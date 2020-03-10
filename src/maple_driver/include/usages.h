@@ -21,6 +21,7 @@ enum OptionIndex : uint64 {
   kHelp,
   kVersion,
   kInFile,
+  kLoad,
   kInMplt,
   kOptimization0,
   kMeOpt,

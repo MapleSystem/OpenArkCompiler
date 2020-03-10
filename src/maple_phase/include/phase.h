@@ -182,5 +182,10 @@ class AnalysisResultManager {
   MapleMap<analysisResultKey, AnalysisResult*> analysisResults;
   MapleMap<PhaseIDT, PhaseT*> analysisPhases;
 };
+
+#define EXPORT_PHASE(phaseType)    \
+  Phase *ExportPhase() {           \
+    return new phaseType();        \
+  }
 }  // namespace maple
 #endif  // MAPLE_PHASE_INCLUDE_PHASE_H

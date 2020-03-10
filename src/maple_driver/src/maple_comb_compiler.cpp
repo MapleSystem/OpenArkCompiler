@@ -469,8 +469,7 @@ ErrorCode MapleCombCompiler::Compile(const MplOptions &options, MIRModulePtr &th
   LogInfo::MapleLogger() << "Starting mpl2mpl&mplme\n";
   PrintCommand(options);
   DriverRunner runner(theModule, options.GetRunningExes(), mpl2mplOptions.get(), fileName, meOptions.get(),
-                      fileName, fileName, optMp,
-                      options.HasSetTimePhases(), options.HasSetGenVtableImpl(), options.HasSetGenMeMpl());
+                      fileName, fileName, optMp, options);
   ErrorCode nErr = runner.Run();
 
   memPoolCtrler.DeleteMemPool(optMp);

@@ -18,6 +18,7 @@
 #include <vector>
 #include <string>
 #include "me_option.h"
+#include "mpl_options.h"
 #include "interleaved_manager.h"
 #include "error_code.h"
 namespace maple {
@@ -28,8 +29,7 @@ class DriverRunner final {
  public:
   DriverRunner(MIRModule *theModule, const std::vector<std::string> &exeNames, Options *mpl2mplOptions,
                std::string mpl2mplInput, MeOption *meOptions, const std::string &meInput, std::string actualInput,
-               MemPool *optMp, bool timePhases = false,
-               bool genVtableImpl = false, bool genMeMpl = false)
+               MemPool *optMp, const MplOptions &mapleOptions)
       : theModule(theModule),
         exeNames(exeNames),
         mpl2mplOptions(mpl2mplOptions),
@@ -38,14 +38,15 @@ class DriverRunner final {
         meInput(meInput),
         actualInput(actualInput),
         optMp(optMp),
-        timePhases(timePhases),
-        genVtableImpl(genVtableImpl),
-        genMeMpl(genMeMpl) {}
+        timePhases(mapleOptions.HasSetTimePhases()),
+        genVtableImpl(mapleOptions.HasSetGenVtableImpl()),
+        genMeMpl(mapleOptions.HasSetGenMeMpl()),
+        isLoadPhase(mapleOptions.GetIsLoadPhase()),
+        loadPhaseFile(mapleOptions.GetLoadPhaseFile()) {}
 
   DriverRunner(MIRModule *theModule, const std::vector<std::string> &exeNames, std::string actualInput, MemPool *optMp,
-               bool timePhases = false, bool genVtableImpl = false, bool genMeMpl = false)
-      : DriverRunner(theModule, exeNames, nullptr, "", nullptr, "", actualInput, optMp, timePhases, genVtableImpl,
-                     genMeMpl) {}
+               const MplOptions &mapleOptions)
+      : DriverRunner(theModule, exeNames, nullptr, "", nullptr, "", actualInput, optMp, mapleOptions) {}
 
   ~DriverRunner() = default;
 
@@ -73,6 +74,8 @@ class DriverRunner final {
   bool genVtableImpl = false;
   bool genMeMpl = false;
   std::string printOutExe;
+  bool isLoadPhase;
+  std::string loadPhaseFile;
 };
 }  // namespace maple
 
