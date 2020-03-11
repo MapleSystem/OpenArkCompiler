@@ -31,5 +31,4 @@ class HelloFuncPhase : public MeFuncPhase {
 };
 
 EXPORT_PHASE(HelloFuncPhase)
-
 }
