@@ -35,7 +35,7 @@ class MeFunction;  // circular dependency exists, no other choice
 using MeFuncResultMgr = AnalysisResultManager<MeFunction, MePhaseID, MeFuncPhase>;
 class MeFuncPhase : public Phase {
  public:
-  explicit MeFuncPhase(MePhaseID id) : Phase(), phaseID(id) {}
+  explicit MeFuncPhase(MePhaseID id = kMePhaseDonothing) : Phase(), phaseID(id) {}
 
   virtual ~MeFuncPhase() = default;
 

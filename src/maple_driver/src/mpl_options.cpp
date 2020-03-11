@@ -78,6 +78,18 @@ const mapleOption::Descriptor usages[] = {
     "  --infile file1,file2,file3  \tInput files.\n",
     "all",
     { { nullptr, nullptr, nullptr, nullptr } } },
+  { kLoad,
+    0,
+    nullptr,
+    "load",
+    nullptr,
+    false,
+    nullptr,
+    mapleOption::BuildType::kBuildTypeAll,
+    mapleOption::ArgCheckPolicy::kArgCheckPolicyRequired,
+    "  --load=phase.so             \tCustom phase .so file.\n",
+    "all",
+    { { nullptr, nullptr, nullptr, nullptr } } },
   { kInMplt,
     0,
     nullptr,
@@ -1279,6 +1291,10 @@ ErrorCode MplOptions::HandleGeneralOptions() {
         break;
       case kAllDebug:
         debugFlag = true;
+        break;
+      case kLoad:
+        isLoadPhase = true;
+        loadPhaseFile = opt.Args();
         break;
       default:
         // I do not care

@@ -52,6 +52,7 @@ class InterleavedManager {
 
   void AddPhases(const std::vector<std::string> &phases, bool isModulePhase, bool timePhases = false,
                  bool genMpl = false);
+  void AttachPhase(Phase &phase, bool isModulePhase, bool timePhases = false, bool genMpl = false);
   void Run();
   const PhaseManager *GetSupportPhaseManager(const std::string &phase);
 
@@ -64,6 +65,7 @@ class InterleavedManager {
   bool timePasses = false;
 
   void InitSupportPhaseManagers();
+  PhaseManager *GetLastPhaseManager(bool isModulePhaseManager) const;
 };
 }  // namespace maple
 #endif  // MAPLE_IPA_INCLUDE_INTERLEAVED_MANAGER_H

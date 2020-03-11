@@ -83,6 +83,13 @@ AnalysisResult *MeDoAliasClass::Run(MeFunction *func, MeFuncResultMgr *funcResMg
   timer.Start();
   (void)funcResMgr->GetAnalysisResult(MeFuncPhase_SSATAB, func);
   MemPool *aliasClassMp = NewMemPool();
+  if (moduleResMgr == nullptr) {
+    moduleResMgr = new ModuleResultMgr(&func->GetAlloc());
+    ModulePhase *phase =
+        new (func->GetMemPool()->Malloc(sizeof(DoKlassHierarchy(MoPhase_CHA)))) DoKlassHierarchy(MoPhase_CHA);
+    moduleResMgr->AddAnalysisPhase(MoPhase_CHA, phase);
+  }
+  CHECK_NULL_FATAL(moduleResMgr);
   auto *kh = static_cast<KlassHierarchy*>(moduleResMgr->GetAnalysisResult(
       MoPhase_CHA, &func->GetMIRModule()));
   auto *aliasClass = aliasClassMp->New<MeAliasClass>(

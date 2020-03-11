@@ -14,6 +14,7 @@
  */
 #include "driver_runner.h"
 #include <iostream>
+#include <dlfcn.h>
 #include <typeinfo>
 #include <sys/stat.h>
 #include "mpl_timer.h"
@@ -138,9 +139,33 @@ void DriverRunner::ProcessMpl2mplAndMePhases(const std::string &outputFile, cons
 
     InterleavedManager mgr(optMp, theModule, meInput, timePhases);
     std::vector<std::string> phases;
+
+    if (isLoadPhase) {
+      void *handle = dlopen(loadPhaseFile.c_str(), RTLD_LAZY);
+      if (handle == nullptr) {
+        LogInfo::MapleLogger() << "Failed to open phase file. \n" << dlerror() << "\n";
+        return;
+      }
+      typedef Phase* (*ExportPhaseFunc)();
+      ExportPhaseFunc func = reinterpret_cast<ExportPhaseFunc>(dlsym(handle, "_ZN5maple11ExportPhaseEv"));
+      if (func == nullptr) {
+        LogInfo::MapleLogger() << dlerror();
+        dlclose(handle);
+        return;
+      }
+
+      Phase *phase = static_cast<Phase*>(func());
+      CHECK_NULL_FATAL(phase);
+      mgr.AttachPhase(*phase, dynamic_cast<ModulePhase*>(phase) != nullptr, timePhases, genMeMpl);
+      mgr.Run();
+      delete phase;
+      phase = nullptr;
+      dlclose(handle);
+    } else {
 #include "phases.def"
-    InitPhases(mgr, phases);
-    mgr.Run();
+      InitPhases(mgr, phases);
+      mgr.Run();
+    }
 
     // emit after module phase
     if (printOutExe == kMpl2mpl || printOutExe == kMplMe) {

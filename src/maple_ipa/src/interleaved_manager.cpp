@@ -54,6 +54,57 @@ void InterleavedManager::AddPhases(const std::vector<std::string> &phases, bool 
   }
 }
 
+PhaseManager *InterleavedManager::GetLastPhaseManager(bool isModulePhaseManager) const {
+  PhaseManager *pm = nullptr;
+
+  for (auto it = phaseManagers.rbegin(); it != phaseManagers.rend(); ++it) {
+    if (isModulePhaseManager) {
+      pm = dynamic_cast<ModulePhaseManager*>(*it);
+    } else {
+      pm = dynamic_cast<MeFuncPhaseManager*>(*it);
+    }
+
+    if (pm != nullptr) {
+      break;
+    }
+  }
+
+  return pm;
+}
+
+void InterleavedManager::AttachPhase(Phase &phase, bool isModulePhase, bool timePhases, bool genMpl) {
+  PhaseManager *pm = GetLastPhaseManager(isModulePhase);
+  if (pm != nullptr) {
+    pm->RegisterPhase(0, phase);
+    pm->AddPhase(phase.PhaseName());
+    return;
+  }
+
+  ModuleResultMgr *mrm = phaseManagers.empty() ? nullptr : phaseManagers.back()->GetModResultMgr();
+
+  if (isModulePhase) {
+    pm = GetMemPool()->New<ModulePhaseManager>(GetMemPool(), mirModule, mrm);
+    auto *mpm = static_cast<ModulePhaseManager*>(pm);
+    mpm->RegisterModulePhases();
+    mpm->SetTimePhases(timePhases);
+  } else {
+    if (mrm == nullptr) {
+      auto *mpm = GetMemPool()->New<ModulePhaseManager>(GetMemPool(), mirModule, mrm);
+      mpm->RegisterModulePhases();
+      mpm->SetTimePhases(timePhases);
+      phaseManagers.push_back(mpm);
+    }
+    mrm = phaseManagers.back()->GetModResultMgr();
+    pm = GetMemPool()->New<MeFuncPhaseManager>(GetMemPool(), mirModule, mrm);
+    auto *fpm = static_cast<MeFuncPhaseManager*>(pm);
+    fpm->RegisterFuncPhases();
+    fpm->SetTimePhases(timePhases);
+    fpm->SetGenMeMpl(genMpl);
+  }
+
+  pm->RegisterPhase(0, phase);
+  pm->AddPhase(phase.PhaseName());
+  phaseManagers.push_back(pm);
 
 void InterleavedManager::Run() {
   for (auto *pm : phaseManagers) {

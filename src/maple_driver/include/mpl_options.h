@@ -200,6 +200,14 @@ class MplOptions {
     return verify;
   }
 
+  bool GetIsLoadPhase() const {
+    return isLoadPhase;
+  }
+
+  std::string GetLoadPhaseFile() const {
+    return loadPhaseFile;
+  }
+
  private:
   bool Init(const std::string &inputFile);
   ErrorCode HandleGeneralOptions();
@@ -222,6 +230,7 @@ class MplOptions {
   std::string outputFolder = "";
   std::string outputName = "maple";
   std::string exeFolder = "";
+  std::string loadPhaseFile = "";
   InputFileType inputFileType = InputFileType::kNone;
   OptimizationLevel optimizationLevel = OptimizationLevel::kO0;
   RunMode runMode = RunMode::kUnkownRun;
@@ -237,6 +246,7 @@ class MplOptions {
   bool genMeMpl = false;
   bool genVtableImpl = false;
   bool verify = false;
+  bool isLoadPhase = false;
 };
 }  // namespace maple
 #endif  // MAPLE_DRIVER_INCLUDE_MPL_OPTIONS_H

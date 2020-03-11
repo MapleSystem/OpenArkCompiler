@@ -32,7 +32,7 @@ class ModulePhase;  // circular dependency exists, no other choice
 using ModuleResultMgr = AnalysisResultManager<MIRModule, ModulePhaseID, ModulePhase>;
 class ModulePhase : public Phase {
  public:
-  explicit ModulePhase(ModulePhaseID id) : Phase(), phaseID(id) {}
+  explicit ModulePhase(ModulePhaseID id = kMoPhaseDoNothing) : Phase(), phaseID(id) {}
 
   virtual ~ModulePhase() = default;
 
