@@ -145,6 +145,8 @@ class MeExpr {
     return nullptr;
   }
 
+  virtual MIRType *GetType() const { return nullptr; }
+
   MeExpr &GetAddrExprBase();               // get the base of the address expression
   // in the expression; nullptr otherwise
   bool SymAppears(OStIdx oidx);  // check if symbol appears in the expression
@@ -314,7 +316,7 @@ class ScalarMeExpr : public MeExpr {
   bool IsSameVariableValue(const VarMeExpr&) const override;
   ScalarMeExpr *FindDefByStmt(std::set<ScalarMeExpr*> &visited);
 
- private:
+ protected:
   OriginalSt *ost;
   uint32 vstIdx;    // the index in MEOptimizer's VersionStTable, 0 if not in VersionStTable
   MeDefBy defBy : 3;
@@ -381,6 +383,10 @@ class VarMeExpr final : public ScalarMeExpr {
 
   void SetNoSubsumeRC(bool noSubsumeRCVal) {
     noSubsumeRC = noSubsumeRCVal;
+  }
+
+  MIRType *GetType() const override {
+    return GlobalTables::GetTypeTable().GetTypeFromTyIdx(ost->GetTyIdx());
   }
 
  private:
@@ -464,6 +470,10 @@ class MePhiNode {
 
   bool IsPiAdded() const {
     return isPiAdded;
+  }
+
+  bool UseReg() const {
+    return lhs->GetMeOp() == kMeOpReg;
   }
 
  private:
@@ -686,6 +696,11 @@ class AddroffuncMeExpr : public MeExpr {
     return puIdx << addroffuncHashShift;
   }
 
+  MIRType *GetType() const override {
+    MIRFunction *func = GlobalTables::GetFunctionTable().GetFunctionFromPuidx(puIdx);
+    return GlobalTables::GetTypeTable().GetOrCreatePointerType(*func->GetMIRFuncType(), PTY_ptr);
+  }
+
  private:
   PUIdx puIdx;
 };
@@ -843,6 +858,13 @@ class OpMeExpr : public MeExpr {
     return hashIdx;
   }
 
+  MIRType *GetType() const override {
+    if (tyIdx != TyIdx(0)) {
+      return GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx);
+    }
+    return nullptr;
+  }
+
  private:
   std::array<MeExpr*, kOperandNumTernary> opnds = { nullptr };  // kid
   PrimType opndType = kPtyInvalid;  // from type
@@ -958,6 +980,14 @@ class IvarMeExpr : public MeExpr {
   uint32 GetHashIndex() const override {
     constexpr uint32 kIvarHashShift = 4;
     return static_cast<uint32>(OP_iread) + fieldID + (static_cast<uint32>(base->GetExprID()) << kIvarHashShift);
+  }
+
+  MIRType *GetType() const override {
+    MIRPtrType *ptrtype = static_cast<MIRPtrType *>(GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx));
+    if (fieldID == 0) {
+      return ptrtype->GetPointedType();
+    }
+    return GlobalTables::GetTypeTable().GetTypeFromTyIdx(ptrtype->GetPointedTyIdxWithFieldID(fieldID));
   }
 
  private:
