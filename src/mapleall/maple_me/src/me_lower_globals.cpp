@@ -122,7 +122,9 @@ void MeLowerGlobals::Run() {
           baseOst = ssaTable->FindOrCreateSymbolOriginalSt(*ost->GetMIRSymbol(),
               func.GetMirFunc()->GetPuidx(), 0);
         }
-        MeExpr *addrof = irMap->CreateAddrofMeExpr(baseOst->GetIndex());
+        AddrofMeExpr addrofmeexpr(-1, PTY_ptr, baseOst->GetIndex());
+        AddrofMeExpr *addrof = static_cast<AddrofMeExpr *>(irMap->HashMeExpr(addrofmeexpr));
+
         MIRPtrType ptrType(baseOst->GetTyIdx(), PTY_ptr);
         if (ost->IsVolatile()) {
           TypeAttrs attrs;
