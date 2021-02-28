@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/user.h>
-#include <unistd.h>
+
 #include <memory>
 
 #include <android-base/logging.h>
@@ -33,7 +33,7 @@ ssize_t SendFileDescriptorVector(int sockfd, const void* data, size_t len,
                                  const std::vector<int>& fds) {
   size_t cmsg_space = CMSG_SPACE(sizeof(int) * fds.size());
   size_t cmsg_len = CMSG_LEN(sizeof(int) * fds.size());
-  if (cmsg_space >= sysconf(_SC_PAGE_SIZE)) {
+  if (cmsg_space >= PAGE_SIZE) {
     errno = ENOMEM;
     return -1;
   }
@@ -75,7 +75,7 @@ ssize_t ReceiveFileDescriptorVector(int sockfd, void* data, size_t len, size_t m
   fds->clear();
 
   size_t cmsg_space = CMSG_SPACE(sizeof(int) * max_fds);
-  if (cmsg_space >= sysconf(_SC_PAGE_SIZE)) {
+  if (cmsg_space >= PAGE_SIZE) {
     errno = ENOMEM;
     return -1;
   }

@@ -40,7 +40,7 @@
 
 
 #include <memory>
-#include <string.h>
+
 #include "android-base/stringprintf.h"
 #include "android-base/strings.h"
 
@@ -401,7 +401,7 @@ bool RuntimeModuleRootDistinctFromAndroidRoot() {
                                                &error_msg);
   return (android_root != nullptr)
       && (runtime_root != nullptr)
-      && (StringView(android_root) != StringView(runtime_root));
+      && (std::string_view(android_root) != std::string_view(runtime_root));
 }
 
 int DupCloexec(int fd) {

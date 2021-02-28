@@ -18,6 +18,7 @@
 #define _LIBS_CUTILS_TRACE_H
 
 #include <inttypes.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -87,7 +88,7 @@ __BEGIN_DECLS
 #elif ATRACE_TAG > ATRACE_TAG_VALID_MASK
 #error ATRACE_TAG must be defined to be one of the tags defined in cutils/trace.h
 #endif
-using namespace std;
+
 /**
  * Opens the trace file for writing and reads the property for initial tags.
  * The atrace.tags.enableflags property sets the tags to trace.

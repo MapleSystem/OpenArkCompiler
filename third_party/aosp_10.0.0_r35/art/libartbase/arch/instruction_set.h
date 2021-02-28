@@ -227,30 +227,19 @@ constexpr size_t GetBytesPerFprSpillLocation(InstructionSet isa) {
 }
 
 namespace instruction_set_details {
-/*
-cflags += [
-        "-DART_STACK_OVERFLOW_GAP_arm=8192",
-        "-DART_STACK_OVERFLOW_GAP_arm64=8192",
-        "-DART_STACK_OVERFLOW_GAP_mips=16384",
-        "-DART_STACK_OVERFLOW_GAP_mips64=16384",
-        "-DART_STACK_OVERFLOW_GAP_x86=16384",
-        "-DART_STACK_OVERFLOW_GAP_x86_64=20480",
-        "-DART_FRAME_SIZE_LIMIT=7400",
-    ]
- */
- /*
+
 #if !defined(ART_STACK_OVERFLOW_GAP_arm) || !defined(ART_STACK_OVERFLOW_GAP_arm64) || \
     !defined(ART_STACK_OVERFLOW_GAP_mips) || !defined(ART_STACK_OVERFLOW_GAP_mips64) || \
     !defined(ART_STACK_OVERFLOW_GAP_x86) || !defined(ART_STACK_OVERFLOW_GAP_x86_64)
 #error "Missing defines for stack overflow gap"
 #endif
-*/
-static constexpr size_t kArmStackOverflowReservedBytes    = 8192;
-static constexpr size_t kArm64StackOverflowReservedBytes  = 8192;
-static constexpr size_t kMipsStackOverflowReservedBytes   = 16384;
-static constexpr size_t kMips64StackOverflowReservedBytes = 16384;
-static constexpr size_t kX86StackOverflowReservedBytes    = 16384;
-static constexpr size_t kX86_64StackOverflowReservedBytes = 20480;
+
+static constexpr size_t kArmStackOverflowReservedBytes    = ART_STACK_OVERFLOW_GAP_arm;
+static constexpr size_t kArm64StackOverflowReservedBytes  = ART_STACK_OVERFLOW_GAP_arm64;
+static constexpr size_t kMipsStackOverflowReservedBytes   = ART_STACK_OVERFLOW_GAP_mips;
+static constexpr size_t kMips64StackOverflowReservedBytes = ART_STACK_OVERFLOW_GAP_mips64;
+static constexpr size_t kX86StackOverflowReservedBytes    = ART_STACK_OVERFLOW_GAP_x86;
+static constexpr size_t kX86_64StackOverflowReservedBytes = ART_STACK_OVERFLOW_GAP_x86_64;
 
 NO_RETURN void GetStackOverflowReservedBytesFailure(const char* error_msg);
 

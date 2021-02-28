@@ -19,7 +19,7 @@
 
 #include <iosfwd>
 #include <string>
-#include "string_view_format.h"
+#include <string_view>
 
 #include <android-base/logging.h>
 
@@ -49,7 +49,7 @@ class Signature : public ValueObject {
     return !(*this == rhs);
   }
 
-  bool operator==(StringView rhs) const;
+  bool operator==(std::string_view rhs) const;
 
  private:
   Signature(const DexFile* dex, const dex::ProtoId& proto) : dex_file_(dex), proto_id_(&proto) {

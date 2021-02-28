@@ -19,7 +19,7 @@
 
 #include <memory>
 #include <string>
-#include "string_view_format.h"
+#include <string_view>
 #include <vector>
 
 #include <android-base/logging.h>
@@ -262,7 +262,7 @@ class DexFile {
   const char* StringDataAndUtf16LengthByIdx(dex::StringIndex idx, uint32_t* utf16_length) const;
 
   const char* StringDataByIdx(dex::StringIndex idx) const;
-  StringView StringViewByIdx(dex::StringIndex idx) const;
+  std::string_view StringViewByIdx(dex::StringIndex idx) const;
 
   // Looks up a string id for a given modified utf8 string.
   const dex::StringId* FindStringId(const char* string) const;
@@ -480,7 +480,7 @@ class DexFile {
   }
 
   // Given a signature place the type ids into the given vector, returns true on success
-  bool CreateTypeList(StringView signature,
+  bool CreateTypeList(std::string_view signature,
                       dex::TypeIndex* return_type_idx,
                       std::vector<dex::TypeIndex>* param_type_idxs) const;
 
