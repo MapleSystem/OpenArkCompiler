@@ -19,7 +19,7 @@
 
 #include <stdint.h>
 #include <iterator>
-#include <string.h>
+
 #include "bit_utils.h"
 #include "globals.h"
 

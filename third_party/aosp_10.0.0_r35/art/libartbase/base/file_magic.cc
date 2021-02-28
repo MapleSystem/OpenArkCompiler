@@ -19,7 +19,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <string.h>
+
 #include <android-base/logging.h>
 #include <android-base/stringprintf.h>
 

@@ -58,8 +58,6 @@ int __android_log_buf_print(int bufID, int prio, const char* tag,
 log_id_t android_name_to_log_id(const char* logName);
 const char* android_log_id_to_name(log_id_t log_id);
 
-int __hwlog_setparam(int paramid, const char *val);
-
 #ifdef __cplusplus
 }
 #endif

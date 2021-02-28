@@ -16,11 +16,10 @@
 
 #if defined(_WIN32)
 #include <windows.h>
-#include "android-base/threads.h"
 #endif
 
 #include "android-base/logging.h"
-#include <string.h>
+
 #include <fcntl.h>
 #include <inttypes.h>
 #include <libgen.h>
@@ -168,7 +167,7 @@ void KernelLogger(android::base::LogId, android::base::LogSeverity severity,
   static constexpr int kLogSeverityToKernelLogLevel[] = {
       [android::base::VERBOSE] = 7,              // KERN_DEBUG (there is no verbose kernel log
                                                  //             level)
-      [android::base::DEBUG_S] = 7,              // KERN_DEBUG_S
+      [android::base::DEBUG] = 7,                // KERN_DEBUG
       [android::base::INFO] = 6,                 // KERN_INFO
       [android::base::WARNING] = 4,              // KERN_WARNING
       [android::base::ERROR] = 3,                // KERN_ERROR
@@ -311,7 +310,7 @@ void InitLogging(char* argv[], LogFunction&& logger, AbortFunction&& aborter) {
           gMinimumLogSeverity = VERBOSE;
           continue;
         case 'd':
-          gMinimumLogSeverity = DEBUG_S;
+          gMinimumLogSeverity = DEBUG;
           continue;
         case 'i':
           gMinimumLogSeverity = INFO;

@@ -144,7 +144,6 @@
 /* The range 2900-2999 is reserved for OEM, and must never be
  * used here */
 #define AID_OEM_RESERVED_START 2900
-#define AID_HDB           2901  /* access hdbservice */
 #define AID_OEM_RESERVED_END 2999
 
 /* The 3000 series are intended for use as supplemental group id's only.
@@ -162,38 +161,6 @@
 
 /* The range 5000-5999 is also reserved for OEM, and must never be used here. */
 #define AID_OEM_RESERVED_2_START 5000
-
-/* Huawei Extend AID */
-/*
- * 1. ALL huawei extend AID should add VENDOR prefix,e.g. AID_VENDOR_XXXX
- * 2. If the added AID was used in vendor partition only, Add it to config.fs
- *    vendor/huawei/chipset_common/config/common/config.fs
- * 3. Huawei AID range:
- *    AID used in system partition: 5501-5900
- *    AID used in vendor partiton only: 5900-5999
- * 4. wiki: http://3ms.huawei.com/hi/group/2844405/wiki_5160709.html?for_statistic_from=creation_group_wiki
-*/
-
-#define AID_VENDOR_HDB 5501 /* access hdbservice*/
-
-#define AID_VENDOR_DSM 5502 /* dsm access */
-
-#define AID_VENDOR_HWHFD 5503 /* Huawei kernel hot fix daemon */
-
-#define AID_VENDOR_SKYTONE 5504 /* access skytone */
-
-#define AID_VENDOR_ACT_RCS 5505 /* access device actr */
-
-#define AID_VENDOR_ODMF 5506 /* access AI model files */
-
-#define AID_VENDOR_INSTALLER 5507  /* access installer files */
-
-#define AID_VENDOR_HBS    5508 /* access hbs data */
-
-#define AID_DSM 5509 /* dsm access */
-
-#define AID_VENDOR_FACEID 5510 /* acess faceid */
-
 #define AID_OEM_RESERVED_2_END 5999
 
 #define AID_EVERYBODY 9997 /* shared between all apps in the same profile */
