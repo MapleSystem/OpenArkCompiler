@@ -855,7 +855,7 @@ FEIRStmtSwitch2::~FEIRStmtSwitch2() {
 std::list<StmtNode*> FEIRStmtSwitch2::GenMIRStmtsImpl(MIRBuilder &mirBuilder) const {
   std::list<StmtNode*> ans;
   CaseVector switchTable(mirBuilder.GetCurrentFuncCodeMpAllocator()->Adapter());
-  for (const std::pair<int32, uint32> &valueLabelPair : mapValueLabelIdx) {
+  for (const std::pair<const int32, uint32> &valueLabelPair : mapValueLabelIdx) {
     switchTable.emplace_back(valueLabelPair.first,
                              FEIRStmtPesudoLabel2::GenMirLabelIdx(mirBuilder, outerIdx, valueLabelPair.second));
   }
