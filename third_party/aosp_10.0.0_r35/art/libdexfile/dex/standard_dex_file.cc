@@ -20,8 +20,6 @@
 #include "base/leb128.h"
 #include "code_item_accessors-inl.h"
 #include "dex_file-inl.h"
-#include <string.h>
-#include <algorithm>
 
 namespace art {
 

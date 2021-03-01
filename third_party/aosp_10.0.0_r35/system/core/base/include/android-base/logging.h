@@ -81,7 +81,7 @@ namespace base {
 
 enum LogSeverity {
   VERBOSE,
-  DEBUG_S,
+  DEBUG,
   INFO,
   WARNING,
   ERROR,
@@ -181,7 +181,7 @@ class ErrnoRestorer {
 // Note: DO NOT USE DIRECTLY. This is an implementation detail.
 #define SEVERITY_LAMBDA(severity) ([&]() {    \
   using ::android::base::VERBOSE;             \
-  using ::android::base::DEBUG_S;             \
+  using ::android::base::DEBUG;               \
   using ::android::base::INFO;                \
   using ::android::base::WARNING;             \
   using ::android::base::ERROR;               \
@@ -248,7 +248,7 @@ struct LogAbortAfterFullExpr {
 // Logs a message to logcat with the specified log ID on Android otherwise to
 // stderr. If the severity is FATAL it also causes an abort.
 // Use an expression here so we can support the << operator following the macro,
-// like "LOG(DEBUG_S) << xxx;".
+// like "LOG(DEBUG) << xxx;".
 #define LOG_TO(dest, severity) LOGGING_PREAMBLE(severity) && LOG_STREAM_TO(dest, severity)
 
 // A variant of LOG that also logs the current errno value. To be used when

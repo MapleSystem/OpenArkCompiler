@@ -21,7 +21,7 @@
 
 #include <android-base/logging.h>
 #include <android-base/macros.h>  // For ATTRIBUTE_UNUSED
-#include "string_view_format.h"
+
 #include "palette_system.h"
 
 enum PaletteStatus PaletteGetVersion(int32_t* version) {
@@ -54,7 +54,7 @@ enum PaletteStatus PaletteSchedGetPriority(int32_t tid,
 }
 
 enum PaletteStatus PaletteWriteCrashThreadStacks(/*in*/ const char* stacks, size_t stacks_len) {
-  LOG(INFO) << StringView(stacks, stacks_len);
+  LOG(INFO) << std::string_view(stacks, stacks_len);
   return PaletteStatus::kOkay;
 }
 

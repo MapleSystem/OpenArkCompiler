@@ -138,7 +138,7 @@ class CentralDirectory {
 
 /**
  * More space efficient string representation of strings in an mmaped zipped file than
- * StringView or ZipString. Using ZipString as an entry in the ZipArchive hashtable wastes
+ * std::string_view or ZipString. Using ZipString as an entry in the ZipArchive hashtable wastes
  * space. ZipString stores a pointer to a string (on 64 bit, 8 bytes) and the length to read from
  * that pointer, 2 bytes. Because of alignment, the structure consumes 16 bytes, wasting 6 bytes.
  * ZipStringOffset stores a 4 byte offset from a fixed location in the memory mapped file instead

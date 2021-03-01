@@ -22,7 +22,7 @@
 #include <cstring>
 #include <memory>
 #include <string>
-#include "string_view_format.h"
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -46,7 +46,7 @@ class DexString final {
   }
   explicit DexString(const char* str = "")
       : ext_string_(MakeExtDexFileString(str, std::strlen(str))) {}
-  explicit DexString(StringView str)
+  explicit DexString(std::string_view str)
       : ext_string_(MakeExtDexFileString(str.data(), str.size())) {}
   ~DexString() { g_ExtDexFileFreeString(ext_string_); }
 
@@ -68,10 +68,10 @@ class DexString final {
   }
   size_t length() const { return size(); }
 
-  operator StringView() const {
+  operator std::string_view() const {
     size_t len;
     const char* chars = g_ExtDexFileGetString(ext_string_, &len);
-    return StringView(chars, len);
+    return std::string_view(chars, len);
   }
 
  private:

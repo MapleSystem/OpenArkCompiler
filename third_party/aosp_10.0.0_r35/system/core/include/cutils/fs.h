@@ -45,14 +45,6 @@ extern "C" {
  */
 extern int fs_prepare_dir(const char* path, mode_t mode, uid_t uid, gid_t gid);
 
-/* DTS2016051401335 AR000485VM FixUid l00214442 20160514 begin */
-/*
- * Ensure that directory exists with given mode and owners.  If it exists
- * with a different mode or owners, they are fixed to match the given values recursively.
- */
-extern int fs_prepare_dir_fixup_recursive(const char* path, mode_t mode, uid_t uid, gid_t gid, int allow_fixup);
-/* DTS2016051401335 AR000485VM FixUid l00214442 20160514 end */
-
 /*
  * Ensure that directory exists with given mode and owners.  If it exists
  * with different owners, they are not fixed and -1 is returned.

@@ -23,7 +23,6 @@
 #include "aborting.h"
 #include "os.h"
 #include "unix_file/fd_file.h"
-#include <string.h>
 
 // Headers for LogMessage::LogLine.
 #ifdef ART_TARGET_ANDROID
