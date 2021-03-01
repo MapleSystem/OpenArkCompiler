@@ -87,32 +87,32 @@ template std::string Join(const std::vector<const char*>&, char);
 template std::string Join(const std::vector<std::string>&, const std::string&);
 template std::string Join(const std::vector<const char*>&, const std::string&);
 
-bool StartsWith(StringView s, StringView prefix) {
+bool StartsWith(std::string_view s, std::string_view prefix) {
   return s.substr(0, prefix.size()) == prefix;
 }
 
-bool StartsWith(StringView s, char prefix) {
+bool StartsWith(std::string_view s, char prefix) {
   return !s.empty() && s.front() == prefix;
 }
 
-bool StartsWithIgnoreCase(StringView s, StringView prefix) {
+bool StartsWithIgnoreCase(std::string_view s, std::string_view prefix) {
   return s.size() >= prefix.size() && strncasecmp(s.data(), prefix.data(), prefix.size()) == 0;
 }
 
-bool EndsWith(StringView s, StringView suffix) {
+bool EndsWith(std::string_view s, std::string_view suffix) {
   return s.size() >= suffix.size() && s.substr(s.size() - suffix.size(), suffix.size()) == suffix;
 }
 
-bool EndsWith(StringView s, char suffix) {
+bool EndsWith(std::string_view s, char suffix) {
   return !s.empty() && s.back() == suffix;
 }
 
-bool EndsWithIgnoreCase(StringView s, StringView suffix) {
+bool EndsWithIgnoreCase(std::string_view s, std::string_view suffix) {
   return s.size() >= suffix.size() &&
          strncasecmp(s.data() + (s.size() - suffix.size()), suffix.data(), suffix.size()) == 0;
 }
 
-bool EqualsIgnoreCase(StringView lhs, StringView rhs) {
+bool EqualsIgnoreCase(std::string_view lhs, std::string_view rhs) {
   return lhs.size() == rhs.size() && strncasecmp(lhs.data(), rhs.data(), lhs.size()) == 0;
 }
 

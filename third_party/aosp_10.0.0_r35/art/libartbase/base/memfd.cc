@@ -25,7 +25,6 @@
 #endif
 
 #include "macros.h"
-#include <string.h>
 
 // When building for linux host, glibc in prebuilts does not include memfd_create system call
 // number. As a temporary testing measure, we add the definition here.

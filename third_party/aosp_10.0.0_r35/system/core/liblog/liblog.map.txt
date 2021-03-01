@@ -63,7 +63,6 @@ LIBLOG_Q {
     __android_log_security; # apex
     android_log_reset; #vndk
     android_log_parser_reset; #vndk
-    __hwlog_setparam;
 };
 
 LIBLOG_PRIVATE {

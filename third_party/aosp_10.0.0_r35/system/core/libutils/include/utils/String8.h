@@ -58,9 +58,6 @@ public:
     explicit                    String8(const char16_t* o, size_t numChars);
     explicit                    String8(const char32_t* o);
     explicit                    String8(const char32_t* o, size_t numChars);
-    //fix bug of sogou input method
-    explicit                    String8(unsigned short const* o);
-    //fix bug of sogou input method
                                 ~String8();
 
     static inline const String8 empty();

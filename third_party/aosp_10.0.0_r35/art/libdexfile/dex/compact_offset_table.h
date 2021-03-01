@@ -28,7 +28,7 @@ class CompactOffsetTable {
  public:
   // This value is coupled with the leb chunk bitmask. That logic must also be adjusted when the
   // integer is modified.
-  static constexpr std::size_t kElementsPerIndex = 16;
+  static constexpr size_t kElementsPerIndex = 16;
 
   // Leb block format:
   // [uint16_t] 16 bit mask for what indexes actually have a non zero offset for the chunk.
@@ -61,7 +61,7 @@ class CompactOffsetTable {
                     uint32_t* out_table_offset);
 
   // 32 bit aligned for the offset table.
-  static constexpr std::size_t kAlignment = sizeof(uint32_t);
+  static constexpr size_t kAlignment = sizeof(uint32_t);
 };
 
 }  // namespace art

@@ -19,7 +19,6 @@
 #include "android-base/logging.h"
 #include "base/bit_utils.h"
 #include "base/globals.h"
-#include <string.h>
 
 namespace art {
 
@@ -116,23 +115,11 @@ static_assert(IsAligned<kPageSize>(kMips64StackOverflowReservedBytes),
 static_assert(IsAligned<kPageSize>(kX86StackOverflowReservedBytes), "X86 gap not page aligned");
 static_assert(IsAligned<kPageSize>(kX86_64StackOverflowReservedBytes),
               "X86_64 gap not page aligned");
-/*
-cflags += [
-        "-DART_STACK_OVERFLOW_GAP_arm=8192",
-        "-DART_STACK_OVERFLOW_GAP_arm64=8192",
-        "-DART_STACK_OVERFLOW_GAP_mips=16384",
-        "-DART_STACK_OVERFLOW_GAP_mips64=16384",
-        "-DART_STACK_OVERFLOW_GAP_x86=16384",
-        "-DART_STACK_OVERFLOW_GAP_x86_64=20480",
-        "-DART_FRAME_SIZE_LIMIT=7400",
-    ]
- */
-/*
+
 #if !defined(ART_FRAME_SIZE_LIMIT)
 #error "ART frame size limit missing"
 #endif
-*/
-const uint32_t ART_FRAME_SIZE_LIMIT = 7400;
+
 // TODO: Should we require an extra page (RoundUp(SIZE) + kPageSize)?
 static_assert(ART_FRAME_SIZE_LIMIT < kArmStackOverflowReservedBytes, "Frame size limit too large");
 static_assert(ART_FRAME_SIZE_LIMIT < kArm64StackOverflowReservedBytes,

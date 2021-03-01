@@ -19,7 +19,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include "string_view_format.h"
 
 namespace android {
 namespace base {
@@ -57,17 +56,17 @@ extern template std::string Join(const std::vector<std::string>&, const std::str
 extern template std::string Join(const std::vector<const char*>&, const std::string&);
 
 // Tests whether 's' starts with 'prefix'.
-bool StartsWith(StringView s, StringView prefix);
-bool StartsWith(StringView s, char prefix);
-bool StartsWithIgnoreCase(StringView s, StringView prefix);
+bool StartsWith(std::string_view s, std::string_view prefix);
+bool StartsWith(std::string_view s, char prefix);
+bool StartsWithIgnoreCase(std::string_view s, std::string_view prefix);
 
 // Tests whether 's' ends with 'suffix'.
-bool EndsWith(StringView s, StringView suffix);
-bool EndsWith(StringView s, char suffix);
-bool EndsWithIgnoreCase(StringView s, StringView suffix);
+bool EndsWith(std::string_view s, std::string_view suffix);
+bool EndsWith(std::string_view s, char suffix);
+bool EndsWithIgnoreCase(std::string_view s, std::string_view suffix);
 
 // Tests whether 'lhs' equals 'rhs', ignoring case.
-bool EqualsIgnoreCase(StringView lhs, StringView rhs);
+bool EqualsIgnoreCase(std::string_view lhs, std::string_view rhs);
 
 }  // namespace base
 }  // namespace android

@@ -17,7 +17,7 @@
 #include "dex_file_verifier.h"
 
 #include <inttypes.h>
-#include <algorithm>
+
 #include <memory>
 
 #include "android-base/stringprintf.h"
