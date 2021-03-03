@@ -108,6 +108,13 @@ class OpcodeTable {
     return table[o].flag & OPCODEISCALLASSIGNED;
   }
 
+  bool IsICall(Opcode o) const {
+    ASSERT(o < OP_last, "invalid opcode");
+    return o == OP_icall || o == OP_icallassigned ||
+           o == OP_virtualicall || o == OP_virtualicallassigned ||
+           o == OP_interfaceicall || o == OP_interfaceicallassigned;
+  }
+
   bool NotPure(Opcode o) const {
     ASSERT(o < OP_last, "invalid opcode");
     return table[o].flag & OPCODENOTPURE;

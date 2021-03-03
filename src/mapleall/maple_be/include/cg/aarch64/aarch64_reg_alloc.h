@@ -28,6 +28,7 @@ class AArch64RegAllocator : public RegAllocator {
         regMap(std::less<uint32>(), alloc.Adapter()),
         liveReg(std::less<uint8>(), alloc.Adapter()),
         allocatedSet(std::less<Operand*>(), alloc.Adapter()),
+        regLiveness(std::less<Operand*>(), alloc.Adapter()),
         visitedBBs(alloc.Adapter()),
         sortedBBs(alloc.Adapter()),
         rememberRegs(alloc.Adapter()) {
@@ -66,11 +67,15 @@ class AArch64RegAllocator : public RegAllocator {
   Operand *AllocSrcOpnd(Operand &opnd, OpndProp *opndProp = nullptr);
   Operand *AllocDestOpnd(Operand &opnd, const Insn &insn);
 
+  uint32 GetRegLivenessId(Operand *opnd);
+  void SetupRegLiveness(BB *bb);
+
   MapleAllocator alloc;
   bool availRegSet[kAllRegNum];
   MapleMap<uint32, AArch64reg> regMap;  /* virtual-register-to-physical-register map */
   MapleSet<uint8> liveReg;              /* a set of currently live physical registers */
   MapleSet<Operand*> allocatedSet;      /* already allocated */
+  MapleMap<Operand*, uint32> regLiveness;
   MapleVector<bool> visitedBBs;
   MapleVector<BB*> sortedBBs;
   MapleVector<AArch64reg> rememberRegs;

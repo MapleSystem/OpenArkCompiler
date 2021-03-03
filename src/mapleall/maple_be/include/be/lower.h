@@ -134,6 +134,7 @@ class CGLowerer {
   BaseNode *LowerArrayDim(ArrayNode &array, int32 dim);
   BaseNode *LowerArrayForLazyBiding(BaseNode &baseNode, BaseNode &offsetNode, const BaseNode &parent);
   BaseNode *LowerArray(ArrayNode &array, const BaseNode &parent);
+  BaseNode *LowerCArray(ArrayNode &array);
 
   DassignNode *SaveReturnValueInLocal(StIdx, uint16);
   void LowerCallStmt(StmtNode&, StmtNode*&, BlockNode&, MIRType *retTy = nullptr);

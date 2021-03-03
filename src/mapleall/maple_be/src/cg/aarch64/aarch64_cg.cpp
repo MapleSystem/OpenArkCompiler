@@ -19,9 +19,11 @@
 
 namespace maplebe {
 #include "aarch64_opnd.def"
+#define DEFINE_MOP(...) {__VA_ARGS__},
 const AArch64MD AArch64CG::kMd[kMopLast] = {
 #include "aarch64_md.def"
 };
+#undef DEFINE_MOP
 
 std::array<std::array<const std::string, kAllRegNum>, kIntRegTypeNum> AArch64CG::intRegNames = {
   std::array<const std::string, kAllRegNum> {
