@@ -1000,7 +1000,7 @@ VarMeExpr *RCLowering::CreateNewTmpVarMeExpr(bool isLocalRefVar) {
   if (ost->GetZeroVersionIndex() == 0) {
     ost->SetZeroVersionIndex(irMap.GetVerst2MeExprTableSize());
     irMap.PushBackVerst2MeExprTable(nullptr);
-    ost->PushbackVersionIndex(ost->GetZeroVersionIndex());
+    ost->PushbackVersionsIndices(ost->GetZeroVersionIndex());
   }
   VarMeExpr *varMeExpr = irMap.CreateNewVarMeExpr(ost, PTY_ref);
   if (isLocalRefVar) {

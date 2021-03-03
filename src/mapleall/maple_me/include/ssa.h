@@ -24,6 +24,7 @@ class VersionSt;  // circular dependency exists, no other choice
 class OriginalStTable;  // circular dependency exists, no other choice
 class VersionStTable;  // circular dependency exists, no other choice
 class SSATab;  // circular dependency exists, no other choice
+class Dominance;  // circular dependency exists, no other choice
 class PhiNode {
  public:
   PhiNode(MapleAllocator &alloc, VersionSt &vsym) : result(&vsym), phiOpnds(kNumOpnds, nullptr, alloc.Adapter()) {
@@ -79,12 +80,13 @@ class PhiNode {
 
 class SSA {
  public:
-  SSA(MemPool &memPool, SSATab &stab)
+  SSA(MemPool &memPool, SSATab &stab, MapleVector<BB *> &bbvec, Dominance *dm)
       : ssaAlloc(&memPool),
         vstStacks(ssaAlloc.Adapter()),
-        vstVersions(ssaAlloc.Adapter()),
         bbRenamed(ssaAlloc.Adapter()),
-        ssaTab(&stab) {}
+        ssaTab(&stab),
+        bbVec(bbvec),
+        dom(dm) {}
 
   virtual ~SSA() = default;
 
@@ -97,6 +99,7 @@ class SSA {
   void RenameUses(StmtNode &stmt);
   void RenamePhiUseInSucc(const BB &bb);
   void RenameMayUses(BaseNode &node);
+  void RenameBB(BB &bb);
 
   MapleAllocator &GetSSAAlloc() {
     return ssaAlloc;
@@ -132,12 +135,13 @@ class SSA {
     return ssaTab;
   }
 
- private:
+ protected:
   MapleAllocator ssaAlloc;
   MapleVector<MapleStack<VersionSt*>*> vstStacks;    // rename stack for variable versions
-  MapleVector<int32> vstVersions;                    // maxium version for variables
   MapleVector<bool> bbRenamed;                       // indicate bb is renamed or not
   SSATab *ssaTab;
+  MapleVector<BB *> &bbVec;
+  Dominance *dom;
 };
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_SSA_H

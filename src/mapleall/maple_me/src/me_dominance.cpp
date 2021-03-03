@@ -30,14 +30,17 @@ AnalysisResult *MeDoDominance::Run(MeFunction *func, MeFuncResultMgr*, ModuleRes
   dom->ComputeDominance();
   dom->ComputeDomFrontiers();
   dom->ComputeDomChildren();
+  dom->ComputeIterDomFrontiers();
   size_t num = 0;
   dom->ComputeDtPreorder(*func->GetCommonEntryBB(), num);
   dom->GetDtPreOrder().resize(num);
   dom->ComputeDtDfn();
+
   dom->PdomGenPostOrderID();
   dom->ComputePostDominance();
   dom->ComputePdomFrontiers();
   dom->ComputePdomChildren();
+  dom->ComputeIterPdomFrontiers();
   num = 0;
   dom->ComputePdtPreorder(*func->GetCommonExitBB(), num);
   dom->ResizePdtPreOrder(num);

@@ -17,6 +17,7 @@
 #include "me_function.h"
 #include "me_irmap.h"
 #include "me_ir.h"
+#include "dominance.h"
 
 namespace maple {
 struct StmtComparator {

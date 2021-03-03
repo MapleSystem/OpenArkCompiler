@@ -469,7 +469,7 @@ class SSANode : public BaseNode {
 
   // MIRSymbol query
   const MIRSymbol &GetMIRSymbol() const {
-    return *(GetSSAVar()->GetOrigSt()->GetMIRSymbol());
+    return *(GetSSAVar()->GetOst()->GetMIRSymbol());
   }
 
  protected:

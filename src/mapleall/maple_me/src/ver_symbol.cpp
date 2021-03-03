@@ -18,7 +18,7 @@
 #include "ssa_mir_nodes.h"
 
 namespace maple {
-VersionSt VersionStTable::dummyVST(0, 0, nullptr);
+
 void VersionSt::DumpDefStmt(const MIRModule*) const {
   if (version <= 0) {
     return;
@@ -41,28 +41,26 @@ void VersionSt::DumpDefStmt(const MIRModule*) const {
   }
 }
 
-VersionSt *VersionStTable::CreateVersionSt(OriginalSt *ost, size_t version) {
-  ASSERT(ost != nullptr, "nullptr check");
-  ASSERT(ost->GetVersionsIndex().size() == version, "ssa version need to be created incrementally!");
-  auto *vst = vstAlloc.GetMemPool()->New<VersionSt>(versionStVector.size(), version, ost);
+VersionSt *VersionStTable::CreateNextVersionSt(OriginalSt *ost) {
+  ASSERT(ost->GetVersionsIndices().size() != 0, "CreateNextVersionSt: zero version must have been created first");
+  VersionSt *vst = vstAlloc.GetMemPool()->New<VersionSt>(versionStVector.size(), ost->GetVersionsIndices().size(), ost);
   versionStVector.push_back(vst);
-  ost->PushbackVersionIndex(vst->GetIndex());
-  if (version == kInitVersion) {
-    ost->SetZeroVersionIndex(vst->GetIndex());
-  }
-  vst->SetOrigSt(ost);
+  ost->PushbackVersionsIndices(vst->GetIndex());
+  vst->SetOst(ost);
   return vst;
 }
 
-VersionSt *VersionStTable::FindOrCreateVersionSt(OriginalSt *ost, size_t version) {
-  // this version already exists...
-  ASSERT(ost != nullptr, "nullptr check");
-  if (ost->GetVersionsIndex().size() > version) {
-    size_t versionIndex = ost->GetVersionIndex(version);
-    ASSERT(versionStVector.size() > versionIndex, "versionStVector out of range");
-    return versionStVector.at(versionIndex);
+void VersionStTable::CreateZeroVersionSt(OriginalSt *ost) {
+  if (ost->GetZeroVersionIndex() != 0) {
+    return;  // already created
   }
-  return CreateVersionSt(ost, version);
+  ASSERT(ost->GetVersionsIndices().size() == 0, "ssa version need to be created incrementally!");
+  VersionSt *vst = vstAlloc.GetMemPool()->New<VersionSt>(versionStVector.size(), kInitVersion, ost);
+  versionStVector.push_back(vst);
+  ost->PushbackVersionsIndices(vst->GetIndex());
+  ost->SetZeroVersionIndex(vst->GetIndex());
+  vst->SetOst(ost);
+  return;
 }
 
 void VersionStTable::Dump(const MIRModule *mod) const {
