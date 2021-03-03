@@ -17,6 +17,7 @@
 // the data structures that represent occurrences and work candidates for SSAPRE
 #include "me_function.h"
 #include "irmap.h"
+#include "dominance.h"
 
 namespace maple {
 enum OccType {

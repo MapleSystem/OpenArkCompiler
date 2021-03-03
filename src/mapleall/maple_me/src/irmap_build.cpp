@@ -160,7 +160,7 @@ void IRMapBuild::SetMeExprOpnds(MeExpr &meExpr, BaseNode &mirNode, bool atParm, 
 MeExpr *IRMapBuild::BuildAddrofMeExpr(const BaseNode &mirNode) const {
   auto &addrofNode = static_cast<const AddrofSSANode&>(mirNode);
   auto meExpr = new AddrofMeExpr(kInvalidExprID, addrofNode.GetPrimType(),
-                                 addrofNode.GetSSAVar()->GetOrigSt()->GetIndex());
+                                 addrofNode.GetSSAVar()->GetOst()->GetIndex());
   meExpr->SetFieldID(addrofNode.GetFieldID());
   return meExpr;
 }
@@ -296,8 +296,8 @@ MeExpr *IRMapBuild::BuildExpr(BaseNode &mirNode, bool atParm, bool noProp) {
     auto &addrOfNode = static_cast<AddrofSSANode&>(mirNode);
     VersionSt *vst = addrOfNode.GetSSAVar();
     VarMeExpr *varMeExpr = GetOrCreateVarFromVerSt(*vst);
-    ASSERT(!vst->GetOrigSt()->IsPregOst(), "not expect preg symbol here");
-    varMeExpr->SetPtyp(GlobalTables::GetTypeTable().GetTypeFromTyIdx(vst->GetOrigSt()->GetTyIdx())->GetPrimType());
+    ASSERT(!vst->GetOst()->IsPregOst(), "not expect preg symbol here");
+    varMeExpr->SetPtyp(GlobalTables::GetTypeTable().GetTypeFromTyIdx(vst->GetOst()->GetTyIdx())->GetPrimType());
     varMeExpr->GetOst()->SetFieldID(addrOfNode.GetFieldID());
     MeExpr *retmeexpr;
     if (propagater && !noProp) {
@@ -347,7 +347,7 @@ MeExpr *IRMapBuild::BuildExpr(BaseNode &mirNode, bool atParm, bool noProp) {
     if (verSt != nullptr) {
       VarMeExpr *varMeExpr = GetOrCreateVarFromVerSt(*verSt);
       ivarMeExpr->SetMuVal(varMeExpr);
-      if (verSt->GetOrigSt()->IsVolatile()) {
+      if (verSt->GetOst()->IsVolatile()) {
         ivarMeExpr->SetVolatileFromBaseSymbol(true);
       }
     }
@@ -537,7 +537,7 @@ MeStmt *IRMapBuild::BuildIassignMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart) 
   if (mirModule.IsCModule()) {
     bool isVolt = false;
     for (MayDefNode maydef : ssaPart.GetMayDefNodes()) {
-      const OriginalSt *ost = maydef.GetResult()->GetOrigSt();
+      const OriginalSt *ost = maydef.GetResult()->GetOst();
       if (ost->IsVolatile()) {
         isVolt = true;
         break;

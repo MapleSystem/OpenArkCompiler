@@ -14,31 +14,28 @@
  */
 #ifndef MAPLE_ME_INCLUDE_ME_SSA_H
 #define MAPLE_ME_INCLUDE_ME_SSA_H
-#include <iostream>
 #include "mir_module.h"
 #include "mir_nodes.h"
+#include "me_function.h"
 #include "me_phase.h"
 #include "ssa.h"
-#include "bb.h"
 #include "dominance.h"
 
 namespace maple {
 class MeSSA : public SSA, public AnalysisResult {
  public:
-  MeSSA(MeFunction &func, Dominance &dom, MemPool &memPool, bool enabledDebug);
+  MeSSA(MeFunction &func, SSATab *stab, Dominance &dom, MemPool &memPool) :
+    SSA(memPool, *stab, func.GetAllBBs(), &dom), AnalysisResult(&memPool), func(&func), dom(&dom) {}
+
   ~MeSSA() = default;
 
-  void BuildSSA();
   void VerifySSA() const;
+  void InsertPhiNode();
 
  private:
   void VerifySSAOpnd(const BaseNode &node) const;
-  void CollectDefBBs(std::map<OStIdx, std::set<BBId>> &ostDefBBs);
-  void InsertPhiNode();
-  void RenameBB(BB&);
   MeFunction *func;
   Dominance *dom;
-  bool enabledDebug;
 };
 
 class MeDoSSA : public MeFuncPhase {
