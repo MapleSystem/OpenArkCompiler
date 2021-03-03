@@ -15,6 +15,7 @@
 #include "me_cond_based_rc.h"
 #include "me_cond_based_npc.h"
 #include "me_const.h"
+#include "dominance.h"
 
 // We do two types of condition based optimization here:
 // 1. condition based null pointer check(NPC) elimination

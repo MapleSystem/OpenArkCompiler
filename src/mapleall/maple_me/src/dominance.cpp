@@ -139,6 +139,34 @@ void Dominance::ComputeDomChildren() {
   }
 }
 
+// bbidMarker indicates that the iterDomFrontier results for bbid < bbidMarker
+// have been computed
+void Dominance::GetIterDomFrontier(BB *bb, MapleSet<BBId> *dfset, BBId bbidMarker, std::vector<bool> &visitedMap) {
+  if (visitedMap[bb->GetBBId()]) {
+    return;
+  }
+  visitedMap[bb->GetBBId()] = true;
+  for (BBId frontierbbid : domFrontier[bb->GetBBId()]) {
+    dfset->insert(frontierbbid);
+    if (frontierbbid < bbidMarker) {  // union with its computed result
+      dfset->insert(iterDomFrontier[frontierbbid].begin(), iterDomFrontier[frontierbbid].end());
+    } else {  // recursive call
+      BB *frontierbb = bbVec[frontierbbid];
+      GetIterDomFrontier(frontierbb, dfset, bbidMarker, visitedMap);
+    }
+  }
+}
+
+void Dominance::ComputeIterDomFrontiers() {
+  for (BB *bb : bbVec) {
+    if (bb == nullptr || bb == &commonExitBB) {
+      continue;
+    }
+    std::vector<bool> visitedMap(bbVec.size(), false);
+    GetIterDomFrontier(bb, &iterDomFrontier[bb->GetBBId()], bb->GetBBId(), visitedMap);
+  }
+}
+
 void Dominance::ComputeDtPreorder(const BB &bb, size_t &num) {
   CHECK_FATAL(num < dtPreOrder.size(), "index out of range in Dominance::ComputeDtPreorder");
   dtPreOrder[num++] = bb.GetBBId();
@@ -293,6 +321,34 @@ void Dominance::ComputePdomChildren() {
   }
 }
 
+// bbidMarker indicates that the iterPdomFrontier results for bbid < bbidMarker
+// have been computed
+void Dominance::GetIterPdomFrontier(BB *bb, MapleSet<BBId> *dfset, BBId bbidMarker, std::vector<bool> &visitedMap) {
+  if (visitedMap[bb->GetBBId()]) {
+    return;
+  }
+  visitedMap[bb->GetBBId()] = true;
+  for (BBId frontierbbid : pdomFrontier[bb->GetBBId()]) {
+    dfset->insert(frontierbbid);
+    if (frontierbbid < bbidMarker) {  // union with its computed result
+      dfset->insert(iterPdomFrontier[frontierbbid].begin(), iterPdomFrontier[frontierbbid].end());
+    } else {  // recursive call
+      BB *frontierbb = bbVec[frontierbbid];
+      GetIterPdomFrontier(frontierbb, dfset, bbidMarker, visitedMap);
+    }
+  }
+}
+
+void Dominance::ComputeIterPdomFrontiers() {
+  for (BB *bb : bbVec) {
+    if (bb == nullptr || bb == &commonEntryBB) {
+      continue;
+    }
+    std::vector<bool> visitedMap(bbVec.size(), false);
+    GetIterPdomFrontier(bb, &iterPdomFrontier[bb->GetBBId()], bb->GetBBId(), visitedMap);
+  }
+}
+
 void Dominance::ComputePdtPreorder(const BB &bb, size_t &num) {
   ASSERT(num < pdtPreOrder.size(), "index out of range in Dominance::ComputePdtPreOrder");
   pdtPreOrder[num++] = bb.GetBBId();
@@ -337,6 +393,10 @@ void Dominance::DumpDoms() {
     for (BBId id : domFrontier[bb->GetBBId()]) {
       LogInfo::MapleLogger() << id << " ";
     }
+    LogInfo::MapleLogger() << "] iterDomFrontier: [";
+    for (BBId id : iterDomFrontier[bb->GetBBId()]) {
+      LogInfo::MapleLogger() << id << " ";
+    }
     LogInfo::MapleLogger() << "] domchildren: [";
     for (BBId id : domChildren[bb->GetBBId()]) {
       LogInfo::MapleLogger() << id << " ";
@@ -357,6 +417,10 @@ void Dominance::DumpPdoms() {
     LogInfo::MapleLogger() << " im_pdom is bb:" << pdoms[bb->GetBBId()]->GetBBId();
     LogInfo::MapleLogger() << " pdomfrontier: [";
     for (BBId id : pdomFrontier[bb->GetBBId()]) {
+      LogInfo::MapleLogger() << id << " ";
+    }
+    LogInfo::MapleLogger() << "] iterPdomFrontier: [";
+    for (BBId id : iterPdomFrontier[bb->GetBBId()]) {
       LogInfo::MapleLogger() << id << " ";
     }
     LogInfo::MapleLogger() << "] pdomchildren: [";
