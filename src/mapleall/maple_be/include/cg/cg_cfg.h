@@ -106,6 +106,7 @@ class CGCFG {
   Insn *FindLastCondBrInsn(BB &bb) const;
   static void FindAndMarkUnreachable(CGFunc &func);
   void FlushUnReachableStatusAndRemoveRelations(BB &curBB, const CGFunc &func) const;
+  void MarkLabelTakenBB();
   void UnreachCodeAnalysis();
   BB *FindLastRetBB();
  /* cgcfgvisitor */
