@@ -87,6 +87,9 @@ VarMeExpr *IRMap::CreateNewGlobalTmp(GStrIdx strIdx, PrimType pType) {
       mirModule.GetMIRBuilder()->CreateSymbol((TyIdx)pType, strIdx, kStVar, kScGlobal, nullptr, kScopeGlobal);
   st->SetIsTmp(true);
   OriginalSt *oSt = ssaTab.CreateSymbolOriginalSt(*st, 0, 0);
+  oSt->SetZeroVersionIndex(vst2MeExprTable.size());
+  vst2MeExprTable.push_back(nullptr);
+  oSt->PushbackVersionsIndices(oSt->GetZeroVersionIndex());
   auto *varx = New<VarMeExpr>(exprID++, oSt, oSt->GetZeroVersionIndex(), pType);
   return varx;
 }
@@ -98,7 +101,7 @@ VarMeExpr *IRMap::CreateNewLocalRefVarTmp(GStrIdx strIdx, TyIdx tIdx) {
   OriginalSt *oSt = ssaTab.CreateSymbolOriginalSt(*st, mirModule.CurFunction()->GetPuidx(), 0);
   oSt->SetZeroVersionIndex(vst2MeExprTable.size());
   vst2MeExprTable.push_back(nullptr);
-  oSt->PushbackVersionIndex(oSt->GetZeroVersionIndex());
+  oSt->PushbackVersionsIndices(oSt->GetZeroVersionIndex());
   auto *newLocalRefVar = New<VarMeExpr>(exprID++, oSt, vst2MeExprTable.size(), PTY_ref);
   vst2MeExprTable.push_back(newLocalRefVar);
   return newLocalRefVar;
@@ -553,6 +556,12 @@ IntrinsiccallMeStmt *IRMap::CreateIntrinsicCallAssignedMeStmt(MIRIntrinsicID idx
 
 MeExpr *IRMap::CreateAddrofMeExprFromSymbol(MIRSymbol &st, PUIdx puIdx) {
   OriginalSt *baseOst = ssaTab.FindOrCreateSymbolOriginalSt(st, puIdx, 0);
+  if (baseOst->GetZeroVersionIndex() == 0) {
+    baseOst->SetZeroVersionIndex(vst2MeExprTable.size());
+    vst2MeExprTable.push_back(nullptr);
+    baseOst->PushbackVersionsIndices(baseOst->GetZeroVersionIndex());
+  }
+
   AddrofMeExpr addrOfMe(kInvalidExprID, PTY_ptr, baseOst->GetIndex());
   return HashMeExpr(addrOfMe);
 }

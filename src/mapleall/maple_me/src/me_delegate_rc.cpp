@@ -308,7 +308,7 @@ RegMeExpr *DelegateRC::RHSTempDelegated(MeExpr &rhs, const MeStmt &useStmt) {
     return nullptr;
   }
   // The index number in originalStVector is bigger than two.
-  if ((func.GetHints() & kPlacementRCed) && ssaTab.GetVersionsIndexSize(ost->GetIndex()) > 2) {
+  if ((func.GetHints() & kPlacementRCed) && ssaTab.GetVersionsIndicesSize(ost->GetIndex()) > 2) {
     return nullptr;
   }
   if (rhsVar.GetDefBy() == kDefByMustDef) {

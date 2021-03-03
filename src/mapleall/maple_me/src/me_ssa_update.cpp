@@ -20,29 +20,16 @@
 // If some assignments have been deleted, the current implementation does not
 // delete useless phi's, and these useless phi's may end up hving identical
 // phi operands.
+
 namespace maple {
-// accumulate the BBs that are in the iterated dominance frontiers of bb in
-// the set dfSet, visiting each BB only once
-void MeSSAUpdate::GetIterDomFrontier(const BB &bb, MapleSet<BBId> &dfSet, std::vector<bool> &visitedMap) const {
-  CHECK_FATAL(bb.GetBBId() < visitedMap.size(), "index out of range in MeSSAUpdate::GetIterDomFrontier");
-  if (visitedMap[bb.GetBBId()]) {
-    return;
-  }
-  visitedMap[bb.GetBBId()] = true;
-  for (auto frontierBBId : dom.GetDomFrontier(bb.GetBBId())) {
-    dfSet.insert(frontierBBId);
-    BB *frontierBB = func.GetBBFromID(frontierBBId);
-    GetIterDomFrontier(*frontierBB, dfSet, visitedMap);
-  }
-}
 
 void MeSSAUpdate::InsertPhis() {
+  MapleMap<OStIdx, MapleSet<BBId> *>::iterator it = updateCands.begin();
   MapleSet<BBId> dfSet(ssaUpdateAlloc.Adapter());
-  for (auto it = updateCands.begin(); it != updateCands.end(); ++it) {
-    std::vector<bool> visitedMap(func.GetAllBBs().size(), false);
+  for (; it != updateCands.end(); ++it) {
     dfSet.clear();
     for (const auto &bbId : *it->second) {
-      GetIterDomFrontier(*func.GetBBFromID(bbId), dfSet, visitedMap);
+      dfSet.insert(dom.iterDomFrontier[bbId].begin(), dom.iterDomFrontier[bbId].end());
     }
     for (const auto &bbId : dfSet) {
       // insert a phi node

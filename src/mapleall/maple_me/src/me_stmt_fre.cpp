@@ -12,6 +12,7 @@
  * FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+#include "me_option.h"
 #include "me_stmt_pre.h"
 
 namespace maple {
