@@ -51,7 +51,7 @@ class MIRConst {
   }
 
   void SetFieldID(uint32 fieldIdx) {
-    DoSetFieldID(fieldIdx);
+    fieldID = fieldIdx;
   }
 
   virtual bool IsZero() const {
@@ -87,13 +87,13 @@ class MIRConst {
     return type;
   }
 
+  void SetType(MIRType &t) {
+    type = t;
+  }
+
  private:
   MIRType &type;
   MIRConstKind kind;
-  virtual void DoSetFieldID(uint32 fieldIdx) {
-    CHECK_FATAL(kind != kConstInt, "must be");
-    fieldID = fieldIdx;
-  }
 
  protected:
   uint32 fieldID;
@@ -159,10 +159,6 @@ class MIRIntConst : public MIRConst {
 
  private:
   int64 value;
-  void DoSetFieldID(uint32 fieldIdx) override {
-    CHECK_FATAL(false, "Can't Use This Interface in This Object");
-    (void)fieldIdx;
-  }
 };
 
 class MIRAddrofConst : public MIRConst {
