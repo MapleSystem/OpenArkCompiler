@@ -1750,7 +1750,7 @@ class CppCatchNode : public StmtNode {
   TyIdx exceptionTyIdx;
 };
 
-using CasePair = std::pair<int32, LabelIdx>;
+using CasePair = std::pair<int64, LabelIdx>;
 using CaseVector = MapleVector<CasePair>;
 class SwitchNode : public StmtNode {
  public:

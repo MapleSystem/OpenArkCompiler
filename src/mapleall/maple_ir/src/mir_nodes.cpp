@@ -1346,50 +1346,11 @@ inline MIRTypeKind GetPointedTypeKind(TyIdx tyIdx) {
   return pointedType->GetKind();
 }
 
-bool GetFieldType(MIRSrcLang srcLang, const MIRStructType *structType, FieldID targetFid, TyIdx &tyIdx) {
-  if (structType == nullptr) {
-    return false;
-  }
-  // For Java module class, find targetFid in inheritance chain firstly
-  if (srcLang == kSrcLangJava || srcLang == kSrcLangDex || srcLang == kSrcLangJbc) {
-    if (structType->GetKind() == kTypeClass || structType->GetKind() == kTypeClassIncomplete) {
-      const auto *classType = static_cast<const MIRClassType*>(structType);
-      std::stack<MIRStructType*> inheritChain;
-      TyIdx parentTyIdx = classType->GetParentTyIdx();
-      while (parentTyIdx > 0u) {
-        auto *parentType = static_cast<MIRStructType*>(GlobalTables::GetTypeTable().GetTypeFromTyIdx(parentTyIdx));
-        inheritChain.push(parentType);
-        parentTyIdx = static_cast<MIRClassType*>(parentType)->GetParentTyIdx();
-      }
-      targetFid -= inheritChain.size();
-      while (!inheritChain.empty()) {
-        auto *curClassType = static_cast<MIRClassType*>(inheritChain.top());
-        if (static_cast<uint32>(targetFid) > 0 && static_cast<uint32>(targetFid) <= curClassType->GetFieldsSize()) {
-          tyIdx = curClassType->GetFieldsElemt(targetFid - 1).second.first;
-          return true;
-        } else {
-          targetFid -= curClassType->GetFieldsSize();
-        }
-        inheritChain.pop();
-      }
-      if (static_cast<uint32>(targetFid) > 0 && static_cast<uint32>(targetFid) <= classType->GetFieldsSize()) {
-        tyIdx = classType->GetFieldsElemt(targetFid - 1).second.first;
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-MIRTypeKind GetFieldTypeKind(const MIRStructType *structType, FieldID fieldId) {
+MIRTypeKind GetFieldTypeKind(MIRStructType *structType, FieldID fieldId) {
   TyIdx fieldTyIdx;
   if (fieldId > 0) {
-    bool isValid = GetFieldType(theMIRModule->GetSrcLang(), structType, fieldId, fieldTyIdx);
-    // when mpl does not have complete class info
-    if (!isValid) {
-      LogInfo::MapleLogger() << "\n#Error:field not found, must have complete class info\n";
-      return kTypeInvalid;
-    }
+    MIRType *mirType = structType->GetFieldType(fieldId);
+    fieldTyIdx = mirType->GetTypeIndex();
   } else {
     ASSERT(static_cast<unsigned>(-fieldId) < structType->GetParentFieldsSize() + 1, "array index out of range");
     fieldTyIdx = structType->GetParentFieldsElemt(-fieldId - 1).second.first;
