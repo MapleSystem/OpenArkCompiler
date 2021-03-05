@@ -289,7 +289,7 @@ TokenKind MIRLexer::GetFloatConst(uint32 valStart, uint32 startIdx, bool negativ
       theFloatVal = -theFloatVal;
     }
     theIntVal = static_cast<int>(theFloatVal);
-    theDoubleVal = static_cast<double>(theDoubleVal);
+    theDoubleVal = static_cast<double>(theFloatVal);
     if (negative && fabs(theFloatVal) <= 1e-6) {
       theDoubleVal = -theDoubleVal;
     }
