@@ -287,7 +287,7 @@ void AnalyzeRC::RenameUses(MeStmt &meStmt) {
 }
 
 DassignMeStmt *AnalyzeRC::CreateDassignInit(OriginalSt &ost, BB &bb) {
-  VarMeExpr *lhs = irMap.CreateNewVarMeExpr(&ost, PTY_ref);
+  VarMeExpr *lhs = irMap.CreateVarMeExprVersion(&ost);
   MeExpr *rhs = irMap.CreateIntConstMeExpr(0, PTY_ref);
   return irMap.CreateDassignMeStmt(utils::ToRef(lhs), utils::ToRef(rhs), bb);
 }

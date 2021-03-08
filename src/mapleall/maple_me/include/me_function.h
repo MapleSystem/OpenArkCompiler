@@ -25,7 +25,6 @@
 #include "ssa_tab.h"
 #include "func_emit.h"
 #include "me_ir.h"
-#include "me_ssa.h"
 #include "profile.h"
 
 namespace maple {

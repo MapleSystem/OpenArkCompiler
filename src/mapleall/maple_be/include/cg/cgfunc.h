@@ -110,7 +110,7 @@ class CGFunc {
   }
 
   bool HasVLAOrAlloca() const {
-    return false;
+    return hasVLAOrAlloca;
   }
 
   void SetRD(ReachingDefinition *paramRd) {
@@ -133,6 +133,7 @@ class CGFunc {
 
   void GenerateInstruction();
   bool MemBarOpt(StmtNode &membar);
+  void UpdateCallBBFrequency();
   void HandleFunction();
   void ProcessExitBBVec();
   virtual void MergeReturn() = 0;
@@ -736,6 +737,12 @@ class CGFunc {
     return newBB;
   }
 
+  void UpdateFrequency(StmtNode &stmt) {
+    bool withFreqInfo = func.HasFreqMap() && !func.GetFreqMap().empty();
+    if (withFreqInfo && (func.GetFreqMap().find(stmt.GetStmtID()) != func.GetFreqMap().end())) {
+      frequency = func.GetFreqMap().at(stmt.GetStmtID());
+    }
+  }
 
   BB *StartNewBBImpl(bool stmtIsCurBBLastStmt, StmtNode &stmt) {
     BB *newBB = CreateNewBB();
@@ -801,6 +808,14 @@ class CGFunc {
     return lSymSize;
   }
 
+  bool HasTakenLabel() const{
+    return hasTakenLabel;
+  }
+
+  void SetHasTakenLabel() {
+    hasTakenLabel = true;
+  }
+
   virtual InsnVisitor *NewInsnModifier() = 0;
 
  protected:
@@ -822,11 +837,13 @@ class CGFunc {
   int32 totalInsns = 0;
   int32 structCopySize;
   int32 maxParamStackSize;
+  bool hasVLAOrAlloca;
   bool hasProEpilogue = false;
   bool isVolLoad = false;
   bool isVolStore = false;
   bool isAfterRegAlloc = false;
   bool isAggParamInReg = false;
+  bool hasTakenLabel = false;
   uint32 frequency = 0;
   DebugInfo *debugInfo = nullptr;  /* debugging info */
   RegOperand *aggParamReg = nullptr;

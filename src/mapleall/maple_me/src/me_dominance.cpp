@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -30,14 +30,17 @@ AnalysisResult *MeDoDominance::Run(MeFunction *func, MeFuncResultMgr*, ModuleRes
   dom->ComputeDominance();
   dom->ComputeDomFrontiers();
   dom->ComputeDomChildren();
+  dom->ComputeIterDomFrontiers();
   size_t num = 0;
   dom->ComputeDtPreorder(*func->GetCommonEntryBB(), num);
   dom->GetDtPreOrder().resize(num);
   dom->ComputeDtDfn();
+
   dom->PdomGenPostOrderID();
   dom->ComputePostDominance();
   dom->ComputePdomFrontiers();
   dom->ComputePdomChildren();
+  dom->ComputeIterPdomFrontiers();
   num = 0;
   dom->ComputePdtPreorder(*func->GetCommonExitBB(), num);
   dom->ResizePdtPreOrder(num);

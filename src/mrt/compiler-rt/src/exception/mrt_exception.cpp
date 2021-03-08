@@ -74,59 +74,74 @@ static void ValidateThrowableException(const MrtClass ex) {
   CHECK(throwable) << "should not throw a nonthrowable object" << maple::endl;
 }
 
+enum ExceptionType : uint8_t {
+  kErrno = 0,
+  kMesgAndCause,
+  kMesg,
+  kCause,
+  kNull
+};
+
+static MrtClass NewExceptionImpl(const MClass *exCls, const char *kMsg, const MrtClass cause,
+                                 const char *sig, const ExceptionType type) {
+  MObject *newex = nullptr;
+  MethodMeta *exceptionConstruct = exCls->GetDeclaredConstructor(sig);
+  CHECK(exceptionConstruct != nullptr) << "failed to find constructor " << sig << maple::endl;
+  switch (type) {
+    case ExceptionType::kErrno : {
+      ObjHandle<MString> jmsg(NewStringUTF(kMsg, strlen(kMsg)));
+      CHECK(jmsg() != 0) << "failed to create jstring object for exception message" << maple::endl;
+      if (exceptionConstruct == nullptr || jmsg() == 0) { EHLOG(FATAL) << "ex msg : " << kMsg << maple::endl; }
+      newex = MObject::NewObject(*exCls, exceptionConstruct, jmsg.AsRaw(), 0);
+      break;
+    }
+    case ExceptionType::kMesgAndCause : {
+      ObjHandle<MString> jmsg(NewStringUTF(kMsg, strlen(kMsg)));
+      CHECK(jmsg() != 0) << "failed to create jstring object for exception message" << maple::endl;
+      if (exceptionConstruct == nullptr || jmsg() == 0) { EHLOG(FATAL) << "ex msg : " << kMsg << maple::endl; }
+      newex = MObject::NewObject(*exCls, exceptionConstruct, jmsg.AsRaw(), cause);
+      break;
+    }
+    case ExceptionType::kMesg : {
+      ObjHandle<MString> jmsg(NewStringUTF(kMsg, strlen(kMsg)));
+      CHECK(jmsg() != 0) << "failed to create jstring object for exception message" << maple::endl;
+      if (exceptionConstruct == nullptr || jmsg() == 0) { EHLOG(FATAL) << "ex msg : " << kMsg << maple::endl; }
+      newex = MObject::NewObject(*exCls, exceptionConstruct, jmsg.AsRaw());
+      break;
+    }
+    case ExceptionType::kCause :
+      newex = MObject::NewObject(*exCls, exceptionConstruct, cause);
+      break;
+    default :
+      newex = MObject::NewObject(*exCls, exceptionConstruct);
+      break;
+  }
+  if (newex == nullptr) {
+    EHLOG(ERROR) << "new exception object is nullptr" << maple::endl;
+  }
+  return reinterpret_cast<MrtClass>(newex);
+}
+
 static MrtClass NewException(MrtClass classType, const char *kMsg = "unknown reason", MrtClass cause = nullptr) {
   CHECK(classType != nullptr) << "invalid exception class type: null" << maple::endl;
   if (classType == nullptr) {
     return nullptr;
   }
-
   MClass *exceptioncls = reinterpret_cast<MClass*>(classType);
-  MObject *newex = nullptr;
-
   ScopedHandles sHandles;
+  if (!strcmp(exceptioncls->GetName(), "Landroid/system/ErrnoException;")) {
+    return NewExceptionImpl(exceptioncls, kMsg, cause, "(Ljava/lang/String;I)V", ExceptionType::kErrno);
+  }
   if (kMsg != nullptr && cause != nullptr) {
-    MethodMeta *exceptionConstruct = exceptioncls->GetDeclaredConstructor(
-        "(Ljava/lang/String;Ljava/lang/Throwable;)V");
-    CHECK(exceptionConstruct != nullptr) << "failed to find constructor (Ljava/lang/String;Ljava/lang/Throwable;)V" <<
-        maple::endl;
-
-    ObjHandle<MString> jmsg(NewStringUTF(kMsg, strlen(kMsg)));
-    CHECK(jmsg() != 0) << "failed to create jstring object for exception message" << maple::endl;
-
-    if (exceptionConstruct == nullptr || jmsg() == 0) {
-      EHLOG(FATAL) << "ex msg : " << kMsg << maple::endl;
-    }
-    newex = MObject::NewObject(*exceptioncls, exceptionConstruct, jmsg.AsRaw(), cause);
+    return NewExceptionImpl(exceptioncls, kMsg, cause,
+                            "(Ljava/lang/String;Ljava/lang/Throwable;)V", ExceptionType::kMesgAndCause);
   } else if (kMsg != nullptr && cause == nullptr) {
-    MethodMeta *exceptionConstruct = exceptioncls->GetDeclaredConstructor("(Ljava/lang/String;)V");
-    CHECK(exceptionConstruct != nullptr) << "failed to find constructor (Ljava/lang/String;)V" << maple::endl;
-
-    ObjHandle<MString> jmsg(NewStringUTF(kMsg, strlen(kMsg)));
-    CHECK(jmsg() != 0) << "failed to create jstring object for exception message" << maple::endl;
-
-    if (exceptionConstruct == nullptr || jmsg() == 0) {
-      EHLOG(FATAL) << "ex msg : " << kMsg << maple::endl;
-    }
-    newex = MObject::NewObject(*exceptioncls, exceptionConstruct, jmsg.AsRaw());
+    return NewExceptionImpl(exceptioncls, kMsg, cause, "(Ljava/lang/String;)V", ExceptionType::kMesg);
   } else if (kMsg == nullptr && cause != nullptr) {
-    MethodMeta *exceptionConstruct = exceptioncls->GetDeclaredConstructor("(Ljava/lang/Throwable;)V");
-    if (exceptionConstruct == nullptr) {
-      EHLOG(FATAL) << "failed to find constructor (Ljava/lang/Throwable;)V" << maple::endl;
-    }
-    newex = MObject::NewObject(*exceptioncls, exceptionConstruct, cause);
+    return NewExceptionImpl(exceptioncls, nullptr, cause, "(Ljava/lang/Throwable;)V", ExceptionType::kCause);
   } else {
-    MethodMeta *exceptionConstruct = exceptioncls->GetDeclaredConstructor("()V");
-    if (exceptionConstruct == nullptr) {
-      EHLOG(FATAL) << "failed to find constructor ()V" << maple::endl;
-    }
-    newex = MObject::NewObject(*exceptioncls, exceptionConstruct);
+    return NewExceptionImpl(exceptioncls, nullptr, cause, "()V", ExceptionType::kNull);
   }
-
-  // this function shoule never returns null.
-  if (newex == nullptr) {
-    EHLOG(ERROR) << "new exception object is nullptr" << maple::endl;
-  }
-  return reinterpret_cast<MrtClass>(newex);
 }
 
 extern "C" void MRT_DumpException(jthrowable exObj, std::string *exceptionStack) {
