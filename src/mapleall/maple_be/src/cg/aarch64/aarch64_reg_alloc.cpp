@@ -13,6 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "aarch64_reg_alloc.h"
+#include "aarch64_lsra.h"
 #include "aarch64_color_ra.h"
 #include "aarch64_cg.h"
 #include "aarch64_live.h"
@@ -666,7 +667,9 @@ AnalysisResult *CgDoRegAlloc::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultM
   if (Globals::GetInstance()->GetOptimLevel() == 0) {
     regAllocator = phaseMp->New<DefaultO0RegAllocator>(*cgFunc, *phaseMp);
   } else {
-    if (cgFunc->GetCG()->GetCGOptions().DoColoringBasedRegisterAllocation()) {
+    if (cgFunc->GetCG()->GetCGOptions().DoLinearScanRegisterAllocation()) {
+      regAllocator = phaseMp->New<LSRALinearScanRegAllocator>(*cgFunc, *phaseMp);
+    } else if (cgFunc->GetCG()->GetCGOptions().DoColoringBasedRegisterAllocation()) {
       regAllocator = phaseMp->New<GraphColorRegAllocator>(*cgFunc, *phaseMp);
     } else {
       maple::LogInfo::MapleLogger(kLlErr) << "Warning: We only support Linear Scan and GraphColor register allocation\n";

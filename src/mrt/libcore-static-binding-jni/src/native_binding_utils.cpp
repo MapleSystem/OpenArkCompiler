@@ -101,7 +101,7 @@ void *MCC_FindNativeMethodPtr(uintptr_t **regFuncTabAddr) {
   if (nativeMethodPtr == nullptr) {
     nativeMethodPtr = reinterpret_cast<void*>(&MCC_DummyNativeMethodPtr);
   }
-#elif defined(__OPENJDK__)
+#else
   // Currently we're reusing native registration functions, which will
   // trigger exceptions for openjdk core library. disable exception during registration.
   maple::IThread *tSelf = maple::IThread::Current();
@@ -110,7 +110,7 @@ void *MCC_FindNativeMethodPtr(uintptr_t **regFuncTabAddr) {
   if (nativeMethodPtr == nullptr) {
     nativeMethodPtr = reinterpret_cast<void*>(&MCC_DummyNativeMethodPtr);
   }
-#endif //__ANDROID__ || __OPENJDK__
+#endif //__ANDROID__
   return (jobject) nativeMethodPtr;
 }
 
@@ -118,14 +118,12 @@ void *MCC_FindNativeMethodPtrWithoutException(uintptr_t **regFuncTabAddr) {
   VLOG(jni) << "[NOTE] : MCC_FindNativeMethodPtrWithoutException is invoked by function address at " <<
       reinterpret_cast<uintptr_t>(regFuncTabAddr)  << maple::endl;
   void *nativeMethodPtr = reinterpret_cast<void*>(&MCC_DummyNativeMethodPtr);
-#if defined(__ANDROID__) || defined(__OPENJDK__)
   maple::IThread *tSelf = maple::IThread::Current();
   JNIEnv *env = tSelf->GetJniEnv();
   nativeMethodPtr = tSelf->FindNativeMethodPtr(env, regFuncTabAddr, false);
   if (nativeMethodPtr == nullptr) {
     nativeMethodPtr = reinterpret_cast<void*>(&MCC_DummyNativeMethodPtr);
   }
-#endif //__ANDROID__ || __OPENJDK__
   return static_cast<jobject>(nativeMethodPtr);
 }
 

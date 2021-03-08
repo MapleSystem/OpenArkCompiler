@@ -5688,6 +5688,14 @@ void AArch64CGFunc::SelectCall(CallNode &callNode) {
     AArch64RegOperand &extraOpnd = GetOrCreatePhysicalRegisterOperand(R9, kSizeOfPtr * kBitsPerByte, kRegTyInt);
     srcOpnds->PushOpnd(extraOpnd);
   }
+  const std::string &funcName = fsym->GetName();
+  if (Globals::GetInstance()->GetOptimLevel() >= CGOptions::kLevel2 &&
+      funcName == "Ljava_2Flang_2FString_3B_7CindexOf_7C_28Ljava_2Flang_2FString_3B_29I") {
+    GStrIdx strIdx = GlobalTables::GetStrTable().GetStrIdxFromName(funcName);
+    MIRSymbol *st = GlobalTables::GetGsymTable().GetSymbolFromStrIdx(strIdx, true);
+    IntrinsifyStringIndexOf(*srcOpnds, *st);
+    return;
+  }
   Insn &callInsn = AppendCall(*fsym, *srcOpnds);
   GetCurBB()->SetHasCall();
   if (retType != nullptr) {
