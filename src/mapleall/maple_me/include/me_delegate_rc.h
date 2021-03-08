@@ -27,11 +27,11 @@ class DelegateRC {
         ssaTab(*func.GetMeSSATab()),
         dominance(dom),
         delegateRCAllocator(memPool),
-        verStCantDelegate(irMap.GetVerst2MeExprTableSize(), false, delegateRCAllocator.Adapter()),
-        verStUseCounts(irMap.GetVerst2MeExprTableSize(), 0, delegateRCAllocator.Adapter()),
+        verStCantDelegate(irMap.GetVerst2MeExprTable().size(), false, delegateRCAllocator.Adapter()),
+        verStUseCounts(irMap.GetVerst2MeExprTable().size(), 0, delegateRCAllocator.Adapter()),
         refVar2RegMap(delegateRCAllocator.Adapter()),
-        verStDerefedCopied(irMap.GetVerst2MeExprTableSize(), false, delegateRCAllocator.Adapter()),
-        verStCantDecrefEarly(irMap.GetVerst2MeExprTableSize(), false, delegateRCAllocator.Adapter()),
+        verStDerefedCopied(irMap.GetVerst2MeExprTable().size(), false, delegateRCAllocator.Adapter()),
+        verStCantDecrefEarly(irMap.GetVerst2MeExprTable().size(), false, delegateRCAllocator.Adapter()),
         enabledDebug(enabledDebug) {}
 
   virtual ~DelegateRC() = default;
