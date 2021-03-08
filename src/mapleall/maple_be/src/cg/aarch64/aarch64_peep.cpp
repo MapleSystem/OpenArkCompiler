@@ -185,6 +185,7 @@ void AArch64PrePeepHole::InitOpts() {
   optimizations[kReplaceCmpToCmnOpt] = optOwnMemPool->New<ReplaceCmpToCmnAArch64>(cgFunc);
   optimizations[kRemoveIncRefOpt] = optOwnMemPool->New<RemoveIncRefAArch64>(cgFunc);
   optimizations[kLongIntCompareWithZOpt] = optOwnMemPool->New<LongIntCompareWithZAArch64>(cgFunc);
+  optimizations[kComplexMemOperandOpt] = optOwnMemPool->New<ComplexMemOperandAArch64>(cgFunc);
   optimizations[kComplexMemOperandPreOptAdd] = optOwnMemPool->New<ComplexMemOperandPreAddAArch64>(cgFunc);
   optimizations[kComplexMemOperandOptLSL] = optOwnMemPool->New<ComplexMemOperandLSLAArch64>(cgFunc);
   optimizations[kComplexMemOperandOptLabel] = optOwnMemPool->New<ComplexMemOperandLabelAArch64>(cgFunc);
@@ -219,6 +220,10 @@ void AArch64PrePeepHole::Run(BB &bb, Insn &insn) {
     }
     case MOP_xcmpri: {
       (static_cast<LongIntCompareWithZAArch64*>(optimizations[kLongIntCompareWithZOpt]))->Run(bb, insn);
+      break;
+    }
+    case MOP_xadrpl12: {
+      (static_cast<ComplexMemOperandAArch64*>(optimizations[kComplexMemOperandOpt]))->Run(bb, insn);
       break;
     }
     case MOP_xaddrrr: {

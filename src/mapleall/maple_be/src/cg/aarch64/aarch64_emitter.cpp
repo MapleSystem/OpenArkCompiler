@@ -18,6 +18,22 @@
 
 namespace {
 using namespace maple;
+const std::unordered_set<std::string> kJniNativeFuncList = {
+  "Landroid_2Fos_2FParcel_3B_7CnativeWriteString_7C_28JLjava_2Flang_2FString_3B_29V_native",
+  "Landroid_2Fos_2FParcel_3B_7CnativeReadString_7C_28J_29Ljava_2Flang_2FString_3B_native",
+  "Landroid_2Fos_2FParcel_3B_7CnativeWriteInt_7C_28JI_29V_native",
+  "Landroid_2Fos_2FParcel_3B_7CnativeReadInt_7C_28J_29I_native",
+  "Landroid_2Fos_2FParcel_3B_7CnativeWriteInterfaceToken_7C_28JLjava_2Flang_2FString_3B_29V_native",
+  "Landroid_2Fos_2FParcel_3B_7CnativeEnforceInterface_7C_28JLjava_2Flang_2FString_3B_29V_native"
+};
+// map func name to <filename, insnCount> pair
+using Func2CodeInsnMap = std::unordered_map<std::string, std::pair<std::string, uint32>>;
+Func2CodeInsnMap func2CodeInsnMap {
+    { "Ljava_2Flang_2FString_3B_7ChashCode_7C_28_29I",
+      { "maple/mrt/codetricks/arch/arm64/hashCode.s", 29 } },
+    { "Ljava_2Flang_2FString_3B_7Cequals_7C_28Ljava_2Flang_2FObject_3B_29Z",
+      { "maple/mrt/codetricks/arch/arm64/stringEquals.s", 50 } }
+};
 constexpr uint32 kQuadInsnCount = 2;
 constexpr uint32 kInsnSize = 4;
 
@@ -317,6 +333,31 @@ void AArch64AsmEmitter::Run(FuncEmitInfo &funcEmitInfo) {
   MIRSymbol *funcSt = GlobalTables::GetGsymTable().GetSymbolFromStidx(cgFunc.GetFunction().GetStIdx().Idx());
   const std::string &funcName = std::string(cgFunc.GetShortFuncName().c_str());
 
+  // manually replace function with optimized assembly language
+  if (CGOptions::IsReplaceASM()) {
+    auto it = func2CodeInsnMap.find(funcSt->GetName());
+    if (it != func2CodeInsnMap.end()) {
+      std::string optFile = it->second.first;
+      struct stat buffer;
+      if (stat(optFile.c_str(), &buffer) == 0) {
+        std::ifstream codetricksFd(optFile);
+        if (!codetricksFd.is_open()) {
+          ERR(kLncErr, " %s open failed!", optFile.c_str());
+          LogInfo::MapleLogger() << "wrong" << '\n';
+        } else {
+          std::string contend;
+          while (getline(codetricksFd, contend)) {
+            emitter.Emit(contend + "\n");
+          }
+        }
+      }
+      emitter.IncreaseJavaInsnCount(it->second.second);
+#ifdef EMIT_INSN_COUNT
+      EmitJavaInsnAddr(funcEmitInfo);
+#endif /* ~EMIT_INSN_COUNT */
+      return;
+    }
+  }
   std::string funcStName = funcSt->GetName();
   if (funcSt->GetFunction()->GetAttr(FUNCATTR_weak)) {
     (void)emitter.Emit("\t.weak\t" + funcStName + "\n");
