@@ -53,7 +53,7 @@ MeExpr *SSAPre::CreateNewCurTemp(const MeExpr &meExpr) {
       auto *varMeExpr = static_cast<const VarMeExpr*>(&meExpr);
       const MIRSymbol *sym = varMeExpr->GetOst()->GetMIRSymbol();
       MIRType *ty = GlobalTables::GetTypeTable().GetTypeFromTyIdx(sym->GetTyIdx());
-      regVar = ty->GetPrimType() == PTY_ref ? irMap->CreateRegRefMeExpr(*ty)
+      regVar = ty->GetPrimType() == PTY_ref ? irMap->CreateRegMeExpr(*ty)
                                             : irMap->CreateRegMeExpr(ty->GetPrimType());
     } else if (meExpr.GetMeOp() == kMeOpIvar) {
       auto *ivarMeExpr = static_cast<const IvarMeExpr*>(&meExpr);
@@ -72,11 +72,11 @@ MeExpr *SSAPre::CreateNewCurTemp(const MeExpr &meExpr) {
                   (ty->GetPrimType() == PTY_ptr && meExpr.GetPrimType() == PTY_ref) ||
                   (ty->GetPrimType() == PTY_ref && meExpr.GetPrimType() == PTY_ptr),
                   "inconsistent type");
-      regVar = (ty->GetPrimType() == PTY_ref) ? (irMap->CreateRegRefMeExpr(*ty))
+      regVar = (ty->GetPrimType() == PTY_ref) ? (irMap->CreateRegMeExpr(*ty))
                                               : (irMap->CreateRegMeExpr(ty->GetPrimType()));
     } else {
       regVar = meExpr.GetPrimType() != PTY_ref ? irMap->CreateRegMeExpr(meExpr.GetPrimType())
-                                                : irMap->CreateRegRefMeExpr(meExpr);
+                                                : irMap->CreateRegMeExpr(meExpr);
     }
     curTemp = regVar;
     if (preKind == kLoadPre) {
@@ -84,7 +84,7 @@ MeExpr *SSAPre::CreateNewCurTemp(const MeExpr &meExpr) {
     }
     return regVar;
   } else {
-    VarMeExpr *tempVar = irMap->CreateNewGlobalTmp(NewTempStrIdx(), meExpr.GetPrimType());
+    VarMeExpr *tempVar = irMap->CreateNewVar(NewTempStrIdx(), meExpr.GetPrimType(), true);
     curTemp = tempVar;
     return tempVar;
   }

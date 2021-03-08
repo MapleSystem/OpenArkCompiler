@@ -12,11 +12,11 @@
  * FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-#include "me_stmt_pre.h"
 #include "utils.h"
 #include "me_dominance.h"
 #include "me_option.h"
 #include "me_ssa_update.h"
+#include "me_stmt_pre.h"
 
 // Note: after the movement of assignments, some phi nodes that used to be dead
 // can become live.  Before we run another round of dead store elimination, we

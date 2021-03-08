@@ -189,6 +189,9 @@ void BB::Dump() const {
   LogInfo::MapleLogger() << "=== BB " << this << " <" << GetKindName();
   if (labIdx) {
     LogInfo::MapleLogger() << "[labeled with " << labIdx << "]";
+    if (labelTaken) {
+      LogInfo::MapleLogger() << " taken";
+    }
   }
   LogInfo::MapleLogger() << "> <" << id << "> ";
   if (isCleanup) {

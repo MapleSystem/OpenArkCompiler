@@ -424,6 +424,10 @@ class ImmOperand : public Operand {
     return value == -1;
   }
 
+  bool IsAllOnes32bit() const {
+    return value == 0x0ffffffffLL;
+  }
+
   bool operator<(const ImmOperand &iOpnd) const {
     return value < iOpnd.value || (value == iOpnd.value && isSigned < iOpnd.isSigned) ||
            (value == iOpnd.value && isSigned == iOpnd.isSigned && size < iOpnd.GetSize());

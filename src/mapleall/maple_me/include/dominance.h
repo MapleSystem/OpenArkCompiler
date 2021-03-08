@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -35,10 +35,12 @@ class Dominance : public AnalysisResult {
         pdoms(domAllocator.Adapter()),
         domFrontier(bbVec.size(), MapleSet<BBId>(domAllocator.Adapter()), domAllocator.Adapter()),
         domChildren(bbVec.size(), MapleSet<BBId>(domAllocator.Adapter()), domAllocator.Adapter()),
+        iterDomFrontier(bbVec.size(), MapleSet<BBId>(domAllocator.Adapter()), domAllocator.Adapter()),
         dtPreOrder(bbVec.size(), BBId(0), domAllocator.Adapter()),
         dtDfn(bbVec.size(), -1, domAllocator.Adapter()),
         pdomFrontier(bbVec.size(), MapleSet<BBId>(domAllocator.Adapter()), domAllocator.Adapter()),
         pdomChildren(bbVec.size(), MapleSet<BBId>(domAllocator.Adapter()), domAllocator.Adapter()),
+        iterPdomFrontier(bbVec.size(), MapleSet<BBId>(domAllocator.Adapter()), domAllocator.Adapter()),
         pdtPreOrder(bbVec.size(), BBId(0), domAllocator.Adapter()),
         pdtDfn(bbVec.size(), -1, domAllocator.Adapter()) {}
 
@@ -48,6 +50,8 @@ class Dominance : public AnalysisResult {
   void ComputeDominance();
   void ComputeDomFrontiers();
   void ComputeDomChildren();
+  void GetIterDomFrontier(const BB *bb, MapleSet<BBId> *dfset, BBId bbidMarker, std::vector<bool> &visitedMap);
+  void ComputeIterDomFrontiers();
   void ComputeDtPreorder(const BB &bb, size_t &num);
   void ComputeDtDfn();
   bool Dominate(const BB &bb1, const BB &bb2);  // true if bb1 dominates bb2
@@ -56,6 +60,8 @@ class Dominance : public AnalysisResult {
   void ComputePostDominance();
   void ComputePdomFrontiers();
   void ComputePdomChildren();
+  void GetIterPdomFrontier(const BB *bb, MapleSet<BBId> *dfset, BBId bbidMarker, std::vector<bool> &visitedMap);
+  void ComputeIterPdomFrontiers();
   void ComputePdtPreorder(const BB &bb, size_t &num);
   void ComputePdtDfn();
   bool PostDominate(const BB &bb1, const BB &bb2);  // true if bb1 postdominates bb2
@@ -211,11 +217,17 @@ class Dominance : public AnalysisResult {
   MapleVector<BB*> pdomReversePostOrder;     // an ordering of the BB in reverse postorder
   MapleUnorderedMap<BBId, BB*> pdoms;        // index is bb id; immediate dominator for each BB
   MapleVector<MapleSet<BBId>> domFrontier;   // index is bb id
+ public:
   MapleVector<MapleSet<BBId>> domChildren;   // index is bb id; for dom tree
+  MapleVector<MapleSet<BBId>> iterDomFrontier;   // index is bb id
+ private:
   MapleVector<BBId> dtPreOrder;              // ordering of the BBs in a preorder traversal of the dominator tree
   MapleVector<uint32> dtDfn;                 // gives position of each BB in dt_preorder
   MapleVector<MapleSet<BBId>> pdomFrontier;  // index is bb id
+ public:
   MapleVector<MapleSet<BBId>> pdomChildren;  // index is bb id; for pdom tree
+  MapleVector<MapleSet<BBId>> iterPdomFrontier;  // index is bb id
+ private:
   MapleVector<BBId> pdtPreOrder;             // ordering of the BBs in a preorder traversal of the post-dominator tree
   MapleVector<uint32> pdtDfn;                // gives position of each BB in pdt_preorder
 };

@@ -472,7 +472,7 @@ void PlacementRC::UpdateCatchBlocks2Insert(const BB &lastUseBB) {
 void PlacementRC::ReplaceOpndWithReg(MeExpr &opnd, BB &lastUseBB, const SRealOcc &realOcc, uint32 idx) const {
   // Save this operand in a preg
   RegMeExpr *curReg = opnd.GetPrimType() != PTY_ref ? irMap->CreateRegMeExpr(opnd.GetPrimType())
-                                                    : irMap->CreateRegRefMeExpr(opnd);
+                                                    : irMap->CreateRegMeExpr(opnd);
   MeStmt *regAss = irMap->CreateRegassignMeStmt(*curReg, opnd, lastUseBB);
   curReg->SetDefByStmt(*regAss);
   lastUseBB.InsertMeStmtBefore(realOcc.GetStmt(), regAss);
@@ -738,7 +738,7 @@ void PlacementRC::ReplaceRHSWithPregForDassign(MeStmt &stmt, BB &bb) const {
     if (ost->IsLocal()) {
       DassignMeStmt &dass = static_cast<DassignMeStmt&>(stmt);
       if (IsDereferenced(*dass.GetRHS(), ost->GetIndex())) {
-        RegMeExpr *regTemp = irMap->CreateRegRefMeExpr(*theLHS);
+        RegMeExpr *regTemp = irMap->CreateRegMeExpr(*theLHS);
         RegassignMeStmt *rass = irMap->CreateRegassignMeStmt(*regTemp, *dass.GetRHS(), bb);
         regTemp->SetDefByStmt(*rass);
         bb.InsertMeStmtBefore(&stmt, rass);
@@ -772,7 +772,7 @@ bool PlacementRC::DoesDassignInsertedForCallAssigned(MeStmt &stmt, BB &bb) const
   if (!resAmongOpnds) {
     return false;
   }
-  RegMeExpr *regTemp = irMap->CreateRegRefMeExpr(*theLHS);
+  RegMeExpr *regTemp = irMap->CreateRegMeExpr(*theLHS);
   MapleVector<MustDefMeNode> *mustDefList = stmt.GetMustDefList();
   CHECK_NULL_FATAL(mustDefList);
   CHECK_FATAL(!mustDefList->empty(), "container check");

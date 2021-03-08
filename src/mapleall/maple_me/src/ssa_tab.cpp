@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -34,16 +34,16 @@ BaseNode *SSATab::CreateSSAExpr(BaseNode &expr) {
     AddrofSSANode *ssaNode = mirModule.CurFunction()->GetCodeMemPool()->New<AddrofSSANode>(addrofNode);
     MIRSymbol *st = mirModule.CurFunction()->GetLocalOrGlobalSymbol(ssaNode->GetStIdx());
     OriginalSt *ost = FindOrCreateSymbolOriginalSt(*st, mirModule.CurFunction()->GetPuidx(), ssaNode->GetFieldID());
-    VersionSt *vst = versionStTable.FindOrCreateVersionSt(ost, kInitVersion);
-    ssaNode->SetSSAVar(*vst);
+    versionStTable.CreateZeroVersionSt(ost);
+    ssaNode->SetSSAVar(*versionStTable.GetZeroVersionSt(ost));
     return ssaNode;
   } else if (expr.GetOpCode() == OP_regread) {
     auto &regReadNode = static_cast<RegreadNode&>(expr);
     RegreadSSANode *ssaNode = mirModule.CurFunction()->GetCodeMemPool()->New<RegreadSSANode>(regReadNode);
     OriginalSt *ost =
         originalStTable.FindOrCreatePregOriginalSt(ssaNode->GetRegIdx(), mirModule.CurFunction()->GetPuidx());
-    VersionSt *vst = versionStTable.FindOrCreateVersionSt(ost, kInitVersion);
-    ssaNode->SetSSAVar(*vst);
+    versionStTable.CreateZeroVersionSt(ost);
+    ssaNode->SetSSAVar(*versionStTable.GetZeroVersionSt(ost));
     return ssaNode;
   } else if (expr.GetOpCode() == OP_iread) {
     auto &ireadNode = static_cast<IreadNode&>(expr);
@@ -63,7 +63,7 @@ BaseNode *SSATab::CreateSSAExpr(BaseNode &expr) {
   return nullptr;
 }
 
-void SSATab::CreateSSAStmt(StmtNode &stmt) {
+void SSATab::CreateSSAStmt(StmtNode &stmt, const BB *curbb) {
   for (size_t i = 0; i < stmt.NumOpnds(); ++i) {
     BaseNode *newOpnd = CreateSSAExpr(*stmt.Opnd(i));
     if (newOpnd != nullptr) {
@@ -81,8 +81,9 @@ void SSATab::CreateSSAStmt(StmtNode &stmt) {
       CHECK_FATAL(st != nullptr, "null ptr check");
 
       OriginalSt *ost = FindOrCreateSymbolOriginalSt(*st, mirModule.CurFunction()->GetPuidx(), dNode.GetFieldID());
-      VersionSt *vst = versionStTable.FindOrCreateVersionSt(ost, kInitVersion);
-      theSSAPart->SetSSAVar(*vst);
+      AddDefBB4Ost(ost->GetIndex(), curbb->GetBBId());
+      versionStTable.CreateZeroVersionSt(ost);
+      theSSAPart->SetSSAVar(*versionStTable.GetZeroVersionSt(ost));
       // if the rhs may throw exception, we insert MayDef of the lhs var
       if (stmt.GetOpCode() == OP_maydassign) {
         theSSAPart->InsertMayDefNode(theSSAPart->GetSSAVar(), &dNode);
@@ -93,7 +94,9 @@ void SSATab::CreateSSAStmt(StmtNode &stmt) {
       auto &regNode = static_cast<RegassignNode&>(stmt);
       OriginalSt *ost =
           originalStTable.FindOrCreatePregOriginalSt(regNode.GetRegIdx(), mirModule.CurFunction()->GetPuidx());
-      VersionSt *vst = versionStTable.FindOrCreateVersionSt(ost, kInitVersion);
+      AddDefBB4Ost(ost->GetIndex(), curbb->GetBBId());
+      versionStTable.CreateZeroVersionSt(ost);
+      VersionSt *vst = versionStTable.GetZeroVersionSt(ost);
       stmtsSSAPart.SetSSAPartOf(stmt, vst);
       return;
     }
@@ -117,23 +120,26 @@ void SSATab::CreateSSAStmt(StmtNode &stmt) {
             stmtsSSAPart.GetSSAPartMp()->New<MayDefMayUseMustDefPart>(&stmtsSSAPart.GetSSAPartAlloc());
         stmtsSSAPart.SetSSAPartOf(stmt, theSSAPart);
         // insert the mustdefs
-        auto *nrets = static_cast<NaryStmtNode&>(stmt).GetCallReturnVector();
+        CallReturnVector *nrets = static_cast<NaryStmtNode&>(stmt).GetCallReturnVector();
         CHECK_FATAL(nrets != nullptr, "CreateSSAStmt: failed to retrieve call return vector");
         if (nrets->empty()) {
           return;
         }
         for (CallReturnPair &retPair : *nrets) {
+          OriginalSt *ost = nullptr;
           if (!retPair.second.IsReg()) {
             StIdx stidx = retPair.first;
             MIRSymbolTable *symTab = mirModule.CurFunction()->GetSymTab();
             MIRSymbol *st = symTab->GetSymbolFromStIdx(stidx.Idx());
-            OriginalSt *ost =
-                FindOrCreateSymbolOriginalSt(*st, mirModule.CurFunction()->GetPuidx(), retPair.second.GetFieldID());
-            VersionSt *vst = versionStTable.FindOrCreateVersionSt(ost, kInitVersion);
-            theSSAPart->InsertMustDefNode(vst, &stmt);
+            ost = FindOrCreateSymbolOriginalSt(*st, mirModule.CurFunction()->GetPuidx(), retPair.second.GetFieldID());
           } else {
-            ASSERT(false, "NYI");
+            ost = originalStTable.FindOrCreatePregOriginalSt(retPair.second.GetPregIdx(),
+                                                             mirModule.CurFunction()->GetPuidx());
           }
+          versionStTable.CreateZeroVersionSt(ost);
+          VersionSt *vst = versionStTable.GetZeroVersionSt(ost);
+          AddDefBB4Ost(ost->GetIndex(), curbb->GetBBId());
+          theSSAPart->InsertMustDefNode(vst, &stmt);
         }
       } else if (kOpcodeInfo.IsCall(stmt.GetOpCode())) {
         stmtsSSAPart.SetSSAPartOf(stmt,
