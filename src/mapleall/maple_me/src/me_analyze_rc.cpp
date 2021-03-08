@@ -120,12 +120,10 @@ OriginalSt *AnalyzeRC::GetOriginalSt(const MeExpr &refLHS) const {
   return iass->GetChiList()->begin()->second->GetLHS()->GetOst();
 }
 
-#if 1
 VarMeExpr *AnalyzeRC::GetZeroVersionVarMeExpr(const VarMeExpr &var) {
   OriginalSt *ost = var.GetOst();
   return irMap.GetOrCreateZeroVersionVarMeExpr(*ost);
 }
-#endif
 
 // check if incref needs to be inserted after this ref pointer assignment;
 // if it is callassigned, the incref has already been done in the callee;
@@ -156,11 +154,7 @@ void AnalyzeRC::IdentifyRCStmts() {
         if (lhsRef->GetMeOp() == kMeOpVar) {
           // insert a decref statement
           UnaryMeStmt *decrefStmt = irMap.CreateUnaryMeStmt(
-#if 1
               OP_decref, GetZeroVersionVarMeExpr(static_cast<const VarMeExpr&>(*lhsRef)), &bb, &stmt.GetSrcPosition());
-#else
-              OP_decref, irMap.GetOrCreateZeroVersionVarMeExpr(*ost), &bb, &stmt.GetSrcPosition());
-#endif
           // insertion position is before stmt
           bb.InsertMeStmtBefore(&stmt, decrefStmt);
         } else {

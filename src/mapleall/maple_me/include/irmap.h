@@ -41,6 +41,7 @@ class IRMap : public AnalysisResult {
   virtual BB *GetBBForLabIdx(LabelIdx lidx, PUIdx pidx = 0) = 0;
   MeExpr *HashMeExpr(MeExpr &meExpr);
   IvarMeExpr *BuildLHSIvarFromIassMeStmt(IassignMeStmt &iassignMeStmt);
+  IvarMeExpr *BuildLHSIvar(MeExpr &baseAddr, PrimType primType, const TyIdx &tyIdx, FieldID fieldID);
   IvarMeExpr *BuildLHSIvar(MeExpr &baseAddr, IassignMeStmt &iassignMeStmt, FieldID fieldID);
   MeExpr *CreateAddrofMeExpr(MeExpr&);
   MeExpr *CreateAddroffuncMeExpr(PUIdx);
@@ -53,6 +54,7 @@ class IRMap : public AnalysisResult {
   VarMeExpr *CreateVarMeExprVersion(const VarMeExpr &varx) {
     return CreateVarMeExprVersion(varx.GetOst());
   }
+  RegMeExpr *CreateRegRefMeExpr(const MeExpr &meExpr);
   VarMeExpr *GetOrCreateZeroVersionVarMeExpr(OriginalSt &ost);
   VarMeExpr *CreateNewVar(GStrIdx strIdx, PrimType primType, bool isGlobal);
   VarMeExpr *CreateNewLocalRefVarTmp(GStrIdx strIdx, TyIdx tIdx);
