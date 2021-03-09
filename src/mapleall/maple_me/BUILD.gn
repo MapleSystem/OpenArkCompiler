@@ -98,11 +98,11 @@ configs = [ "${MAPLEALL_ROOT}:mapleallcompilecfg" ]
 static_library("libmplme") {
   sources = src_libmplme
   include_dirs = include_directories
-  output_dir = "${root_out_dir}/ar"
+  output_dir = "${root_out_dir}/lib/${HOST_ARCH}"
 }
 
 static_library("libmplmewpo") {
   sources = src_libmplmewpo
   include_dirs = include_directories
-  output_dir = "${root_out_dir}/ar"
+  output_dir = "${root_out_dir}/lib/${HOST_ARCH}"
 }

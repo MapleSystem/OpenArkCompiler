@@ -59,7 +59,7 @@ cflags_cc += [ "-DSTORE_BACK_VTABLE_REF_AFTER_LOAD=1" ]
 static_library("libmplir") {
   sources = src_libmplir
   include_dirs = include_directories
-  output_dir = "${root_out_dir}/ar"
+  output_dir = "${root_out_dir}/lib/${HOST_ARCH}"
   deps = [
     "${MAPLEALL_ROOT}/maple_driver:libdriver_option",
     "${MAPLEALL_ROOT}/maple_driver:liboption_parser",
