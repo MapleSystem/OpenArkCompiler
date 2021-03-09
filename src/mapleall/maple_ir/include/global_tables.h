@@ -250,12 +250,12 @@ class TypeTable {
     return typeTable.at(PTY_void);
   }
 
+#ifdef DYNAMICLANG
   MIRType *GetDynundef() const {
     ASSERT(PTY_dynundef < typeTable.size(), "array index out of range");
     return typeTable.at(PTY_dynundef);
   }
 
-#ifdef DYNAMICLANG
   MIRType *GetDynany() const {
     ASSERT(PTY_dynany < typeTable.size(), "array index out of range");
     return typeTable.at(PTY_dynany);
