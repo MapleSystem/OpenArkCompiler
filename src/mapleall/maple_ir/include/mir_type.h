@@ -292,6 +292,11 @@ class FieldAttrs {
     return !(*this == tA);
   }
 
+  void Clear() {
+    attrFlag = 0;
+    attrAlign = 0;
+  }
+
   void DumpAttributes() const;
   TypeAttrs ConvertToTypeAttrs();
 

@@ -393,6 +393,24 @@ class MIRFunction {
     return 0xffffffff;
   }
 
+  bool IsAFormalName(const GStrIdx idx) const {
+    for (const auto &formalDef : formalDefVec) {
+      if (idx == formalDef.formalStrIdx) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  const FormalDef GetFormalFromName(const GStrIdx idx) const {
+    for (size_t i = 0; i < formalDefVec.size(); ++i) {
+      if (formalDefVec[i].formalStrIdx == idx) {
+        return formalDefVec[i];
+      }
+    }
+    return FormalDef();
+  }
+
   // tell whether this function is a Java method
   bool IsJava() const {
     return classTyIdx != 0u;
@@ -775,6 +793,10 @@ class MIRFunction {
 
   MapleVector<FormalDef> &GetFormalDefVec() {
     return formalDefVec;
+  }
+
+  const FormalDef &GetFormalDefAt(size_t i) const {
+    return formalDefVec[i];
   }
 
   const MIRSymbol *GetFormal(size_t i) const {
