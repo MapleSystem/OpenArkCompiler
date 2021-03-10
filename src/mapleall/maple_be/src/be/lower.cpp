@@ -1050,6 +1050,7 @@ BlockNode *CGLowerer::LowerCallAssignedStmt(StmtNode &stmt) {
       auto &origCall = static_cast<CallNode&>(stmt);
       newCall = GenCallNode(stmt, funcCalled, origCall);
       p2nRets = &origCall.GetReturnVec();
+      static_cast<CallNode *>(newCall)->SetReturnVec(*p2nRets);
       break;
     }
     case OP_intrinsiccallassigned:
@@ -1067,12 +1068,14 @@ BlockNode *CGLowerer::LowerCallAssignedStmt(StmtNode &stmt) {
       }
       newCall = GenIntrinsiccallNode(stmt, funcCalled, handledAtLowerLevel, intrincall);
       p2nRets = &intrincall.GetReturnVec();
+      static_cast<IntrinsiccallNode *>(newCall)->SetReturnVec(*p2nRets);
       break;
     }
     case OP_intrinsiccallwithtypeassigned: {
       auto &origCall = static_cast<IntrinsiccallNode&>(stmt);
       newCall = GenIntrinsiccallNode(stmt, funcCalled, handledAtLowerLevel, origCall);
       p2nRets = &origCall.GetReturnVec();
+      static_cast<IntrinsiccallNode *>(newCall)->SetReturnVec(*p2nRets);
       break;
     }
     case OP_icallassigned: {
