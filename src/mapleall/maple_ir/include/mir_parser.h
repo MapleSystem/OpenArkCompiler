@@ -45,7 +45,7 @@ class MIRParser {
   bool ParseLocStmt(StmtNodePtr &stmt);
   bool ParseAlias(StmtNodePtr &stmt);
   uint8 *ParseWordsInfo(uint32 size);
-  bool ParseSwitchCase(int32&, LabelIdx&);
+  bool ParseSwitchCase(int64&, LabelIdx&);
   bool ParseExprOneOperand(BaseNodePtr &expr);
   bool ParseExprTwoOperand(BaseNodePtr &opnd0, BaseNodePtr &opnd1);
   bool ParseExprNaryOperand(MapleVector<BaseNode*>&);
@@ -185,6 +185,7 @@ class MIRParser {
   bool ParseIntrinsicId(IntrinsicopNode&);
   void Error(const std::string&);
   void Warning(const std::string&);
+  void FixForwardReferencedTypeForOneAgg(MIRType *ty);
   void FixupForwardReferencedTypeByMap();
 
   const std::string &GetError();

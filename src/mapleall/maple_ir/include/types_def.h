@@ -52,6 +52,10 @@ class StIdx {  // scope nesting level + symbol table index
     u.scopeIdx.idx = i;
   }
 
+  StIdx(uint32 fidx) {
+    u.fullIdx = fidx;
+  }
+
   ~StIdx() = default;
 
   uint32 Idx() const {
@@ -64,6 +68,10 @@ class StIdx {  // scope nesting level + symbol table index
 
   uint32 Scope() const {
     return u.scopeIdx.scope;
+  }
+
+  void SetScope(uint32 scpe) {
+    u.scopeIdx.scope = scpe;
   }
 
   uint32 FullIdx() const {
