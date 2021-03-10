@@ -1352,7 +1352,7 @@ MIRType *MIRStructType::GetFieldType(FieldID fieldID) {
   if (fieldID == 0) {
     return this;
   }
-  const FieldPair &fieldPair = TraverseToField(fieldID);
+  const FieldPair &fieldPair = TraverseToFieldRef(fieldID);
   return GlobalTables::GetTypeTable().GetTypeFromTyIdx(fieldPair.second.first);
 }
 

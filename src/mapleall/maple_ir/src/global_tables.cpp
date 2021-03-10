@@ -31,7 +31,8 @@ TypeTable::TypeTable() {
   // enter the primitve types in type_table_
   typeTable.push_back(static_cast<MIRType*>(nullptr));
   ASSERT(typeTable.size() == static_cast<size_t>(PTY_void), "use PTY_void as the first index to type table");
-  for (auto primTypeIdx = static_cast<uint32>(PTY_void); primTypeIdx <= static_cast<uint32>(PTY_agg); ++primTypeIdx) {
+  uint32 primTypeIdx;
+  for (primTypeIdx = static_cast<uint32>(PTY_begin)+1; primTypeIdx <= static_cast<uint32>(PTY_end); ++primTypeIdx) {
     MIRType *type = CreateMirType(primTypeIdx);
     type->SetTypeIndex(TyIdx{ primTypeIdx });
     typeTable.push_back(type);
@@ -40,6 +41,7 @@ TypeTable::TypeTable() {
   if (voidPtrType == nullptr) {
     voidPtrType = GetOrCreatePointerType(*GetVoid(), PTY_ptr);
   }
+  lastDefaultTyIdx.SetIdx(primTypeIdx);
 }
 
 void TypeTable::SetTypeWithTyIdx(const TyIdx &tyIdx, MIRType &type) {
@@ -48,7 +50,9 @@ void TypeTable::SetTypeWithTyIdx(const TyIdx &tyIdx, MIRType &type) {
   typeTable.at(tyIdx) = &type;
   if (oldType != nullptr && oldType != &type) {
     (void)typeHashTable.erase(oldType);
+#if 0 // cannot delete because typTab in BinaryMplImport is still pointing to it
     delete oldType;
+#endif
   }
 }
 
