@@ -24,6 +24,7 @@
 #include "version.h"
 #include "default_options.def"
 #include "driver_option_common.h"
+#include "ipa_option.h"
 #include "jbc2mpl_option.h"
 #include "me_option.h"
 #include "option.h"
@@ -37,6 +38,7 @@ const std::string kMapleDriverVersion = "MapleDriver " + std::to_string(Version:
                                         std::to_string(Version::kMinorCompilerVersion) + " 20190929";
 
 const std::vector<std::string> kMapleCompilers = { "jbc2mpl",
+    "dex2mpl", "mplipa",
     "me", "mpl2mpl", "mplcg" };
 
 int MplOptions::Parse(int argc, char **argv) {

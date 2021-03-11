@@ -57,6 +57,9 @@ void MeAliasClass::DoAliasAnalysis() {
     ApplyUnionForPointedTos();
     UnionForNotAllDefsSeen();
   }
+  if (!mirModule.IsJavaModule()) {
+    UnionForAggAndFields();
+  }
   // TBAA
   if (!MeOption::noTBAA && mirModule.IsJavaModule()) {
     ReconstructAliasGroups();

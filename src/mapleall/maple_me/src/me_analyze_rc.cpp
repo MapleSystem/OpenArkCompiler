@@ -15,6 +15,8 @@
 #include "me_analyze_rc.h"
 #include "me_option.h"
 #include "me_dominance.h"
+#include "me_delegate_rc.h"
+#include "me_subsum_rc.h"
 
 // This phase analyzes the defs and uses of ref pointers in the function and
 // performs the following modifications to the code:
@@ -449,10 +451,14 @@ AnalysisResult *MeDoAnalyzeRC::Run(MeFunction *func, MeFuncResultMgr *m, ModuleR
     LogInfo::Info() << "\n============== After ANALYZE RC =============" << '\n';
     func->Dump(false);
   }
+  if (MeOption::subsumRC && MeOption::rcLowering && MeOption::optLevel > 0) {
+    (void)m->GetAnalysisResult(MeFuncPhase_SUBSUMRC, func);
+  }
   if (!MeOption::noDelegateRC && MeOption::rcLowering && MeOption::optLevel > 0) {
     m->GetAnalysisResult(MeFuncPhase_DELEGATERC, func);
   }
-  if (!MeOption::noCondBasedRC && MeOption::rcLowering && MeOption::optLevel > 0) {
+  if (!MeOption::noCondBasedRC && !(func->GetHints() & kPlacementRCed) &&
+      MeOption::rcLowering && MeOption::optLevel > 0) {
     m->GetAnalysisResult(MeFuncPhase_CONDBASEDRC, func);
   }
   if (DEBUGFUNC(func)) {

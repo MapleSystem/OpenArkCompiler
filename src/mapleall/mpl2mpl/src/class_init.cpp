@@ -17,6 +17,9 @@
 #include <fstream>
 
 namespace {
+constexpr char kCinfString[] = "__cinf_Ljava_2Flang_2FString_3B";
+constexpr char kINFOFilename[] = "INFO_filename";
+constexpr char kCoreAll[] = "core-all";
 constexpr char kMCCPreClinitCheck[] = "MCC_PreClinitCheck";
 constexpr char kMCCPostClinitCheck[] = "MCC_PostClinitCheck";
 } // namespace
@@ -26,9 +29,27 @@ constexpr char kMCCPostClinitCheck[] = "MCC_PostClinitCheck";
 //   for place where needed.
 //   Insert clinit check for static native methods which are not private.
 // 2. Lower JAVA_CLINIT_CHECK to MPL_CLINIT_CHECK.
+//   Before insert or tranform the clinit check, we used a optimise based on
+//   white list. When the dexname is core-all and the class is in the white list
+//   we dont't insert clinit check.Because the class in the white list is intialized
+//   in the system bootup.
 namespace maple {
 bool ClassInit::CanRemoveClinitCheck(const std::string &clinitClassname) const {
-  return false;
+  if (!Options::usePreloadedClass) {
+    return false;
+  }
+  if (clinitClassname.empty()) {
+    return false;
+  }
+  if (clinitClassname == kCinfString) {
+    return true;
+  }
+  uint32 dexNameIdx = GetMIRModule().GetFileinfo(GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(kINFOFilename));
+  const std::string &dexName = GlobalTables::GetStrTable().GetStringFromStrIdx(GStrIdx(dexNameIdx));
+  if (dexName.find(kCoreAll) != std::string::npos) {
+    return false;
+  }
+  return IsSystemPreloadedClass(clinitClassname);
 }
 
 void ClassInit::GenClassInitCheckProfile(MIRFunction &func, const MIRSymbol &classInfo, StmtNode *clinit) const {
@@ -133,6 +154,9 @@ void ClassInit::ProcessFunc(MIRFunction *func) {
           doClinitCheck = true;
         } else {
           doClinitCheck = !CanRemoveClinitCheck(className) && klassHierarchy->NeedClinitCheckRecursively(*klass);
+        }
+        if (Options::buildApp != 0) {
+          doClinitCheck = true;
         }
         if (doClinitCheck) {
           MIRSymbol *classInfo = GetClassInfo(className);

@@ -30,10 +30,24 @@ class JavaIntrnLowering : public FuncOptimizeImpl {
   }
 
  private:
+  void InitTypes();
+  void InitFuncs();
+  void InitLists();
   void ProcessStmt(StmtNode &stmt) override;
   void ProcessJavaIntrnMerge(StmtNode &assignNode, const IntrinsicopNode &intrinNode);
   BaseNode *JavaIntrnMergeToCvtType(PrimType dtyp, PrimType styp, BaseNode *src);
+  void LoadClassLoaderInvocation(const std::string &list);
+  void CheckClassLoaderInvocation(const CallNode &callNode) const;
+  void DumpClassLoaderInvocation(const CallNode &callNode);
+  void ProcessForNameClassLoader(CallNode &callnode);
   void ProcessJavaIntrnFillNewArray(IntrinsiccallNode &intrinCall);
+  std::string outFileName;
+  std::unordered_set<std::string> clInterfaceSet;
+  std::multimap<std::string, std::string> clInvocationMap;
+  MIRFunction *classForName1Func = nullptr;
+  MIRFunction *classForName3Func = nullptr;
+  MIRFunction *getCurrentClassLoaderFunc = nullptr;
+  MIRType *classLoaderPointerToType = nullptr;
 };
 
 class DoJavaIntrnLowering : public ModulePhase {

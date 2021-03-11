@@ -590,6 +590,9 @@ void BB::EmitBB(SSATab &ssaTab, BlockNode &curblk, bool needAnotherPass) {
     }
     StmtNode &stmt = meStmt.EmitStmt(ssaTab);
     curblk.AddStatement(&stmt);
+    if (&meStmt == &(meStmts.back())) {
+      ssaTab.GetModule().CurFunction()->SetFreqMap(stmt.GetStmtID(), GetFrequency());
+    }
   }
   if (GetAttributes(kBBAttrIsTryEnd)) {
     // generate op_endtry

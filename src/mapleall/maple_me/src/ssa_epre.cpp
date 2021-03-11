@@ -120,12 +120,32 @@ void SSAEPre::GenerateSaveRealOcc(MeRealOcc &realOcc) {
   // replace realOcc->GetMeStmt()'s occ with regOrVar
   bool isReplaced = irMap->ReplaceMeExprStmt(*realOcc.GetMeStmt(), *realOcc.GetMeExpr(), *regOrVar);
   // rebuild worklist
-  if (isReplaced) {
+  if (isReplaced  && !ReserveCalFuncAddrForDecouple(*realOcc.GetMeExpr())) {
     BuildWorkListStmt(*realOcc.GetMeStmt(), realOcc.GetSequence(), true, regOrVar);
   }
   realOcc.SetSavedExpr(*regOrVar);
 }
 
+#ifdef USE_32BIT_REF
+static constexpr int kFieldIDOfFuncAddrInClassMeta = 8;
+#else
+static constexpr int kFieldIDOfFuncAddrInClassMeta = 6;
+#endif
+bool SSAEPre::ReserveCalFuncAddrForDecouple(MeExpr &meExpr) const {
+  if (!Options::buildApp) {
+    return false;
+  }
+  bool virtualFuncAddr = false;
+  if (meExpr.GetMeOp() == kMeOpIvar) {
+    auto &ivar = static_cast<IvarMeExpr&>(meExpr);
+    auto ptrTyIdx = ivar.GetTyIdx();
+    auto *ptrType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(ptrTyIdx);
+    virtualFuncAddr =
+        (static_cast<MIRPtrType*>(ptrType)->GetPointedType()->GetName() == namemangler::kClassMetadataTypeName) &&
+        (ivar.GetFieldID() == kFieldIDOfFuncAddrInClassMeta);
+  }
+  return virtualFuncAddr;
+}
 
 void SSAEPre::GenerateReloadRealOcc(MeRealOcc &realOcc) {
   CHECK_FATAL(!realOcc.IsLHS(), "GenerateReloadRealOcc: cannot be LHS occurrence");
@@ -152,7 +172,7 @@ void SSAEPre::GenerateReloadRealOcc(MeRealOcc &realOcc) {
   // replace realOcc->GetMeStmt()'s occ with regOrVar
   bool isReplaced = irMap->ReplaceMeExprStmt(*realOcc.GetMeStmt(), *realOcc.GetMeExpr(), *regOrVar);
   // update worklist
-  if (isReplaced) {
+  if (isReplaced && !ReserveCalFuncAddrForDecouple(*realOcc.GetMeExpr())) {
     BuildWorkListStmt(*realOcc.GetMeStmt(), realOcc.GetSequence(), true, regOrVar);
   }
 }

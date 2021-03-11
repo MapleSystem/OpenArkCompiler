@@ -29,7 +29,7 @@ void MIRBuilder::AddAddrofFieldConst(const MIRStructType &structType, MIRAggCons
                                      const MIRSymbol &fieldSymbol) {
   AddrofNode *fieldExpr = CreateExprAddrof(0, fieldSymbol, mirModule->GetMemPool());
   auto *fieldConst = mirModule->GetMemPool()->New<MIRAddrofConst>(fieldExpr->GetStIdx(), fieldExpr->GetFieldID(),
-                                                                      *structType.GetElemType(fieldID - 1));
+                                                                  *structType.GetElemType(fieldID - 1));
   fieldConst->SetFieldID(fieldID);
   newConst.PushBack(fieldConst);
 }
@@ -1018,4 +1018,27 @@ MapleAllocator *MIRBuilder::GetCurrentFuncCodeMpAllocator() {
   return mirModule->CurFuncCodeMemPoolAllocator();
 }
 
+MIRBuilderExt::MIRBuilderExt(MIRModule *module, pthread_mutex_t *mutex) : MIRBuilder(module), mutex(mutex) {}
+
+MemPool *MIRBuilderExt::GetCurrentFuncCodeMp() {
+  ASSERT(curFunction, "curFunction is null");
+  return curFunction->GetCodeMemPool();
+}
+
+MapleAllocator *MIRBuilderExt::GetCurrentFuncCodeMpAllocator() {
+  ASSERT(curFunction, "curFunction is null");
+  return &curFunction->GetCodeMemPoolAllocator();
+}
+
+void MIRBuilderExt::GlobalLock() {
+  if (mutex) {
+    ASSERT(pthread_mutex_lock(mutex) == 0, "lock failed");
+  }
+}
+
+void MIRBuilderExt::GlobalUnlock() {
+  if (mutex) {
+    ASSERT(pthread_mutex_unlock(mutex) == 0, "unlock failed");
+  }
+}
 }  // namespace maple
