@@ -40,7 +40,15 @@ namespace maple {
 bool KlassHierarchy::traceFlag = false;
 
 bool IsSystemPreloadedClass(const std::string &className) {
-  return false;
+  if (!Options::usePreloadedClass) {
+    return false;
+  }
+  static const std::unordered_set<std::string> preloadedClass = {
+#define CLASS_PREFIX(classname) #classname,
+#include "white_list.def"
+#undef CLASS_PREFIX
+  };
+  return preloadedClass.find(className) != preloadedClass.end();
 }
 
 Klass::Klass(MIRStructType *type, MapleAllocator *alc)
@@ -329,6 +337,28 @@ Klass *KlassHierarchy::GetKlassFromLiteral(const std::string &name) const {
   return GetKlassFromStrIdx(GlobalTables::GetStrTable().GetStrIdxFromName(namemangler::GetInternalNameLiteral(name)));
 }
 
+// check if super is a superclass of base
+// 1/0/-1: true/false/unknown
+int KlassHierarchy::IsSuperKlass(TyIdx superTyIdx, TyIdx baseTyIdx) const {
+  if (superTyIdx == 0u || baseTyIdx == 0u) {
+    return -1;
+  }
+  if (superTyIdx == baseTyIdx) {
+    return 1;
+  }
+  Klass *super = GetKlassFromTyIdx(superTyIdx);
+  Klass *base = GetKlassFromTyIdx(baseTyIdx);
+  if (super == nullptr || base == nullptr) {
+    return -1;
+  }
+  while (base != nullptr) {
+    if (base == super) {
+      return 1;
+    }
+    base = base->GetSuperKlass();
+  }
+  return 0;
+}
 
 bool KlassHierarchy::IsSuperKlass(const Klass *super, const Klass *base) const {
   if (super == nullptr || base == nullptr || base->IsInterface()) {
@@ -482,7 +512,25 @@ const std::string &KlassHierarchy::GetLCA(const std::string &name1, const std::s
 
 void KlassHierarchy::AddKlasses() {
   for (MIRType *type : GlobalTables::GetTypeTable().GetTypeTable()) {
-    if (type == nullptr || (type->GetKind() != kTypeClass && type->GetKind() != kTypeInterface)) {
+#if DEBUG
+    if (type != nullptr) {
+      MIRTypeKind kd = type->GetKind();
+      if (kd == kTypeStructIncomplete || kd == kTypeClassIncomplete || kd == kTypeInterfaceIncomplete)
+        LogInfo::MapleLogger() << "Warning: KlassHierarchy::AddKlasses "
+                               << GlobalTables::GetStrTable().GetStringFromStrIdx(type->GetNameStrIdx())
+                               << " INCOMPLETE \n";
+    }
+#endif
+    if (Options::deferredVisit2 && type && (type->IsIncomplete())) {
+      GStrIdx stridx = type->GetNameStrIdx();
+      std::string strName = GlobalTables::GetStrTable().GetStringFromStrIdx(stridx);
+#if DEBUG
+      LogInfo::MapleLogger() << "Waring: " << strName << " INCOMPLETE \n";
+#endif
+      if (strName == namemangler::kClassMetadataTypeName) {
+        continue;
+      }
+    } else if (type == nullptr || (type->GetKind() != kTypeClass && type->GetKind() != kTypeInterface)) {
       continue;
     }
     GStrIdx strIdx = type->GetNameStrIdx();
@@ -750,6 +798,44 @@ void KlassHierarchy::Dump() const {
   }
 }
 
+GStrIdx KlassHierarchy::GetUniqueMethod(GStrIdx vfuncNameStridx) const {
+  auto it = vfunc2RfuncMap.find(vfuncNameStridx);
+  return (it != vfunc2RfuncMap.end() ? it->second : GStrIdx(0));
+}
+
+bool KlassHierarchy::IsDevirtualListEmpty() const {
+  return vfunc2RfuncMap.empty();
+}
+
+void KlassHierarchy::DumpDevirtualList(const std::string &outputFileName) const {
+  std::unordered_map<std::string, std::string> funcMap;
+  for (Klass *klass : topoWorkList) {
+    for (MIRFunction *func : klass->GetMethods()) {
+      MIRFunction *uniqCand = klass->GetUniqueMethod(func->GetBaseFuncNameWithTypeStrIdx());
+      if (uniqCand != nullptr) {
+        funcMap[func->GetName()] = uniqCand->GetName();
+      }
+    }
+  }
+  std::ofstream outputFile;
+  outputFile.open(outputFileName);
+  for (auto it : funcMap) {
+    outputFile << it.first << "\t" << it.second << "\n";
+  }
+  outputFile.close();
+}
+
+void KlassHierarchy::ReadDevirtualList(const std::string &inputFileName) {
+  std::ifstream inputFile;
+  inputFile.open(inputFileName);
+  std::string vfuncName;
+  std::string rfuncName;
+  while (inputFile >> vfuncName >> rfuncName) {
+    vfunc2RfuncMap[GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(vfuncName)] =
+        GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(rfuncName);
+  }
+  inputFile.close();
+}
 
 void KlassHierarchy::BuildHierarchy() {
   // Scan class list and generate Klass without method information
@@ -766,6 +852,14 @@ void KlassHierarchy::BuildHierarchy() {
   if (!strIdx2KlassMap.empty()) {
     WKTypes::Init();
   }
+  // Use --dump-devirtual-list=... to dump a closed-wolrd analysis result into a file
+  if (!Options::dumpDevirtualList.empty()) {
+    DumpDevirtualList(Options::dumpDevirtualList);
+  }
+  // Use --read-devirtual-list=... to read in a closed-world analysis result
+  if (!Options::readDevirtualList.empty()) {
+    ReadDevirtualList(Options::readDevirtualList);
+  }
 }
 
 KlassHierarchy::KlassHierarchy(MIRModule *mirmodule, MemPool *memPool)
@@ -773,6 +867,7 @@ KlassHierarchy::KlassHierarchy(MIRModule *mirmodule, MemPool *memPool)
       alloc(memPool),
       mirModule(mirmodule),
       strIdx2KlassMap(std::less<GStrIdx>(), alloc.Adapter()),
+      vfunc2RfuncMap(std::less<GStrIdx>(), alloc.Adapter()),
       topoWorkList(alloc.Adapter()) {}
 
 AnalysisResult *DoKlassHierarchy::Run(MIRModule *module, ModuleResultMgr *m) {

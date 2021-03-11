@@ -22,6 +22,9 @@
 namespace {
 using namespace maple;
 
+const std::set<std::string> kNoSideEffectWhiteList {
+  "Landroid_2Fos_2FParcel_24ReadWriteHelper_3B_7CwriteString_7C_28Landroid_2Fos_2FParcel_3BLjava_2Flang_2FString_3B_29V",
+};
 
 inline bool IsReadOnlyOst(const OriginalSt &ost) {
   return ost.GetMIRSymbol()->HasAddrOfValues();
@@ -45,6 +48,10 @@ bool AliasClass::CallHasNoSideEffectOrPrivateDefEffect(const CallNode &stmt, Fun
   } else if (!ignoreIPA) {
     hasAttr = (attrKind == FUNCATTR_nosideeffect) ? (callee->IsNoDefEffect() && callee->IsNoDefArgEffect()) :
                                                     callee->IsNoPrivateDefEffect();
+  }
+  if (!hasAttr && attrKind == FUNCATTR_nosideeffect) {
+    const std::string &funcName = callee->GetName();
+    hasAttr = kNoSideEffectWhiteList.find(funcName) != kNoSideEffectWhiteList.end();
   }
   return hasAttr;
 }
@@ -418,6 +425,32 @@ void AliasClass::UnionForNotAllDefsSeen() {
   }
 }
 
+void AliasClass::UnionForAggAndFields() {
+  // key: index of MIRSymbol; value: id of alias element.
+  std::map<uint32, std::set<uint32>> symbol2AEs;
+
+  // collect alias elements with same MIRSymbol, and the ost is zero level.
+  for (auto *aliasElem : id2Elem) {
+    OriginalSt &ost = aliasElem->GetOriginalSt();
+    if (ost.GetIndirectLev() == 0) {
+      (void)symbol2AEs[ost.GetMIRSymbol()->GetStIndex()].insert(aliasElem->GetClassID());
+    }
+  }
+
+  // union alias elements of Agg(fieldID == 0) and fields(fieldID > 0).
+  for (auto &sym2AE : symbol2AEs) {
+    auto &aesWithSameSymbol = sym2AE.second;
+    for (auto idA : aesWithSameSymbol) {
+      if (id2Elem[idA]->GetOriginalSt().GetFieldID() == 0 && aesWithSameSymbol.size() > 1) {
+        (void)aesWithSameSymbol.erase(idA);
+        for (auto idB : aesWithSameSymbol) {
+          unionFind.Union(idA, idB);
+        }
+        break;
+      }
+    }
+  }
+}
 
 // fabricate the imaginary not_all_def_seen AliasElem
 AliasElem *AliasClass::FindOrCreateDummyNADSAe() {

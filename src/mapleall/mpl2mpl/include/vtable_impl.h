@@ -34,13 +34,42 @@ class VtableImpl : public FuncOptimizeImpl {
   FuncOptimizeImpl *Clone() override {
     return new VtableImpl(*this);
   }
+#ifndef USE_ARM32_MACRO
+#ifdef USE_32BIT_REF
+  void Finish() override;
+#endif  // ~USE_32BIT_REF
+#endif  // ~USE_ARM32_MACRO
 
  private:
   void ReplaceResolveInterface(StmtNode &stmt, const ResolveFuncNode &resolveNode);
   void ItabProcess(StmtNode &stmt, const ResolveFuncNode &resolveNode, const std::string &signature,
                    PregIdx &pregFuncPtr, const MIRType &compactPtrType, const PrimType &compactPtrPrim);
   bool Intrinsify(MIRFunction &func, CallNode &cnode);
+#ifndef USE_ARM32_MACRO
+#ifdef USE_32BIT_REF
+  void InlineCacheinit();
+  void GenInlineCacheTableSymbol();
+  void InlineCacheProcess(StmtNode &stmt, const ResolveFuncNode &resolveNode,
+                          const std::string &signature, PregIdx &pregFuncPtr);
+  void CallMrtInlineCacheFun(StmtNode &stmt, const ResolveFuncNode &resolveNode,
+                             RegreadNode &regReadNodeTmp, int64 hashCode, uint64 secondHashCode,
+                             const std::string &signature, PregIdx &pregFuncPtr, IfStmtNode &ifStmt);
+  void ResolveInlineCacheTable();
+#endif  // ~USE_32BIT_REF
+#endif  // ~USE_ARM32_MACRO
+  void DeferredVisit(CallNode &stmt, CallKind n);
+  void DeferredVisitCheckFloat(CallNode &stmt, const MIRFunction &mirFunc);
   MIRModule *mirModule;
+  KlassHierarchy *klassHierarchy;
+#ifndef USE_ARM32_MACRO
+#ifdef USE_32BIT_REF
+  MIRFunction *mccItabFuncInlineCache;
+  uint32 numOfInterfaceCallSite = 0;
+  MIRStructType *inlineCacheTableEntryType = nullptr;
+  MIRArrayType *inlineCacheTableType = nullptr;
+  MIRSymbol *inlineCacheTableSym = nullptr;
+#endif  // ~USE_32BIT_REF
+#endif  // ~USE_ARM32_MACRO
   MIRFunction *mccItabFunc;
 };
 

@@ -55,6 +55,8 @@ class InterleavedManager {
   void Run();
   void RunMeOptimize(MeFuncPhaseManager &fpm);
   const PhaseManager *GetSupportPhaseManager(const std::string &phase);
+  void AddIPAPhases(std::vector<std::string> &phases, bool timePhases = false, bool genMpl = false);
+  void IPARun(MeFuncPhaseManager&);
   long GetEmitVtableImplTime() const {
     return emitVtableImplMplTime;
   }

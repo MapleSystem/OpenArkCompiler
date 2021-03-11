@@ -32,7 +32,7 @@ TypeTable::TypeTable() {
   typeTable.push_back(static_cast<MIRType*>(nullptr));
   ASSERT(typeTable.size() == static_cast<size_t>(PTY_void), "use PTY_void as the first index to type table");
   uint32 primTypeIdx;
-  for (primTypeIdx = static_cast<uint32>(PTY_begin)+1; primTypeIdx <= static_cast<uint32>(PTY_end); ++primTypeIdx) {
+  for (primTypeIdx = static_cast<uint32>(PTY_begin) + 1; primTypeIdx <= static_cast<uint32>(PTY_end); ++primTypeIdx) {
     MIRType *type = CreateMirType(primTypeIdx);
     type->SetTypeIndex(TyIdx{ primTypeIdx });
     typeTable.push_back(type);
@@ -94,11 +94,13 @@ MIRType* TypeTable::GetOrCreateMIRTypeNode(MIRType &pType) {
       auto *pMap = (type.GetPrimType() == PTY_ptr ? &ptrTypeMap : &refTypeMap);
       auto *otherPMap = (type.GetPrimType() == PTY_ref ? &ptrTypeMap : &refTypeMap);
       {
+        std::shared_lock<std::shared_timed_mutex> lock(mtx);
         const auto it = pMap->find(type.GetPointedTyIdx());
         if (it != pMap->end()) {
           return GetTypeFromTyIdx(it->second);
         }
       }
+      std::unique_lock<std::shared_timed_mutex> lock(mtx);
       CHECK_FATAL(!(type.GetPointedTyIdx().GetIdx() >= kPtyDerived && type.GetPrimType() == PTY_ref &&
                     otherPMap->find(type.GetPointedTyIdx()) != otherPMap->end()),
                   "GetOrCreateMIRType: ref pointed-to type %d has previous ptr occurrence",
@@ -107,11 +109,13 @@ MIRType* TypeTable::GetOrCreateMIRTypeNode(MIRType &pType) {
     }
   }
   {
+    std::shared_lock<std::shared_timed_mutex> lock(mtx);
     const auto it = typeHashTable.find(&pType);
     if (it != typeHashTable.end()) {
       return *it;
     }
   }
+  std::unique_lock<std::shared_timed_mutex> lock(mtx);
   return CreateAndUpdateMirTypeNode(pType);
 }
 
@@ -253,6 +257,9 @@ void FPConstTable::PostInit() {
 }
 
 MIRIntConst *IntConstTable::GetOrCreateIntConst(int64 val, MIRType &type, uint32 fieldID) {
+  if (ThreadEnv::IsMeParallel()) {
+    return DoGetOrCreateIntConstTreadSafe(val, type, fieldID);
+  }
   return DoGetOrCreateIntConst(val, type, fieldID);
 }
 
@@ -262,6 +269,20 @@ MIRIntConst *IntConstTable::DoGetOrCreateIntConst(int64 val, MIRType &type, uint
   if (intConstTable.find(key) != intConstTable.end()) {
     return intConstTable[key];
   }
+  intConstTable[key] = new MIRIntConst(val, type, fieldID);
+  return intConstTable[key];
+}
+
+MIRIntConst *IntConstTable::DoGetOrCreateIntConstTreadSafe(int64 val, MIRType &type, uint32 fieldID) {
+  uint64 idid = static_cast<uint64>(type.GetTypeIndex()) + (static_cast<uint64>(fieldID) << 32); // shift bit is 32
+  IntConstKey key(val, idid);
+  {
+    std::shared_lock<std::shared_timed_mutex> lock(mtx);
+    if (intConstTable.find(key) != intConstTable.end()) {
+      return intConstTable[key];
+    }
+  }
+  std::unique_lock<std::shared_timed_mutex> lock(mtx);
   intConstTable[key] = new MIRIntConst(val, type, fieldID);
   return intConstTable[key];
 }
@@ -282,6 +303,9 @@ MIRFloatConst *FPConstTable::GetOrCreateFloatConst(float floatVal) {
   if (floatVal == 0.0 && std::signbit(floatVal)) {
     return minusZeroFloatConst;
   }
+  if (ThreadEnv::IsMeParallel()) {
+    return DoGetOrCreateFloatConstThreadSafe(floatVal);
+  }
   return DoGetOrCreateFloatConst(floatVal);
 }
 
@@ -291,6 +315,21 @@ MIRFloatConst *FPConstTable::DoGetOrCreateFloatConst(float floatVal) {
     return it->second;
   }
   // create a new one
+  auto *floatConst = new MIRFloatConst(floatVal, *GlobalTables::GetTypeTable().GetTypeFromTyIdx(TyIdx{ PTY_f32 }));
+  floatConstTable[floatVal] = floatConst;
+  return floatConst;
+}
+
+MIRFloatConst *FPConstTable::DoGetOrCreateFloatConstThreadSafe(float floatVal) {
+  {
+    std::shared_lock<std::shared_timed_mutex> lock(floatMtx);
+    const auto it = floatConstTable.find(floatVal);
+    if (it != floatConstTable.cend()) {
+      return it->second;
+    }
+  }
+  // create a new one
+  std::unique_lock<std::shared_timed_mutex> lock(floatMtx);
   auto *floatConst = new MIRFloatConst(floatVal, *GlobalTables::GetTypeTable().GetTypeFromTyIdx(TyIdx{ PTY_f32 }));
   floatConstTable[floatVal] = floatConst;
   return floatConst;
@@ -306,6 +345,9 @@ MIRDoubleConst *FPConstTable::GetOrCreateDoubleConst(double doubleVal) {
   if (doubleVal == 0.0 && std::signbit(doubleVal)) {
     return minusZeroDoubleConst;
   }
+  if (ThreadEnv::IsMeParallel()) {
+    return DoGetOrCreateDoubleConstThreadSafe(doubleVal);
+  }
   return DoGetOrCreateDoubleConst(doubleVal);
 }
 
@@ -315,6 +357,22 @@ MIRDoubleConst *FPConstTable::DoGetOrCreateDoubleConst(double doubleVal) {
     return it->second;
   }
   // create a new one
+  auto *doubleConst = new MIRDoubleConst(doubleVal,
+                                         *GlobalTables::GetTypeTable().GetTypeFromTyIdx((TyIdx)PTY_f64));
+  doubleConstTable[doubleVal] = doubleConst;
+  return doubleConst;
+}
+
+MIRDoubleConst *FPConstTable::DoGetOrCreateDoubleConstThreadSafe(double doubleVal) {
+  {
+    std::shared_lock<std::shared_timed_mutex> lock(doubleMtx);
+    const auto it = doubleConstTable.find(doubleVal);
+    if (it != doubleConstTable.cend()) {
+      return it->second;
+    }
+  }
+  // create a new one
+  std::unique_lock<std::shared_timed_mutex> lock(doubleMtx);
   auto *doubleConst = new MIRDoubleConst(doubleVal,
                                          *GlobalTables::GetTypeTable().GetTypeFromTyIdx((TyIdx)PTY_f64));
   doubleConstTable[doubleVal] = doubleConst;

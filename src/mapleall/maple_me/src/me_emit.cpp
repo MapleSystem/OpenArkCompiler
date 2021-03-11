@@ -13,13 +13,18 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "me_emit.h"
+#include <mutex>
+#include "thread_env.h"
 #include "me_bb_layout.h"
 #include "me_irmap.h"
 #include "me_cfg.h"
+#include "constantfold.h"
 
 namespace maple {
 // emit IR to specified file
 AnalysisResult *MeDoEmit::Run(MeFunction *func, MeFuncResultMgr*, ModuleResultMgr*) {
+  static std::mutex mtx;
+  ParallelGuard guard(mtx, ThreadEnv::IsMeParallel());
   if (func->NumBBs() > 0) {
     CHECK_FATAL(func->GetIRMap() != nullptr, "Why not hssa?");
     // generate bblist after layout (bb physical position)
@@ -43,6 +48,8 @@ AnalysisResult *MeDoEmit::Run(MeFunction *func, MeFuncResultMgr*, ModuleResultMg
       ASSERT(bb != nullptr, "Check bblayout phase");
       bb->EmitBB(*func->GetMeSSATab(), *mirFunction->GetBody(), false);
     }
+    ConstantFold cf(func->GetMIRModule());
+    cf.Simplify(func->GetMirFunc()->GetBody());
     if (DEBUGFUNC(func)) {
       LogInfo::MapleLogger() << "\n==============after meemit =============" << '\n';
       func->GetMirFunc()->Dump();

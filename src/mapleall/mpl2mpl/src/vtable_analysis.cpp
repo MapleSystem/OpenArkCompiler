@@ -42,8 +42,14 @@ VtableAnalysis::VtableAnalysis(MIRModule &mod, KlassHierarchy *kh, bool dump) : 
     GenVtableList(*klass);
     if (klass->IsClass() && klass->GetMIRStructType()->IsLocal()) {
       // We generate itable/vtable definition in the same place where the class is defined
-      GenVtableDefinition(*klass);
-      GenItableDefinition(*klass);
+      // We generate vtable of the class if DAI2.0 is off or its only superclass is object
+      if (!Options::deferredVisit2) {
+        GenVtableDefinition(*klass);
+        GenItableDefinition(*klass);
+      } else if ((klass->GetSuperKlasses().size() == 1) &&
+                 (klass->GetSuperKlass()->GetKlassName() == namemangler::kJavaLangObjectStr)) {
+        GenVtableDefinition(*klass);
+      }
     }
     if (trace) {
       DumpVtableList(*klass);
@@ -477,6 +483,83 @@ BaseNode *VtableAnalysis::GenVtabItabBaseAddr(BaseNode &obj, bool isVirtual) {
                                   (isVirtual ? kKlassVtabFieldID : kKlassItabFieldID), classInfoAddress);
 }
 
+size_t VtableAnalysis::SearchWithoutRettype(const MIRFunction &callee, const MIRStructType &structType) const {
+  // Initilization must be < 0
+  size_t entryoffset = SIZE_MAX;
+  GStrIdx calleeSigStrIdx = callee.GetBaseFuncSigStrIdx();
+  MIRType *tmpType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(callee.GetReturnTyIdx());
+  Klass *targetKlass = nullptr;
+  bool isCalleeScalar = false;
+  if (tmpType->GetKind() == kTypePointer && tmpType->GetPrimType() == PTY_ref) {
+    auto *ptrType = (static_cast<MIRPtrType*>(tmpType))->GetPointedType();
+    targetKlass = klassHierarchy->GetKlassFromTyIdx(ptrType->GetTypeIndex());
+  } else if (tmpType->GetKind() == kTypeScalar) {
+    isCalleeScalar = true;
+  } else {
+    targetKlass = klassHierarchy->GetKlassFromTyIdx(tmpType->GetTypeIndex());
+  }
+  if (!isCalleeScalar) {
+    CHECK_FATAL(targetKlass != nullptr, "null ptr check");
+  }
+  Klass *curKlass = nullptr;
+  bool isCurrVtabScalar = false;
+  bool isFindMethod = false;
+  for (size_t id = 0; id < structType.GetVTableMethodsSize(); ++id) {
+    MIRFunction *vtableMethod = builder->GetFunctionFromStidx(structType.GetVTableMethodsElemt(id)->first);
+    ASSERT_NOT_NULL(vtableMethod);
+    if (calleeSigStrIdx == vtableMethod->GetBaseFuncSigStrIdx()) {
+      MIRType *tmpVtabType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(vtableMethod->GetReturnTyIdx());
+      Klass *tmpKlass = nullptr;
+      if (tmpVtabType->GetKind() == kTypePointer && tmpVtabType->GetPrimType() == PTY_ref) {
+        auto *tmpPtrType = (static_cast<MIRPtrType*>(tmpVtabType))->GetPointedType();
+        tmpKlass = klassHierarchy->GetKlassFromTyIdx(tmpPtrType->GetTypeIndex());
+      } else if (tmpVtabType->GetKind() == kTypeScalar) {
+        isCurrVtabScalar = true;
+      } else {
+        tmpKlass = klassHierarchy->GetKlassFromTyIdx(tmpVtabType->GetTypeIndex());
+      }
+      if (!isCurrVtabScalar) {
+        CHECK_FATAL(tmpKlass != nullptr, "null ptr check");
+      }
+      if (isCalleeScalar || isCurrVtabScalar) {
+        if (isFindMethod) {
+          CHECK_FATAL(klassHierarchy->GetKlassFromTyIdx(structType.GetTypeIndex()) != nullptr, "null ptr check");
+          LogInfo::MapleLogger() << "warning: this "
+                                 << (klassHierarchy->GetKlassFromTyIdx(structType.GetTypeIndex()))->GetKlassName()
+                                 << " has mult methods with the same function name but with different return type!\n";
+          break;
+        }
+        entryoffset = id;
+        isFindMethod = true;
+        continue;
+      }
+      CHECK_FATAL(targetKlass != nullptr, "null ptr check");
+      if (targetKlass->IsClass() && klassHierarchy->IsSuperKlass(tmpKlass, targetKlass) &&
+          (curKlass == nullptr || klassHierarchy->IsSuperKlass(curKlass, tmpKlass))) {
+        curKlass = tmpKlass;
+        entryoffset = id;
+      }
+      if (targetKlass->IsClass() && klassHierarchy->IsInterfaceImplemented(tmpKlass, targetKlass)) {
+        entryoffset = id;
+        break;
+      }
+      if (!targetKlass->IsClass()) {
+        CHECK_FATAL(tmpKlass != nullptr, "null ptr check");
+        if (tmpKlass->IsClass() && klassHierarchy->IsInterfaceImplemented(targetKlass, tmpKlass) &&
+            (curKlass == nullptr || klassHierarchy->IsSuperKlass(curKlass, tmpKlass))) {
+          curKlass = tmpKlass;
+          entryoffset = id;
+        }
+        if (!tmpKlass->IsClass() && klassHierarchy->IsSuperKlassForInterface(tmpKlass, targetKlass) &&
+            (curKlass == nullptr || klassHierarchy->IsSuperKlass(curKlass, tmpKlass))) {
+          curKlass = tmpKlass;
+          entryoffset = id;
+        }
+      }
+    }
+  }
+  return entryoffset;
+}
 
 void VtableAnalysis::ReplaceVirtualInvoke(CallNode &stmt) {
   MIRFunction *callee = GlobalTables::GetFunctionTable().GetFunctionFromPuidx(stmt.GetPUIdx());
@@ -514,6 +597,55 @@ void VtableAnalysis::ReplaceVirtualInvoke(CallNode &stmt) {
         break;
       }
     }
+    // If full match function can't be found, try to ignore type of return value
+    if (entryOffset == SIZE_MAX) {
+      if (Options::deferredVisit) {
+        return;
+      }
+      entryOffset = SearchWithoutRettype(*callee, *structType);
+    }
+    // Add this check for the thirdparty APP compile
+    if (entryOffset == SIZE_MAX) {
+      Klass *parentKlass = klassHierarchy->GetKlassFromName(callee->GetBaseClassName());
+      CHECK_FATAL(parentKlass != nullptr, "nullptr check.");
+      bool flag = false;
+      Klass *currKlass = klassHierarchy->GetKlassFromTyIdx(structType->GetTypeIndex());
+      CHECK_FATAL(currKlass != nullptr, "nullptr check.");
+      if (parentKlass->GetKlassName() == currKlass->GetKlassName()) {
+        flag = true;
+      } else {
+        for (Klass * const &superClass : currKlass->GetSuperKlasses()) {
+          if (parentKlass->GetKlassName() == superClass->GetKlassName()) {
+            flag = true;
+            break;
+          }
+        }
+        if (!flag && parentKlass->IsInterface()) {
+          for (Klass * const &implClass : currKlass->GetImplKlasses()) {
+            if (parentKlass->GetKlassName() == implClass->GetKlassName()) {
+              flag = true;
+              break;
+            }
+          }
+        }
+      }
+      if (!flag) {
+        LogInfo::MapleLogger() << "warning: func " << callee->GetName() << " is not found in DeVirtual!\n";
+        LogInfo::MapleLogger() << "warning: " << callee->GetBaseClassName() << " is not the parent of "
+                               << currKlass->GetKlassName() << "\n";
+      }
+    }
+    if (entryOffset == SIZE_MAX && (structType->GetKind() == kTypeInterface || structType->GetKind() == kTypeClass)) {
+      CHECK_FATAL(klassHierarchy->GetKlassFromTyIdx(structType->GetTypeIndex()) != nullptr, "null ptr check");
+      LogInfo::MapleLogger() << "warning: func " << callee->GetName() << " is not found in "
+                             << (klassHierarchy->GetKlassFromTyIdx(structType->GetTypeIndex()))->GetKlassName()
+                             << " in VirtualCall!" << "\n";
+      if (Options::deferredVisit) {
+        return;
+      }
+      stmt.SetOpCode(OP_callassigned);
+      return;
+    }
     CHECK_FATAL(entryOffset != SIZE_MAX,
                 "Error: method for virtual call cannot be found in all included mplt files. Call to %s in %s",
                 callee->GetName().c_str(), currFunc->GetName().c_str());
@@ -531,9 +663,45 @@ void VtableAnalysis::ReplaceVirtualInvoke(CallNode &stmt) {
   stmt.SetNumOpnds(stmt.GetNumOpnds() + 1);
 }
 
+bool VtableAnalysis::CheckInterfaceImplemented(const CallNode &stmt) const {
+  GStrIdx calleeMethodStrIdx =
+    (GlobalTables::GetFunctionTable().GetFunctionFromPuidx(stmt.GetPUIdx()))->GetBaseFuncNameWithTypeStrIdx();
+  MIRFunction *callee = GlobalTables::GetFunctionTable().GetFunctionFromPuidx(stmt.GetPUIdx());
+  Klass *klassFromFuncDependCallee = klassHierarchy->GetKlassFromFunc(callee);
+  if (klassFromFuncDependCallee == nullptr) {
+    return false;
+  }
+  std::queue<Klass*> klassList;
+  klassList.push(klassFromFuncDependCallee);
+  while (!klassList.empty()) {
+    Klass *currentKlass = klassList.front();
+    klassList.pop();
+    for (Klass *parentKlass : currentKlass->GetSuperKlasses()) {
+      if (parentKlass != nullptr) {
+        klassList.push(parentKlass);
+      }
+    }
+    if (currentKlass->IsClass() || currentKlass->IsClassIncomplete()) {
+      continue;
+    }
+    MIRInterfaceType *interfaceType = currentKlass->GetMIRInterfaceType();
+    for (MethodPair &imethodPair : interfaceType->GetMethods()) {
+      MIRFunction *interfaceMethod = builder->GetFunctionFromStidx(imethodPair.first);
+      ASSERT_NOT_NULL(interfaceMethod);
+      GStrIdx interfaceMethodStrIdx = interfaceMethod->GetBaseFuncNameWithTypeStrIdx();
+      if (interfaceMethodStrIdx == calleeMethodStrIdx) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 void VtableAnalysis::ReplaceInterfaceInvoke(CallNode &stmt) {
   CHECK_FATAL(!stmt.GetNopnd().empty(), "container check");
+  if (Options::deferredVisit && !CheckInterfaceImplemented(stmt)) {
+    return;
+  }
   BaseNode *tabBaseAddress = GenVtabItabBaseAddr(*stmt.GetNopndAt(0), false);
   MemPool *currentFuncMp = builder->GetCurrentFuncCodeMp();
   ASSERT_NOT_NULL(currentFuncMp);
