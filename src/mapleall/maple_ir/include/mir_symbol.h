@@ -313,7 +313,7 @@ class MIRSymbol {
     return srcPosition;
   }
 
-  void SetSrcPosition(const SrcPosition &position) {
+  void SetSrcPosition(SrcPosition &position) {
     srcPosition = position;
   }
 
@@ -473,21 +473,22 @@ class MIRSymbolTable {
     return idx < symbolTable.size();
   }
 
-  const MIRSymbol *GetSymbolFromStIdx(uint32 idx, bool checkFirst = false) const {
+  MIRSymbol *GetSymbolFromStIdx(uint32 idx, bool checkFirst = false) const {
     if (checkFirst && idx >= symbolTable.size()) {
       return nullptr;
     }
     CHECK_FATAL(IsValidIdx(idx), "symbol table index out of range");
     return symbolTable[idx];
   }
-  MIRSymbol *GetSymbolFromStIdx(uint32 idx, bool checkFirst = false) {
-    return const_cast<MIRSymbol*>(const_cast<const MIRSymbolTable*>(this)->GetSymbolFromStIdx(idx, checkFirst));
-  }
 
   MIRSymbol *CreateSymbol(uint8 scopeID) {
     auto *st = mAllocator.GetMemPool()->New<MIRSymbol>(symbolTable.size(), scopeID);
     symbolTable.push_back(st);
     return st;
+  }
+
+  void PushNullSymbol() {
+    symbolTable.push_back(nullptr);
   }
 
   // add sym from other symbol table, happens in inline
@@ -515,10 +516,6 @@ class MIRSymbolTable {
   }
 
   MIRSymbol *GetSymbolFromStrIdx(GStrIdx idx, bool checkFirst = false) {
-    return GetSymbolFromStIdx(GetStIdxFromStrIdx(idx).Idx(), checkFirst);
-  }
-
-  const MIRSymbol *GetSymbolFromStrIdx(GStrIdx idx, bool checkFirst = false) const {
     return GetSymbolFromStIdx(GetStIdxFromStrIdx(idx).Idx(), checkFirst);
   }
 
@@ -623,6 +620,7 @@ class MIRLabelTable {
   MapleAllocator mAllocator;
   MapleMap<GStrIdx, LabelIdx> strIdxToLabIdxMap;
   MapleVector<GStrIdx> labelTable;  // map label idx to label name
+ public:
   MapleUnorderedSet<LabelIdx> addrTakenLabels; // those appeared in addroflabel or MIRLblConst
 };
 }  // namespace maple

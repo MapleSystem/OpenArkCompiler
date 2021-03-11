@@ -68,7 +68,10 @@ class BinaryMplImport {
  private:
   void ReadContentField();
   void ReadStrField();
+  void ReadHeaderField();
   void ReadTypeField();
+  void ReadSymField();
+  void ReadSymTabField();
   void Jump2NextField();
   void Reset();
   void SkipTotalSize();
@@ -88,7 +91,7 @@ class BinaryMplImport {
   TyIdx ImportType(bool forPointedType = false);
   void ImportTypeBase(PrimType &primType, GStrIdx &strIdx, bool &nameIsLocal);
   void InSymTypeTable();
-  void ImportTypePairs(MIRInstantVectorType &insVecType);
+  void ImportTypePairs(std::vector<TypePair> &insVecType);
   TypeAttrs ImportTypeAttrs();
   MIRPragmaElement *ImportPragmaElement();
   MIRPragma *ImportPragma();
@@ -105,6 +108,25 @@ class BinaryMplImport {
   void ImportInterfaceTypeData(MIRInterfaceType &type);
   PUIdx ImportFunction();
   MIRSymbol *InSymbol(MIRFunction *func);
+
+  void ImportInfoVector(MIRInfoVector &infovector, MapleVector<bool> &infovector_isstring);
+  void ImportLocalTypeNameTable(MIRTypeNameTable *typeNameTab);
+  void ImportFuncIdInfo(MIRFunction *func);
+  void ImportLocalSymbol(MIRFunction *func);
+  void ImportLocalSymTab(MIRFunction *func);
+  void ImportPregTab(MIRFunction *func);
+  void ImportLabelTab(MIRFunction *func);
+  void ImportFormalsStIdx(MIRFunction *func);
+  void ImportAliasMap(MIRFunction *func);
+  void ImportSrcPos(SrcPosition &pos);
+  void ImportBaseNode(Opcode &o, PrimType &typ, uint8 &numopr);
+  PUIdx ImportFuncViaSymName();
+  BaseNode *ImportExpression(MIRFunction *func);
+
+  void ImportReturnValues(MIRFunction *func, CallReturnVector *retv);
+  BlockNode *ImportBlockNode(MIRFunction *fn);
+  void ReadFunctionBodyField();
+
   void ReadFileAt(const std::string &modid, int32 offset);
   uint8 Read();
   int64 ReadInt64();
@@ -112,6 +134,7 @@ class BinaryMplImport {
   int32 GetIPAFileIndex(std::string &name);
 
   bool imported = true;  // used only by irbuild to convert to ascii
+  bool importingFromMplt;  // decided based on magic number
   uint64 bufI = 0;
   std::vector<uint8> buf;
   std::map<int64, int32> content;
