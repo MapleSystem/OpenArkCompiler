@@ -588,6 +588,10 @@ bool Ebo::ForwardPropagateOpnd(Insn &insn, Operand *&opnd, uint32 opndIndex,
     }
     return true;
   }
+  if (static_cast<RegOperand *>(opnd)->GetRegisterNumber() == RSP) {
+    /* Disallow optimization with stack pointer */
+    return false;
+  }
 
   if (EBO_DUMP) {
     LogInfo::MapleLogger() << "===replace operand " << opndIndex << " of insn: \n";
