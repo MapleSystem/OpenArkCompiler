@@ -205,6 +205,10 @@ class MIRModule {
     return symbolSet;
   }
 
+  const MapleVector<StIdx> &GetSymbolDefOrder() const {
+    return symbolDefOrder;
+  }
+
   Profile &GetProfile() {
     return profile;
   }
@@ -230,14 +234,14 @@ class MIRModule {
   }
 
   void DumpGlobals(bool emitStructureType = true) const;
-  void Dump(bool emitStructureType = true) const;
+  void Dump(bool emitStructureType = true, std::unordered_set<std::string> *dumpFuncSet = nullptr) const;
   void DumpToFile(const std::string &fileNameStr, bool emitStructureType = true) const;
   void DumpInlineCandidateToFile(const std::string &fileNameStr) const;
   const std::string &GetFileNameFromFileNum(uint32 fileNum) const;
 
   void DumpToHeaderFile(bool binaryMplt, const std::string &outputName = "");
   void DumpClassToFile(const std::string &path) const;
-  void DumpFunctionList(bool skipBody = false) const;
+  void DumpFunctionList(const std::unordered_set<std::string> *dumpFuncSet) const;
   void DumpGlobalArraySymbol() const;
   void Emit(const std::string &outFileName) const;
   uint32 GetAndIncFloatNum() {
@@ -254,7 +258,9 @@ class MIRModule {
 
   MIRFunction *FindEntryFunction();
   uint32 GetFileinfo(GStrIdx strIdx) const;
-  void OutputAsciiMpl(const std::string &phaseName, bool emitStructureType = true);
+  void OutputAsciiMpl(const char *phaseName, const char *suffix,
+                      std::unordered_set<std::string> *dumpFuncSet = nullptr,
+                      bool emitStructureType = true, bool binaryform = false);
   void OutputFunctionListAsciiMpl(const std::string &phaseName);
   const std::string &GetFileName() const {
     return fileName;
@@ -372,7 +378,7 @@ class MIRModule {
     inIPA = isInIPA;
   }
 
-  const MIRInfoVector &GetFileInfo() const {
+  MIRInfoVector &GetFileInfo() {
     return fileInfo;
   }
   void PushFileInfoPair(MIRInfoPair pair) {
@@ -382,7 +388,7 @@ class MIRModule {
     fileInfo = fileInf;
   }
 
-  const MapleVector<bool> &GetFileInfoIsString() const {
+  MapleVector<bool> &GetFileInfoIsString() {
     return fileInfoIsString;
   }
   void SetFileInfoIsString(const MapleVector<bool> &fileInfoIsStr) {
@@ -417,6 +423,10 @@ class MIRModule {
     srcLang = sourceLanguage;
   }
 
+  uint16 GetID() const {
+    return id;
+  }
+
   void SetID(uint16 num) {
     id = num;
   }
@@ -447,6 +457,10 @@ class MIRModule {
   }
   void SetGlobalWordsRefCounted(uint8 *counted) {
     globalWordsRefCounted = counted;
+  }
+
+  uint32 GetNumFuncs() const {
+    return numFuncs;
   }
 
   void SetNumFuncs(uint32 numFunc) {

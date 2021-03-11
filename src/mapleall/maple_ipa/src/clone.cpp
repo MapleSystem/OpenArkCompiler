@@ -137,14 +137,14 @@ void Clone::CloneArgument(MIRFunction &originalFunction, ArgVector &argument) co
   }
 }
 
-void Clone::CopyFuncInfo(const MIRFunction &originalFunction, MIRFunction &newFunc) const {
+void Clone::CopyFuncInfo(MIRFunction &originalFunction, MIRFunction &newFunc) const {
   auto funcNameIdx = newFunc.GetBaseFuncNameStrIdx();
   auto fullNameIdx = newFunc.GetNameStrIdx();
   auto classNameIdx = newFunc.GetBaseClassNameStrIdx();
   auto metaFullNameIdx = mirBuilder.GetOrCreateStringIndex(kFullNameStr);
   auto metaClassNameIdx = mirBuilder.GetOrCreateStringIndex(kClassNameStr);
   auto metaFuncNameIdx = mirBuilder.GetOrCreateStringIndex(kFuncNameStr);
-  const MIRInfoVector &fnInfo = originalFunction.GetInfoVector();
+  MIRInfoVector &fnInfo = originalFunction.GetInfoVector();
   const MapleVector<bool> &infoIsString = originalFunction.InfoIsString();
   size_t size = fnInfo.size();
   for (size_t i = 0; i < size; ++i) {
