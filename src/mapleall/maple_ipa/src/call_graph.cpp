@@ -21,6 +21,7 @@
 #include "option.h"
 #include "retype.h"
 #include "string_utils.h"
+
 //                   Call Graph Analysis
 // This phase is a foundation phase of compilation. This phase build
 // the call graph not only for this module also for the modules it
@@ -748,6 +749,13 @@ void IPODevirtulize::SearchDefInMemberMethods(const Klass &klass) {
   for (size_t i = 0; i < classType->GetFieldsSize(); ++i) {
     FieldAttrs attribute = classType->GetFieldsElemt(i).second.second;
     if (attribute.GetAttr(FLDATTR_final)) {
+      // Conflict with simplify
+      if (strcmp(klass.GetKlassName().c_str(),
+                 "Lcom_2Fandroid_2Fserver_2Fpm_2FPackageManagerService_24ActivityIntentResolver_3B") == 0 &&
+          strcmp(GlobalTables::GetStrTable().GetStringFromStrIdx(classType->GetFieldsElemt(i).first).c_str(),
+                 "mActivities") == 0) {
+        continue;
+      }
       FieldID id = mirBuilder->GetStructFieldIDFromFieldNameParentFirst(
           classType, GlobalTables::GetStrTable().GetStringFromStrIdx(classType->GetFieldsElemt(i).first));
       finalPrivateFieldID.push_back(id);
@@ -1005,6 +1013,9 @@ void DoDevirtual(const Klass &klass, const KlassHierarchy &klassh) {
                 }
                 // Add this check for the thirdparty APP compile
                 if (tmpMethod == nullptr) {
+                  if (Options::deferredVisit) {
+                    return;
+                  }
                   Klass *parentKlass = klassh.GetKlassFromName(calleeFunc->GetBaseClassName());
                   CHECK_FATAL(parentKlass != nullptr, "null ptr check");
                   bool flag = false;

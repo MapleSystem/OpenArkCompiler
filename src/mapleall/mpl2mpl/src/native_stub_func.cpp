@@ -33,6 +33,7 @@ NativeStubFuncGeneration::NativeStubFuncGeneration(MIRModule &mod, KlassHierarch
   auto *jstrPointerType =
       static_cast<MIRPtrType*>(GlobalTables::GetTypeTable().GetOrCreatePointerType(*jstrType, PTY_ref));
   jstrPointerTypeIdx = jstrPointerType->GetTypeIndex();
+  LoadNativeFuncProperty();
   GenerateRegTableEntryType();
   GenerateHelperFuncDecl();
   GenerateRegFuncTabEntryType();
@@ -126,7 +127,13 @@ void NativeStubFuncGeneration::ProcessFunc(MIRFunction *func) {
   }
   func->GetBody()->ResetBlock();
   NativeFuncProperty funcProperty;
-  bool needNativeCall = (!func->GetAttr(FUNCATTR_critical_native)) && (funcProperty.jniType == kJniTypeNormal);
+  bool isStaticBindingNative = IsStaticBindingMethod(func->GetName());
+  bool existsFuncProperty = GetNativeFuncProperty(func->GetName(), funcProperty);
+  if (existsFuncProperty && funcProperty.jniType == kJniTypeCriticalNative) {
+    func->SetAttr(FUNCATTR_critical_native);
+  }
+  bool needNativeCall = (!func->GetAttr(FUNCATTR_critical_native)) &&
+                        (!existsFuncProperty || funcProperty.jniType == kJniTypeNormal) && !isStaticBindingNative;
   GStrIdx classObjSymStrIdx =
       GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(CLASSINFO_PREFIX_STR + func->GetBaseClassName());
   MIRSymbol *classObjSymbol = GlobalTables::GetGsymTable().GetSymbolFromStrIdx(classObjSymStrIdx);
@@ -177,17 +184,26 @@ void NativeStubFuncGeneration::ProcessFunc(MIRFunction *func) {
   if (!func->GetAttr(FUNCATTR_critical_native)) {
     if (needNativeCall) {
       func->GetBody()->AddStatement(preFuncCall);
-      // set up env
-      allocCallArgs.push_back(Options::usePreg
-                              ? (static_cast<BaseNode*>(builder->CreateExprRegread(PTY_ptr, envPregIdx)))
-                              : (static_cast<BaseNode*>(builder->CreateExprDread(*envPtrSym))));
+      if (existsFuncProperty && funcProperty.useEnv == 0) {
+        // set up env
+        allocCallArgs.push_back(builder->CreateIntConst(0, PTY_i32));
+      } else {
+        // set up env
+        allocCallArgs.push_back(Options::usePreg
+                                ? (static_cast<BaseNode*>(builder->CreateExprRegread(PTY_ptr, envPregIdx)))
+                                : (static_cast<BaseNode*>(builder->CreateExprDread(*envPtrSym))));
+      }
     } else {
       // set up env
       allocCallArgs.push_back(builder->CreateIntConst(0, PTY_i32));
     }
     // set up class
     if (func->GetAttr(FUNCATTR_static)) {
-      allocCallArgs.push_back(builder->CreateExprAddrof(0, *classObjSymbol));
+      if (existsFuncProperty && funcProperty.useClassObj == 0) {
+        allocCallArgs.push_back(builder->CreateIntConst(0, PTY_i32));
+      } else {
+        allocCallArgs.push_back(builder->CreateExprAddrof(0, *classObjSymbol));
+      }
     }
   }
   for (uint32 i = 0; i < func->GetFormalCount(); ++i) {
@@ -210,7 +226,7 @@ void NativeStubFuncGeneration::ProcessFunc(MIRFunction *func) {
   if (Options::regNativeFunc) {
     GenerateRegisteredNativeFuncCall(*func, nativeFunc, allocCallArgs, stubFuncRet);
   }
-  bool needDecodeRef = (func->GetReturnType()->GetPrimType() == PTY_ref);
+  bool needDecodeRef = (func->GetReturnType()->GetPrimType() == PTY_ref) && !isStaticBindingNative;
   if (needDecodeRef) {
     MapleVector<BaseNode*> decodeArgs(func->GetCodeMempoolAllocator().Adapter());
     CHECK_FATAL(stubFuncRet != nullptr, "stubfunc_ret is nullptr");
@@ -242,14 +258,15 @@ void NativeStubFuncGeneration::ProcessFunc(MIRFunction *func) {
     NaryStmtNode *syncExit = builder->CreateStmtNary(OP_syncexit, monitor);
     func->GetBody()->AddStatement(syncExit);
   }
-  bool needCheckExceptionCall = needNativeCall;
+  bool needCheckExceptionCall = needNativeCall || isStaticBindingNative;
   // check pending exception just before leaving this stub frame except for critical natives
   if (needCheckExceptionCall) {
     MapleVector<BaseNode*> getExceptArgs(func->GetCodeMempoolAllocator().Adapter());
     CallNode *callGetExceptFunc = builder->CreateStmtCallAssigned(MRTCheckThrowPendingExceptionFunc->GetPuidx(),
                                                                   getExceptArgs, nullptr, OP_callassigned);
     func->GetBody()->AddStatement(callGetExceptFunc);
-  } else if (!func->GetAttr(FUNCATTR_critical_native)) {
+  } else if (!func->GetAttr(FUNCATTR_critical_native) &&
+             !(existsFuncProperty && funcProperty.jniType == kJniTypeCriticalNeedArg)) {
     MapleVector<BaseNode*> frameStatusArgs(func->GetCodeMempoolAllocator().Adapter());
     CallNode *callSetFrameStatusFunc = builder->CreateStmtCallAssigned(MCCSetReliableUnwindContextFunc->GetPuidx(),
                                                                        frameStatusArgs, nullptr, OP_callassigned);
@@ -258,6 +275,10 @@ void NativeStubFuncGeneration::ProcessFunc(MIRFunction *func) {
   if (!voidRet) {
     StmtNode *stmt = builder->CreateStmtReturn(builder->CreateExprDread(*stubFuncRet));
     func->GetBody()->AddStatement(stmt);
+  }
+  if (existsFuncProperty && funcProperty.jniType == kJniTypeCriticalNeedArg) {
+    func->UnSetAttr(FUNCATTR_fast_native);
+    func->SetAttr(FUNCATTR_critical_native);
   }
 }
 
@@ -344,9 +365,11 @@ void NativeStubFuncGeneration::GenerateRegisteredNativeFuncCall(MIRFunction &fun
   // read func ptr from symbol
   auto readFuncPtr = builder->CreateExprDread(*funcPtrSym);
   NativeFuncProperty funcProperty;
-  bool needCheckThrowPendingExceptionFunc =
-      (!func.GetAttr(FUNCATTR_critical_native)) && (funcProperty.jniType == kJniTypeNormal);
-  bool needIndirectCall = func.GetAttr(FUNCATTR_critical_native) || func.GetAttr(FUNCATTR_fast_native);
+  bool existsFuncProperty = GetNativeFuncProperty(func.GetName(), funcProperty);
+  bool needCheckThrowPendingExceptionFunc = (!func.GetAttr(FUNCATTR_critical_native)) &&
+                                            (!existsFuncProperty || funcProperty.jniType == kJniTypeNormal);
+  bool needIndirectCall = func.GetAttr(FUNCATTR_critical_native) || func.GetAttr(FUNCATTR_fast_native) ||
+                          (existsFuncProperty && funcProperty.jniType == kJniTypeCriticalNeedArg);
 
   // Get current native method function ptr from reg_jni_func_tab slot
   BaseNode *regReadExpr = builder->CreateExprDread(*funcPtrSym);
@@ -500,6 +523,16 @@ void NativeStubFuncGeneration::GenerateRegisteredNativeFuncCall(MIRFunction &fun
   func.GetBody()->AddStatement(icall);
 }
 
+// Use wrapper to call the native function, the logic is:
+//     if func is fast_native or critical_native {
+//      icall[assigned](args, ...)[{ret}]
+//    } else {
+//      if num_of_args < 8 {
+//        call MCC_CallSlowNative(nativeFunc, ...)
+//      } else {
+//        call MCC_CallSlowNativeExt(nativeFunc, num_of_args, ...)
+//      }
+//    }
 StmtNode *NativeStubFuncGeneration::CreateNativeWrapperCallNode(MIRFunction &func, BaseNode *funcPtr,
                                                                 MapleVector<BaseNode*> &args, const MIRSymbol *ret,
                                                                 bool needIndirectCall) {
@@ -621,6 +654,33 @@ bool NativeStubFuncGeneration::IsStaticBindingMethod(const std::string &methodNa
           staticBindingMethodsSet.end());
 }
 
+bool NativeStubFuncGeneration::GetNativeFuncProperty(const std::string &funcName, NativeFuncProperty &property) {
+  auto it = nativeFuncPropertyMap.find(funcName);
+  if (it != nativeFuncPropertyMap.end()) {
+    property = it->second;
+    return true;
+  }
+  return false;
+}
+
+void NativeStubFuncGeneration::LoadNativeFuncProperty() {
+  const std::string kNativeFuncPropertyFile = Options::nativeFuncPropertyFile;
+  std::ifstream in(kNativeFuncPropertyFile, std::ios::in | std::ios::binary);
+  if (!in.is_open()) {
+    std::cerr << "Cannot Open native function property file " << kNativeFuncPropertyFile << "\n";
+    return;
+  }
+  // Mangled name of java function to native function name
+  while (!in.eof()) {
+    NativeFuncProperty property;
+    in >> property.javaFunc >> property.nativeFile >> property.nativeFunc >>
+          property.jniType >> property.useEnv >> property.useClassObj;
+    if (!property.javaFunc.empty()) {
+      nativeFuncPropertyMap[property.javaFunc] = property;
+    }
+  }
+  in.close();
+}
 
 void NativeStubFuncGeneration::Finish() {
   if (!regTableConst->GetConstVec().empty()) {
