@@ -20,6 +20,8 @@
 #include "mir_preg.h"
 #include "parser_opt.h"
 #include "module_phase.h"
+#include "ea_connection_graph.h"
+#include "call_graph.h"
 
 namespace maple {
 enum : uint8 {

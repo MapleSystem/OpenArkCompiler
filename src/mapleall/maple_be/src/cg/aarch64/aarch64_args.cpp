@@ -267,7 +267,7 @@ void AArch64MoveRegArgs::MoveVRegisterArgs() {
   ParmLocator parmlocator(aarchCGFunc->GetBecommon());
   PLocInfo ploc;
 
-  uint32 formalCount = aarchCGFunc->GetFunction().GetFormalCount();
+  uint32 formalCount = static_cast<uint32>(aarchCGFunc->GetFunction().GetFormalCount());
   uint32 start = 0;
   if (formalCount) {
     MIRFunction *func = const_cast<MIRFunction*>(aarchCGFunc->GetBecommon().GetMIRModule().CurFunction());

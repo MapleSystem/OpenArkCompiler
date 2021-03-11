@@ -18,6 +18,16 @@
 #include <cstdio>
 
 namespace {
+constexpr char kMplSuffix[] = ".mpl";
+constexpr char kClinvocation[] = ".clinvocation";
+constexpr char kJavaLangClassloader[] = "Ljava_2Flang_2FClassLoader_3B";
+constexpr char kFuncClassForname1[] =
+    "Ljava_2Flang_2FClass_3B_7CforName_7C_28Ljava_2Flang_2FString_3B_29Ljava_2Flang_2FClass_3B";
+constexpr char kFuncClassForname3[] =
+    "Ljava_2Flang_2FClass_3B_7CforName_7C_28Ljava_2Flang_2FString_3BZLjava_2Flang_2FClassLoader_3B_29Ljava_2Flang_"
+    "2FClass_3B";
+constexpr char kFuncGetCurrentCl[] = "MCC_GetCurrentClassLoader";
+constexpr char kRetvarCurrentClassloader[] = "retvar_current_classloader";
 } // namespace
 
 // JavaIntrnLowering lowers several kinds of intrinsics:
@@ -26,6 +36,11 @@ namespace {
 //    if yes, turn it into a Retype or CvtType; if no, assert
 // 2. INTRN_JAVA_FILL_NEW_ARRAY
 //    Turn it into a jarray malloc and jarray element-wise assignment
+//
+// JavaIntrnLowering also performs the following optimizations:
+// 1. Turn single-parameter Class.forName call into three-parameter
+//    Class.forName call, where the third-parameter points to the
+//    current class loader being used.
 namespace maple {
 inline bool IsConstvalZero(BaseNode &node) {
   return (node.GetOpCode() == OP_constval) && (static_cast<ConstvalNode&>(node).GetConstVal()->IsZero());
@@ -33,8 +48,49 @@ inline bool IsConstvalZero(BaseNode &node) {
 
 JavaIntrnLowering::JavaIntrnLowering(MIRModule &mod, KlassHierarchy *kh, bool dump)
     : FuncOptimizeImpl(mod, kh, dump) {
+  InitTypes();
+  InitFuncs();
+  InitLists();
 }
 
+void JavaIntrnLowering::InitLists() {
+  if (Options::dumpClassLoaderInvocation || !Options::classLoaderInvocationList.empty()) {
+    LoadClassLoaderInvocation(Options::classLoaderInvocationList);
+  }
+  if (Options::dumpClassLoaderInvocation) {
+    // Remove any existing output file.
+    const std::string &mplName = GetMIRModule().GetFileName();
+    CHECK_FATAL(mplName.rfind(kMplSuffix) != std::string::npos, "File name %s does not contain .mpl", mplName.c_str());
+    std::string prefix = mplName.substr(0, mplName.rfind(kMplSuffix));
+    outFileName = prefix + kClinvocation;
+    std::remove(outFileName.c_str());
+  }
+}
+
+void JavaIntrnLowering::InitTypes() {
+  GStrIdx gStrIdx = GlobalTables::GetStrTable().GetStrIdxFromName(kJavaLangClassloader);
+  MIRType *classLoaderType =
+      GlobalTables::GetTypeTable().GetTypeFromTyIdx(GlobalTables::GetTypeNameTable().GetTyIdxFromGStrIdx(gStrIdx));
+  CHECK_FATAL(classLoaderType != nullptr, "Ljava_2Flang_2FClassLoader_3B type can not be null");
+  classLoaderPointerToType = GlobalTables::GetTypeTable().GetOrCreatePointerType(*classLoaderType, PTY_ref);
+}
+
+void JavaIntrnLowering::InitFuncs() {
+  classForName1Func = builder->GetFunctionFromName(kFuncClassForname1);
+  CHECK_FATAL(classForName1Func != nullptr, "classForName1Func is null in JavaIntrnLowering::InitFuncs");
+  classForName3Func = builder->GetFunctionFromName(kFuncClassForname3);
+  CHECK_FATAL(classForName3Func != nullptr, "classForName3Func is null in JavaIntrnLowering::InitFuncs");
+  // MCC_GetCurrentClassLoader.
+  getCurrentClassLoaderFunc = builder->GetFunctionFromName(kFuncGetCurrentCl);
+  if (!getCurrentClassLoaderFunc) {
+    ArgVector clArgs(GetMIRModule().GetMPAllocator().Adapter());
+    MIRType *refTy = GlobalTables::GetTypeTable().GetRef();
+    clArgs.push_back(ArgPair("caller", refTy));
+    getCurrentClassLoaderFunc = builder->CreateFunction(kFuncGetCurrentCl, *refTy, clArgs);
+    CHECK_FATAL(getCurrentClassLoaderFunc != nullptr,
+                "getCurrentClassLoaderFunc is null in JavaIntrnLowering::InitFuncs");
+  }
+}
 
 void JavaIntrnLowering::ProcessStmt(StmtNode &stmt) {
   Opcode opcode = stmt.GetOpCode();
@@ -57,6 +113,12 @@ void JavaIntrnLowering::ProcessStmt(StmtNode &stmt) {
       }
       break;
     }
+    case OP_callassigned: {
+      auto &call = static_cast<CallNode&>(stmt);
+      // Currently it's only for classloader.
+      ProcessForNameClassLoader(call);
+      break;
+    }
     case OP_intrinsiccallwithtypeassigned: {
       IntrinsiccallNode &intrinCall = static_cast<IntrinsiccallNode&>(stmt);
       if (intrinCall.GetIntrinsic() == INTRN_JAVA_FILL_NEW_ARRAY) {
@@ -69,6 +131,133 @@ void JavaIntrnLowering::ProcessStmt(StmtNode &stmt) {
   }
 }
 
+void JavaIntrnLowering::CheckClassLoaderInvocation(const CallNode &callNode) const {
+  MIRFunction *callee = GlobalTables::GetFunctionTable().GetFunctionFromPuidx(callNode.GetPUIdx());
+  if (clInterfaceSet.find(callee->GetName()) != clInterfaceSet.end()) {
+    auto range = clInvocationMap.equal_range(currFunc->GetName());
+    for (auto i = range.first; i != range.second; ++i) {
+      const std::string &val = i->second;
+      if (val == callee->GetName()) {
+        return;
+      }
+    }
+    CHECK_FATAL(false,
+                "Check ClassLoader Invocation, failed. \
+                 Please copy \"%s,%s\" into %s, and submit it to review. mpl file:%s",
+                namemangler::DecodeName(currFunc->GetName()).c_str(),
+                namemangler::DecodeName(callee->GetName()).c_str(), Options::classLoaderInvocationList.c_str(),
+                GetMIRModule().GetFileName().c_str());
+  }
+}
+
+void JavaIntrnLowering::DumpClassLoaderInvocation(const CallNode &callNode) {
+  MIRFunction *callee = GlobalTables::GetFunctionTable().GetFunctionFromPuidx(callNode.GetPUIdx());
+  if (clInterfaceSet.find(callee->GetName()) != clInterfaceSet.end()) {
+    builder->GlobalLock();
+    std::ofstream outfile;
+    outfile.open(outFileName, std::ios::out | std::ios::app);
+    CHECK_FATAL(!outfile.fail(), "Dump ClassLoader Invocation, open file failed.");
+    outfile << namemangler::DecodeName(currFunc->GetName()) << "," << namemangler::DecodeName(callee->GetName())
+            << "\n";
+    outfile.close();
+    LogInfo::MapleLogger() << "Dump ClassLoader Invocation, \"" << namemangler::DecodeName(currFunc->GetName()) << ","
+                           << namemangler::DecodeName(callee->GetName()) << "\", " << GetMIRModule().GetFileName()
+                           << "\n";
+    builder->GlobalUnlock();
+  }
+}
+
+void JavaIntrnLowering::LoadClassLoaderInvocation(const std::string &list) {
+  std::ifstream infile;
+  infile.open(list);
+  CHECK_FATAL(!infile.fail(), "Load ClassLoader Invocation, open file %s failed.", list.c_str());
+
+  bool reachInvocation = false;
+  std::string line;
+  // Load ClassLoader Interface&Invocation Config.
+  // There're two parts: interfaces and invocations in the list.
+  // Firstly loading interfaces, then loading invocations.
+  while (getline(infile, line)) {
+    if (line.empty()) {
+      continue;  // Ignore empty line.
+    }
+    if (line.front() == '#') {
+      continue;  // Ignore comment line.
+    }
+    // Check if reach invocation parts by searching ','
+    if (!reachInvocation && std::string::npos != line.find(',')) {
+      reachInvocation = true;
+    }
+    if (!reachInvocation) {
+      // Load interface.
+      (void)clInterfaceSet.insert(namemangler::EncodeName(line));
+    } else {
+      // Load invocation, which has 2 elements seperated by ','.
+      std::stringstream ss(line);
+      std::string caller;
+      std::string callee;
+      if (!getline(ss, caller, ',')) {
+        CHECK_FATAL(false, "Load ClassLoader Invocation, wrong format.");
+      }
+      if (!getline(ss, callee, ',')) {
+        CHECK_FATAL(false, "Load ClassLoader Invocation, wrong format.");
+      }
+      (void)clInvocationMap.insert(make_pair(namemangler::EncodeName(caller), namemangler::EncodeName(callee)));
+    }
+  }
+  infile.close();
+}
+
+void JavaIntrnLowering::ProcessForNameClassLoader(CallNode &callNode) {
+  if (callNode.GetPUIdx() != classForName1Func->GetPuidx()) {
+    return;
+  }
+  BaseNode *arg = nullptr;
+  if (currFunc->IsStatic()) {
+    // It's a static function,
+    // pass caller functions's classinfo directly.
+    std::string callerName = CLASSINFO_PREFIX_STR;
+    callerName += currFunc->GetBaseClassName();
+    builder->GlobalLock();
+    MIRSymbol *callerClassinfoSym =
+        GlobalTables::GetGsymTable().GetSymbolFromStrIdx(GlobalTables::GetStrTable().GetStrIdxFromName(callerName));
+    if (callerClassinfoSym == nullptr) {
+      callerClassinfoSym = builder->CreateGlobalDecl(callerName, *GlobalTables::GetTypeTable().GetPtr(), kScExtern);
+    }
+    builder->GlobalUnlock();
+    arg = builder->CreateExprAddrof(0, *callerClassinfoSym);
+  } else {
+    // It's an instance function,
+    // pass caller function's this pointer
+    CHECK_FATAL(currFunc->GetFormalCount() > 0, "index out of range in JavaIntrnLowering::ProcessForNameClassLoader");
+    MIRSymbol *formalst = currFunc->GetFormal(0);
+    if (formalst->GetSKind() != kStPreg) {
+      arg = builder->CreateExprDread(*formalst);
+    } else {
+      arg = builder->CreateExprRegread(formalst->GetType()->GetPrimType(), currFunc->GetPregTab()->GetPregIdxFromPregno(
+          formalst->GetValue().preg->GetPregNo()));
+    }
+  }
+  MIRSymbol *currentCL = builder->GetOrCreateLocalDecl(kRetvarCurrentClassloader, *classLoaderPointerToType);
+  MapleVector<BaseNode*> args(builder->GetCurrentFuncCodeMpAllocator()->Adapter());
+  args.push_back(arg);
+  CallNode *clCall = builder->CreateStmtCallAssigned(getCurrentClassLoaderFunc->GetPuidx(), args, currentCL);
+  currFunc->GetBody()->InsertBefore(&callNode, clCall);
+  // Class.forName(jstring name) ==>
+  // Class.forName(jstring name, jboolean 1, jobject current_cl)
+  // Ensure initialized is true.
+  callNode.GetNopnd().push_back(builder->GetConstUInt1(true));
+  // Classloader.
+  callNode.GetNopnd().push_back(builder->CreateExprDread(*currentCL));
+  callNode.numOpnds = callNode.GetNopndSize();
+  callNode.SetPUIdx(classForName3Func->GetPuidx());
+  if (!Options::dumpClassLoaderInvocation && !Options::classLoaderInvocationList.empty()) {
+    CheckClassLoaderInvocation(callNode);
+  }
+  if (Options::dumpClassLoaderInvocation) {
+    DumpClassLoaderInvocation(callNode);
+  }
+}
 
 void JavaIntrnLowering::ProcessJavaIntrnMerge(StmtNode &assignNode, const IntrinsicopNode &intrinNode) {
   CHECK_FATAL(intrinNode.GetNumOpnds() == 1, "invalid JAVA_MERGE intrinsic node");

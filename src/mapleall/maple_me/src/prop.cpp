@@ -15,6 +15,7 @@
 #include "prop.h"
 #include "me_irmap.h"
 #include "dominance.h"
+#include "constantfold.h"
 
 using namespace maple;
 

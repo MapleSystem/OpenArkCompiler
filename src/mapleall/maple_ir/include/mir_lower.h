@@ -24,13 +24,15 @@ enum MirLowerPhase : uint8 {
   kLowerMe,
   kLowerExpandArray,
   kLowerBe,
-  kLowerCG
+  kLowerCG,
+  kLowerLNO
 };
 
 constexpr uint32 kShiftLowerMe = 1U << kLowerMe;
 constexpr uint32 kShiftLowerExpandArray = 1U << kLowerExpandArray;
 constexpr uint32 kShiftLowerBe = 1U << kLowerBe;
 constexpr uint32 kShiftLowerCG = 1U << kLowerCG;
+constexpr uint32 kShiftLowerLNO = 1U << kLowerLNO;
 // check if a block node ends with an unconditional jump
 inline bool OpCodeNoFallThrough(Opcode opCode) {
   return opCode == OP_goto || opCode == OP_return || opCode == OP_switch || opCode == OP_throw || opCode == OP_gosub ||
@@ -75,6 +77,10 @@ class MIRLower {
     lowerPhase |= kShiftLowerMe;
   }
 
+  void SetLowerLNO() {
+    lowerPhase |= kShiftLowerLNO;
+  }
+
   void SetLowerExpandArray() {
     lowerPhase |= kShiftLowerExpandArray;
   }
@@ -89,6 +95,10 @@ class MIRLower {
 
   bool IsLowerME() const {
     return lowerPhase & kShiftLowerMe;
+  }
+
+  bool IsLowerLNO() const {
+    return lowerPhase & kShiftLowerLNO;
   }
 
   bool IsLowerExpandArray() const {
