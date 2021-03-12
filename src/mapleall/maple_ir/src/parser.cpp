@@ -507,7 +507,7 @@ bool MIRParser::ParsePragma(MIRStructType &type) {
   p->SetKind(it->second);
 
   if (tk == TK_param) {
-    tk = lexer.NextToken();
+    lexer.NextToken();
     p->SetParamNum(lexer.GetTheIntVal());
   }
   tk = lexer.NextToken();
@@ -516,7 +516,7 @@ bool MIRParser::ParsePragma(MIRStructType &type) {
     return false;
   }
   p->SetStrIdx(GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(lexer.GetName()));
-  tk = lexer.NextToken();
+  lexer.NextToken();
   TyIdx tyIdx;
   if (!ParseType(tyIdx)) {
     Error("parsing pragma error: wrong type ");
@@ -525,8 +525,12 @@ bool MIRParser::ParsePragma(MIRStructType &type) {
   p->SetTyIdx(tyIdx);
   tk = lexer.GetTokenKind();
   if (tk != TK_lbrace) {
-    Error("parsing pragma error: expecting { but get ");
-    return false;
+    TyIdx tyIdxEx;
+    if (!ParseType(tyIdxEx)) {
+      Error("parsing pragma error: wrong type ");
+      return false;
+    }
+    p->SetTyIdxEx(tyIdxEx);
   }
   tk = lexer.NextToken();
   while (tk != TK_rbrace) {
@@ -810,7 +814,7 @@ bool MIRParser::ParseStructType(TyIdx &styIdx) {
   if (styIdx != 0u) {
     MIRType *prevType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(styIdx);
     if (prevType->GetKind() != kTypeByName) {
-      ASSERT(prevType->GetKind() == kTypeStruct || prevType->GetKind() == kTypeStructIncomplete,
+      ASSERT(prevType->GetKind() == kTypeStruct || prevType->IsIncomplete(),
              "type kind should be consistent.");
       if (static_cast<MIRStructType*>(prevType)->IsIncomplete() && !(structType.IsIncomplete())) {
         structType.SetNameStrIdx(prevType->GetNameStrIdx());
@@ -847,7 +851,7 @@ bool MIRParser::ParseClassType(TyIdx &styidx) {
     prevType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(styidx);
   }
   if (prevType != nullptr && prevType->GetKind() != kTypeByName) {
-    ASSERT(prevType->GetKind() == kTypeClass || prevType->GetKind() == kTypeClassIncomplete,
+    ASSERT(prevType->GetKind() == kTypeClass || prevType->IsIncomplete(),
            "type kind should be consistent.");
     if (static_cast<MIRClassType*>(prevType)->IsIncomplete() && !(classType.IsIncomplete())) {
       classType.SetNameStrIdx(prevType->GetNameStrIdx());
@@ -890,7 +894,7 @@ bool MIRParser::ParseInterfaceType(TyIdx &sTyIdx) {
   }
   if (sTyIdx != 0u) {
     MIRType *prevType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(sTyIdx);
-    ASSERT(prevType->GetKind() == kTypeInterface || prevType->GetKind() == kTypeInterfaceIncomplete,
+    ASSERT(prevType->GetKind() == kTypeInterface || prevType->IsIncomplete(),
            "type kind should be consistent.");
     if (static_cast<MIRInterfaceType*>(prevType)->IsIncomplete() && !(interfaceType.IsIncomplete())) {
       interfaceType.SetNameStrIdx(prevType->GetNameStrIdx());
