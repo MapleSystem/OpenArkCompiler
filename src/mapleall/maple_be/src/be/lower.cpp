@@ -829,7 +829,7 @@ StmtNode *CGLowerer::LowerIassignBitfield(IassignNode &iassign, BlockNode &newBl
   DepositbitsNode *depositBits = mirModule.CurFuncCodeMemPool()->New<DepositbitsNode>();
   depositBits->SetPrimType(GetRegPrimType(fType->GetPrimType()));
   depositBits->SetBitsOffset(byteBitOffsets.second);
-  depositBits->SetBitsOffset(static_cast<MIRBitFieldType*>(fType)->GetFieldSize());
+  depositBits->SetBitsSize(static_cast<MIRBitFieldType*>(fType)->GetFieldSize());
   depositBits->SetBOpnd(ireadNode, 0);
   depositBits->SetBOpnd(iassign.GetRHS(), 1);
 
