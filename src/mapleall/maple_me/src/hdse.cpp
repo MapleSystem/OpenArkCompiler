@@ -340,7 +340,7 @@ bool HDSE::HasNonDeletableExpr(const MeStmt &meStmt) const {
              (decoupleStatic && varMeExpr->GetOst()->GetMIRSymbol()->IsGlobal());
     }
     case OP_regassign: {
-      auto &rasgn = static_cast<const RegassignMeStmt&>(meStmt);
+      auto &rasgn = static_cast<const AssignMeStmt&>(meStmt);
       return ExprNonDeletable(*rasgn.GetRHS());
     }
     case OP_maydassign:

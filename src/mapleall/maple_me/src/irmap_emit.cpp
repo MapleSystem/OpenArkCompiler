@@ -293,7 +293,7 @@ StmtNode &DassignMeStmt::EmitStmt(SSATab &ssaTab) {
   return *dassignStmt;
 }
 
-StmtNode &RegassignMeStmt::EmitStmt(SSATab &ssaTab) {
+StmtNode &AssignMeStmt::EmitStmt(SSATab &ssaTab) {
   CHECK_NULL_FATAL(lhs);
   CHECK_NULL_FATAL(rhs);
   RegassignNode *regassignStmt = ssaTab.GetModule().GetMIRBuilder()->CreateStmtRegassign(

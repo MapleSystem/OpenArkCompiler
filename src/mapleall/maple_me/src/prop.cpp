@@ -276,7 +276,7 @@ MeExpr &Prop::PropVar(VarMeExpr &varMeExpr, bool atParm, bool checkPhi) const {
 
 MeExpr &Prop::PropReg(RegMeExpr &regMeExpr, bool atParm) const {
   if (regMeExpr.GetDefBy() == kDefByStmt) {
-    RegassignMeStmt *defStmt = static_cast<RegassignMeStmt*>(regMeExpr.GetDefStmt());
+    AssignMeStmt *defStmt = static_cast<AssignMeStmt*>(regMeExpr.GetDefStmt());
     MeExpr &rhs = utils::ToRef(defStmt->GetRHS());
     if (rhs.GetDepth() <= kPropTreeLevel && Propagatable(rhs, utils::ToRef(defStmt->GetBB()), atParm)) {
       return rhs;
@@ -436,8 +436,8 @@ void Prop::TraversalMeStmt(MeStmt &meStmt) {
       break;
     }
     case OP_regassign: {
-      auto &regMeStmt = static_cast<RegassignMeStmt&>(meStmt);
-      PropUpdateDef(static_cast<RegMeExpr&>(utils::ToRef(regMeStmt.GetRegLHS())));
+      auto &regMeStmt = static_cast<AssignMeStmt&>(meStmt);
+      PropUpdateDef(static_cast<RegMeExpr&>(utils::ToRef(regMeStmt.GetLHS())));
       break;
     }
     default:

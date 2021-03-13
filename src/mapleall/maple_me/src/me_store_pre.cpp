@@ -62,7 +62,7 @@ RegMeExpr *MeStorePre::EnsureRHSInCurTemp(BB &bb) {
       }
       // create and insert regassign before dass
       RegMeExpr *lhsReg = irMap->CreateRegMeExprVersion(*curTemp);
-      RegassignMeStmt *rass = irMap->CreateRegassignMeStmt(*lhsReg, *dass->GetRHS(), bb);
+      AssignMeStmt *rass = irMap->CreateAssignMeStmt(*lhsReg, *dass->GetRHS(), bb);
       rass->SetSrcPos(itStmt->GetSrcPosition());
       lhsReg->SetDefByStmt(*rass);
       bb.InsertMeStmtBefore(dass, rass);
@@ -89,7 +89,7 @@ RegMeExpr *MeStorePre::EnsureRHSInCurTemp(BB &bb) {
         RegMeExpr *lhsReg = irMap->CreateRegMeExprVersion(*curTemp);
         mustDefList->front().UpdateLHS(*lhsReg);
         // create dassign
-        DassignMeStmt *dass = irMap->CreateDassignMeStmt(*lhsVar, *lhsReg, bb);
+        AssignMeStmt *dass = irMap->CreateAssignMeStmt(*lhsVar, *lhsReg, bb);
         dass->SetSrcPos(itStmt->GetSrcPosition());
         lhsVar->SetDefByStmt(*dass);
         bb.InsertMeStmtAfter(to_ptr(itStmt), dass);
@@ -145,7 +145,7 @@ void MeStorePre::CodeMotion() {
       CheckCreateCurTemp();
       CHECK_FATAL(insertBB->GetPred().size() == 1, "CodeMotion: encountered critical edge");
       RegMeExpr *rhsReg = EnsureRHSInCurTemp(*insertBB->GetPred(0));
-      DassignMeStmt *newDass = irMap->CreateDassignMeStmt(*lhsVar, *rhsReg, *insertBB);
+      AssignMeStmt *newDass = irMap->CreateAssignMeStmt(*lhsVar, *rhsReg, *insertBB);
       lhsVar->SetDefByStmt(*newDass);
       // insert at earliest point in BB, but after statements required to be
       // first statements in BBG

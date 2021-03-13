@@ -30,7 +30,7 @@ void May2Dassign::DoIt() {
       VarMeExpr *theLhs = mass.GetChiList()->begin()->second->GetLHS();
       ASSERT(mass.GetMayDassignSym() == theLhs->GetOst(),
              "MeDoMay2Dassign: cannot find maydassign lhs");
-      auto *dass = static_cast<DassignMeStmt*>(irMap->CreateDassignMeStmt(*theLhs, *mass.GetRHS(), *bb));
+      auto *dass = static_cast<DassignMeStmt*>(irMap->CreateAssignMeStmt(*theLhs, *mass.GetRHS(), *bb));
       dass->SetNeedDecref(mass.NeedDecref());
       dass->SetNeedIncref(mass.NeedIncref());
       dass->SetWasMayDassign(true);

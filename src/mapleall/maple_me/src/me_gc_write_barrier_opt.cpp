@@ -107,14 +107,14 @@ void GCWriteBarrierOpt::ResetMeStmt(IntrinsiccallMeStmt &stmt) {
     MapleMap<OStIdx, ChiMeNode*> *chiList = stmt.GetChiList();
     meStmt = irMap.CreateIassignMeStmt(opnd->GetTyIdx(), *ivar, *rhs, *chiList);
   } else {
-    MeExpr *lhs = stmt.GetOpnds().front();
+    ScalarMeExpr *lhs = static_cast<ScalarMeExpr *>(stmt.GetOpnds().front());
     if (lhs->GetMeOp() == kMeOpReg) {
-      meStmt = irMap.CreateRegassignMeStmt(*lhs, *rhs, *stmt.GetBB());
+      meStmt = irMap.CreateAssignMeStmt(*lhs, *rhs, *stmt.GetBB());
     } else {
       CHECK_FATAL((lhs->GetMeOp() == kMeOpVar && stmt.GetIntrinsic() == INTRN_MCCWriteS), "Not Expected.");
       auto *ost = ssaTab.GetOriginalStFromID(GetOStIdx(*lhs));
       VarMeExpr *lhsVar = irMap.GetOrCreateZeroVersionVarMeExpr(*ost);
-      meStmt = irMap.CreateDassignMeStmt(*lhsVar, *rhs, *stmt.GetBB());
+      meStmt = irMap.CreateAssignMeStmt(*lhsVar, *rhs, *stmt.GetBB());
     }
   }
   stmt.GetBB()->ReplaceMeStmt(&stmt, meStmt);

@@ -130,7 +130,7 @@ class SSAPre {
 
  protected:
   // step 6 codemotion methods
-  MeExpr *CreateNewCurTemp(const MeExpr &meExpr);
+  ScalarMeExpr *CreateNewCurTemp(const MeExpr &meExpr);
   VarMeExpr *CreateNewCurLocalRefVar();
   virtual void GenerateSaveRealOcc(MeRealOcc &realOcc) = 0;
   virtual void GenerateReloadRealOcc(MeRealOcc &realOcc) = 0;
@@ -229,7 +229,7 @@ class SSAPre {
   MapleSet<uint32> rename2Set;  // set created by rename1 for use rename2; value
   // is index into workCand->realOccs
   // step 6 codemotion data structures
-  MeExpr *curTemp = nullptr;            // the created temp for current workCand
+  ScalarMeExpr *curTemp = nullptr;            // the created temp for current workCand
   VarMeExpr *curLocalRefVar = nullptr;  // the created localrefvar for ref-type iread
   MapleMap<RegMeExpr*, VarMeExpr*> temp2LocalRefVarMap;
   int32 reBuiltOccIndex = -1;  // stores the size of worklist every time when try to add new worklist, update before
