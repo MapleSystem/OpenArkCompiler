@@ -40,7 +40,9 @@ enum InputFileType {
 enum OptimizationLevel {
   kO0,
   kO1,
-  kO2
+  kO2,
+  kCLangO0,
+  kCLangO2,
 };
 
 enum RunMode {

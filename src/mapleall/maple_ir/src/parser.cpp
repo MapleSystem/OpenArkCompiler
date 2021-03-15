@@ -523,6 +523,7 @@ bool MIRParser::ParsePragma(MIRStructType &type) {
     return false;
   }
   p->SetTyIdx(tyIdx);
+
   tk = lexer.GetTokenKind();
   if (tk != TK_lbrace) {
     TyIdx tyIdxEx;
@@ -532,6 +533,7 @@ bool MIRParser::ParsePragma(MIRStructType &type) {
     }
     p->SetTyIdxEx(tyIdxEx);
   }
+
   tk = lexer.NextToken();
   while (tk != TK_rbrace) {
     auto *e = mod.GetMemPool()->New<MIRPragmaElement>(mod);
