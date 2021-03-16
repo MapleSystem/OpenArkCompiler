@@ -56,10 +56,8 @@ enum MIRSrcLang {
   kSrcLangUnknown,
   kSrcLangC,
   kSrcLangJs,
-  kSrcLangDex,
   kSrcLangCPlusPlus,
   kSrcLangJava,
-  kSrcLangJbc,
   kSrcLangChar,
   // SrcLangSwift : when clang adds support for Swift.
 };
@@ -284,7 +282,7 @@ class MIRModule {
   }
 
   bool IsJavaModule() const {
-    return srcLang == kSrcLangJava || srcLang == kSrcLangDex || srcLang == kSrcLangJbc;
+    return srcLang == kSrcLangJava;
   }
 
   bool IsCModule() const {

@@ -16,18 +16,14 @@
 #include "common_utils.h"
 #include "mpl_logging.h"
 
-#if DEBUG
 #include <stdio.h>
 #include <set>
 #include <iomanip>
-#endif
 
 namespace maplebe {
-#if DEBUG
 static std::set<uint64> ValidBitmaskImmSet = {
 #include "valid_bitmask_imm.txt"
 };
-#endif
 
 namespace {
 constexpr uint32 kMaxBitTableSize = 5;
@@ -45,13 +41,12 @@ bool IsBitmaskImmediate(uint64 val, uint32 bitLen) {
   if ((bitLen == k32BitSize) && (static_cast<int32>(val) == -1)) {
     return false;
   }
-#if DEBUG
   uint64 val2 = val;
   if (bitLen == k32BitSize) {
     val2 = (val2 << k32BitSize) | (val2 & ((1ULL << k32BitSize) - 1));
   }
   bool expectedOutcome = (ValidBitmaskImmSet.find(val2) != ValidBitmaskImmSet.end());
-#endif
+
   if ((val & 0x1) != 0) {
     /*
      * we want to work with
@@ -72,13 +67,12 @@ bool IsBitmaskImmediate(uint64 val, uint32 bitLen) {
   /* now check if tmp is a power of 2 or tmpVal==0. */
   tmpVal = tmpVal & (tmpVal - 1);
   if (tmpVal == 0) {
-#if DEBUG
     if (!expectedOutcome) {
       LogInfo::MapleLogger() << "0x" << std::hex << std::setw(k16ByteSize) << std::setfill('0') <<
                                 static_cast<uint64>(val) << "\n";
+      return false;
     }
     ASSERT(expectedOutcome, "incorrect implementation: not valid value but returning true");
-#endif
     /* power of two or zero ; return true */
     return true;
   }

@@ -476,7 +476,7 @@ void MIRModule::DumpTypeTreeToCxxHeaderFile(MIRType &ty, std::unordered_set<MIRT
     return;
   }
   // dump all of its parents
-  if (srcLang == kSrcLangDex) {
+  if (IsJavaModule()) {
     ASSERT(ty.GetKind() != kTypeStruct, "type is not supposed to be struct");
     ASSERT(ty.GetKind() != kTypeUnion, "type is not supposed to be union");
     ASSERT(ty.GetKind() != kTypeInterface, "type is not supposed to be interface");
@@ -486,7 +486,7 @@ void MIRModule::DumpTypeTreeToCxxHeaderFile(MIRType &ty, std::unordered_set<MIRT
     ASSERT(false, "source languages other than DEX/C/C++ are not supported yet");
   }
   const std::string &name = GlobalTables::GetStrTable().GetStringFromStrIdx(ty.GetNameStrIdx());
-  if (srcLang == kSrcLangDex) {
+  if (IsJavaModule()) {
     // Java class has at most one parent
     auto &classType = static_cast<MIRClassType&>(ty);
     MIRClassType *parentType = nullptr;
@@ -531,8 +531,8 @@ void MIRModule::DumpToCxxHeaderFile(std::set<std::string> &leafClasses, const st
   // define a hash table
   std::unordered_set<MIRType*> dumpedClasses;
   const char *prefix = "__SRCLANG_UNKNOWN_";
-  if (srcLang == kSrcLangDex) {
-    prefix = "__SRCLANG_DEX_";
+  if (IsJavaModule()) {
+    prefix = "__SRCLANG_JAVA_";
   } else if (srcLang == kSrcLangC || srcLang == kSrcLangCPlusPlus) {
     prefix = "__SRCLANG_CXX_";
   }

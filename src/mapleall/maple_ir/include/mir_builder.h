@@ -149,6 +149,7 @@ class MIRBuilder {
                               MIRStorageClass sc = kScGlobal);
   MIRSymbol *GetOrCreateDeclInFunc(const std::string &str, const MIRType &type, MIRFunction &func);
   // for creating Expression
+  ConstvalNode *CreateConstval(MIRConst *constVal);
   ConstvalNode *CreateIntConst(int64, PrimType);
   ConstvalNode *CreateFloatConst(float val);
   ConstvalNode *CreateDoubleConst(double val);
@@ -285,6 +286,7 @@ class MIRBuilder {
   AddrofNode *CreateDread(const MIRSymbol &st, PrimType pty);
   virtual MemPool *GetCurrentFuncCodeMp();
   virtual MapleAllocator *GetCurrentFuncCodeMpAllocator();
+  virtual MemPool *GetCurrentFuncDataMp();
 
   virtual void GlobalLock() {}
   virtual void GlobalUnlock() {}
