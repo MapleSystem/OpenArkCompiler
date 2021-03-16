@@ -1202,7 +1202,7 @@ BlockNode *CGLowerer::LowerBlock(BlockNode &block) {
         newBlk->AddStatement(stmt);
         break;
       case OP_throw:
-        if (mirModule.GetSrcLang() == kSrcLangJava) {
+        if (mirModule.IsJavaModule()) {
           if (GenerateExceptionHandlingCode()) {
             LowerStmt(*stmt, *newBlk);
             newBlk->AddStatement(stmt);
@@ -1792,8 +1792,7 @@ LabelIdx CGLowerer::GetLabelIdx(MIRFunction &curFunc) const {
 }
 
 void CGLowerer::ProcessArrayExpr(BaseNode &expr, BlockNode &blkNode) {
-  bool needProcessArrayExpr =
-      !ShouldOptarray() && ((mirModule.GetSrcLang() == kSrcLangDex) || (mirModule.GetSrcLang() == kSrcLangJava));
+  bool needProcessArrayExpr = !ShouldOptarray() && mirModule.IsJavaModule();
   if (!needProcessArrayExpr) {
     return;
   }
@@ -2820,7 +2819,7 @@ void CGLowerer::LowerGCMalloc(const BaseNode &node, const GCMallocNode &gcmalloc
   auto *curFunc = mirModule.CurFunction();
   if (classSym->GetAttr(ATTR_abstract) || classSym->GetAttr(ATTR_interface)) {
     MIRFunction *funcSecond = mirBuilder->GetOrCreateFunction("MCC_Reflect_ThrowInstantiationError",
-                                                             (TyIdx)(LOWERED_PTR_TYPE));
+                                                              (TyIdx)(LOWERED_PTR_TYPE));
     funcSecond->AllocSymTab();
     BaseNode *arg = mirBuilder->CreateExprAddrof(0, *classSym);
     if (node.GetOpCode() == OP_dassign) {
@@ -3025,8 +3024,7 @@ void CGLowerer::LowerFunc(MIRFunction &func) {
     CleanupBranches(func);
   }
 
-  if (mirModule.GetSrcLang() == kSrcLangJava && func.GetBody()->GetFirst() &&
-      GenerateExceptionHandlingCode()) {
+  if (mirModule.IsJavaModule() && func.GetBody()->GetFirst() && GenerateExceptionHandlingCode()) {
     LowerTryCatchBlocks(*func.GetBody());
   }
 }

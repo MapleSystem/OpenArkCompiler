@@ -3830,7 +3830,7 @@ void AArch64CGFunc::SelectCvtInt2Int(const BaseNode *parent, Operand *&resOpnd, 
       }
     } else {
       /* same size, so resOpnd can be set */
-      if ((mirModule.GetSrcLang() == kSrcLangJava) || (IsSignedInteger(fromType) == IsSignedInteger(toType)) ||
+      if ((mirModule.IsJavaModule()) || (IsSignedInteger(fromType) == IsSignedInteger(toType)) ||
           (GetPrimTypeSize(toType) > k4BitSize)) {
         AArch64RegOperand *reg = static_cast<AArch64RegOperand*>(resOpnd);
         reg->SetRegisterNumber(static_cast<AArch64RegOperand*>(opnd0)->GetRegisterNumber());
