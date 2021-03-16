@@ -72,6 +72,7 @@ bool IsBitmaskImmediate(uint64 val, uint32 bitLen) {
                                 static_cast<uint64>(val) << "\n";
       return false;
     }
+#if DEBUG
     ASSERT(expectedOutcome, "incorrect implementation: not valid value but returning true");
     /* power of two or zero ; return true */
     return true;
