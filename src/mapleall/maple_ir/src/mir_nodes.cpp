@@ -1533,8 +1533,7 @@ bool RetypeNode::VerifyCompleteMIRType(const MIRType &from, const MIRType &to, b
     LogInfo::MapleLogger() << "\n#Error: retype scalar type failed\n";
     return false;
   }
-  MIRSrcLang srcLang = verifyResult.GetMIRModule().GetSrcLang();
-  if (srcLang != kSrcLangJava && srcLang != kSrcLangJbc && srcLang != kSrcLangDex) {
+  if (!verifyResult.GetMIRModule().IsJavaModule()) {
     return true;
   }
   isJavaRefType |= IsJavaRefType(from) && IsJavaRefType(to);
