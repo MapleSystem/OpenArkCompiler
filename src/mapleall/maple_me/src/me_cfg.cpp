@@ -165,7 +165,7 @@ void MeCFG::AddCatchHandlerForTryBB(BB &bb, MapleVector<BB*> &exitBlocks) {
       bb.SetAttributes(kBBAttrIsExit);  // may exit
       exitBlocks.push_back(&bb);
     }
-  } else if ((func.GetMIRModule().GetSrcLang() == kSrcLangDex) && bb.GetAttributes(kBBAttrIsExit)) {
+  } else if (func.GetMIRModule().IsJavaModule() && bb.GetAttributes(kBBAttrIsExit)) {
     // deal with throw bb, if throw bb in a tryblock and has finallyhandler
     auto &stmtNodes = bb.GetStmtNodes();
     if (!stmtNodes.empty() && stmtNodes.back().GetOpCode() == OP_throw) {
