@@ -529,7 +529,7 @@ void MeSSUPre::CreateSortedOccs() {
 
 void MeSSUPre::ApplySSUPre() {
   BuildWorkListBB(func->GetCommonExitBB());
-  if (preKind != kSecondDecrefPre) {  // #0 build worklist
+  if (!MeOption::gcOnly && preKind != kSecondDecrefPre) {  // #0 build worklist
     CreateEmptyCleanupIntrinsics();
   }
   if (enabledDebug) {

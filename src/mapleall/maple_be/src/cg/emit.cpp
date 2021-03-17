@@ -286,9 +286,14 @@ void Emitter::EmitAsmLabel(const MIRSymbol &mirSymbol, AsmLabel label) {
       Emit(size);
       Emit(", ");
 #if PECOFF
+#if TARGARM || TARGAARCH64 || TARGARK || TARGRISCV64
       std::string align = std::to_string(
         static_cast<int>(log2(Globals::GetInstance()->GetBECommon()->GetTypeAlign(mirType->GetTypeIndex()))));
-      emit(align);
+#else
+      std::string align = std::to_string(
+        Globals::GetInstance()->GetBECommon()->GetTypeAlign(mirType->GetTypeIndex()));
+#endif
+      emit(align.c_str());
 #else /* ELF */
       /* output align, symbol name begin with "classInitProtectRegion" align is 4096 */
       MIRTypeKind kind = mirSymbol.GetType()->GetKind();
@@ -297,7 +302,12 @@ void Emitter::EmitAsmLabel(const MIRSymbol &mirSymbol, AsmLabel label) {
         Emit(4096);
       } else if (((kind == kTypeStruct) || (kind == kTypeClass) || (kind == kTypeArray) || (kind == kTypeUnion)) &&
                  ((storage == kScGlobal) || (storage == kScPstatic) || (storage == kScFstatic))) {
-        Emit(std::to_string(k8ByteSize));
+        int32 align = Globals::GetInstance()->GetBECommon()->GetTypeAlign(mirType->GetTypeIndex());
+        if (kSizeOfPtr < align) {
+          Emit(std::to_string(align));
+        } else {
+          Emit(std::to_string(k8ByteSize));
+        }
       } else {
         Emit(std::to_string(Globals::GetInstance()->GetBECommon()->GetTypeAlign(mirType->GetTypeIndex())));
       }
@@ -1504,6 +1514,9 @@ void Emitter::EmitStructConstant(MIRConst &mirConst) {
   /* total size of emitted elements size. */
   uint32 size = Globals::GetInstance()->GetBECommon()->GetTypeSize(structType.GetTypeIndex());
   uint32 fieldIdx = 1;
+  if (structType.GetKind() == kTypeUnion) {
+    fieldIdx = structCt.GetConstVecItem(0)->GetFieldId();
+  }
   for (uint32 i = 0; i < num; ++i) {
     if (((i + 1) == num) && cg->GetMIRModule()->GetSrcLang() == kSrcLangC) {
       isFlexibleArray = Globals::GetInstance()->GetBECommon()->GetHasFlexibleArray(mirType.GetTypeIndex().GetIdx());

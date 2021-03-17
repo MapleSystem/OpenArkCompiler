@@ -258,6 +258,9 @@ void MeProfUse::SetFuncEdgeInfo() {
   }
   func->SetProfValid();
   func->SetFrequency(func->GetCommonEntryBB()->GetFrequency());
+  if (Options::genPGOReport) {
+    func->GetMIRModule().GetProfile().SetFuncStatus(func->GetName(), true);
+  }
 }
 
 void MeProfUse::DumpFuncCFGEdgeFreq() const {

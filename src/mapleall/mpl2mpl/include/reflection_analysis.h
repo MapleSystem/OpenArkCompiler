@@ -132,6 +132,7 @@ class ReflectionAnalysis : public AnalysisResult {
   static TyIdx GetClassMetaDataTyIdx() {
     return classMetadataTyIdx;
   }
+  void DumpPGOSummary();
 
  private:
   static std::unordered_map<std::string, uint32> &GetStr2IdxMap() {
@@ -187,8 +188,20 @@ class ReflectionAnalysis : public AnalysisResult {
   MIRSymbol *GenFieldOffsetData(const Klass &klass, std::pair<FieldPair, int> &fieldInfo);
   MIRSymbol *GetMethodSignatureSymbol(std::string signature);
   MIRSymbol *GetParameterTypesSymbol(uint32 size, uint32 index);
-  MIRSymbol *GenFieldsMetaData(const Klass &klass);
-  MIRSymbol *GenMethodsMetaData(const Klass &klass);
+  MIRSymbol *GenFieldsMetaData(const Klass &klass, bool isHot);
+  MIRSymbol *GenMethodsMetaData(const Klass &klass, bool isHot);
+  MIRSymbol *GenFieldsMetaCompact(const Klass &klass, std::vector<std::pair<FieldPair, int>> &fieldsVector);
+  void GenFieldMetaCompact(const Klass &klass, MIRStructType &fieldsInfoCompactType,
+                           std::pair<FieldPair, int> &fieldInfo, MIRAggConst &aggConstCompact);
+  void GenMethodMetaCompact(const Klass &klass, MIRStructType &methodsInfoType, int idx,
+                            MIRSymbol &funcSym, MIRAggConst &aggConst,
+                            int &allDeclaringClassOffset,
+                            std::unordered_map<uint32, std::string> &baseNameMp,
+                            std::unordered_map<uint32, std::string> &fullNameMp);
+  MIRSymbol *GenMethodsMetaCompact(const Klass &klass,
+                                   std::vector<std::pair<MethodPair*, int>> &methodInfoVec,
+                                   std::unordered_map<uint32, std::string> &baseNameMp,
+                                   std::unordered_map<uint32, std::string> &fullNameMp);
   MIRSymbol *GenFieldsMeta(const Klass &klass, std::vector<std::pair<FieldPair, int>> &fieldsVector,
                            std::vector<std::pair<FieldPair, uint16>> &fieldHashvec);
   void GenFieldMeta(const Klass &klass, MIRStructType &fieldsInfoType, std::pair<FieldPair, int> &fieldInfo,
@@ -274,6 +287,15 @@ class ReflectionAnalysis : public AnalysisResult {
   static bool strTabInited;
   static TyIdx invalidIdx;
   static constexpr uint16 kNoHashBits = 6u;
+  // profile statistics
+  static uint32_t hotMethodMeta;
+  static uint32_t totalMethodMeta;
+  static uint32_t hotClassMeta;
+  static uint32_t totalClassMeta;
+  static uint32_t hotFieldMeta;
+  static uint32_t totalFieldMeta;
+  static uint32_t hotCStr;
+  static uint32_t totalCStr;
   static constexpr char annoDelimiterPrefix = '`';
   static constexpr char annoDelimiter = '!';
   static constexpr char annoArrayStartDelimiter = '{';

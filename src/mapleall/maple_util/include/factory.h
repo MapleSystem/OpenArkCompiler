@@ -17,6 +17,8 @@
 #include <map>
 #include <memory>
 #include <functional>
+#include <mutex>
+#include "thread_env.h"
 
 namespace maple {
 template <typename TKey, typename TObject, typename... TArgs>
@@ -77,6 +79,8 @@ class FunctionFactory final {
   using creator_type = std::function<TRet(TArgs...)>;
 
   void Register(const key_type &key, creator_type func) {
+    static std::mutex mtx;
+    ParallelGuard guard(mtx, ThreadEnv::IsMeParallel());
     if (creator.find(key) == creator.end()) {
       creator[key] = func;
     }
