@@ -70,6 +70,7 @@ MemPool *MemPoolCtrler::NewMemPool(const std::string &name) {
     CHECK_FATAL(false, "ERROR: Can't allocate new memory pool");
     return nullptr;
   }
+  ParallelGuard guard(mtx, HaveRace());
   memPools.insert(memPool);
   return memPool;
 }
@@ -84,6 +85,7 @@ void MemPoolCtrler::DeleteMemPool(MemPool *memPool) {
     return;
   }
 #endif
+  ParallelGuard guard(mtx, HaveRace());
   // Transfer memory blocks to ctrler->freeMemBlocks stack
   while (!memPool->memBlockStack.empty()) {
     MemBlock *mb = memPool->memBlockStack.top();
@@ -113,6 +115,7 @@ void MemPoolCtrler::DeleteMemPool(MemPool *memPool) {
 }
 
 void MemPoolCtrler::FreeMem() {
+  ParallelGuard guard(mtx, HaveRace());
   for (MemBlock *block : freeMemBlocks) {
     free(block);
   }
@@ -141,6 +144,8 @@ MemPool::~MemPool() {
 
 // Return a pointer that points to size of memory from memory block
 void *MemPool::Malloc(size_t size) {
+  // we use the same mutex as ctrler to avoid MemPool::Malloc and MemPoolCtrler::DeleteMemPool are called meanwhile
+  ParallelGuard guard(ctrler.mtx, HaveRace());
 #ifdef MP_DEBUG
   // If controller is not set, or the memory pool is invalid
   if (!IsValid()) {
@@ -216,6 +221,7 @@ void *MemPool::Realloc(const void *ptr, size_t oldSize, size_t newSize) {
 }
 
 void MemPool::ReleaseContainingMem() {
+  ParallelGuard guard(ctrler.mtx, HaveRace());
   while (!memBlockStack.empty()) {
     MemPoolCtrler::MemBlock *block1 = memBlockStack.top();
     block1->available = block1->origSize;

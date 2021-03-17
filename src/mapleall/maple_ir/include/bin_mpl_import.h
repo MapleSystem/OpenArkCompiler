@@ -19,6 +19,7 @@
 #include "mir_preg.h"
 #include "parser_opt.h"
 #include "mir_builder.h"
+#include "ea_connection_graph.h"
 namespace maple {
 class BinaryMplImport {
  public:
@@ -69,6 +70,18 @@ class BinaryMplImport {
   void ReadContentField();
   void ReadStrField();
   void ReadTypeField();
+  void ReadCgField();
+  EAConnectionGraph *ReadEaCgField();
+  void ReadEaField();
+  EACGBaseNode &InEaCgNode(EAConnectionGraph &newEaCg);
+  void InEaCgBaseNode(EACGBaseNode &base, EAConnectionGraph &newEaCg, bool firstPart);
+  void InEaCgActNode(EACGActualNode &actual);
+  void InEaCgFieldNode(EACGFieldNode &field, EAConnectionGraph &newEaCg);
+  void InEaCgObjNode(EACGObjectNode &obj, EAConnectionGraph &newEaCg);
+  void InEaCgRefNode(EACGRefNode &ref);
+  CallInfo *ImportCallInfo();
+  void MergeDuplicated(PUIdx methodPuidx, std::vector<CallInfo*> &targetSet, std::vector<CallInfo*> &newSet);
+  void ReadSeField();
   void Jump2NextField();
   void Reset();
   void SkipTotalSize();
@@ -77,6 +90,7 @@ class BinaryMplImport {
   void InsertInHashTable(MIRType &ptype);
   void SetupEHRootType();
   void UpdateMethodSymbols();
+  void UpdateDebugInfo();
   void ImportConstBase(MIRConstKind &kind, MIRTypePtr &type, uint32 &fieldID);
   MIRConst *ImportConst(MIRFunction *func);
   GStrIdx ImportStr();
@@ -111,6 +125,8 @@ class BinaryMplImport {
   void ReadAsciiStr(std::string &str);
   int32 GetIPAFileIndex(std::string &name);
 
+  bool inCG = false;
+  bool inIPA = false;
   bool imported = true;  // used only by irbuild to convert to ascii
   uint64 bufI = 0;
   std::vector<uint8> buf;
@@ -125,6 +141,8 @@ class BinaryMplImport {
   std::vector<MIRType*> typTab;
   std::vector<MIRFunction*> funcTab;
   std::vector<MIRSymbol*> symTab;
+  std::vector<CallInfo*> callInfoTab;
+  std::vector<EACGBaseNode*> eaCgTab;
   std::vector<MIRSymbol*> methodSymbols;
   std::map<TyIdx, TyIdx> typeDefIdxMap;  // map previous declared tyIdx
   std::vector<bool> definedLabels;

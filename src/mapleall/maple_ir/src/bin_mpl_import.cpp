@@ -430,16 +430,20 @@ void BinaryMplImport::ImportClassTypeData(MIRClassType &type) {
   }
   ImportInterfacesOfClassType(type.GetInterfaceImplemented());
   ImportInfoIsStringOfStructType(type);
-  ImportInfoOfStructType(type);
-  ImportPragmaOfStructType(type);
+  if (!inIPA) {
+    ImportInfoOfStructType(type);
+    ImportPragmaOfStructType(type);
+  }
   SetClassTyidxOfMethods(type);
 }
 
 void BinaryMplImport::ImportInterfaceTypeData(MIRInterfaceType &type) {
   ImportInterfacesOfClassType(type.GetParentsTyIdx());
   ImportInfoIsStringOfStructType(type);
-  ImportInfoOfStructType(type);
-  ImportPragmaOfStructType(type);
+  if (!inIPA) {
+    ImportInfoOfStructType(type);
+    ImportPragmaOfStructType(type);
+  }
   SetClassTyidxOfMethods(type);
 }
 
@@ -743,6 +747,10 @@ MIRType &BinaryMplImport::InsertInTypeTables(MIRType &type) {
   }
   return *resultTypePtr;
 }
+
+void BinaryMplImport::UpdateDebugInfo() {
+}
+
 
 void BinaryMplImport::SetupEHRootType() {
   // setup eh root type with most recent Ljava_2Flang_2FObject_3B

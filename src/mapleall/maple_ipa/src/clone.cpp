@@ -25,6 +25,9 @@
 namespace maple {
 ReplaceRetIgnored::ReplaceRetIgnored(MemPool *memPool)
     : memPool(memPool), allocator(memPool), toBeClonedFuncNames(allocator.Adapter()) {
+#define ORIFUNC(ORIGINAL, CLONED) toBeClonedFuncNames.insert(MapleString(#ORIGINAL, memPool));
+#include "tobe_cloned_funcs.def"
+#undef ORIFUNC
 }
 
 bool ReplaceRetIgnored::RealShouldReplaceWithVoidFunc(Opcode op, size_t nRetSize,

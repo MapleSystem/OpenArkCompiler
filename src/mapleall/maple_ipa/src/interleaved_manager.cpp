@@ -22,6 +22,11 @@
 #include "mempool.h"
 #include "phase_manager.h"
 #include "mpl_timer.h"
+#include "call_graph.h"
+#include "ipa_escape_analysis.h"
+#include "me_ssa_devirtual.h"
+#include "me_func_opt.h"
+#include "thread_env.h"
 
 namespace maple {
 std::vector<std::pair<std::string, time_t>> InterleavedManager::interleavedTimer;
@@ -56,6 +61,129 @@ void InterleavedManager::AddPhases(const std::vector<std::string> &phases, bool 
   }
 }
 
+void InterleavedManager::AddIPAPhases(std::vector<std::string> &phases, bool timePhases, bool genMpl) {
+  ModuleResultMgr *mrm = nullptr;
+  if (!phaseManagers.empty()) {
+    // ModuleResult such class hierarchy needs to be carried on
+    PhaseManager *pm = phaseManagers.back();
+    mrm = pm->GetModResultMgr();
+  }
+
+  auto *fpm = GetMemPool()->New<MeFuncPhaseManager>(GetMemPool(), mirModule, mrm);
+  fpm->RegisterFuncPhases();
+  if (genMpl) {
+    fpm->SetGenMeMpl(true);
+  }
+  if (timePhases) {
+    fpm->SetTimePhases(true);
+  }
+  fpm->AddPhasesNoDefault(phases);
+  phaseManagers.push_back(fpm);
+  fpm->SetIPA(true);
+}
+
+void InterleavedManager::IPARun(MeFuncPhaseManager &fpm) {
+  uint64 rangeNum = 0;
+  CHECK_NULL_FATAL(fpm.GetModResultMgr());
+  auto *pcg = static_cast<CallGraph*>(fpm.GetModResultMgr()->GetAnalysisResult(MoPhase_CALLGRAPH_ANALYSIS,
+                                                                               &mirModule));
+  CHECK_NULL_FATAL(pcg);
+
+  const MapleVector<SCCNode*> &sccTopVec = pcg->GetSCCTopVec();
+  for (auto nodeIt = sccTopVec.rbegin(); nodeIt != sccTopVec.rend(); ++nodeIt) {
+    ++rangeNum;
+    SCCNode *curSCCNode = *nodeIt;
+
+    if (IPAEscapeAnalysis::kDebug) {
+      LogInfo::MapleLogger() << "<<<<<<<<<<<<<<<<<< SCC BEGIN <<<<<<<<<<<<<<<<<<" << "\n";
+      LogInfo::MapleLogger() << "[SCCCOUNT] " << rangeNum << ", [SIZE] " << curSCCNode->GetCGNodes().size() << "\n";
+      curSCCNode->Dump();
+    }
+    bool needConservation = false;
+    if (curSCCNode->GetCGNodes().size() > IPAEscapeAnalysis::kFuncInSCCLimit) {
+      if (IPAEscapeAnalysis::kDebug) {
+        LogInfo::MapleLogger() << "[kFuncInSCCLimit] [SCCCOUNT] " << rangeNum << ", [SIZE] " <<
+            curSCCNode->GetCGNodes().size() << "\n";
+      }
+      needConservation = true;
+    }
+    bool cgUpdated = true;
+    int iterationTime = 0;
+    do {
+      if (iterationTime == IPAEscapeAnalysis::kSCCConvergenceLimit) {
+        if (IPAEscapeAnalysis::kDebug) {
+          LogInfo::MapleLogger() << "[kSCCConvergenceLimit] [SCCCOUNT] " << rangeNum << ", [SIZE] " <<
+              curSCCNode->GetCGNodes().size() << "\n";
+        }
+        needConservation = true;
+      }
+      ++iterationTime;
+      if (IPAEscapeAnalysis::kDebug) {
+        LogInfo::MapleLogger() << "===========LOOP BEGIN============ " << iterationTime << "\n";
+      }
+
+      // At the loop beginning, we set cgUpdated to false, if any eaCG of the function in
+      // the scc changed, we set cgUpdated to true.
+      cgUpdated = false;
+      for (auto *node : curSCCNode->GetCGNodes()) {
+        MIRFunction *func = node->GetMIRFunction();
+        if (func->GetBody() == nullptr) {
+          // No matter whether current node needs update or not,
+          // there is no need to run the following code, because the function has no body.
+          continue;
+        }
+        if (func->IsNative() || func->IsAbstract()) {
+          continue;
+        }
+        if (fpm.GetPhaseSequence()->empty()) {
+          continue;
+        }
+        mirModule.SetCurFunction(func);
+        if (func->GetEACG() != nullptr) {
+          func->GetEACG()->UnSetCGUpdateFlag();
+        }
+        if (IPAEscapeAnalysis::kDebug) {
+          LogInfo::MapleLogger() << "[FUNC_IN_SCC] " << func->GetName() << " [SCCCOUNT] " << rangeNum << "\n";
+        }
+        if (func->GetMeFunc() != nullptr) {
+          if (IPAEscapeAnalysis::kDebug) {
+            LogInfo::MapleLogger() << "[HANDLED_BEFORE] skip all phase but ipaea" << "\n";
+          }
+          if (needConservation) {
+            ASSERT_NOT_NULL(func->GetEACG());
+            func->GetEACG()->SetNeedConservation();
+          }
+          fpm.RunFuncPhase(func->GetMeFunc(), static_cast<MeFuncPhase*>(fpm.GetPhaseFromName("ipaea")));
+        } else {
+          // lower, create BB and build cfg
+          fpm.Run(func, rangeNum, meInput);
+        }
+        cgUpdated = func->GetEACG()->CGHasUpdated();
+      }
+      if (IPAEscapeAnalysis::kDebug) {
+        LogInfo::MapleLogger() << "===========LOOP END============ " << iterationTime << "\n";
+      }
+      if (needConservation || !curSCCNode->HasRecursion()) {
+        break;
+      }
+    } while (cgUpdated);
+
+    for (auto *node : curSCCNode->GetCGNodes()) {
+      MIRFunction *func = node->GetMIRFunction();
+      mirModule.SetCurFunction(func);
+      if (func->GetEACG() != nullptr && func->GetBody() != nullptr && IPAEscapeAnalysis::kDebug) {
+        func->GetEACG()->CountObjEAStatus();
+      }
+      if (func->GetMeFunc() != nullptr) {
+        memPoolCtrler.DeleteMemPool(func->GetMeFunc()->GetMemPool());
+      }
+    }
+    fpm.GetAnalysisResultManager()->InvalidAllResults();
+    if (IPAEscapeAnalysis::kDebug) {
+      LogInfo::MapleLogger() << ">>>>>>>>>>>>>>>>>> SCC END >>>>>>>>>>>>>>>>>>" << "\n\n";
+    }
+  }
+}
 
 void InterleavedManager::OptimizeFuncs(MeFuncPhaseManager &fpm, MapleVector<MIRFunction*> &compList) {
   for (size_t i = 0; i < compList.size(); ++i) {
