@@ -526,7 +526,7 @@ class IntConstTable {
   IntConstTable &operator=(const IntConstTable &p) = delete;
   ~IntConstTable();
 
-  MIRIntConst *GetOrCreateIntConst(int64 val, MIRType &type, uint32 fieldID = 0);
+  MIRIntConst *GetOrCreateIntConst(int64 val, MIRType &type, uint32 fieldID);
 
   static std::unique_ptr<IntConstTable> Create() {
     auto p = std::unique_ptr<IntConstTable>(new IntConstTable());

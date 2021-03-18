@@ -309,7 +309,7 @@ void NativeStubFuncGeneration::GenerateRegFuncTabEntry() {
   uint64 locIdx = regFuncTabConst->GetConstVec().size();
   auto *newConst =
     GlobalTables::GetIntConstTable().GetOrCreateIntConst(static_cast<int64>((locIdx << locIdxShift) | locIdxMask),
-                                                         *GlobalTables::GetTypeTable().GetVoidPtr());
+                                                         *GlobalTables::GetTypeTable().GetVoidPtr(), 0/*fieldID*/);
   regFuncTabConst->PushBack(newConst);
 }
 
@@ -331,10 +331,10 @@ void NativeStubFuncGeneration::GenerateRegTabEntry(const MIRFunction &func) {
   uint32 classIdx = ReflectionAnalysis::FindOrInsertRepeatString(base, true);  // always used
   // Using MIRIntConst instead of MIRStruct for RegTable.
   auto *baseConst =
-      GlobalTables::GetIntConstTable().GetOrCreateIntConst(classIdx, *GlobalTables::GetTypeTable().GetVoidPtr());
+      GlobalTables::GetIntConstTable().GetOrCreateIntConst(classIdx, *GlobalTables::GetTypeTable().GetVoidPtr(), 0/*fieldID*/);
   regTableConst->PushBack(baseConst);
   auto *newConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(baseFuncNameWithTypeIdx,
-                                                                        *GlobalTables::GetTypeTable().GetVoidPtr());
+                                                                        *GlobalTables::GetTypeTable().GetVoidPtr(), 0/*fieldID*/);
   regTableConst->PushBack(newConst);
 }
 
