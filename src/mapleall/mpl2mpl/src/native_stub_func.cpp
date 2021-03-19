@@ -378,7 +378,7 @@ void NativeStubFuncGeneration::GenerateRegisteredNativeFuncCall(MIRFunction &fun
       builder->CreateExprCompare(OP_lt, *GlobalTables::GetTypeTable().GetUInt1(),
                                  *GlobalTables::GetTypeTable().GetPtr(),
                                  regReadExpr, builder->CreateIntConst(MByteRef::kPositiveOffsetBias, PTY_ptr));
-#elif defined(TARGAARCH64)
+#elif defined(TARGAARCH64) || defined(TARGRISCV64)
   // define a temp register for bitwise-and operation
   constexpr int intConstLength = 1;
   BaseNode *andExpr = builder->CreateExprBinary(OP_band, *GlobalTables::GetTypeTable().GetPtr(), regReadExpr,
@@ -415,7 +415,7 @@ void NativeStubFuncGeneration::GenerateRegisteredNativeFuncCall(MIRFunction &fun
       func.GetBody()->AddStatement(wrapperCall);
     } else if (!Options::regNativeDynamicOnly) { // Qemu
       func.GetBody()->AddStatement(funcPtrAssign);
-#ifdef TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
       func.GetBody()->AddStatement(flagSymAssign);
 #endif
       // Get find_native_func function
@@ -472,7 +472,7 @@ void NativeStubFuncGeneration::GenerateRegisteredNativeFuncCall(MIRFunction &fun
       }
     } else { // EMUI
       func.GetBody()->AddStatement(funcPtrAssign);
-#ifdef TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
       func.GetBody()->AddStatement(flagSymAssign);
 #endif
       MIRFunction *findNativeFunc = builder->GetOrCreateFunction(namemangler::kFindNativeFunc,

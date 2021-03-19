@@ -104,7 +104,7 @@ class CGOptions : public MapleDriverOptionBase {
    * function at each function entry.
    */
   static const OptionFlag kDefaultOptions = OptionFlag(
-#if TARGAARCH64 || TARGARM32
+#if TARGAARCH64 || TARGARM32 || TARGRISCV64
     kDoCg | kGenPie | kDoColorRegAlloc
 #else
     kDoCg

@@ -41,7 +41,7 @@ AnalysisResult *CgDoGenProEpiLog::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncRes
   ASSERT(cgFunc != nullptr, "expect a cgfunc in CgDoGenProEpiLog");
   MemPool *memPool = NewMemPool();
   GenProEpilog *genPE = nullptr;
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
   genPE = memPool->New<AArch64GenProEpilog>(*cgFunc);
 #endif
 #if TARGARM32

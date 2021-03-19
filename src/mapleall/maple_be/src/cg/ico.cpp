@@ -95,7 +95,7 @@ AnalysisResult *CgDoIco::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
   }
   MemPool *memPool = NewMemPool();
   IfConversionOptimizer *ico = nullptr;
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
   ico = memPool->New<AArch64IfConversionOptimizer>(*cgFunc, *memPool);
 #endif
 #if TARGARM32

@@ -15,6 +15,8 @@
 #include "yieldpoint.h"
 #if TARGAARCH64
 #include "aarch64_yieldpoint.h"
+#elif TARGRISCV64
+#include "riscv64_yieldpoint.h"
 #endif
 #if TARGARM32
 #include "arm32_yieldpoint.h"
@@ -28,7 +30,7 @@ AnalysisResult *CgYieldPointInsertion::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFu
   ASSERT(cgFunc != nullptr, "expect a cgfunc in CgYieldPointInsertion");
   MemPool *memPool = NewMemPool();
   YieldPointInsertion *yieldPoint = nullptr;
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
   yieldPoint = memPool->New<AArch64YieldPointInsertion>(*cgFunc);
 #endif
 #if TARGARM32

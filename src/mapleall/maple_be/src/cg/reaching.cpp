@@ -1130,7 +1130,7 @@ AnalysisResult *CgDoReachingDefinition::Run(CGFunc *cgFunc, CgFuncResultMgr *cgF
   CHECK_NULL_FATAL(cgFuncResultMgr);
   MemPool *memPool = NewMemPool();
   ReachingDefinition *reachingDef = nullptr;
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
   reachingDef = memPool->New<AArch64ReachingDefinition>(*cgFunc, *memPool);
 #endif
 #if TARGARM32
