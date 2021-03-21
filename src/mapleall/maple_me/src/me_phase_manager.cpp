@@ -31,12 +31,24 @@
 #include "me_hdse.h"
 #include "me_prop.h"
 #include "me_rename2preg.h"
+#include "me_loop_unrolling.h"
+#include "me_cfg_opt.h"
+#include "meconstprop.h"
+#include "me_bb_analyze.h"
 #include "me_ssa_lpre.h"
 #include "me_ssa_epre.h"
 #include "me_stmt_pre.h"
 #include "me_store_pre.h"
 #include "me_cond_based_rc.h"
 #include "me_cond_based_npc.h"
+#include "me_check_cast.h"
+#include "me_placement_rc.h"
+#include "me_subsum_rc.h"
+#include "me_predict.h"
+#include "ipa_side_effect.h"
+#include "do_ipa_escape_analysis.h"
+#include "me_gc_lowering.h"
+#include "me_gc_write_barrier_opt.h"
 #include "preg_renamer.h"
 #include "me_ssa_devirtual.h"
 #include "me_delegate_rc.h"
@@ -49,6 +61,9 @@
 #include "me_emit.h"
 #include "me_rc_lowering.h"
 #include "gen_check_cast.h"
+#if MIR_JAVA
+#include "sync_select.h"
+#endif  // MIR_JAVA
 #include "me_ssa_tab.h"
 #include "mpl_timer.h"
 #include "constantfold.h"
@@ -63,10 +78,15 @@ void MeFuncPhaseManager::RunFuncPhase(MeFunction *func, MeFuncPhase *phase) {
     LogInfo::MapleLogger() << "---Run Phase [ " << phase->PhaseName() << " ]---\n";
   }
   // 3. tracetime(phase.id())
+#ifdef DEBUG_TIMER
+  MPLTimer timer;
+  timer.Start();
+#endif
   // 4. run: skip mplme phase except "emit" if no cfg in MeFunction
   AnalysisResult *analysisRes = nullptr;
   MePhaseID phaseID = phase->GetPhaseId();
-  if ((func->NumBBs() > 0) || (phaseID == MeFuncPhase_EMIT)) {
+  if ((func->NumBBs() > 0 || (mirModule.IsInIPA() && phaseID == MeFuncPhase_IPASIDEEFFECT)) ||
+      (phaseID == MeFuncPhase_EMIT) || (phaseID == MeFuncPhase_SSARENAME2PREG)) {
     analysisRes = phase->Run(func, &arFuncManager, modResMgr);
     phase->ClearMemPoolsExcept(analysisRes == nullptr ? nullptr : analysisRes->GetMempool());
     phase->ClearString();

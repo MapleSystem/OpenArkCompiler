@@ -29,7 +29,7 @@ void MIRBuilder::AddAddrofFieldConst(const MIRStructType &structType, MIRAggCons
                                      const MIRSymbol &fieldSymbol) {
   AddrofNode *fieldExpr = CreateExprAddrof(0, fieldSymbol, mirModule->GetMemPool());
   auto *fieldConst = mirModule->GetMemPool()->New<MIRAddrofConst>(fieldExpr->GetStIdx(), fieldExpr->GetFieldID(),
-                                                                      *structType.GetElemType(fieldID - 1));
+                                                                  *structType.GetElemType(fieldID - 1));
   fieldConst->SetFieldID(fieldID);
   newConst.PushBack(fieldConst);
 }
@@ -468,6 +468,10 @@ MIRSymbol *MIRBuilder::CreatePregFormalSymbol(TyIdx tyIdx, PregIdx pRegIdx, MIRF
   return MIRSymbolBuilder::Instance().CreatePregFormalSymbol(tyIdx, pRegIdx, func);
 }
 
+ConstvalNode *MIRBuilder::CreateConstval(MIRConst *mirConst) {
+  return GetCurrentFuncCodeMp()->New<ConstvalNode>(mirConst->GetType().GetPrimType(), mirConst);
+}
+
 ConstvalNode *MIRBuilder::CreateIntConst(int64 val, PrimType pty) {
   auto *mirConst =
       GlobalTables::GetIntConstTable().GetOrCreateIntConst(val, *GlobalTables::GetTypeTable().GetPrimType(pty));
@@ -475,22 +479,19 @@ ConstvalNode *MIRBuilder::CreateIntConst(int64 val, PrimType pty) {
 }
 
 ConstvalNode *MIRBuilder::CreateFloatConst(float val) {
-  MIRFunction *currentFunctionInner = GetCurrentFunctionNotNull();
-  auto *mirConst = currentFunctionInner->GetDataMemPool()->New<MIRFloatConst>(
+  auto *mirConst = GetCurrentFuncDataMp()->New<MIRFloatConst>(
       val, *GlobalTables::GetTypeTable().GetPrimType(PTY_f32));
   return GetCurrentFuncCodeMp()->New<ConstvalNode>(PTY_f32, mirConst);
 }
 
 ConstvalNode *MIRBuilder::CreateDoubleConst(double val) {
-  MIRFunction *currentFunctionInner = GetCurrentFunctionNotNull();
-  auto *mirConst = currentFunctionInner->GetDataMemPool()->New<MIRDoubleConst>(
+  auto *mirConst = GetCurrentFuncDataMp()->New<MIRDoubleConst>(
       val, *GlobalTables::GetTypeTable().GetPrimType(PTY_f64));
   return GetCurrentFuncCodeMp()->New<ConstvalNode>(PTY_f64, mirConst);
 }
 
 ConstvalNode *MIRBuilder::CreateFloat128Const(const uint64 *val) {
-  MIRFunction *currentFunctionInner = GetCurrentFunctionNotNull();
-  auto *mirConst = currentFunctionInner->GetDataMemPool()->New<MIRFloat128Const>(
+  auto *mirConst = GetCurrentFuncDataMp()->New<MIRFloat128Const>(
       *val, *GlobalTables::GetTypeTable().GetPrimType(PTY_f128));
   return GetCurrentFuncCodeMp()->New<ConstvalNode>(PTY_f128, mirConst);
 }
@@ -1011,11 +1012,47 @@ void MIRBuilder::AddStmtInCurrentFunctionBody(StmtNode &stmt) {
 }
 
 MemPool *MIRBuilder::GetCurrentFuncCodeMp() {
-  return mirModule->CurFuncCodeMemPool();
+  if (MIRFunction *curFunction = GetCurrentFunction()) {
+    return curFunction->GetCodeMemPool();
+  }
+  return mirModule->GetMemPool();
 }
 
 MapleAllocator *MIRBuilder::GetCurrentFuncCodeMpAllocator() {
-  return mirModule->CurFuncCodeMemPoolAllocator();
+  if (MIRFunction *curFunction = GetCurrentFunction()) {
+    return &curFunction->GetCodeMPAllocator();
+  }
+  return &mirModule->GetMPAllocator();
 }
 
+MemPool *MIRBuilder::GetCurrentFuncDataMp() {
+  if (MIRFunction *curFunction = GetCurrentFunction()) {
+    return curFunction->GetDataMemPool();
+  }
+  return mirModule->GetMemPool();
+}
+
+MIRBuilderExt::MIRBuilderExt(MIRModule *module, pthread_mutex_t *mutex) : MIRBuilder(module), mutex(mutex) {}
+
+MemPool *MIRBuilderExt::GetCurrentFuncCodeMp() {
+  ASSERT(curFunction, "curFunction is null");
+  return curFunction->GetCodeMemPool();
+}
+
+MapleAllocator *MIRBuilderExt::GetCurrentFuncCodeMpAllocator() {
+  ASSERT(curFunction, "curFunction is null");
+  return &curFunction->GetCodeMemPoolAllocator();
+}
+
+void MIRBuilderExt::GlobalLock() {
+  if (mutex) {
+    ASSERT(pthread_mutex_lock(mutex) == 0, "lock failed");
+  }
+}
+
+void MIRBuilderExt::GlobalUnlock() {
+  if (mutex) {
+    ASSERT(pthread_mutex_unlock(mutex) == 0, "unlock failed");
+  }
+}
 }  // namespace maple

@@ -22,6 +22,8 @@
 #include "call_graph.h"
 #include "verification.h"
 #include "verify_mark.h"
+#include "inline.h"
+#include "method_replace.h"
 #if MIR_JAVA
 #include "native_stub_func.h"
 #include "vtable_analysis.h"
@@ -30,11 +32,11 @@
 #include "vtable_impl.h"
 #include "java_intrn_lowering.h"
 #include "java_eh_lower.h"
-#include "native_stub_func.h"
 #include "muid_replacement.h"
 #include "gen_check_cast.h"
 #include "coderelayout.h"
 #include "constantfold.h"
+#include "barrierinsertion.h"
 #endif  // ~MIR_JAVA
 
 namespace {

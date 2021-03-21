@@ -352,6 +352,8 @@ class KlassHierarchy : public AnalysisResult {
   TyIdx GetLCA(TyIdx ty1, TyIdx ty2) const;
   GStrIdx GetLCA(GStrIdx str1, GStrIdx str2) const;
   const std::string &GetLCA(const std::string &name1, const std::string &name2) const;
+  // 1/0/-1: true/false/unknown
+  int IsSuperKlass(TyIdx superTyIdx, TyIdx baseTyIdx) const;
   bool IsSuperKlass(const Klass *super, const Klass *base) const;
   bool IsSuperKlassForInterface(const Klass *super, const Klass *base) const;
   bool IsInterfaceImplemented(Klass *interface, const Klass *base) const;
@@ -388,6 +390,12 @@ class KlassHierarchy : public AnalysisResult {
   int GetFieldIDOffsetBetweenClasses(const Klass &super, const Klass &base) const;
   void TopologicalSortKlasses();
   void MarkClassFlags();
+  // Return the unique method if there is only one target virtual function.
+  // Return 0 if there are multiple targets or the targets are unclear.
+  GStrIdx GetUniqueMethod(GStrIdx) const;
+  bool IsDevirtualListEmpty() const;
+  void DumpDevirtualList(const std::string &outputFileName) const;
+  void ReadDevirtualList(const std::string &inputFileName);
   MapleAllocator alloc;
   MIRModule *mirModule;
   // Map from class name to klass. Use name as the key because the type
@@ -397,6 +405,9 @@ class KlassHierarchy : public AnalysisResult {
   //    class B extends A { void foo(); }
   //    In this case, there is no link from B.bar to B in the maple file.
   MapleMap<GStrIdx, Klass*> strIdx2KlassMap;
+  // Map from a virtual method name to its corresponding real method name
+  // This is used for devirtualization and has to be built with a closed-world view
+  MapleMap<GStrIdx, GStrIdx> vfunc2RfuncMap;
   MapleVector<Klass*> topoWorkList;
 };
 

@@ -149,6 +149,7 @@ class MIRBuilder {
                               MIRStorageClass sc = kScGlobal);
   MIRSymbol *GetOrCreateDeclInFunc(const std::string &str, const MIRType &type, MIRFunction &func);
   // for creating Expression
+  ConstvalNode *CreateConstval(MIRConst *constVal);
   ConstvalNode *CreateIntConst(int64, PrimType);
   ConstvalNode *CreateFloatConst(float val);
   ConstvalNode *CreateDoubleConst(double val);
@@ -285,7 +286,10 @@ class MIRBuilder {
   AddrofNode *CreateDread(const MIRSymbol &st, PrimType pty);
   virtual MemPool *GetCurrentFuncCodeMp();
   virtual MapleAllocator *GetCurrentFuncCodeMpAllocator();
+  virtual MemPool *GetCurrentFuncDataMp();
 
+  virtual void GlobalLock() {}
+  virtual void GlobalUnlock() {}
 
  private:
   MIRSymbol *GetOrCreateGlobalDecl(const std::string &str, TyIdx tyIdx, bool &created) const;
@@ -303,5 +307,27 @@ class MIRBuilder {
   unsigned int lineNum = 0;
 };
 
+class MIRBuilderExt : public MIRBuilder {
+ public:
+  explicit MIRBuilderExt(MIRModule *module, pthread_mutex_t *mutex = nullptr);
+  virtual ~MIRBuilderExt() = default;
+
+  void SetCurrentFunction(MIRFunction &func) override {
+    curFunction = &func;
+  }
+
+  MIRFunction *GetCurrentFunction() const override {
+    return curFunction;
+  }
+
+  MemPool *GetCurrentFuncCodeMp() override;
+  MapleAllocator *GetCurrentFuncCodeMpAllocator() override;
+  void GlobalLock() override;
+  void GlobalUnlock() override;
+
+ private:
+  MIRFunction *curFunction = nullptr;
+  pthread_mutex_t *mutex = nullptr;
+};
 }  // namespace maple
 #endif  // MAPLE_IR_INCLUDE_MIR_BUILDER_H

@@ -23,11 +23,12 @@
 namespace maple {
 class RCLowering {
  public:
-  RCLowering(MeFunction &f, bool enabledDebug)
+  RCLowering(MeFunction &f, KlassHierarchy &kh, bool enabledDebug)
       : func(f),
         mirModule(f.GetMIRModule()),
         irMap(*f.GetIRMap()),
         ssaTab(*f.GetMeSSATab()),
+        klassHierarchy(kh),
         enabledDebug(enabledDebug) {}
 
   virtual ~RCLowering() = default;
@@ -37,6 +38,10 @@ class RCLowering {
   void RCLower();
   void PostRCLower();
   void Finish();
+  void FastBBLower(BB &bb);
+  void SetDominance(Dominance &domin) {
+    dominance = &domin;
+  }
   bool GetIsAnalyzed() const {
     return isAnalyzed;
   }
@@ -44,6 +49,12 @@ class RCLowering {
  private:
   void MarkLocalRefVar();
   void MarkAllRefOpnds();
+  void UpdateRefVarVersions(BB &bb);
+  void RecordVarPhiVersions(std::map<OStIdx, size_t> &savedStackSize, const BB &bb);
+  void TraverseAllStmts(BB &bb);
+  void RestoreVersionRecords(std::map<OStIdx, size_t> &savedStackSize);
+  void UnmarkNotNeedDecRefOpnds();
+  void EpreFixup(BB &bb);
   void BBLower(BB &bb);
   void CreateCleanupIntrinsics();
   void HandleArguments();
@@ -88,17 +99,36 @@ class RCLowering {
   void HandleReturnNeedBackup();
   void HandleReturnStmt();
   void HandleAssignMeStmt(MeStmt &stmt, MeExpr *pendingDec);
+  void HandlePerManent(MeStmt &stmt);
+  bool HasCallOrBranch(const MeStmt &from, const MeStmt &to);
   MIRIntrinsicID SelectWriteBarrier(const MeStmt &stmt);
   MIRType *GetArrayNodeType(const VarMeExpr &var);
   void CheckArrayStore(const IntrinsiccallMeStmt &writeRefCall);
+  void FastLowerThrowStmt(MeStmt &stmt, MapleMap<uint32, MeStmt*> &exceptionAllocsites);
+  void FastLowerRetStmt(MeStmt &stmt);
+  void FastLowerRetVar(RetMeStmt &stmt);
+  void FastLowerRetIvar(RetMeStmt &stmt);
+  void FastLowerRetReg(RetMeStmt &stmt);
+  void FastLowerAssignToVar(MeStmt &stmt, MapleMap<uint32, MeStmt*> &exceptionAllocsites);
+  void FastLowerAssignToIvar(MeStmt &stmt);
+  void FastLowerCallAssignedStmt(MeStmt &stmt);
+  void CheckRefs();
+  void ParseCheckFlag();
+  void CheckFormals();
+  void CheckRefsInAssignStmt(BB &bb);
+  void CheckRefReturn(BB &bb);
   MeFunction &func;
   MIRModule &mirModule;
   IRMap &irMap;
   SSATab &ssaTab;
+  KlassHierarchy &klassHierarchy;
   std::vector<MeStmt*> rets{};  // std::vector of return statement
   unsigned int tmpCount = 0;
+  uint32_t checkRCIndex = 0;
   bool needSpecialHandleException = false;
   bool isAnalyzed = false;
+  bool rcCheckReferent = false;
+  Dominance *dominance = nullptr;
   std::set<const MIRSymbol*> assignedPtrSym;
   std::set<VarMeExpr*> tmpLocalRefVars;
   std::set<MeExpr*> gcMallocObjects{};
@@ -106,6 +136,11 @@ class RCLowering {
   std::map<OStIdx, OriginalSt*> varOStMap{};
   // used to store initialized map, help to optimize dec ref in first assignment
   std::unordered_map<MeExpr*, std::set<FieldID>> initializedFields{};
+  std::map<MeStmt*, MeExpr*> decOpnds{};
+  std::map<OStIdx, std::vector<MeExpr*>> varVersions{};
+  bool checkRefFormal = false;
+  bool checkRefAssign = false;
+  bool checkRefReturn = false;
   bool enabledDebug;
 };
 

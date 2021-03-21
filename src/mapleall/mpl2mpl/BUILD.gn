@@ -27,6 +27,7 @@ include_directories = [
 src_libmpl2mpl = [
   "src/class_init.cpp",
   "src/gen_check_cast.cpp",
+  "src/barrierinsertion.cpp",
   "src/muid_replacement.cpp",
   "src/reflection_analysis.cpp",
   "src/vtable_analysis.cpp",

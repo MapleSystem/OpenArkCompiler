@@ -528,6 +528,19 @@ class MIRSymbolTable {
     symbolTable.clear();
   }
 
+  MIRSymbol *CloneLocalSymbol(const MIRSymbol &oldSym) const {
+    auto *memPool = mAllocator.GetMemPool();
+    auto *newSym = memPool->New<MIRSymbol>(oldSym);
+    if (oldSym.GetSKind() == kStConst) {
+      newSym->SetKonst(oldSym.GetKonst()->Clone(*memPool));
+    } else if (oldSym.GetSKind() == kStPreg) {
+      newSym->SetPreg(memPool->New<MIRPreg>(*oldSym.GetPreg()));
+    } else if (oldSym.GetSKind() == kStFunc) {
+      CHECK_FATAL(false, "%s has unexpected local func symbol", oldSym.GetName().c_str());
+    }
+    return newSym;
+  }
+
  private:
   MapleAllocator mAllocator;
   // hash table mapping string index to st index

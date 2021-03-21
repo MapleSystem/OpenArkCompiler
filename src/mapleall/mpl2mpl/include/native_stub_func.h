@@ -69,6 +69,8 @@ class NativeStubFuncGeneration : public FuncOptimizeImpl {
   }
   void InitStaticBindingMethodList();
   bool IsStaticBindingMethod(const std::string &methodName) const;
+  void LoadNativeFuncProperty();
+  bool GetNativeFuncProperty(const std::string &funcName, NativeFuncProperty &property);
   MIRFunction &GetOrCreateDefaultNativeFunc(MIRFunction &stubFunc);
   void GenerateRegisteredNativeFuncCall(MIRFunction &func, const MIRFunction &nativeFunc, MapleVector<BaseNode*> &args,
                                         const MIRSymbol *ret);
@@ -83,6 +85,7 @@ class NativeStubFuncGeneration : public FuncOptimizeImpl {
   void GenerateRegFuncTabEntryType();
   void GenerateRegFuncTabEntry();
   void GenerateRegFuncTab();
+  std::unordered_map<std::string, NativeFuncProperty> nativeFuncPropertyMap;
   // a static binding function list
   std::unordered_set<std::string> staticBindingMethodsSet;
   TyIdx jstrPointerTypeIdx = TyIdx(0);

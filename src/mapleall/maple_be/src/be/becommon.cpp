@@ -115,13 +115,13 @@ void BECommon::ComputeStructTypeSizesAligns(MIRType &ty, const TyIdx &tyIdx) {
   uint64 allocedSize = 0;
   uint64 allocedSizeInBits = 0;
   SetStructFieldCount(structType.GetTypeIndex(), fields.size());
-  if (fields.size() == 0 && mirModule.IsCModule()) {
-    SetTypeAlign(tyIdx.GetIdx(), 1);
+  if (fields.size() == 0) {
     if (structType.IsCPlusPlus()) {
-      SetTypeSize(tyIdx.GetIdx(), 1);
+      SetTypeSize(tyIdx.GetIdx(), 1); /* empty struct in C++ has size 1 */
+      SetTypeAlign(tyIdx.GetIdx(), 1);
     } else {
-      /* empty struct is not supported in C, but gcc allows for it as size 0 */
       SetTypeSize(tyIdx.GetIdx(), 0);
+      SetTypeAlign(tyIdx.GetIdx(), k8ByteSize);
     }
     return;
   }
@@ -608,7 +608,7 @@ bool BECommon::TyIsInSizeAlignTable(const MIRType &ty) const {
 }
 
 void BECommon::AddAndComputeSizeAlign(MIRType &ty) {
-  CHECK_FATAL(ty.GetTypeIndex() == typeSizeTable.size(), "make sure the ty idx is exactly the table size");
+  FinalizeTypeTable(ty);
   typeAlignTable.emplace_back(mirModule.IsCModule());
   typeSizeTable.emplace_back(0);
   ComputeTypeSizesAligns(ty);
@@ -620,8 +620,7 @@ void BECommon::AddElementToJClassLayout(MIRClassType &klass, JClassFieldInfo inf
 }
 
 void BECommon::AddElementToFuncReturnType(MIRFunction &func, const TyIdx tyIdx) {
-  TyIdx &ty = funcReturnType.at(&func);
-  ty = tyIdx;
+  funcReturnType[&func] = tyIdx;
 }
 
 MIRType *BECommon::BeGetOrCreatePointerType(const MIRType &pointedType) {
@@ -643,12 +642,15 @@ MIRType *BECommon::BeGetOrCreateFunctionType(TyIdx tyIdx, const std::vector<TyId
   return newType;
 }
 
-void BECommon::FinalizeTypeTable() {
-  if (mirModule.GetSrcLang() == kSrcLangC &&
-      (GlobalTables::GetTypeTable().GetTypeTableSize() > GetSizeOfTypeSizeTable())) {
-    for (uint32 i = GetSizeOfTypeSizeTable(); i < GlobalTables::GetTypeTable().GetTypeTableSize(); ++i) {
-      MIRType *ty = GlobalTables::GetTypeTable().GetTypeFromTyIdx(i);
-      AddAndComputeSizeAlign(*ty);
+void BECommon::FinalizeTypeTable(const MIRType &ty) {
+  if (ty.GetTypeIndex() > GetSizeOfTypeSizeTable()) {
+    if (mirModule.GetSrcLang() == kSrcLangC) {
+      for (uint32 i = GetSizeOfTypeSizeTable(); i < ty.GetTypeIndex(); ++i) {
+        MIRType *tyTmp = GlobalTables::GetTypeTable().GetTypeFromTyIdx(i);
+        AddAndComputeSizeAlign(*tyTmp);
+      }
+    } else {
+      CHECK_FATAL(ty.GetTypeIndex() == typeSizeTable.size(), "make sure the ty idx is exactly the table size");
     }
   }
 }

@@ -31,9 +31,17 @@ const std::string kFileSeperatorWindowsStyleStr = std::string(1, kFileSeperatorW
 } // namespace
 
 namespace maple {
+#if __WIN32
+const char kFileSeperatorChar = kFileSeperatorWindowsStyleChar;
+#else
 const char kFileSeperatorChar = kFileSeperatorLinuxStyleChar;
+#endif
 
+#if __WIN32
+const std::string kFileSeperatorStr = kFileSeperatorWindowsStyleStr;
+#else
 const std::string kFileSeperatorStr = kFileSeperatorLinuxStyleStr;
+#endif
 
 std::string FileUtils::GetRealPath(const std::string &filePath) {
 #ifdef _WIN32

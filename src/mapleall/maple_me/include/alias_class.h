@@ -145,6 +145,7 @@ class AliasClass : public AnalysisResult {
   void ApplyUnionForPointedTos();
   void CollectRootIDOfNextLevelNodes(const OriginalSt &ost, std::set<unsigned int> &rootIDOfNADSs);
   void UnionForNotAllDefsSeen();
+  void UnionForAggAndFields();
   void CollectAliasGroups(std::map<unsigned int, std::set<unsigned int>> &aliasGroups);
   bool AliasAccordingToType(TyIdx tyIdxA, TyIdx tyIdxB);
   bool AliasAccordingToFieldID(const OriginalSt &ostA, const OriginalSt &ostB);
