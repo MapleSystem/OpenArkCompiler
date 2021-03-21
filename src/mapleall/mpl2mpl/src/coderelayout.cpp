@@ -179,7 +179,8 @@ void CodeReLayout::Finish() {
   for (auto &function : GetMIRModule().GetFunctionList()) {
     ++layoutCount[static_cast<size_t>(function->GetLayoutType())];
   }
-  if (trace) {
+  if (Options::genPGOReport || trace) {
+    GetMIRModule().GetProfile().DumpFuncIRProfUseInfo();
     for (uint32 i = 0; i < static_cast<uint32>(LayoutType::kLayoutTypeCount); ++i) {
       LogInfo::MapleLogger() << "function in category\t" << GetLayoutTypeString(i)
                              << "\tcount=" << layoutCount[i] << "\n";

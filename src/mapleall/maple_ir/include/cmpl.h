@@ -176,6 +176,29 @@ struct BaseNodeT {  // 4B
     return numOpnds;
   }
 
+  uint8 GetNumOpnds() const {
+    return numOpnds;
+  }
+  void SetNumOpnds(uint8 num) {
+    numOpnds = num;
+  }
+
+  Opcode GetOpCode() const {
+    return op;
+  }
+
+  void SetOpCode(Opcode o) {
+    op = o;
+  }
+
+  PrimType GetPrimType() const {
+    return ptyp;
+  }
+
+  void SetPrimType(PrimType type) {
+    ptyp = type;
+  }
+
   BaseNodeT() : op(OP_undef), ptyp(kPtyInvalid), typeFlag(0), numOpnds(0) {}
 
   virtual ~BaseNodeT() = default;

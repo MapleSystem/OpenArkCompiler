@@ -25,6 +25,10 @@
 #include <string>
 #include <unordered_set>
 #include <shared_mutex>
+#include <thread>
+#include <mutex>
+#include <map>
+#include "thread_env.h"
 #include "mempool.h"
 #include "mempool_allocator.h"
 #include "maple_string.h"
@@ -52,10 +56,9 @@ enum MIRSrcLang {
   kSrcLangUnknown,
   kSrcLangC,
   kSrcLangJs,
-  kSrcLangDex,
   kSrcLangCPlusPlus,
   kSrcLangJava,
-  kSrcLangJbc,
+  kSrcLangChar,
   // SrcLangSwift : when clang adds support for Swift.
 };
 
@@ -194,6 +197,12 @@ class MIRModule {
   void RemoveClass(TyIdx tyIdx);
 
   void SetCurFunction(MIRFunction *f) {
+    if (ThreadEnv::IsMeParallel()) {
+      std::lock_guard<std::mutex> guard(curFunctionMutex);
+      auto tid = std::this_thread::get_id();
+      curFunctionMap[tid] = f;
+      return; // DO NOT delete the return statement
+    }
     curFunction = f;
   }
 
@@ -218,6 +227,12 @@ class MIRModule {
   }
 
   MIRFunction *CurFunction() const {
+    if (ThreadEnv::IsMeParallel()) {
+      std::lock_guard<std::mutex> guard(curFunctionMutex);
+      auto tid = std::this_thread::get_id();
+      auto pair = curFunctionMap.find(tid);
+      return pair->second;
+    }
     return curFunction;
   }
 
@@ -240,6 +255,7 @@ class MIRModule {
   const std::string &GetFileNameFromFileNum(uint32 fileNum) const;
 
   void DumpToHeaderFile(bool binaryMplt, const std::string &outputName = "");
+  void DumpToCxxHeaderFile(std::set<std::string> &leafClasses, const std::string &pathToOutf) const;
   void DumpClassToFile(const std::string &path) const;
   void DumpFunctionList(const std::unordered_set<std::string> *dumpFuncSet) const;
   void DumpGlobalArraySymbol() const;
@@ -272,7 +288,7 @@ class MIRModule {
   }
 
   bool IsJavaModule() const {
-    return srcLang == kSrcLangJava || srcLang == kSrcLangDex || srcLang == kSrcLangJbc;
+    return srcLang == kSrcLangJava;
   }
 
   bool IsCModule() const {
@@ -280,7 +296,7 @@ class MIRModule {
   }
 
   bool IsCharModule() const {
-    return false;
+    return srcLang == kSrcLangChar;
   }
 
   void addSuperCall(const std::string &func) {
@@ -289,6 +305,15 @@ class MIRModule {
 
   bool findSuperCall(const std::string &func) const {
     return superCallSet.find(func) != superCallSet.end();
+  }
+
+  void ReleaseCurFuncMemPoolTmp();
+  void SetUseFuncCodeMemPoolTmp() {
+    useFuncCodeMemPoolTmp = true;
+  }
+
+  void ResetUseFuncCodeMemPoolTmp() {
+    useFuncCodeMemPoolTmp = false;
   }
 
   void SetFuncInfoPrinted() const;
@@ -318,6 +343,13 @@ class MIRModule {
 
   auto &GetRealCaller() {
     return realCaller;
+  }
+
+  const MapleSet<uint32_t> &GetInlineGlobals() const {
+    return inliningGlobals;
+  }
+  void InsertInlineGlobal(uint32_t global) {
+    (void)inliningGlobals.insert(global);
   }
 
   const MapleSet<FieldID> *GetPUIdxFieldInitializedMapItem(PUIdx key) const {
@@ -517,6 +549,8 @@ class MIRModule {
   }
 
  private:
+  void DumpTypeTreeToCxxHeaderFile(MIRType &ty, std::unordered_set<MIRType*> &dumpedClasses) const;
+
   MemPool *memPool;
   MemPool *pragmaMemPool;
   MapleAllocator memPoolAllocator;
@@ -572,8 +606,12 @@ class MIRModule {
   std::map<PUIdx, std::unordered_set<uint32>> method2TargetHash;
   std::map<GStrIdx, EAConnectionGraph*> eaSummary;
 
+  bool useFuncCodeMemPoolTmp = false;
   MIRFunction *entryFunc = nullptr;
   uint32 floatNum = 0;
+  // curFunction for single thread, curFunctionMap for multiple threads
+  std::map<std::thread::id, MIRFunction*> curFunctionMap;
+  mutable std::mutex curFunctionMutex;
   MIRFunction *curFunction;
   MapleVector<MIRFunction*> optimizedFuncs;
   // Add the field for decouple optimization
@@ -586,6 +624,7 @@ class MIRModule {
   MapleMap<PUIdx, MapleSet<FieldID>*> puIdxFieldInitializedMap;
   mutable std::shared_timed_mutex fieldMapMutex;
   std::map<std::pair<GStrIdx, GStrIdx>, GStrIdx> realCaller;
+  MapleSet<uint32_t> inliningGlobals;  // global symbols accessed, used for inlining
 };
 #endif  // MIR_FEATURE_FULL
 }  // namespace maple

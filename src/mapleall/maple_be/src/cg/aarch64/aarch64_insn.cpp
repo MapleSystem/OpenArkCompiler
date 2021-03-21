@@ -741,7 +741,7 @@ void AArch64Insn::EmitAdrpLabel(Emitter &emitter) const {
   emitter.Emit(", ");
   const char *idx;
   idx = strdup(std::to_string(Globals::GetInstance()->GetBECommon()->GetMIRModule().CurFunction()->GetPuidx()).c_str());
-  emitter.Emit(".label.").Emit(idx).Emit("__").Emit(lidx).Emit("\n");
+  emitter.Emit(".L.").Emit(idx).Emit("__").Emit(lidx).Emit("\n");
 
   /* add     xd, xd, #lo12:label */
   emitter.Emit("\tadd\t");
@@ -749,7 +749,7 @@ void AArch64Insn::EmitAdrpLabel(Emitter &emitter) const {
   emitter.Emit(", ");
   opnd0->Emit(emitter, prop0);
   emitter.Emit(", ");
-  emitter.Emit(":lo12:").Emit(".label.").Emit(idx).Emit("__").Emit(lidx).Emit("\n");
+  emitter.Emit(":lo12:").Emit(".L.").Emit(idx).Emit("__").Emit(lidx).Emit("\n");
   emitter.Emit("\n");
 }
 

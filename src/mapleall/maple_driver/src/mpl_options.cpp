@@ -24,6 +24,7 @@
 #include "version.h"
 #include "default_options.def"
 #include "driver_option_common.h"
+#include "ipa_option.h"
 #include "jbc2mpl_option.h"
 #include "me_option.h"
 #include "option.h"
@@ -37,6 +38,7 @@ const std::string kMapleDriverVersion = "MapleDriver " + std::to_string(Version:
                                         std::to_string(Version::kMinorCompilerVersion) + " 20190929";
 
 const std::vector<std::string> kMapleCompilers = { "jbc2mpl",
+    "dex2mpl", "mplipa",
     "me", "mpl2mpl", "mplcg" };
 
 int MplOptions::Parse(int argc, char **argv) {
@@ -187,6 +189,22 @@ ErrorCode MplOptions::DecideRunType() {
           optimizationLevel = kO2;
         }
         break;
+      case kCLangOptimization0:
+        if (runMode == RunMode::kCustomRun) {  // O0 and run should not appear at the same time
+          runModeConflict = true;
+        } else {
+          runMode = RunMode::kAutoRun;
+          optimizationLevel = kCLangO0;
+        }
+            break;
+      case kCLangOptimization2:
+        if (runMode == RunMode::kCustomRun) {  // O0 and run should not appear at the same time
+          runModeConflict = true;
+        } else {
+          runMode = RunMode::kAutoRun;
+          optimizationLevel = kCLangO2;
+        }
+            break;
       case kRun:
         if (runMode == RunMode::kAutoRun) {    // O0 and run should not appear at the same time
           runModeConflict = true;
@@ -340,23 +358,27 @@ bool MplOptions::Init(const std::string &inputFile) {
 
 ErrorCode MplOptions::AppendDefaultCombOptions() {
   ErrorCode ret = kErrorNoError;
-  if (optimizationLevel == kO0) {
+  if (optimizationLevel == kO0 || optimizationLevel == kCLangO0) {
     ret = AppendDefaultOptions(kBinNameMe, kMeDefaultOptionsO0, sizeof(kMeDefaultOptionsO0) / sizeof(MplOption));
     if (ret != kErrorNoError) {
       return ret;
     }
-    ret = AppendDefaultOptions(kBinNameMpl2mpl, kMpl2MplDefaultOptionsO0,
-                               sizeof(kMpl2MplDefaultOptionsO0) / sizeof(MplOption));
+    if (optimizationLevel == kO0) {
+      ret = AppendDefaultOptions(kBinNameMpl2mpl, kMpl2MplDefaultOptionsO0,
+                                 sizeof(kMpl2MplDefaultOptionsO0) / sizeof(MplOption));
+    }
     if (ret != kErrorNoError) {
       return ret;
     }
-  } else if (optimizationLevel == kO2) {
+  } else if (optimizationLevel == kO2 || optimizationLevel == kCLangO2) {
     ret = AppendDefaultOptions(kBinNameMe, kMeDefaultOptionsO2, sizeof(kMeDefaultOptionsO2) / sizeof(MplOption));
     if (ret != kErrorNoError) {
       return ret;
     }
-    ret = AppendDefaultOptions(kBinNameMpl2mpl, kMpl2MplDefaultOptionsO2,
-                               sizeof(kMpl2MplDefaultOptionsO2) / sizeof(MplOption));
+    if (optimizationLevel == kO2) {
+      ret = AppendDefaultOptions(kBinNameMpl2mpl, kMpl2MplDefaultOptionsO2,
+                                 sizeof(kMpl2MplDefaultOptionsO2) / sizeof(MplOption));
+    }
     if (ret != kErrorNoError) {
       return ret;
     }
@@ -366,13 +388,13 @@ ErrorCode MplOptions::AppendDefaultCombOptions() {
 
 ErrorCode MplOptions::AppendDefaultCgOptions() {
   ErrorCode ret = kErrorNoError;
-  if (optimizationLevel == kO0) {
+  if (optimizationLevel == kO0 || optimizationLevel == kCLangO0) {
     ret = AppendDefaultOptions(kBinNameMplcg, kMplcgDefaultOptionsO0,
                                sizeof(kMplcgDefaultOptionsO0) / sizeof(MplOption));
     if (ret != kErrorNoError) {
       return ret;
     }
-  } else if (optimizationLevel == kO2) {
+  } else if (optimizationLevel == kO2 || optimizationLevel == kCLangO2) {
     ret = AppendDefaultOptions(kBinNameMplcg, kMplcgDefaultOptionsO2,
                                sizeof(kMplcgDefaultOptionsO2) / sizeof(MplOption));
     if (ret != kErrorNoError) {

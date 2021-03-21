@@ -499,7 +499,6 @@ class AArch64MemOperand : public MemOperand {
   /*
    * ARMv8-A A64 ISA Overview by Matteo Franchin @ ARM
    * (presented at 64-bit Android on ARM. Sep. 2015) p.14
-   * #endif  // ~HUAWEI_EXTERNAL_RELEASE
    * o Address to load from/store to is a 64-bit base register + an optional offset
    *   LDR X0, [X1] ; Load from address held in X1
    *   STR X0, [X1] ; Store to address held in X1

@@ -353,11 +353,12 @@ void MIRPragma::Dump(int indent) const {
   }
   LogInfo::MapleLogger() << GlobalTables::GetStrTable().GetStringFromStrIdx(strIdx) << " ";
   GStrIdx gStrIdx = GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx)->GetNameStrIdx();
+  LogInfo::MapleLogger() << "<$" << GlobalTables::GetStrTable().GetStringFromStrIdx(gStrIdx) << "> ";
   if (tyIdxEx != 0u) {
     MIRType *typeEx = GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdxEx);
-    LogInfo::MapleLogger() << "\"" << typeEx->GetMplTypeName() << "\" ";
+    LogInfo::MapleLogger() << " " << typeEx->GetMplTypeName() << " ";
   }
-  LogInfo::MapleLogger() << "<$" << GlobalTables::GetStrTable().GetStringFromStrIdx(gStrIdx) << "> {";
+  LogInfo::MapleLogger() << "{";
   for (size_t j = 0; j < elementVec.size(); ++j) {
     LogInfo::MapleLogger() << '\n';
     PrintIndentation(indent + 1);

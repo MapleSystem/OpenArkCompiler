@@ -29,6 +29,8 @@ struct ArgInfo {
   RegType regType;
   MIRSymbol *sym;
   const AArch64SymbolAlloc *symLoc;
+  uint8 memPairSecondRegSize;  /* struct arg requiring two regs, size of 2nd reg */
+  bool doMemPairOpt;
 };
 
 class AArch64MoveRegArgs : public MoveRegArgs {
@@ -40,11 +42,15 @@ class AArch64MoveRegArgs : public MoveRegArgs {
  private:
   RegOperand *baseReg = nullptr;
   const MemSegment *lastSegment = nullptr;
-  void CollectRegisterArgs(std::map<uint32, AArch64reg> &argsList, std::vector<uint32> &indexList) const;
-  ArgInfo GetArgInfo(std::map<uint32, AArch64reg> &argsList, uint32 argIndex) const;
+  void CollectRegisterArgs(std::map<uint32, AArch64reg> &argsList, std::vector<uint32> &indexList,
+                           std::map<uint32, AArch64reg> &pairReg, std::vector<uint32> &numFpRegs,
+                           std::vector<uint32> &fpSize) const;
+  ArgInfo GetArgInfo(std::map<uint32, AArch64reg> &argsList, std::vector<uint32> &numFpRegs,
+                     std::vector<uint32> &fpSize, uint32 argIndex) const;
   bool IsInSameSegment(const ArgInfo &firstArgInfo, const ArgInfo &secondArgInfo) const;
+  void GenOneInsn(ArgInfo &argInfo, AArch64RegOperand &baseOpnd, uint32 stBitSize, AArch64reg dest, int32 offset);
   void GenerateStpInsn(const ArgInfo &firstArgInfo, const ArgInfo &secondArgInfo);
-  void GenerateStrInsn(ArgInfo &argInfo);
+  void GenerateStrInsn(ArgInfo &argInfo, AArch64reg reg2, uint32 numFpRegs, uint32 fpSize);
   void MoveRegisterArgs();
   void MoveVRegisterArgs();
   void MoveLocalRefVarToRefLocals(MIRSymbol &mirSym);

@@ -19,35 +19,7 @@ namespace maplebe {
 using namespace maple;
 
 namespace {
-constexpr int kMaxRegCount = 2;
-
-/*
- * return the class resulted from merging the two classes, based on rules
- * described by the ARM ABI
- */
-AArch64ArgumentClass MergeClasses(AArch64ArgumentClass class0, AArch64ArgumentClass class1) {
-  /*
-   * maybe return ( class0 | class 1 ) would do if
-   * ( class0 != kAArch64MemoryClass && class1 != kAArch64MemoryClass ) always hold
-   */
-  if (class0 == class1) {
-    return class0;
-  }
-  if (class0 == kAArch64NoClass) {
-    return class1;
-  }
-  if (class1 == kAArch64NoClass) {
-    return class0;
-  }
-  if ((class0 == kAArch64MemoryClass) || (class1 == kAArch64MemoryClass)) {
-    return kAArch64MemoryClass;
-  }
-  if ((class0 == kAArch64IntegerClass) || (class1 == kAArch64IntegerClass)) {
-    return kAArch64IntegerClass;
-  }
-  ASSERT(false, "NYI");
-  return kAArch64NoClass;
-}
+constexpr int kMaxRegCount = 4;
 
 int32 ProcessNonStructAndNonArrayWhenClassifyAggregate(const MIRType &mirType,
                                                        AArch64ArgumentClass classes[kMaxRegCount],
@@ -84,99 +56,83 @@ int32 ProcessNonStructAndNonArrayWhenClassifyAggregate(const MIRType &mirType,
   return 0;
 }
 
-void ProcessNonUnionWhenClassifyAggregate(const BECommon &be, const MIRType &fieldType, uint32 &fldBofst,
-                                          uint64 &allocedSize, uint64 &allocedSizeInBits) {
-  /* determine fld_bofst for this field */
-  uint64 fieldTypeSize = be.GetTypeSize(fieldType.GetTypeIndex());
-  ASSERT(fieldTypeSize != 0, "fieldTypeSize should not be 0");
-  uint8 fieldAlign = be.GetTypeAlign(fieldType.GetTypeIndex());
-  ASSERT(fieldAlign != 0, "fieldAlign should not be 0");
-  if (fieldType.GetKind() == kTypeBitField) {
-    uint32 fieldSize = static_cast<const MIRBitFieldType&>(fieldType).GetFieldSize();
-    if ((allocedSizeInBits / (fieldAlign * k8ByteSize)) !=
-        ((allocedSizeInBits + fieldSize - 1u) / (fieldAlign * k8ByteSize))) {
-      /*
-       * the field is crossing the align boundary of its base type;
-       * align alloced_size_in_bits to fieldAlign
-       */
-      allocedSizeInBits = RoundUp(allocedSizeInBits, fieldAlign * k8ByteSize);
+PrimType TraverseStructFieldsForFp(MIRType *ty, uint32 &numRegs) {
+  if (ty->GetKind() == kTypeArray) {
+    MIRArrayType *arrtype = static_cast<MIRArrayType *>(ty);
+    MIRType *pty = GlobalTables::GetTypeTable().GetTypeFromTyIdx(arrtype->GetElemTyIdx());
+    if (pty->GetKind() == kTypeArray || pty->GetKind() == kTypeStruct) {
+      return TraverseStructFieldsForFp(pty, numRegs);
     }
-    /* allocate the bitfield */
-    fldBofst = allocedSizeInBits;
-    allocedSizeInBits += fieldSize;
-    allocedSize = std::max(allocedSize, RoundUp(allocedSizeInBits, fieldAlign * k8ByteSize) / k8ByteSize);
+    for (uint32 i = 0; i < arrtype->GetDim(); ++i) {
+      numRegs += arrtype->GetSizeArrayItem(i);
+    }
+    return pty->GetPrimType();
+  } else if (ty->GetKind() == kTypeStruct) {
+    MIRStructType *sttype = static_cast<MIRStructType *>(ty);
+    FieldVector fields = sttype->GetFields();
+    PrimType oldtype = PTY_void;
+    for (uint32 fcnt = 0; fcnt < fields.size(); ++fcnt) {
+      TyIdx fieldtyidx = fields[fcnt].second.first;
+      MIRType *fieldty = GlobalTables::GetTypeTable().GetTypeFromTyIdx(fieldtyidx);
+      PrimType ptype = TraverseStructFieldsForFp(fieldty, numRegs);
+      if (oldtype != PTY_void && oldtype != ptype) {
+        return PTY_void;
+      } else {
+        oldtype = ptype;
+      }
+    }
+    return oldtype;
   } else {
-    /* pad alloced_size according to the field alignment */
-    allocedSize = RoundUp(allocedSize, fieldAlign);
-    fldBofst = allocedSize * k8ByteSize;
-    allocedSize += fieldTypeSize;
-    allocedSizeInBits = allocedSize * k8ByteSize;
+    numRegs++;
+    return ty->GetPrimType();
   }
 }
 
-int32 ClassifyAggregate(BECommon &be, MIRType &mirType, AArch64ArgumentClass classes[kMaxRegCount],
-                        size_t classesLength);
+int32 ClassifyAggregate(const BECommon &be, MIRType &mirType, AArch64ArgumentClass classes[kMaxRegCount],
+                        size_t classesLength, uint32 &fpSize);
 
-void ProcessStructWhenClassifyAggregate(BECommon &be, MIRStructType &structType, int32 &subNumRegs,
-                                        AArch64ArgumentClass classes[kMaxRegCount],
-                                        size_t classesLength) {
+uint32 ProcessStructWhenClassifyAggregate(const BECommon &be, MIRStructType &structType,
+                                          AArch64ArgumentClass classes[kMaxRegCount],
+                                          size_t classesLength, uint32 &fpSize) {
   CHECK_FATAL(classesLength > 0, "classLength must > 0");
-  int32 sizeOfTyInDwords = RoundUp(be.GetTypeSize(structType.GetTypeIndex()), k8ByteSize) >> k8BitShift;
-  AArch64ArgumentClass subClasses[kMaxRegCount];
-  uint32 fldBofst = 0;  /* offset of field in bits within immediate struct */
-  uint64 allocedSize = 0;
-  uint64 allocedSizeInBits = 0;
+  uint32 sizeOfTyInDwords = RoundUp(be.GetTypeSize(structType.GetTypeIndex()), k8ByteSize) >> k8BitShift;
+  bool isF32 = false;
+  bool isF64 = false;
+  uint32 numRegs = 0;
   for (uint32 f = 0; f < structType.GetFieldsSize(); ++f) {
     TyIdx fieldTyIdx = structType.GetFieldsElemt(f).second.first;
     MIRType *fieldType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(fieldTyIdx);
-    subNumRegs = ClassifyAggregate(be, *fieldType, subClasses, sizeof(subClasses) / sizeof(AArch64ArgumentClass));
-    ASSERT(subNumRegs > 0, "expect subNumRegs > 0");  /* we come here when the total size < 16? */
-    if (subNumRegs == 0) {
-      return;
-    }
-    if (structType.GetKind() != kTypeUnion) {
-      ProcessNonUnionWhenClassifyAggregate(be, (*fieldType), fldBofst, allocedSize, allocedSizeInBits);
-    } else {
-      /*
-       * for unions, bitfields are treated as non-bitfields
-       * the parent aggregate is union, why are we increasing the alloced_size?
-       * this would alter the next field's bit offset?
-       */
-      uint64 fieldTypeSize = be.GetTypeSize(fieldType->GetTypeIndex());
-      ASSERT(fieldTypeSize != 0, "fieldTypeSize should not be 0");
-      fldBofst = allocedSize * k8ByteSize;
-      allocedSize = std::max(allocedSize, fieldTypeSize);
-    }
-    /* merge subClasses into classes */
-    int32 idx = fldBofst >> 6;  /* index into the struct in doublewords */
-    ASSERT(idx > 0, "expect idx > 0");
-    ASSERT(idx < kMaxRegCount, "expect idx < kMaxRegCount");
-    ASSERT(subNumRegs == 1, "subNumRegs should be equal to 1");
-    ASSERT(subClasses[0] != kAArch64MemoryClass, "expect a kAArch64MemoryClass");
-    for (int32 i = 0; i < subNumRegs; ++i) {
-      classes[i + idx] = MergeClasses(classes[i + idx], subClasses[i]);
-    }
-  }
-  if (subNumRegs < sizeOfTyInDwords) {
-    for (int32 i = 1; i < sizeOfTyInDwords; ++i) {
-      if (classes[i] == kAArch64NoClass) {
-        classes[i] = classes[i - 1];
+    PrimType pType = TraverseStructFieldsForFp(fieldType, numRegs);
+    if (pType == PTY_f32) {
+      if (isF64) {
+        isF64 = false;
+        break;
       }
+      isF32 = true;
+    } else if (pType == PTY_f64) {
+      if (isF32) {
+        isF32 = false;
+        break;
+      }
+      isF64 = true;
+    } else {
+      isF32 = isF64 = false;
+      break;
     }
   }
-}
-
-void ProcessArrayWhenClassifyAggregate(BECommon &be, const MIRArrayType &mirArrayType, int32 &subNumRegs,
-                                       AArch64ArgumentClass classes[kMaxRegCount], size_t classesLength) {
-  CHECK_FATAL(classesLength > 0, "classLength must > 0");
-  int32 sizeOfTyInDwords = RoundUp(be.GetTypeSize(mirArrayType.GetTypeIndex()), k8ByteSize) >> k8BitShift;
-  AArch64ArgumentClass subClasses[kMaxRegCount];
-  subNumRegs = ClassifyAggregate(be, *(GlobalTables::GetTypeTable().GetTypeFromTyIdx(mirArrayType.GetElemTyIdx())),
-                                 subClasses, sizeof(subClasses) / sizeof(AArch64ArgumentClass));
-  CHECK_FATAL(subNumRegs == 1, "subnumregs should be equal to 1");
-  for (int32 i = 0; i < sizeOfTyInDwords; ++i) {
-    classes[i] = subClasses[i];
+  if (isF32 || isF64) {
+    for (uint32 i = 0; i < numRegs; ++i) {
+      classes[i] = kAArch64FloatClass;
+    }
+    fpSize = isF32 ? k4ByteSize : k8ByteSize;
+    return numRegs;
   }
+
+  classes[0] = kAArch64IntegerClass;
+  if (sizeOfTyInDwords == kDwordSizeTwo) {
+    classes[1] = kAArch64IntegerClass;
+  }
+  return sizeOfTyInDwords;
 }
 
 /*
@@ -185,8 +141,8 @@ void ProcessArrayWhenClassifyAggregate(BECommon &be, const MIRArrayType &mirArra
  * the doublewords are returned in parameter "classes"; if 0 is returned, it
  * means the whole aggregate is passed in memory.
  */
-int32 ClassifyAggregate(BECommon &be, MIRType &mirType, AArch64ArgumentClass classes[kMaxRegCount],
-                        size_t classesLength) {
+int32 ClassifyAggregate(const BECommon &be, MIRType &mirType, AArch64ArgumentClass classes[kMaxRegCount],
+                        size_t classesLength, uint32 &fpSize) {
   CHECK_FATAL(classesLength > 0, "invalid index");
   uint64 sizeOfTy = be.GetTypeSize(mirType.GetTypeIndex());
   /* Rule B.3.
@@ -206,7 +162,7 @@ int32 ClassifyAggregate(BECommon &be, MIRType &mirType, AArch64ArgumentClass cla
    */
   int32 sizeOfTyInDwords = RoundUp(sizeOfTy, k8ByteSize) >> k8BitShift;
   ASSERT(sizeOfTyInDwords > 0, "sizeOfTyInDwords should be sizeOfTyInDwords > 0");
-  ASSERT(sizeOfTyInDwords <= kMaxRegCount, "sizeOfTyInDwords should be sizeOfTyInDwords <= kMaxRegCount");
+  ASSERT(sizeOfTyInDwords <= kTwoRegister, "sizeOfTyInDwords should be <= 2");
   int32 i;
   for (i = 0; i < sizeOfTyInDwords; ++i) {
     classes[i] = kAArch64NoClass;
@@ -214,17 +170,12 @@ int32 ClassifyAggregate(BECommon &be, MIRType &mirType, AArch64ArgumentClass cla
   if ((mirType.GetKind() != kTypeStruct) && (mirType.GetKind() != kTypeArray) && (mirType.GetKind() != kTypeUnion)) {
     return ProcessNonStructAndNonArrayWhenClassifyAggregate(mirType, classes, classesLength);
   }
-  int32 subNumRegs;
   if (mirType.GetKind() == kTypeStruct) {
     MIRStructType &structType = static_cast<MIRStructType&>(mirType);
-    ProcessStructWhenClassifyAggregate(be, structType, subNumRegs, classes, classesLength);
-    if (subNumRegs == 0) {
-      return 0;
-    }
+    return ProcessStructWhenClassifyAggregate(be, structType, classes, classesLength, fpSize);
   } else {
     /* mirType->_kind == TYPE_ARRAY */
-    auto &mirArrayType = static_cast<MIRArrayType&>(mirType);
-    ProcessArrayWhenClassifyAggregate(be, mirArrayType, subNumRegs, classes, classesLength);
+    CHECK_FATAL(false, "Should not be here");
   }
   /* post merger clean-up */
   for (i = 0; i < sizeOfTyInDwords; ++i) {
@@ -364,7 +315,45 @@ bool IsSpillRegInRA(AArch64reg regNO, bool has3RegOpnd) {
 void ParmLocator::InitPLocInfo(PLocInfo &pLoc) const {
   pLoc.reg0 = kRinvalid;
   pLoc.reg1 = kRinvalid;
+  pLoc.reg2 = kRinvalid;
+  pLoc.reg3 = kRinvalid;
   pLoc.memOffset = nextStackArgAdress;
+  pLoc.fpSize = 0;
+  pLoc.numFpPureRegs = 0;
+}
+
+int32 ParmLocator::LocateRetVal(MIRType &retType, PLocInfo &pLoc) {
+  InitPLocInfo(pLoc);
+  uint32 retSize = beCommon.GetTypeSize(retType.GetTypeIndex().GetIdx());
+  if (retSize == 0) {
+    return 0;    /* size 0 ret val */
+  }
+  if (retSize <= k16ByteSize) {
+    /* For return struct size less or equal to 16 bytes, the values */
+    /* are returned in register pairs. */
+    AArch64ArgumentClass classes[kMaxRegCount]; /* Max of four floats. */
+    uint32 fpSize;
+    uint32 numRegs = static_cast<uint32>(ClassifyAggregate(beCommon, retType, classes, sizeof(classes), fpSize));
+    if (classes[0] == kAArch64FloatClass) {
+      CHECK_FATAL(numRegs <= kMaxRegCount, "LocateNextParm: illegal number of regs");
+      AllocateNSIMDFPRegisters(pLoc, numRegs);
+      pLoc.numFpPureRegs = numRegs;
+      pLoc.fpSize = fpSize;
+      return 0;
+    } else {
+      CHECK_FATAL(numRegs <= kTwoRegister, "LocateNextParm: illegal number of regs");
+      if (numRegs == kOneRegister) {
+        pLoc.reg0 = AllocateGPRegister();
+      } else {
+        AllocateTwoGPRegisters(pLoc);
+      }
+      return 0;
+    }
+  } else {
+    /* For return struct size > 16 bytes the pointer returns in x8. */
+    pLoc.reg0 = R8;
+    return kSizeOfPtr;
+  }
 }
 
 /*
@@ -397,8 +386,28 @@ int32 ParmLocator::LocateNextParm(MIRType &mirType, PLocInfo &pLoc, bool isFirst
         return kSizeOfPtr;
       }
       /* For return struct size less or equal to 16 bytes, the values
-       * are returned in register pairs.  Do nothing here.
+       * are returned in register pairs.
+       * Check for pure float struct.
        */
+      AArch64ArgumentClass classes[kMaxRegCount];
+      uint32 fpSize;
+      MIRType *retType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(beCommon.GetFuncReturnType(*func));
+      uint32 numRegs = static_cast<uint32>(ClassifyAggregate(beCommon, *retType, classes, sizeof(classes), fpSize));
+      if (classes[0] == kAArch64FloatClass) {
+        CHECK_FATAL(numRegs <= kMaxRegCount, "LocateNextParm: illegal number of regs");
+        AllocateNSIMDFPRegisters(pLoc, numRegs);
+        pLoc.numFpPureRegs = numRegs;
+        pLoc.fpSize = fpSize;
+        return 0;
+      } else {
+        CHECK_FATAL(numRegs <= kTwoRegister, "LocateNextParm: illegal number of regs");
+        if (numRegs == kOneRegister) {
+          pLoc.reg0 = AllocateGPRegister();
+        } else {
+          AllocateTwoGPRegisters(pLoc);
+        }
+        return 0;
+      }
     }
   }
   uint64 typeSize = beCommon.GetTypeSize(mirType.GetTypeIndex());
@@ -491,11 +500,12 @@ int32 ParmLocator::ProcessPtyAggWhenLocateNextParm(MIRType &mirType, PLocInfo &p
    * In AArch64, integer-float or float-integer
    * argument passing is not allowed. All should go through
    * integer-integer.
+   * In the case where a struct is homogeneous composed of one of the fp types,
+   * either all single fp or all double fp, then it can be passed by float-float.
    */
   AArch64ArgumentClass classes[kMaxRegCount] = { kAArch64NoClass };
 #if DEBUG
   int32 saveIntParmNum = nextGeneralRegNO;
-  int32 saveFloatParmNum = nextFloatRegNO;
 #endif
   typeSize = beCommon.GetTypeSize(mirType.GetTypeIndex().GetIdx());
   int32 aggCopySize = 0;
@@ -511,13 +521,20 @@ int32 ParmLocator::ProcessPtyAggWhenLocateNextParm(MIRType &mirType, PLocInfo &p
     RoundNGRNUpToNextEven();
   }
 
-  int32 numRegs = ClassifyAggregate(beCommon, mirType, classes, sizeof(classes) / sizeof(AArch64ArgumentClass));
-  if (numRegs == 1) {
+  uint32 fpSize;
+  uint32 numRegs = static_cast<uint32>(
+      ClassifyAggregate(beCommon, mirType, classes, sizeof(classes) / sizeof(AArch64ArgumentClass), fpSize));
+  if (classes[0] == kAArch64FloatClass) {
+    CHECK_FATAL(numRegs <= kMaxRegCount, "LocateNextParm: illegal number of regs");
+    typeSize = k8ByteSize;
+    AllocateNSIMDFPRegisters(pLoc, numRegs);
+    pLoc.numFpPureRegs = numRegs;
+    pLoc.fpSize = fpSize;
+  } else if (numRegs == 1) {
     /* passing in registers */
     typeSize = k8ByteSize;
     if (classes[0] == kAArch64FloatClass) {
-      pLoc.reg0 = AllocateSIMDFPRegister();
-      ASSERT(nextFloatRegNO == saveFloatParmNum, "RegNo should be saved pramRegNO");
+      CHECK_FATAL(false, "param passing in FP reg not allowed here");
     } else {
       pLoc.reg0 = AllocateGPRegister();
       ASSERT(nextGeneralRegNO == saveIntParmNum, "RegNo should be saved pramRegNO");
@@ -525,7 +542,7 @@ int32 ParmLocator::ProcessPtyAggWhenLocateNextParm(MIRType &mirType, PLocInfo &p
       ASSERT((pLoc.reg0 != kRinvalid) || (nextGeneralRegNO == AArch64Abi::kNumIntParmRegs),
              "reg0 should not be kRinvalid or nextGeneralRegNO should equal kNumIntParmRegs");
     }
-  } else if (numRegs == kMaxRegCount) {
+  } else if (numRegs == kTwoRegister) {
     ASSERT(classes[0] == kAArch64IntegerClass, "class 0 must be integer class");
     ASSERT(classes[1] == kAArch64IntegerClass, "class 1 must be integer class");
     AllocateTwoGPRegisters(pLoc);
@@ -572,7 +589,7 @@ int32 ParmLocator::ProcessPtyAggWhenLocateNextParm(MIRType &mirType, PLocInfo &p
  *   Passing, then the result is returned in the same registers
  *   as would be used for such an argument.
  */
-ReturnMechanism::ReturnMechanism(MIRType &retTy, BECommon &be)
+ReturnMechanism::ReturnMechanism(MIRType &retTy, const BECommon &be)
     : regCount(0), reg0(kRinvalid), reg1(kRinvalid), primTypeOfReg0(kPtyInvalid), primTypeOfReg1(kPtyInvalid) {
   PrimType pType = retTy.GetPrimType();
   switch (pType) {
@@ -645,10 +662,34 @@ ReturnMechanism::ReturnMechanism(MIRType &retTy, BECommon &be)
         SetupToReturnThroughMemory();
         return;
       }
+      uint32 fpSize;
       AArch64ArgumentClass classes[kMaxRegCount];
       regCount = static_cast<uint8>(ClassifyAggregate(be, retTy, classes,
-                                                      sizeof(classes) / sizeof(AArch64ArgumentClass)));
-      if (regCount == 0) {
+                                                      sizeof(classes) / sizeof(AArch64ArgumentClass), fpSize));
+      if (classes[0] == kAArch64FloatClass) {
+        switch (regCount) {
+          case kFourRegister:
+            reg3 = AArch64Abi::floatReturnRegs[3];
+            break;
+          case kThreeRegister:
+            reg2 = AArch64Abi::floatReturnRegs[2];
+            break;
+          case kTwoRegister:
+            reg1 = AArch64Abi::floatReturnRegs[1];
+            break;
+          case kOneRegister:
+            reg0 = AArch64Abi::floatReturnRegs[0];
+            break;
+          default:
+            CHECK_FATAL(0, "ReturnMechanism: unsupported");
+        }
+        if (fpSize == k4ByteSize) {
+          primTypeOfReg0 = primTypeOfReg1 = PTY_f32;
+        } else {
+          primTypeOfReg0 = primTypeOfReg1 = PTY_f64;
+        }
+        return;
+      } else if (regCount == 0) {
         SetupToReturnThroughMemory();
         return;
       } else {
