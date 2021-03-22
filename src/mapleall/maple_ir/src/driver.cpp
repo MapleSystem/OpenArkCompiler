@@ -22,69 +22,90 @@
 #include "mir_type.h"
 
 using namespace maple;
-#if MIR_FEATURE_FULL
-void ConstantFoldModule(MIRModule &module) {
-  MapleVector<MIRFunction*> &funcList = module.GetFunctionList();
-  for (auto it = funcList.begin(); it != funcList.end(); ++it) {
-    MIRFunction *curFunc = *it;
-    module.SetCurFunction(curFunc);
-  }
-}
 
-// hello.mpl
-// flavor 1
-// srclang 3
-// type $person <struct {@age i64,
-//                       @data <* f32>}>
-// var $BOB i32 = 8
+std::unordered_set<std::string> dumpFuncSet = {};
+
+#if MIR_FEATURE_FULL
+
 int main(int argc, char **argv) {
   constexpr int judgeNumber = 2;
   if (argc < judgeNumber) {
     (void)MIR_PRINTF(
-        "usage: ./irbuild [i|e] <any number of mpl files>\n\n"
-        "The optional 'i' flag will convert the binary mplt input file to ascii\n\n"
-        "The optional 'e' flag will convert the textual mplt input file to binary\n");
+      "usage: ./irbuild [-b] [-dumpfunc=<string>] [-srclang=<string>] <any number of .mplt, .mpl, .bpl or .tmpl files>\n"
+      "    By default, the files are converted to corresponding ascii format.\n"
+      "    If -b is specified, output is binary format instead.\n"
+//    "    If -fold is specified, constant folding is performed before outputing the IR.\n"
+      "    If -dumpfunc= is specified, only functions with name containing the string is output.\n"
+      "    -dumpfunc= can be specified multiple times to give multiple strings.\n"
+      "    -srclang specifies the source language that produces the mpl file. \n"
+      "    Each output file has .irb added after its file stem.\n");
     exit(1);
   }
-  char flag = '\0';
-  int32 i = 1;
-  if (argv[1][0] == 'i' && argv[1][1] == '\0') {
-    flag = 'i';
-    i = judgeNumber;
-  } else if (argv[1][0] == 'e' && argv[1][1] == '\0') {
-    flag = 'e';
-    i = judgeNumber;
+  std::vector<maple::MIRModule *> themodule(argc, nullptr);
+  bool useBinary = false;
+  bool doConstantFold = false;
+  MIRSrcLang srcLang = kSrcLangUnknown;
+  // process the options which must come first
+  maple::int32 i = 1;
+  while (argv[i][0] == '-' ) {
+    if (argv[i][1] == 'b' && argv[i][2] == '\0') {
+      useBinary = true;
+    } else if (strcmp(argv[i], "-fold") == 0) {
+      doConstantFold = true;
+    } else if (strncmp(argv[i], "-dumpfunc=", 10) == 0 && strlen(argv[i]) > 10) {
+      std::string funcName(&argv[i][10]);
+      dumpFuncSet.insert(funcName);
+    } else if (strcmp(argv[i], "-srclang=java") == 0 ) {
+      srcLang = kSrcLangJava;
+    } else if (strcmp(argv[i], "-srclang=c") == 0 ) {
+      srcLang = kSrcLangC;
+    } else if (strcmp(argv[i], "-srclang=c++") == 0 ) {
+      srcLang = kSrcLangCPlusPlus;
+    } else {
+      ERR(kLncErr, "irbuild: unrecognized command line option");
+      return 1;
+    }
+    i++;
   }
+  // process the input files
   while (i < argc) {
-    MIRModule module{ argv[i] };
-    if (flag == '\0') {
-      MIRParser theParser(module);
-      if (theParser.ParseMIR()) {
-        ConstantFoldModule(module);
-        module.OutputAsciiMpl(".irb");
-      } else {
-        theParser.EmitError(module.GetFileName());
+    themodule[i] = new maple::MIRModule(argv[i]);
+    themodule[i]->SetSrcLang(srcLang);
+    std::string::size_type lastdot = themodule[i]->GetFileName().find_last_of(".");
+    bool ismplt = themodule[i]->GetFileName().compare(lastdot, 5, ".mplt") == 0;
+    bool istmpl = themodule[i]->GetFileName().compare(lastdot, 5, ".tmpl") == 0;
+    bool ismpl = themodule[i]->GetFileName().compare(lastdot, 5, ".mpl\0") == 0;
+    bool isbpl = themodule[i]->GetFileName().compare(lastdot, 5, ".bpl\0") == 0;
+    if (!ismplt && !istmpl && !ismpl && !isbpl) {
+      ERR(kLncErr, "irbuild: input must be .mplt or .mpl or .bpl or .tmpl file");
+      return 1;
+    }
+    // input the file
+    if (ismpl || istmpl) {
+      maple::MIRParser theparser(*themodule[i]);
+      if (!theparser.ParseMIR()) {
+        theparser.EmitError(themodule[i]->GetFileName().c_str());
         return 1;
       }
-    } else if (flag == 'e') {
-      MIRParser theParser(module);
-      if (theParser.ParseMIR()) {
-        ConstantFoldModule(module);
-        BinaryMplt binMplt(module);
-        const std::string &modID = module.GetFileName();
-        binMplt.Export("bin." + modID);
-      } else {
-        theParser.EmitError(module.GetFileName());
-        return 1;
-      }
-    } else if (flag == 'i') {
-      module.SetFlavor(kFeProduced);
-      module.SetSrcLang(kSrcLangJava);
-      BinaryMplImport binMplt(module);
+    } else {
+      BinaryMplImport binMplt(*themodule[i]);
       binMplt.SetImported(false);
-      const std::string &modID = module.GetFileName();
-      (void)binMplt.Import(modID, true);
-      module.OutputAsciiMpl(".irb");
+      std::string modid = themodule[i]->GetFileName();
+      if (!binMplt.Import(modid, true)) {
+        ERR(kLncErr, "irbuild: cannot open .mplt or .bpl file: %s", modid.c_str());
+        return 1;
+      }
+    }
+
+    // output the file
+    if (!useBinary) {
+      themodule[i]->OutputAsciiMpl(".irb", (ismpl || isbpl) ? ".mpl" : ".tmpl", &dumpFuncSet, true, false);
+    } else {
+      BinaryMplt binMplt(*themodule[i]);
+      std::string modid = themodule[i]->GetFileName();
+      binMplt.GetBinExport().not2mplt = ismpl || isbpl;
+      std::string filestem = modid.substr(0, lastdot);
+      binMplt.Export(filestem + ((ismpl || isbpl) ? ".irb.bpl" : ".irb.mplt"), &dumpFuncSet);
     }
     ++i;
   }
