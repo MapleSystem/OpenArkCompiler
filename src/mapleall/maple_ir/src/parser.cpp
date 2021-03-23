@@ -24,6 +24,7 @@
 #include "bin_mplt.h"
 #include "option.h"
 #include "string_utils.h"
+#include "debug_info.h"
 
 namespace {
 using namespace maple;
@@ -161,6 +162,8 @@ void MIRParser::Error(const std::string &str) {
   message += ": ";
   message += lexer.GetTokenString();
   message += "\n";
+
+  mod.GetDbgInfo()->SetErrPos(lexer.GetLineNum(), lexer.GetCurIdx());
 }
 
 const std::string &MIRParser::GetError() {
@@ -1468,7 +1471,6 @@ bool MIRParser::ParseTypedef() {
   GStrIdx strIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(name);
   TyIdx prevTyIdx;
   TyIdx tyIdx(0);
-  // dbginfo class/interface init
   if (tokenKind == TK_gname) {
     if (isLocal) {
       Error("A local type must use local type name ");
@@ -2890,6 +2892,7 @@ void MIRParser::EmitError(const std::string &fileName) {
   if (!strlen(GetError().c_str())) {
     return;
   }
+  mod.GetDbgInfo()->EmitMsg();
   ERR(kLncErr, "%s \n%s", fileName.c_str(), GetError().c_str());
 }
 
