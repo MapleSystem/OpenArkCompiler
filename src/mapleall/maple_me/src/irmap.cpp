@@ -462,7 +462,8 @@ MeExpr *IRMap::CreateConstMeExpr(PrimType pType, MIRConst &mirConst) {
 
 MeExpr *IRMap::CreateIntConstMeExpr(int64 value, PrimType pType) {
   auto *intConst =
-      GlobalTables::GetIntConstTable().GetOrCreateIntConst(value, *GlobalTables::GetTypeTable().GetPrimType(pType), 0/*fieldID*/);
+      GlobalTables::GetIntConstTable().GetOrCreateIntConst(value, *GlobalTables::GetTypeTable().GetPrimType(pType),
+                                                           0 /* fieldID */);
   return CreateConstMeExpr(pType, *intConst);
 }
 

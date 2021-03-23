@@ -187,10 +187,11 @@ void MUIDReplacement::GenArrayClassCache() {
   constexpr int32 arrayClassCacheMagicNumber = 0x1a3;
   for (auto arrayClassName : arrayClassSet) {
     uint32 typeNameIdx = ReflectionAnalysis::FindOrInsertRepeatString(arrayClassName);
-    MIRIntConst *nameConstValue = GlobalTables::GetIntConstTable().GetOrCreateIntConst(typeNameIdx, *mType, 0/*fieldID*/);
+    MIRIntConst *nameConstValue =
+        GlobalTables::GetIntConstTable().GetOrCreateIntConst(typeNameIdx, *mType, 0 /* fieldID */);
     arrayClassNameConst->PushBack(nameConstValue);
     MIRIntConst *constValue =
-       GlobalTables::GetIntConstTable().GetOrCreateIntConst(arrayClassCacheMagicNumber, *mType, 0/*fieldID*/);
+        GlobalTables::GetIntConstTable().GetOrCreateIntConst(arrayClassCacheMagicNumber, *mType, 0 /* fieldID */);
     arrayClassConst->PushBack(constValue);
   }
   MIRSymbol *arrayClassNameSt = GetMIRModule().GetMIRBuilder()->CreateGlobalDecl(
@@ -394,7 +395,8 @@ void MUIDReplacement::GenerateFuncDefTable() {
     // Use the muid index for now. It will be back-filled once we have the whole vector.
     MIRIntConst *indexConst =
         GlobalTables::GetIntConstTable().GetOrCreateIntConst(keyVal.second.second,
-                                                             *GlobalTables::GetTypeTable().GetUInt32(), 0/*fieldID*/);
+                                                             *GlobalTables::GetTypeTable().GetUInt32(),
+                                                             0 /* fieldID */);
     muidIdxTabConst->PushBack(indexConst);
   }
   FieldVector parentFields;
@@ -460,13 +462,15 @@ void MUIDReplacement::GenerateFuncDefTable() {
     auto *indexConst = safe_cast<MIRIntConst>(muidIdxTabConst->GetConstVecItem(muidIdx));
     uint32 tempIdx = (static_cast<uint64>(indexConst->GetValue()) & weakFuncFlag) | idx;
     indexConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(tempIdx,
-                                                                      *GlobalTables::GetTypeTable().GetUInt32(), 0/*fieldID*/);
+                                                                      *GlobalTables::GetTypeTable().GetUInt32(),
+                                                                      0 /* fieldID */);
     muidIdxTabConst->SetConstVecItem(muidIdx, *indexConst);
     if (reflectionList.find(mirFunc->GetName()) != reflectionList.end()) {
       auto *tempConst = safe_cast<MIRIntConst>(muidIdxTabConst->GetConstVecItem(idx));
       tempIdx = weakFuncFlag | static_cast<uint64>(tempConst->GetValue());
       tempConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(tempIdx,
-                                                                       *GlobalTables::GetTypeTable().GetUInt32(), 0/*fieldID*/);
+                                                                       *GlobalTables::GetTypeTable().GetUInt32(),
+                                                                       0 /* fieldID */);
       muidIdxTabConst->SetConstVecItem(idx, *tempConst);
     }
     if (Options::genIRProfile) {
@@ -999,17 +1003,17 @@ void MUIDReplacement::ReplaceAddroffuncConst(MIRConst *&entry, uint32 fieldID, b
     // this is an index into the funcDefTab
     constexpr uint64 idxIntoFuncDefTabFlag = 2u;
     constNode = GlobalTables::GetIntConstTable().GetOrCreateIntConst(
-        static_cast<int64>(((offset + 1) << KReservedBits) + idxIntoFuncDefTabFlag), voidType, 0/*fieldID*/);
+        static_cast<int64>(((offset + 1) << KReservedBits) + idxIntoFuncDefTabFlag), voidType, 0 /* fieldID */);
   } else if (isVtab && func->IsAbstract()) {
     MIRType &type = *GlobalTables::GetTypeTable().GetVoidPtr();
-    constNode = GlobalTables::GetIntConstTable().GetOrCreateIntConst(0, type, 0/*fieldID*/);
+    constNode = GlobalTables::GetIntConstTable().GetOrCreateIntConst(0, type, 0 /* fieldID */);
   } else {
     ASSERT(func->GetFuncSymbol() != nullptr, "null ptr check!");
     offset = FindIndexFromUndefTable(*(func->GetFuncSymbol()), true);
     // The second least significant bit is set to 0, indicating
     // this is an index into the funcUndefTab
     constNode = GlobalTables::GetIntConstTable().GetOrCreateIntConst(static_cast<int64>((offset + 1) << KReservedBits),
-                                                                     voidType, 0/*fieldID*/);
+                                                                     voidType, 0 /* fieldID */);
   }
   if (fieldID != 0xffffffff) {
     constNode = GlobalTables::GetIntConstTable().GetOrCreateIntConst(constNode->GetValue(),
@@ -1130,11 +1134,11 @@ void MUIDReplacement::ReplaceAddrofConst(MIRConst *&entry, bool muidIndex32Mod) 
   if (addrSym->GetStorageClass() != kScExtern) {
     offset = FindIndexFromDefTable(*addrSym, false);
     constNode = GlobalTables::GetIntConstTable().GetOrCreateIntConst(GetDefOrUndefOffsetWithMask(offset, true,
-                                                                     muidIndex32Mod), voidType, 0/*fieldID*/);
+                                                                     muidIndex32Mod), voidType, 0 /* fieldID */);
   } else {
     offset = FindIndexFromUndefTable(*addrSym, false);
     constNode = GlobalTables::GetIntConstTable().GetOrCreateIntConst(GetDefOrUndefOffsetWithMask(offset, false,
-                                                                     muidIndex32Mod), voidType, 0/*fieldID*/);
+                                                                     muidIndex32Mod), voidType, 0 /* fieldID */);
   }
   entry = constNode;
 }
@@ -1515,8 +1519,10 @@ void MUIDReplacement::GenerateCompilerVersionNum() {
   MIRArrayType &arrayType = *GlobalTables::GetTypeTable().GetOrCreateArrayType(*ptrType, 0);
   MIRAggConst *newConst = GetMIRModule().GetMemPool()->New<MIRAggConst>(GetMIRModule(), arrayType);
   MIRType &type = *GlobalTables::GetTypeTable().GetInt32();
-  MIRConst *firstConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(Version::kMajorMplVersion, type, 0/*fieldID*/);
-  MIRConst *secondConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(Version::kMinorCompilerVersion, type, 0/*fieldID*/);
+  MIRConst *firstConst =
+      GlobalTables::GetIntConstTable().GetOrCreateIntConst(Version::kMajorMplVersion, type, 0 /* fieldID */);
+  MIRConst *secondConst =
+      GlobalTables::GetIntConstTable().GetOrCreateIntConst(Version::kMinorCompilerVersion, type, 0 /* fieldID */);
   newConst->PushBack(firstConst);
   newConst->PushBack(secondConst);
   std::string symName = namemangler::kCompilerVersionNum + GetMIRModule().GetFileNameAsPostfix();

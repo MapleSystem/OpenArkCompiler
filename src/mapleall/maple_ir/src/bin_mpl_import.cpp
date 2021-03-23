@@ -135,7 +135,7 @@ MIRConst *BinaryMplImport::ImportConst(MIRFunction *func) {
       LabelIdx lidx = ReadNum();
       PUIdx puIdx = func->GetPuidx();
       MIRLblConst *lblConst = memPool->New<MIRLblConst>(lidx, puIdx, *type, fieldID);
-      func->GetLabelTab()->addrTakenLabels.insert(lidx);
+      (void)func->GetLabelTab()->addrTakenLabels.insert(lidx);
       return lblConst;
     }
     case kBinKindConstStr: {
@@ -333,7 +333,7 @@ void BinaryMplImport::UpdateMethodSymbols() {
     if (fn->GetFormalDefVec().size() != 0) {
       continue;  // already updated in ImportFunction()
     }
-    for (size_t i = 0; i < funcType->GetParamTypeList().size(); i++ ) {
+    for (size_t i = 0; i < funcType->GetParamTypeList().size(); ++i) {
       FormalDef formalDef(nullptr, funcType->GetParamTypeList()[i], funcType->GetParamAttrsList()[i]);
       fn->GetFormalDefVec().push_back(formalDef);
     }
@@ -554,10 +554,10 @@ TyIdx BinaryMplImport::ImportType(bool forPointedType) {
       type.SetNameIsLocal(nameIsLocal);
       size_t idx = typTab.size();
       typTab.push_back(nullptr);
+      type.SetTypeAttrs(ImportTypeAttrs());
       ++ptrLev;
       type.SetPointedTyIdx(ImportType(true));
       --ptrLev;
-      type.SetTypeAttrs(ImportTypeAttrs());
       MIRType *origType = &InsertInTypeTables(type);
       typTab[idx] = origType;
       if (typeNeedsComplete != nullptr && ptrLev == 0) {
@@ -735,8 +735,10 @@ MIRType &BinaryMplImport::InsertInTypeTables(MIRType &type) {
   TyIdx prevTyIdx = mod.GetTypeNameTab()->GetTyIdxFromGStrIdx(type.GetNameStrIdx());
   if (prevTyIdx != 0u && !type.IsNameIsLocal()) {
     MIRType *prevType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(prevTyIdx);
-    if ((IsIncomplete(*prevType) && IsIncomplete(type)) || (!IsIncomplete(*prevType) && !IsIncomplete(type)) ||
-        (!IsIncomplete(*prevType) && IsIncomplete(type))) {
+    if (!prevType->IsMIRTypeByName() &&
+        ((IsIncomplete(*prevType) && IsIncomplete(type)) ||
+         (!IsIncomplete(*prevType) && !IsIncomplete(type)) ||
+         (!IsIncomplete(*prevType) && IsIncomplete(type)))) {
       resultTypePtr = prevType->CopyMIRTypeNode();
       if (resultTypePtr->GetKind() == kTypeStruct || resultTypePtr->GetKind() == kTypeStructIncomplete) {
         tmpStruct.push_back(static_cast<MIRStructType*>(resultTypePtr));
@@ -888,8 +890,7 @@ PUIdx BinaryMplImport::ImportFunction() {
   func->SetStIdx(funcSt->GetStIdx());
   func->SetFuncAttrs(ReadNum());
   func->SetFlag(ReadNum());
-  /*func->SetClassTyIdx(*/ImportType();  // not set the field to mimic parser
-  // import formal parameter informcation
+  (void)ImportType();  // not set the field to mimic parser
   size_t size = ReadNum();
   if (func->GetFormalDefVec().size() == 0) {
     for (size_t i = 0; i < size; i++) {
@@ -986,11 +987,12 @@ void BinaryMplImport::ReadTypeField() {
   CHECK_FATAL(tag == ~kBinTypeStart, "pattern mismatch in Read TYPE");
 }
 
+
 void BinaryMplImport::ReadSymField() {
   SkipTotalSize();
   int32 size = ReadInt();
   for (int64 i = 0; i < size; i++) {
-    InSymbol(nullptr);
+    (void)InSymbol(nullptr);
   }
   int64 tag = ReadNum();
   CHECK_FATAL(tag == ~kBinSymStart, "pattern mismatch in Read SYM");
@@ -1033,7 +1035,7 @@ bool BinaryMplImport::Import(const std::string &fname, bool readSymbols, bool re
   Reset();
   ReadFileAt(fname, 0);
   int32 magic = ReadInt();
-  if (kMpltMagicNumber != magic && (kMpltMagicNumber+0x10) != magic) {
+  if (kMpltMagicNumber != magic && (kMpltMagicNumber + 0x10) != magic) {
     buf.clear();
     return false;
   }

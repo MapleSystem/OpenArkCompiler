@@ -46,10 +46,10 @@ src_libmplir = [
   "src/mir_parser.cpp",
   "src/mir_pragma.cpp",
   "src/printing.cpp",
+  "src/bin_func_import.cpp",
+  "src/bin_func_export.cpp",
   "src/bin_mpl_import.cpp",
   "src/bin_mpl_export.cpp",
-  "src/bin_func_export.cpp",
-  "src/bin_func_import.cpp",
 ]
 
 src_irbuild = [ "src/driver.cpp" ]

@@ -117,6 +117,7 @@ void EHThrow::ConvertThrowToRuntime(CGFunc &cgFunc, BaseNode &arg) {
   MIRFunction &mirFunc = cgFunc.GetFunction();
   MIRModule *mirModule = mirFunc.GetModule();
   MIRFunction *calleeFunc = mirModule->GetMIRBuilder()->GetOrCreateFunction("MCC_ThrowException", (TyIdx)(PTY_void));
+  cgFunc.GetBecommon().UpdateTypeTable(*calleeFunc->GetMIRFuncType());
   calleeFunc->SetNoReturn();
   MapleVector<BaseNode*> args(mirModule->GetMIRBuilder()->GetCurrentFuncCodeMpAllocator()->Adapter());
   args.emplace_back(&arg);
@@ -129,6 +130,7 @@ void EHThrow::ConvertThrowToRethrow(CGFunc &cgFunc) {
   MIRModule *mirModule = mirFunc.GetModule();
   MIRBuilder *mirBuilder = mirModule->GetMIRBuilder();
   MIRFunction *unFunc = mirBuilder->GetOrCreateFunction("MCC_RethrowException", (TyIdx)PTY_void);
+  cgFunc.GetBecommon().UpdateTypeTable(*unFunc->GetMIRFuncType());
   unFunc->SetNoReturn();
   MapleVector<BaseNode*> args(mirBuilder->GetCurrentFuncCodeMpAllocator()->Adapter());
   args.emplace_back(rethrow->Opnd(0));
@@ -508,6 +510,7 @@ void EHFunc::InsertDefaultLabelAndAbortFunc(BlockNode &blkNode, SwitchNode &swit
   StmtNode *dfLabStmt = mirModule.GetMIRBuilder()->CreateStmtLabel(dfLabIdx);
   blkNode.InsertAfter(&beforeEndLabel, dfLabStmt);
   MIRFunction *calleeFunc = mirModule.GetMIRBuilder()->GetOrCreateFunction("abort", (TyIdx)(PTY_void));
+  cgFunc->GetBecommon().UpdateTypeTable(*calleeFunc->GetMIRFuncType());
   MapleVector<BaseNode*> args(mirModule.GetMIRBuilder()->GetCurrentFuncCodeMpAllocator()->Adapter());
   CallNode *callExit = mirModule.GetMIRBuilder()->CreateStmtCall(calleeFunc->GetPuidx(), args);
   blkNode.InsertAfter(dfLabStmt, callExit);
@@ -591,6 +594,7 @@ void EHFunc::InsertCxaAfterEachCatch(const std::vector<std ::pair<LabelIdx, Catc
   for (const auto &catchVecPair : catchVec) {
     jCatchNode = catchVecPair.second;
     MIRFunction *calleeFunc = mirModule.GetMIRBuilder()->GetOrCreateFunction("MCC_JavaBeginCatch", voidPTy);
+    cgFunc->GetBecommon().UpdateTypeTable(*calleeFunc->GetMIRFuncType());
     RegreadNode *retRegRead0 = mirModule.CurFuncCodeMemPool()->New<RegreadNode>();
     retRegRead0->SetRegIdx(-kSregRetval0);
     retRegRead0->SetPrimType(LOWERED_PTR_TYPE);

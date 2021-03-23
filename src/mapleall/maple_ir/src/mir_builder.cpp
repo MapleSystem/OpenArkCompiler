@@ -228,11 +228,15 @@ MIRFunction *MIRBuilder::GetOrCreateFunction(const std::string &str, TyIdx retTy
   }
   auto *fn = mirModule->GetMemPool()->New<MIRFunction>(mirModule, funcSt->GetStIdx());
   fn->SetPuidx(GlobalTables::GetFunctionTable().GetFuncTable().size());
-  auto *funcType = mirModule->GetMemPool()->New<MIRFuncType>(mirModule->GetMPAllocator());
-  fn->SetMIRFuncType(funcType);
+  MIRFuncType funcType(mirModule->GetMPAllocator());
+  funcType.SetRetTyIdx(retTyIdx);
+  auto funcTyIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&funcType);
+  auto *funcTypeInTypeTable = static_cast<MIRFuncType*>(GlobalTables::GetTypeTable().GetTypeFromTyIdx(funcTyIdx));
+  fn->SetMIRFuncType(funcTypeInTypeTable);
   fn->SetReturnTyIdx(retTyIdx);
   GlobalTables::GetFunctionTable().GetFuncTable().push_back(fn);
   funcSt->SetFunction(fn);
+  funcSt->SetTyIdx(funcTyIdx);
   return fn;
 }
 
@@ -474,7 +478,8 @@ ConstvalNode *MIRBuilder::CreateConstval(MIRConst *mirConst) {
 
 ConstvalNode *MIRBuilder::CreateIntConst(int64 val, PrimType pty) {
   auto *mirConst =
-      GlobalTables::GetIntConstTable().GetOrCreateIntConst(val, *GlobalTables::GetTypeTable().GetPrimType(pty), 0/*fieldID*/);
+      GlobalTables::GetIntConstTable().GetOrCreateIntConst(val, *GlobalTables::GetTypeTable().GetPrimType(pty),
+                                                           0 /* fieldID */);
   return GetCurrentFuncCodeMp()->New<ConstvalNode>(pty, mirConst);
 }
 
@@ -497,7 +502,8 @@ ConstvalNode *MIRBuilder::CreateFloat128Const(const uint64 *val) {
 }
 
 ConstvalNode *MIRBuilder::GetConstInt(MemPool &memPool, int val) {
-  auto *mirConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(val, *GlobalTables::GetTypeTable().GetInt64(), 0/*fieldID*/);
+  auto *mirConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(val, *GlobalTables::GetTypeTable().GetInt64(),
+                                                                        0 /* fieldID */);
   return memPool.New<ConstvalNode>(PTY_i32, mirConst);
 }
 

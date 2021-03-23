@@ -74,7 +74,7 @@ class CallInfo {
     return callStmt;
   }
 
-  const MIRFunction *GetFunc() const {
+  MIRFunction *GetFunc() {
     return mirFunc;
   }
 
