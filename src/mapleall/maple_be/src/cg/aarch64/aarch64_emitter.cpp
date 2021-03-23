@@ -364,6 +364,8 @@ void AArch64AsmEmitter::Run(FuncEmitInfo &funcEmitInfo) {
     (void)emitter.Emit("\t.hidden\t" + funcStName + "\n");
   } else if (funcSt->GetFunction()->GetAttr(FUNCATTR_local)) {
     (void)emitter.Emit("\t.local\t" + funcStName + "\n");
+  } else if (funcSt->GetFunction() && (funcSt->GetFunction()->IsJava() == false) && funcSt->GetFunction()->IsStatic()) {
+    // nothing
   } else {
     bool isExternFunction = false;
     (void)emitter.Emit("\t.globl\t").Emit(funcSt->GetName()).Emit("\n");
