@@ -23,6 +23,7 @@
 #include "option.h"
 #include "mir_module.h"
 #include "mir_parser.h"
+#include "bin_mplt.h"
 
 namespace maple {
 const std::string kBinNameNone = "";

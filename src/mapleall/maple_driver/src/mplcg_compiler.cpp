@@ -107,29 +107,39 @@ ErrorCode MplcgCompiler::Compile(const MplOptions &options, std::unique_ptr<MIRM
   std::string fileName = GetInputFileName(options);
   std::string baseName = options.GetOutputFolder() + FileUtils::GetFileName(fileName, false);
   std::string output = baseName + ".s";
-  bool parsed = false;
-  std::unique_ptr<MIRParser> theParser;
-  bool fileparsed = true;
+  bool fileread = true;
   if (theModule == nullptr) {
     MPLTimer timer;
     timer.Start();
-    fileparsed = false;
+    fileread = false;
     theModule = std::make_unique<MIRModule>(fileName);
     theModule->SetWithMe(
         std::find(options.GetRunningExes().begin(), options.GetRunningExes().end(),
                   kBinNameMe) != options.GetRunningExes().end());
-    theParser.reset(new MIRParser(*theModule));
-    parsed = theParser->ParseMIR(0, cgOption.GetParserOption());
-    if (parsed) {
-      if (!cgOption.IsQuiet() && theParser->GetWarning().size()) {
-        theParser->EmitWarning(fileName);
+    if (options.GetInputFileType() != kFileTypeBpl) {
+      std::unique_ptr<MIRParser> theParser;
+      theParser.reset(new MIRParser(*theModule));
+      bool parsed = theParser->ParseMIR(0, cgOption.GetParserOption());
+      if (parsed) {
+        if (!cgOption.IsQuiet() && theParser->GetWarning().size()) {
+          theParser->EmitWarning(fileName);
+        }
+      } else {
+        if (theParser != nullptr) {
+          theParser->EmitError(fileName);
+        }
+        memPoolCtrler.DeleteMemPool(optMp);
+        return kErrorCompileFail;
       }
     } else {
-      if (theParser != nullptr) {
-        theParser->EmitError(fileName);
+      BinaryMplImport binMplt(*theModule);
+      binMplt.SetImported(false);
+      std::string modid = theModule->GetFileName();
+      bool imported = binMplt.Import(modid, true);
+      if (!imported) {
+        memPoolCtrler.DeleteMemPool(optMp);
+        return kErrorCompileFail;
       }
-      memPoolCtrler.DeleteMemPool(optMp);
-      return kErrorCompileFail;
     }
     timer.Stop();
     LogInfo::MapleLogger() << "Mplcg Parser consumed " << timer.ElapsedMilliseconds() << "ms\n";
@@ -137,8 +147,8 @@ ErrorCode MplcgCompiler::Compile(const MplOptions &options, std::unique_ptr<MIRM
   }
 
   LogInfo::MapleLogger() << "Starting mplcg\n";
-  DriverRunner runner(theModule.get(), options.GetRunningExes(), fileName, optMp,
-      fileparsed, options.HasSetTimePhases());
+  DriverRunner runner(theModule.get(), options.GetRunningExes(), options.GetInputFileType(), fileName, optMp,
+      fileread, options.HasSetTimePhases());
   PrintCommand(options);
   runner.SetCGInfo(&cgOption, fileName);
   runner.ProcessCGPhase(output, baseName);

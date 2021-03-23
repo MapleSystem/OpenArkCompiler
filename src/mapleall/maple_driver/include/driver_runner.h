@@ -32,7 +32,7 @@ extern const std::string mplME;
 
 class DriverRunner final {
  public:
-  DriverRunner(MIRModule *theModule, const std::vector<std::string> &exeNames, Options *mpl2mplOptions,
+  DriverRunner(MIRModule *theModule, const std::vector<std::string> &exeNames, InputFileType inpFileType, Options *mpl2mplOptions,
                std::string mpl2mplInput, MeOption *meOptions, const std::string &meInput, std::string actualInput,
                MemPool *optMp, bool fileParsed = false, bool timePhases = false,
                bool genVtableImpl = false, bool genMeMpl = false)
@@ -47,11 +47,12 @@ class DriverRunner final {
         fileParsed(fileParsed),
         timePhases(timePhases),
         genVtableImpl(genVtableImpl),
-        genMeMpl(genMeMpl) {}
+        genMeMpl(genMeMpl),
+        inputFileType(inpFileType) {}
 
-  DriverRunner(MIRModule *theModule, const std::vector<std::string> &exeNames, std::string actualInput, MemPool *optMp,
+  DriverRunner(MIRModule *theModule, const std::vector<std::string> &exeNames, InputFileType inpFileType, std::string actualInput, MemPool *optMp,
                bool fileParsed = false, bool timePhases = false, bool genVtableImpl = false, bool genMeMpl = false)
-      : DriverRunner(theModule, exeNames, nullptr, "", nullptr, "", actualInput, optMp, fileParsed, timePhases,
+      : DriverRunner(theModule, exeNames, inpFileType, nullptr, "", nullptr, "", actualInput, optMp, fileParsed, timePhases,
                      genVtableImpl, genMeMpl) {}
 
   ~DriverRunner() = default;
@@ -93,6 +94,7 @@ class DriverRunner final {
   bool timePhases = false;
   bool genVtableImpl = false;
   bool genMeMpl = false;
+  InputFileType inputFileType;
   std::string printOutExe;
 };
 }  // namespace maple
