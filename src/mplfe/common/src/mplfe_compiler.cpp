@@ -197,7 +197,7 @@ void MPLFECompiler::ExportMpltFile() {
 void MPLFECompiler::ExportMplFile() {
   FETimer timer;
   timer.StartAndDump("Output mpl");
-  module.OutputAsciiMpl("", false);
+  module.OutputAsciiMpl("", ".mpl", nullptr, false, false);
   timer.StopAndDumpTimeMS("Output mpl");
 }
 

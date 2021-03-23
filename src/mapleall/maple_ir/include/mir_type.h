@@ -517,6 +517,10 @@ class MIRType {
     return typeKind == kTypeScalar;
   }
 
+  bool IsMIRTypeByName() const {
+    return typeKind == kTypeByName;
+  }
+
   bool ValidateClassOrInterface(const std::string &className, bool noWarning) const;
   bool IsOfSameType(MIRType &type);
   const std::string &GetName() const;

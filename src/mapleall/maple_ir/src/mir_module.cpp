@@ -12,6 +12,7 @@
  * FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+#include "mir_module.h"
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -276,8 +277,7 @@ void MIRModule::DumpGlobals(bool emitStructureType) const {
   }
 }
 
-void MIRModule::Dump(bool emitStructureType,
-                     std::unordered_set<std::string> *dumpFuncSet) const {
+void MIRModule::Dump(bool emitStructureType, const std::unordered_set<std::string> *dumpFuncSet) const {
   DumpGlobals(emitStructureType);
   DumpFunctionList(dumpFuncSet);
 }
@@ -619,7 +619,7 @@ MIRFunction *MIRModule::FindEntryFunction() {
 // module to the file with given file suffix, and file stem from
 // this->fileName appended with phaseName
 void MIRModule::OutputAsciiMpl(const char *phaseName, const char *suffix,
-                               std::unordered_set<std::string> *dumpFuncSet,
+                               const std::unordered_set<std::string> *dumpFuncSet,
                                bool emitStructureType, bool binaryform) {
   ASSERT(!(emitStructureType && binaryform), "Cannot emit type info in .bpl");
   std::string fileStem;
@@ -640,9 +640,9 @@ void MIRModule::OutputAsciiMpl(const char *phaseName, const char *suffix,
     LogInfo::MapleLogger().rdbuf(backup);  // restore LogInfo::MapleLogger()'s buffer
     mplFile.close();
   } else {
-    BinaryMplt binMplt(*this);
-    binMplt.GetBinExport().not2mplt = true;
-    binMplt.Export(outfileName);
+    BinaryMplt binaryMplt(*this);
+    binaryMplt.GetBinExport().not2mplt = true;
+    binaryMplt.Export(outfileName);
   }
 }
 

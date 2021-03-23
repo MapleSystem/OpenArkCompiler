@@ -132,13 +132,13 @@ class BinaryMplExport {
   void OutputInterfaceTypeData(const MIRInterfaceType &type);
   void OutputSrcPos(const SrcPosition &pos);
   void OutputAliasMap(MapleMap<GStrIdx, MIRAliasVars> &aliasVarMap);
-  void OutputInfoVector(const MIRInfoVector &infovector, const MapleVector<bool> &infovector_isstring);
+  void OutputInfoVector(const MIRInfoVector &infoVector, const MapleVector<bool> &infoVectorIsString);
   void OutputFuncIdInfo(MIRFunction *func);
   void OutputLocalSymbol(MIRSymbol *sym);
   void OutputLocalSymTab(const MIRFunction *func);
   void OutputPregTab(const MIRFunction *func);
   void OutputLabelTab(const MIRFunction *func);
-  void OutputLocalTypeNameTab(const MIRTypeNameTable *tnametab);
+  void OutputLocalTypeNameTab(const MIRTypeNameTable *tyNameTab);
   void OutputFormalsStIdx(MIRFunction *func);
   void OutputFuncViaSymName(PUIdx puIdx);
   void OutputExpression(BaseNode *e);
@@ -149,6 +149,8 @@ class BinaryMplExport {
   const MIRModule &GetMIRModule() const {
     return mod;
   }
+
+  bool not2mplt;  // this export is not to an mplt file
 
  private:
   void WriteContentField4mplt(int fieldNum, uint64 *fieldStartP);
@@ -178,11 +180,12 @@ class BinaryMplExport {
   std::unordered_map<UStrIdx, int64, UStrIdxHash> uStrMark;
   std::unordered_map<const MIRSymbol*, int64> symMark;
   std::unordered_map<MIRType*, int64> typMark;
-  static int typeMarkOffset;  // offset of mark (tag in binmplimport) resulting from duplicated function
-
- public:
-  bool not2mplt;  // this export is not to an mplt file
+  friend class DoUpdateMplt;
   std::unordered_map<uint32, int64> callInfoMark;
+  std::map<GStrIdx, uint8> *func2SEMap = nullptr;
+  std::unordered_map<EACGBaseNode*, int64> eaNodeMark;
+  bool inIPA = false;
+  static int typeMarkOffset;  // offset of mark (tag in binmplimport) resulting from duplicated function
 };
 
 }  // namespace maple

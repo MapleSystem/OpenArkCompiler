@@ -577,7 +577,7 @@ class MIRFunction {
     return GetFuncSymbol()->GetSrcPosition();
   }
 
-  void SetSrcPosition(SrcPosition &position) {
+  void SetSrcPosition(const SrcPosition &position) {
     GetFuncSymbol()->SetSrcPosition(position);
   }
 

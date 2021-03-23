@@ -249,7 +249,7 @@ class MIRModule {
   }
 
   void DumpGlobals(bool emitStructureType = true) const;
-  void Dump(bool emitStructureType = true, std::unordered_set<std::string> *dumpFuncSet = nullptr) const;
+  void Dump(bool emitStructureType = true, const std::unordered_set<std::string> *dumpFuncSet = nullptr) const;
   void DumpToFile(const std::string &fileNameStr, bool emitStructureType = true) const;
   void DumpInlineCandidateToFile(const std::string &fileNameStr) const;
   const std::string &GetFileNameFromFileNum(uint32 fileNum) const;
@@ -275,7 +275,7 @@ class MIRModule {
   MIRFunction *FindEntryFunction();
   uint32 GetFileinfo(GStrIdx strIdx) const;
   void OutputAsciiMpl(const char *phaseName, const char *suffix,
-                      std::unordered_set<std::string> *dumpFuncSet = nullptr,
+                      const std::unordered_set<std::string> *dumpFuncSet = nullptr,
                       bool emitStructureType = true, bool binaryform = false);
   void OutputFunctionListAsciiMpl(const std::string &phaseName);
   const std::string &GetFileName() const {

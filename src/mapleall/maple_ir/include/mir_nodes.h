@@ -1816,6 +1816,10 @@ class SwitchNode : public StmtNode {
     defaultLabel = idx;
   }
 
+  const CaseVector &GetSwitchTable() const {
+    return switchTable;
+  }
+
   CaseVector &GetSwitchTable() {
     return switchTable;
   }

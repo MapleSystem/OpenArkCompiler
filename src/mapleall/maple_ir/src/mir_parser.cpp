@@ -1871,7 +1871,8 @@ bool MIRParser::ParseExprConstval(BaseNodePtr &expr) {
   exprConst->SetPrimType(GetPrimitiveType(typeTk));
   lexer.NextToken();
   MIRConst *constVal = nullptr;
-  if (!ParseScalarValue(constVal, *GlobalTables::GetTypeTable().GetPrimType(exprConst->GetPrimType()), 0/*fieldID*/)) {
+  if (!ParseScalarValue(constVal, *GlobalTables::GetTypeTable().GetPrimType(exprConst->GetPrimType()),
+                        0 /* fieldID */)) {
     Error("expect scalar type but get ");
     return false;
   }

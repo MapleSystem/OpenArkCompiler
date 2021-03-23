@@ -2146,7 +2146,7 @@ static void ReflectionAnalysisGenStrTab(MIRModule &mirModule, const std::string 
   strTabSt->SetStorageClass(kScFstatic);
   for (char c : strTab) {
     MIRConst *newConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(
-        c, *GlobalTables::GetTypeTable().GetUInt8(), 0/*fieldID*/);
+        c, *GlobalTables::GetTypeTable().GetUInt8(), 0 /* fieldID */);
     strTabAggconst->PushBack(newConst);
   }
   strTabSt->SetKonst(strTabAggconst);

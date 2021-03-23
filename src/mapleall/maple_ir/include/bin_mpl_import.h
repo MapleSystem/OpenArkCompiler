@@ -122,25 +122,22 @@ class BinaryMplImport {
   void ImportInterfaceTypeData(MIRInterfaceType &type);
   PUIdx ImportFunction();
   MIRSymbol *InSymbol(MIRFunction *func);
-
-  void ImportInfoVector(MIRInfoVector &infovector, MapleVector<bool> &infovector_isstring);
+  void ImportInfoVector(MIRInfoVector &infoVector, MapleVector<bool> &infoVectorIsString);
   void ImportLocalTypeNameTable(MIRTypeNameTable *typeNameTab);
   void ImportFuncIdInfo(MIRFunction *func);
   void ImportLocalSymbol(MIRFunction *func);
   void ImportLocalSymTab(MIRFunction *func);
-  void ImportPregTab(MIRFunction *func);
+  void ImportPregTab(const MIRFunction *func);
   void ImportLabelTab(MIRFunction *func);
   void ImportFormalsStIdx(MIRFunction *func);
   void ImportAliasMap(MIRFunction *func);
   void ImportSrcPos(SrcPosition &pos);
-  void ImportBaseNode(Opcode &o, PrimType &typ, uint8 &numopr);
+  void ImportBaseNode(Opcode &o, PrimType &typ, uint8 &numOpr);
   PUIdx ImportFuncViaSymName();
   BaseNode *ImportExpression(MIRFunction *func);
-
   void ImportReturnValues(MIRFunction *func, CallReturnVector *retv);
   BlockNode *ImportBlockNode(MIRFunction *fn);
   void ReadFunctionBodyField();
-
   void ReadFileAt(const std::string &modid, int32 offset);
   uint8 Read();
   int64 ReadInt64();
