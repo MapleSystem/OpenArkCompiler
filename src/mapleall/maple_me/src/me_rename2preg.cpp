@@ -182,7 +182,7 @@ void SSARename2Preg::Rename2PregLeafLHS(MeStmt *mestmt, const VarMeExpr *varmeex
         oldrhs = meirmap->HashMeExpr(opmeexpr);
       }
     }
-    RegassignMeStmt *regssmestmt = meirmap->New<RegassignMeStmt>(varreg, oldrhs);
+    AssignMeStmt *regssmestmt = meirmap->New<AssignMeStmt>(OP_regassign, varreg, oldrhs);
     regssmestmt->CopyBase(*mestmt);
     mestmt->GetBB()->InsertMeStmtBefore(mestmt, regssmestmt);
     mestmt->GetBB()->RemoveMeStmt(mestmt);
@@ -261,7 +261,7 @@ void SSARename2Preg::Rename2PregStmt(MeStmt *stmt) {
     case OP_iassign: {
       IassignMeStmt *ivarstmt = static_cast<IassignMeStmt *>(stmt);
       Rename2PregExpr(stmt, ivarstmt->GetRHS());
-      Rename2PregExpr(stmt, ivarstmt->GetLHS()->GetBase());
+      Rename2PregExpr(stmt, ivarstmt->GetLHSVal()->GetBase());
       break;
     }
     default:

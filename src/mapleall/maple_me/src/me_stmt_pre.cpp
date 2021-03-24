@@ -107,7 +107,7 @@ void MeStmtPre::CodeMotion() {
               }
               // create a new LHS for the dassign in insertedOcc->GetMeStmt()
               VarMeExpr *newVarVersion = irMap->CreateVarMeExprVersion(*dass->GetVarLHS());
-              dass->UpdateLHS(*newVarVersion);
+              dass->UpdateLhs(newVarVersion);
             } else if (insertedOcc->GetOpcodeOfMeStmt() == OP_callassigned) {
               auto *call = static_cast<CallMeStmt*>(insertedOcc->GetMeStmt());
               if (call->GetAssignedLHS() != nullptr) {

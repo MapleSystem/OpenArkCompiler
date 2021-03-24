@@ -63,7 +63,7 @@ class IPAEscapeAnalysis {
                                         bool createObjNode);
   EACGObjectNode *GetOrCreateCGObjNode(MeExpr *expr, MeStmt *stmt = nullptr, EAStatus easOfPhanObj = kNoEscape);
   void GetCGNodeForMeExpr(std::vector<EACGBaseNode*> &nodes, MeExpr &expr, MeStmt &stmt, bool createObjNode);
-  void CollectDefStmtForReg(std::set<RegMeExpr*> &visited, std::set<RegassignMeStmt*> &defStmts, RegMeExpr &regVar);
+  void CollectDefStmtForReg(std::set<RegMeExpr*> &visited, std::set<AssignMeStmt*> &defStmts, RegMeExpr &regVar);
   void UpdateEscConnGraphWithStmt(MeStmt &stmt);
   void UpdateEscConnGraphWithPhi(const BB &bb);
   void HandleParaAtFuncEntry();

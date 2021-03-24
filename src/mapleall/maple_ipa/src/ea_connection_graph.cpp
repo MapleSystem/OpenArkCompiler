@@ -691,7 +691,7 @@ bool EAConnectionGraph::ExprCanBeOptimized(MeExpr &expr) {
       ASSERT(static_cast<RegMeExpr*>(&expr)->GetDefBy() == kDefByStmt, "must be kDefByStmt");
       ASSERT(static_cast<RegMeExpr*>(&expr)->GetDefStmt()->GetOp() == OP_regassign, "must be OP_regassign");
       MeStmt *defStmt = static_cast<RegMeExpr*>(&expr)->GetDefStmt();
-      RegassignMeStmt *regassignStmt = static_cast<RegassignMeStmt*>(defStmt);
+      AssignMeStmt *regassignStmt = static_cast<AssignMeStmt*>(defStmt);
       rhs = regassignStmt->GetRHS();
     } else {
       CHECK_FATAL(false, "impossible");

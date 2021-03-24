@@ -89,9 +89,8 @@ class IRMap : public AnalysisResult {
     return meExpr;
   }
 
-  DassignMeStmt *CreateDassignMeStmt(MeExpr&, MeExpr&, BB&);
   IassignMeStmt *CreateIassignMeStmt(TyIdx, IvarMeExpr&, MeExpr&, const MapleMap<OStIdx, ChiMeNode*>&);
-  RegassignMeStmt *CreateRegassignMeStmt(MeExpr&, MeExpr&, BB&);
+  AssignMeStmt *CreateAssignMeStmt(ScalarMeExpr&, MeExpr&, BB&);
   void InsertMeStmtBefore(BB&, MeStmt&, MeStmt&);
   MePhiNode *CreateMePhi(ScalarMeExpr&);
 
@@ -119,7 +118,7 @@ class IRMap : public AnalysisResult {
   UnaryMeStmt *CreateUnaryMeStmt(Opcode op, MeExpr *opnd, BB *bb, const SrcPosition *src);
   IntrinsiccallMeStmt *CreateIntrinsicCallMeStmt(MIRIntrinsicID idx, std::vector<MeExpr*> &opnds,
                                                  TyIdx tyIdx = TyIdx());
-  IntrinsiccallMeStmt *CreateIntrinsicCallAssignedMeStmt(MIRIntrinsicID idx, std::vector<MeExpr*> &opnds, MeExpr *ret,
+  IntrinsiccallMeStmt *CreateIntrinsicCallAssignedMeStmt(MIRIntrinsicID idx, std::vector<MeExpr*> &opnds, ScalarMeExpr *ret,
                                                          TyIdx tyIdx = TyIdx());
   MeExpr *SimplifyOpMeExpr(OpMeExpr *opmeexpr);
   MeExpr *SimplifyMeExpr(MeExpr *x);

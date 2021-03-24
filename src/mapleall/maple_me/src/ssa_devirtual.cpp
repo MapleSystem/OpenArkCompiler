@@ -466,7 +466,7 @@ void SSADevirtual::TraversalMeStmt(MeStmt &meStmt) {
       break;
     }
     case OP_regassign: {
-      auto *regMeStmt = static_cast<RegassignMeStmt*>(&meStmt);
+      auto *regMeStmt = static_cast<AssignMeStmt*>(&meStmt);
       VisitMeExpr(regMeStmt->GetRHS());
       break;
     }

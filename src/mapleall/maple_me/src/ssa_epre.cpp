@@ -19,7 +19,7 @@ namespace {
 }
 
 namespace maple {
-void SSAEPre::GenerateSaveLHSRealocc(MeRealOcc &realOcc, MeExpr &regOrVar) {
+void SSAEPre::GenerateSaveLHSRealocc(MeRealOcc &realOcc, ScalarMeExpr &regOrVar) {
   CHECK_FATAL(realOcc.GetOpcodeOfMeStmt() == OP_iassign, "GenerateSaveLHSReal: only iassign expected");
   auto *iass = static_cast<IassignMeStmt*>(realOcc.GetMeStmt());
   IvarMeExpr *theLHS = iass->GetLHSVal();
@@ -31,16 +31,14 @@ void SSAEPre::GenerateSaveLHSRealocc(MeRealOcc &realOcc, MeExpr &regOrVar) {
   BB *savedBB = iass->GetBB();
   MeStmt *savedPrev = iass->GetPrev();
   MeStmt *savedNext = iass->GetNext();
-  RegassignMeStmt *rass = nullptr;
+  AssignMeStmt *rass = nullptr;
   if (!workCand->NeedLocalRefVar() || GetPlacementRCOn()) {
     CHECK_FATAL(regOrVar.GetMeOp() == kMeOpReg, "GenerateSaveLHSRealocc: EPRE temp must b e preg here");
     // change original iassign to regassign;
     // use placement new to modify in place, because other occ nodes are pointing
     // to this statement in order to get to the rhs expression;
-    // this assumes RegassignMeStmt has smaller size then IassignMeStmt
-    rass = new (iass) RegassignMeStmt();
-    rass->SetLHS(static_cast<RegMeExpr*>(&regOrVar));
-    rass->SetRHS(savedRHS);
+    // this assumes AssignMeStmt has smaller size then IassignMeStmt
+    rass = new (iass) AssignMeStmt(OP_regassign, static_cast<RegMeExpr*>(&regOrVar), savedRHS);
     rass->SetSrcPos(savedSrcPos);
     rass->SetBB(savedBB);
     rass->SetPrev(savedPrev);
@@ -54,15 +52,13 @@ void SSAEPre::GenerateSaveLHSRealocc(MeRealOcc &realOcc, MeExpr &regOrVar) {
     // use placement new to modify in place, because other occ nodes are pointing
     // to this statement in order to get to the rhs expression;
     // this assumes DassignMeStmt has smaller size then IassignMeStmt
-    DassignMeStmt *dass = new (iass) DassignMeStmt(&irMap->GetIRMapAlloc());
-    dass->SetLHS(localRefVar);
-    dass->SetRHS(savedRHS);
+    DassignMeStmt *dass = new (iass) DassignMeStmt(&irMap->GetIRMapAlloc(), localRefVar, savedRHS);
     dass->SetSrcPos(savedSrcPos);
     dass->SetBB(savedBB);
     dass->SetPrev(savedPrev);
     dass->SetNext(savedNext);
     localRefVar->SetDefByStmt(*dass);
-    rass = irMap->CreateRegassignMeStmt(regOrVar, *localRefVar, *savedBB);
+    rass = irMap->CreateAssignMeStmt(regOrVar, *localRefVar, *savedBB);
     regOrVar.SetDefByStmt(*rass);
     savedBB->InsertMeStmtAfter(dass, rass);
     EnterCandsForSSAUpdate(localRefVar->GetOstIdx(), *savedBB);
@@ -83,7 +79,7 @@ void SSAEPre::GenerateSaveLHSRealocc(MeRealOcc &realOcc, MeExpr &regOrVar) {
 void SSAEPre::GenerateSaveRealOcc(MeRealOcc &realOcc) {
   ASSERT(GetPUIdx() == workCand->GetPUIdx() || workCand->GetPUIdx() == 0,
          "GenerateSaveRealOcc: inconsistent puIdx");
-  MeExpr *regOrVar = CreateNewCurTemp(*realOcc.GetMeExpr());
+  ScalarMeExpr *regOrVar = CreateNewCurTemp(*realOcc.GetMeExpr());
   if (realOcc.IsLHS()) {
     GenerateSaveLHSRealocc(realOcc, *regOrVar);
     return;
@@ -98,21 +94,17 @@ void SSAEPre::GenerateSaveRealOcc(MeRealOcc &realOcc) {
     static_cast<DassignMeStmt*>(realOcc.GetMeStmt())->GetVarLHS()->SetNoDelegateRC(true);
   }
   if (!workCand->NeedLocalRefVar() || isRHSOfDassign || GetPlacementRCOn()) {
-    if (regOrVar->GetMeOp() == kMeOpReg) {
-      newMeStmt = irMap->CreateRegassignMeStmt(*regOrVar, *realOcc.GetMeExpr(), *realOcc.GetMeStmt()->GetBB());
-    } else {
-      newMeStmt = irMap->CreateDassignMeStmt(*regOrVar, *realOcc.GetMeExpr(), *realOcc.GetMeStmt()->GetBB());
-    }
+    newMeStmt = irMap->CreateAssignMeStmt(*regOrVar, *realOcc.GetMeExpr(), *realOcc.GetMeStmt()->GetBB());
     regOrVar->SetDefByStmt(*newMeStmt);
     realOcc.GetMeStmt()->GetBB()->InsertMeStmtBefore(realOcc.GetMeStmt(), newMeStmt);
   } else {
     // regOrVar is MeOp_reg and localRefVar is kMeOpVar
     VarMeExpr *localRefVar = CreateNewCurLocalRefVar();
     temp2LocalRefVarMap[static_cast<RegMeExpr*>(regOrVar)] = localRefVar;
-    newMeStmt = irMap->CreateDassignMeStmt(*localRefVar, *realOcc.GetMeExpr(), *realOcc.GetMeStmt()->GetBB());
+    newMeStmt = irMap->CreateAssignMeStmt(*localRefVar, *realOcc.GetMeExpr(), *realOcc.GetMeStmt()->GetBB());
     localRefVar->SetDefByStmt(*newMeStmt);
     realOcc.GetMeStmt()->GetBB()->InsertMeStmtBefore(realOcc.GetMeStmt(), newMeStmt);
-    newMeStmt = irMap->CreateRegassignMeStmt(*regOrVar, *localRefVar, *realOcc.GetMeStmt()->GetBB());
+    newMeStmt = irMap->CreateAssignMeStmt(*regOrVar, *localRefVar, *realOcc.GetMeStmt()->GetBB());
     regOrVar->SetDefByStmt(*newMeStmt);
     realOcc.GetMeStmt()->GetBB()->InsertMeStmtBefore(realOcc.GetMeStmt(), newMeStmt);
     EnterCandsForSSAUpdate(localRefVar->GetOstIdx(), *realOcc.GetMeStmt()->GetBB());

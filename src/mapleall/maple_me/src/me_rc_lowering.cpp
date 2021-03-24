@@ -240,7 +240,7 @@ IntrinsiccallMeStmt *RCLowering::CreateRCIntrinsic(MIRIntrinsicID intrnID, const
                                                    std::vector<MeExpr*> &opnds, bool assigned) {
   IntrinsiccallMeStmt *intrn = nullptr;
   if (assigned) {
-    MeExpr *ret = (stmt.GetOp() == OP_regassign) ? stmt.GetLHS() : irMap.CreateRegMeExpr(PTY_ref);
+    ScalarMeExpr *ret = (stmt.GetOp() == OP_regassign) ? stmt.GetLHS() : irMap.CreateRegMeExpr(PTY_ref);
     intrn = irMap.CreateIntrinsicCallAssignedMeStmt(intrnID, opnds, ret);
   } else {
     intrn = irMap.CreateIntrinsicCallMeStmt(intrnID, opnds);
@@ -369,7 +369,7 @@ void RCLowering::HandleCallAssignedMeStmt(MeStmt &stmt, MeExpr *pendingDec) {
   assignedPtrSym.insert(retSym);
   if (retSym->GetAttr(ATTR_rcunowned)) {
     // if retSym is rcunowned, we need to introduce a new localrefvar to decref in cleanup
-    MeStmt *regToTmp = irMap.CreateDassignMeStmt(*CreateNewTmpVarMeExpr(true), *lhs, *bb);
+    MeStmt *regToTmp = irMap.CreateAssignMeStmt(*CreateNewTmpVarMeExpr(true), *lhs, *bb);
     bb->InsertMeStmtAfter(&stmt, regToTmp);
     return;
   }
@@ -392,8 +392,8 @@ void RCLowering::IntroduceRegRetIntoCallAssigned(MeStmt &stmt) {
 void RCLowering::HandleRetOfCallAssignedMeStmt(MeStmt &stmt, MeExpr &pendingDec) {
   BB *bb = stmt.GetBB();
   CHECK_FATAL(bb != nullptr, "bb null ptr check");
-  RegassignMeStmt *backup = irMap.CreateRegassignMeStmt(*irMap.CreateRegMeExpr(PTY_ref), pendingDec, *bb);
-  std::vector<MeExpr*> opnds = { backup->GetRegLHS() };
+  AssignMeStmt *backup = irMap.CreateAssignMeStmt(*irMap.CreateRegMeExpr(PTY_ref), pendingDec, *bb);
+  std::vector<MeExpr*> opnds = { backup->GetLHS() };
   IntrinsiccallMeStmt *decRefCall = CreateRCIntrinsic(INTRN_MCCDecRef, stmt, opnds);
   if (!instance_of<CallMeStmt>(stmt)) {
     bb->InsertMeStmtBefore(&stmt, backup);
@@ -403,7 +403,7 @@ void RCLowering::HandleRetOfCallAssignedMeStmt(MeStmt &stmt, MeExpr &pendingDec)
     // instead of change callassign {dassign} to backup; callassign {dassign}; decref
     // callassign {regassign}; backup; dassign (regread); decref
     RegMeExpr *curTmp = irMap.CreateRegMeExpr(PTY_ref);
-    MeStmt *regToVar = irMap.CreateDassignMeStmt(*stmt.GetAssignedLHS(), *curTmp, *bb);
+    MeStmt *regToVar = irMap.CreateAssignMeStmt(*stmt.GetAssignedLHS(), *curTmp, *bb);
     stmt.GetMustDefList()->front().UpdateLHS(*curTmp);
     bb->InsertMeStmtAfter(&stmt, decRefCall);
     bb->InsertMeStmtAfter(&stmt, regToVar);
@@ -426,7 +426,12 @@ bool RCLowering::RCFirst(MeExpr &rhs) {
 
 void RCLowering::PreprocessAssignMeStmt(MeStmt &stmt) {
   BB *bb = stmt.GetBB();
-  MeExpr *lhs = stmt.GetLHS();
+  MeExpr *lhs = nullptr;
+  if (stmt.GetOp() != OP_iassign) {
+    lhs = stmt.GetLHS();
+  } else {
+    lhs = static_cast<IassignMeStmt &>(stmt).GetLHSVal();
+  }
   CHECK_FATAL(lhs != nullptr, "null ptr check");
   MeExpr *rhs = stmt.GetRHS();
   CHECK_FATAL(rhs != nullptr, "null ptr check");
@@ -450,7 +455,7 @@ void RCLowering::PreprocessAssignMeStmt(MeStmt &stmt) {
     // if new obj is assigned to unowned refvar, we need a localrefvar
     // to decref at exit
     // introduce new localrefvar = lhs after current stmt
-    MeStmt *backup = irMap.CreateDassignMeStmt(*CreateNewTmpVarMeExpr(true), *lhs, *bb);
+    MeStmt *backup = irMap.CreateAssignMeStmt(*CreateNewTmpVarMeExpr(true), *lhs, *bb);
     // backup will not have any incref/decref
     bb->InsertMeStmtAfter(&stmt, backup);
   }
@@ -576,7 +581,7 @@ void RCLowering::HandleAssignToLocalVar(MeStmt &stmt, MeExpr *pendingDec) {
       IntrinsiccallMeStmt *decCall = CreateRCIntrinsic(INTRN_MCCDecRef, stmt, opnds);
       bb->InsertMeStmtBefore(&stmt, decCall);
     } else {
-      RegassignMeStmt *backup = irMap.CreateRegassignMeStmt(*irMap.CreateRegMeExpr(PTY_ref), *pendingDec, *bb);
+      AssignMeStmt *backup = irMap.CreateAssignMeStmt(*irMap.CreateRegMeExpr(PTY_ref), *pendingDec, *bb);
       bb->InsertMeStmtBefore(&stmt, backup);
       std::vector<MeExpr*> opnds = { backup->GetLHS() };
       IntrinsiccallMeStmt *decCall = CreateRCIntrinsic(INTRN_MCCDecRef, stmt, opnds);
@@ -659,7 +664,12 @@ void RCLowering::HandleAssignMeStmt(MeStmt &stmt, MeExpr *pendingDec) {
     return;
   }
   HandleAssignMeStmtRHS(stmt);
-  MeExpr *lhs = stmt.GetLHS();
+  MeExpr *lhs = nullptr;
+  if (stmt.GetOp() != OP_iassign) {
+    lhs = stmt.GetLHS();
+  } else {
+    lhs = static_cast<IassignMeStmt &>(stmt).GetLHSVal();
+  }
   CHECK_FATAL(lhs != nullptr, "null ptr check");
   if (lhs->GetMeOp() == kMeOpReg) {
     HandleAssignMeStmtRegLHS(stmt);
@@ -731,7 +741,12 @@ bool RCLowering::HasCallOrBranch(const MeStmt &from, const MeStmt &to) {
 MIRIntrinsicID RCLowering::SelectWriteBarrier(const MeStmt &stmt) {
   bool incWithLHS = stmt.NeedIncref();
   bool decWithLHS = stmt.NeedDecref();
-  MeExpr *lhs = stmt.GetLHS();
+  MeExpr *lhs = nullptr;
+  if (stmt.GetOp() != OP_iassign) {
+    lhs = stmt.GetLHS();
+  } else {
+    lhs = static_cast<const IassignMeStmt &>(stmt).GetLHSVal();
+  }
   CHECK_FATAL(lhs != nullptr, "null ptr check");
   MeExprOp meOp = lhs->GetMeOp();
   CHECK_FATAL((meOp == kMeOpVar || meOp == kMeOpIvar), "Not Expected meOp");
@@ -932,9 +947,9 @@ void RCLowering::HandleReturnGlobal(RetMeStmt &ret) {
   CHECK_FATAL(retVar != nullptr, "retVal null ptr check");
   if (MeOption::strictNaiveRC) {
     RegMeExpr *curTmp = irMap.CreateRegMeExpr(PTY_ref);
-    RegassignMeStmt *regAssStmt = irMap.CreateRegassignMeStmt(*curTmp, *retVar, *bb);
+    AssignMeStmt *regAssStmt = irMap.CreateAssignMeStmt(*curTmp, *retVar, *bb);
     bb->InsertMeStmtBefore(&ret, regAssStmt);
-    std::vector<MeExpr*> opnds = { regAssStmt->GetRegLHS() };
+    std::vector<MeExpr*> opnds = { regAssStmt->GetLHS() };
     IntrinsiccallMeStmt *incCall = CreateRCIntrinsic(INTRN_MCCIncRef, *regAssStmt, opnds, true);
     bb->InsertMeStmtBefore(&ret, incCall);
     ret.SetOpnd(0, curTmp);
@@ -1001,9 +1016,9 @@ void RCLowering::HandleReturnIvar(RetMeStmt &ret) {
   } else {
     if (MeOption::strictNaiveRC) {
       RegMeExpr *curTmp = irMap.CreateRegMeExpr(PTY_ref);
-      RegassignMeStmt *regAssStmt = irMap.CreateRegassignMeStmt(*curTmp, *retIvar, *ret.GetBB());
+      AssignMeStmt *regAssStmt = irMap.CreateAssignMeStmt(*curTmp, *retIvar, *ret.GetBB());
       ret.GetBB()->InsertMeStmtBefore(&ret, regAssStmt);
-      std::vector<MeExpr*> opnds = { regAssStmt->GetRegLHS() };
+      std::vector<MeExpr*> opnds = { regAssStmt->GetLHS() };
       IntrinsiccallMeStmt *incCall = CreateRCIntrinsic(INTRN_MCCIncRef, *regAssStmt, opnds, true);
       ret.GetBB()->InsertMeStmtBefore(&ret, incCall);
       ret.SetOpnd(0, curTmp);
@@ -1062,7 +1077,7 @@ void RCLowering::HandleReturnWithCleanup() {
     } else {
       // incref by default
       RegMeExpr *tmpReg = irMap.CreateRegMeExpr(PTY_ref);
-      RegassignMeStmt *temp = irMap.CreateRegassignMeStmt(*tmpReg, *retVal, *stmt->GetBB());
+      AssignMeStmt *temp = irMap.CreateAssignMeStmt(*tmpReg, *retVal, *stmt->GetBB());
       stmt->GetBB()->InsertMeStmtBefore(stmt, temp);
       std::vector<MeExpr*> opnds = { tmpReg };
       IntrinsiccallMeStmt *incCall = CreateRCIntrinsic(INTRN_MCCIncRef, *stmt, opnds);
@@ -1085,7 +1100,7 @@ void RCLowering::HandleReturnNeedBackup() {
       continue;
     }
     RegMeExpr *curTmp = irMap.CreateRegMeExpr(retVal->GetPrimType());
-    MeStmt *regAssign = irMap.CreateRegassignMeStmt(*curTmp, *retVal, *ret->GetBB());
+    MeStmt *regAssign = irMap.CreateAssignMeStmt(*curTmp, *retVal, *ret->GetBB());
     ret->GetBB()->InsertMeStmtBefore(ret, regAssign);
     ret->SetOpnd(0, curTmp);
   }
@@ -1428,7 +1443,7 @@ void RCLowering::FastBBLower(BB &bb) {
 
   for (auto iter : exceptionAllocsites) {
     MeStmt *stmt = iter.second;
-    DassignMeStmt *backup = irMap.CreateDassignMeStmt(*CreateNewTmpVarMeExpr(true), *stmt->GetLHS(), *stmt->GetBB());
+    AssignMeStmt *backup = irMap.CreateAssignMeStmt(*CreateNewTmpVarMeExpr(true), *stmt->GetLHS(), *stmt->GetBB());
     stmt->GetBB()->InsertMeStmtAfter(stmt, backup);
   }
 }
@@ -1439,7 +1454,7 @@ void RCLowering::FastLowerThrowStmt(MeStmt &stmt, MapleMap<uint32, MeStmt*> &exc
   MeExpr *throwVal = throwMeStmt.GetOpnd();
   BB *bb = stmt.GetBB();
   CHECK_FATAL(bb != nullptr, "bb nullptr check");
-  DassignMeStmt *backup = irMap.CreateDassignMeStmt(*CreateNewTmpVarMeExpr(true), *throwVal, *bb);
+  AssignMeStmt *backup = irMap.CreateAssignMeStmt(*CreateNewTmpVarMeExpr(true), *throwVal, *bb);
   bb->InsertMeStmtBefore(&throwMeStmt, backup);
   if (throwVal->GetMeOp() == kMeOpVar) {
     auto *var = static_cast<VarMeExpr*>(throwVal);
@@ -1496,12 +1511,12 @@ void RCLowering::FastLowerRetVar(RetMeStmt &stmt) {
 void RCLowering::FastLowerRetIvar(RetMeStmt &stmt) {
   BB *bb = stmt.GetBB();
   CHECK_NULL_FATAL(bb);
-  RegassignMeStmt *tmpRet = irMap.CreateRegassignMeStmt(*irMap.CreateRegMeExpr(PTY_ref), *stmt.GetOpnd(0), *bb);
+  AssignMeStmt *tmpRet = irMap.CreateAssignMeStmt(*irMap.CreateRegMeExpr(PTY_ref), *stmt.GetOpnd(0), *bb);
   bb->InsertMeStmtBefore(&stmt, tmpRet);
-  std::vector<MeExpr*> opnds = { tmpRet->GetRegLHS() };
+  std::vector<MeExpr*> opnds = { tmpRet->GetLHS() };
   IntrinsiccallMeStmt *incCall = CreateRCIntrinsic(INTRN_MCCIncRef, stmt, opnds);
   bb->InsertMeStmtBefore(&stmt, incCall);
-  stmt.SetOpnd(0, tmpRet->GetRegLHS());
+  stmt.SetOpnd(0, tmpRet->GetLHS());
 }
 
 void RCLowering::FastLowerRetReg(RetMeStmt &stmt) {
@@ -1545,7 +1560,7 @@ void RCLowering::FastLowerAssignToVar(MeStmt &stmt, MapleMap<uint32, MeStmt*> &e
     // add a localrefvar temp to compensate incref with new object
     BB *bb = stmt.GetBB();
     CHECK_FATAL(bb != nullptr, "bb nullptr check");
-    DassignMeStmt *backup = irMap.CreateDassignMeStmt(*CreateNewTmpVarMeExpr(true), *lhs, *bb);
+    AssignMeStmt *backup = irMap.CreateAssignMeStmt(*CreateNewTmpVarMeExpr(true), *lhs, *bb);
     bb->InsertMeStmtAfter(&stmt, backup);
   }
 }
@@ -1615,7 +1630,7 @@ void RCLowering::FastLowerCallAssignedStmt(MeStmt &stmt) {
       return;
     }
     // insert localrefvar for decref on ret
-    DassignMeStmt *backup = irMap.CreateDassignMeStmt(*CreateNewTmpVarMeExpr(true), *lhs, *bb);
+    AssignMeStmt *backup = irMap.CreateAssignMeStmt(*CreateNewTmpVarMeExpr(true), *lhs, *bb);
     bb->InsertMeStmtAfter(&stmt, backup);
   }
 }

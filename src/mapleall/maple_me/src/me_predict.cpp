@@ -81,7 +81,7 @@ Predictor MePrediction::ReturnPrediction(const MeExpr *val, Prediction &predicti
   if (def->GetOp() != OP_regassign) {
     return kPredNoPrediction;
   }
-  auto *rhs = static_cast<RegassignMeStmt*>(def)->GetRHS();
+  auto *rhs = static_cast<AssignMeStmt*>(def)->GetRHS();
   ASSERT_NOT_NULL(rhs);
   if (rhs->GetMeOp() != kMeOpConst) {
     return kPredNoPrediction;

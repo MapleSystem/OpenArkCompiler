@@ -136,7 +136,7 @@ static bool IsNoSideEffect(CallMeStmt &call) {
   return true;
 }
 
-static bool IsRegAssignStmtForClassMeta(const RegassignMeStmt &regAssign) {
+static bool IsRegAssignStmtForClassMeta(const AssignMeStmt &regAssign) {
   MeExpr &rhs = utils::ToRef(regAssign.GetRHS());
   if (rhs.GetOp() == OP_add) {
     return true;
@@ -439,10 +439,10 @@ EACGObjectNode *IPAEscapeAnalysis::GetOrCreateCGObjNode(MeExpr *expr, MeStmt *st
   return objectNode;
 }
 
-void IPAEscapeAnalysis::CollectDefStmtForReg(std::set<RegMeExpr*> &visited, std::set<RegassignMeStmt*> &defStmts,
+void IPAEscapeAnalysis::CollectDefStmtForReg(std::set<RegMeExpr*> &visited, std::set<AssignMeStmt*> &defStmts,
                                              RegMeExpr &regVar) {
   if (regVar.GetDefBy() == kDefByStmt) {
-    RegassignMeStmt *regAssignStmt = static_cast<RegassignMeStmt*>(regVar.GetDefStmt());
+    AssignMeStmt *regAssignStmt = static_cast<AssignMeStmt*>(regVar.GetDefStmt());
     (void)defStmts.insert(regAssignStmt);
   } else if (regVar.GetDefBy() == kDefByPhi) {
     if (visited.find(&regVar) == visited.end()) {
@@ -458,7 +458,7 @@ void IPAEscapeAnalysis::CollectDefStmtForReg(std::set<RegMeExpr*> &visited, std:
 }
 
 void IPAEscapeAnalysis::GetArrayBaseNodeForReg(std::vector<EACGBaseNode*> &nodes, RegMeExpr &regVar, MeStmt &stmt) {
-  std::set<RegassignMeStmt*> defStmts;
+  std::set<AssignMeStmt*> defStmts;
   std::set<RegMeExpr*> visited;
   CollectDefStmtForReg(visited, defStmts, regVar);
   for (auto &regAssignStmt : defStmts) {
@@ -637,9 +637,8 @@ void IPAEscapeAnalysis::UpdateEscConnGraphWithStmt(MeStmt &stmt) {
       break;
     }
     case OP_regassign: {
-      RegassignMeStmt *regasgn = static_cast<RegassignMeStmt*>(&stmt);
+      AssignMeStmt *regasgn = static_cast<AssignMeStmt*>(&stmt);
       CHECK_FATAL(regasgn->GetLHS() != nullptr, "Impossible");
-      CHECK_FATAL(regasgn->GetRegLHS() != nullptr, "Impossible");
       CHECK_FATAL(regasgn->GetRHS() != nullptr, "Impossible");
       if (!IsExprRefOrPtr(*regasgn->GetLHS())) {
         break;
@@ -648,7 +647,7 @@ void IPAEscapeAnalysis::UpdateEscConnGraphWithStmt(MeStmt &stmt) {
       if (IsRegAssignStmtForClassMeta(*regasgn) || regasgn->GetRHS()->GetOp() == OP_array) {
         break;
       }
-      EACGRefNode *lhsNode = GetOrCreateCGRefNodeForReg(*regasgn->GetRegLHS(), false);
+      EACGRefNode *lhsNode = GetOrCreateCGRefNodeForReg(*regasgn->GetLHS(), false);
       std::vector<EACGBaseNode*> rhsNodes;
       GetCGNodeForMeExpr(rhsNodes, *regasgn->GetRHS(), stmt, true);
       for (const auto &rhsNode : rhsNodes) {
@@ -1277,14 +1276,14 @@ void IPAEscapeAnalysis::ProcessNoAndRetEscObj() {
     BB *curBB = stmt->GetBB();
     VarMeExpr *initVar = CreateEATempVarMeExpr(*ost);
     MeExpr *zeroExpr = irMap->CreateIntConstMeExpr(0, PTY_ref);
-    DassignMeStmt *initStmt = irMap->CreateDassignMeStmt(*initVar, *zeroExpr, *firstBB);
+    DassignMeStmt *initStmt = static_cast<DassignMeStmt *>(irMap->CreateAssignMeStmt(*initVar, *zeroExpr, *firstBB));
     firstBB->AddMeStmtFirst(initStmt);
 
     VarMeExpr *var = CreateEATempVarMeExpr(*ost);
     noAndRetEscObj.push_back(var);
-    MeExpr *lhs = stmt->GetLHS();
+    ScalarMeExpr *lhs = stmt->GetLHS();
     CHECK_FATAL(lhs != nullptr, "nullptr check");
-    DassignMeStmt *newStmt = irMap->CreateDassignMeStmt(*var, *lhs, *curBB);
+    DassignMeStmt *newStmt = static_cast<DassignMeStmt *>(irMap->CreateAssignMeStmt(*var, *lhs, *curBB));
     curBB->InsertMeStmtAfter(stmt, newStmt);
     IntrinsiccallMeStmt *meStmt = irMap->NewInPool<IntrinsiccallMeStmt>(OP_intrinsiccall, INTRN_MCCSetObjectPermanent);
     meStmt->PushBackOpnd(var);
@@ -1301,7 +1300,7 @@ void IPAEscapeAnalysis::ProcessRetStmt() {
   OriginalSt *ost = CreateEARetTempOst();
   VarMeExpr *initVar = CreateEATempVarMeExpr(*ost);
   MeExpr *zeroExpr = irMap->CreateIntConstMeExpr(0, PTY_ref);
-  DassignMeStmt *newStmt = irMap->CreateDassignMeStmt(*initVar, *zeroExpr, *firstBB);
+  DassignMeStmt *newStmt = static_cast<DassignMeStmt *>(irMap->CreateAssignMeStmt(*initVar, *zeroExpr, *firstBB));
   firstBB->AddMeStmtFirst(newStmt);
 
   for (BB *bb : func->GetAllBBs()) {
@@ -1315,7 +1314,7 @@ void IPAEscapeAnalysis::ProcessRetStmt() {
         VarMeExpr *var = GetOrCreateEARetTempVarMeExpr(*ost);
         for (const auto &expr : retMeStmt->GetOpnds()) {
           if (IsExprRefOrPtr(*expr)) {
-            DassignMeStmt *newStmtTmp = irMap->CreateDassignMeStmt(*var, *expr, *bb);
+            DassignMeStmt *newStmtTmp = static_cast<DassignMeStmt *>(irMap->CreateAssignMeStmt(*var, *expr, *bb));
             bb->InsertMeStmtBefore(stmt, newStmtTmp);
           }
         }

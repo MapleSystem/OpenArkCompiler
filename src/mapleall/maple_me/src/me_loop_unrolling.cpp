@@ -77,7 +77,7 @@ void LoopUnrolling::CopyDassignStmt(const MeStmt &stmt, BB &bb) {
   VarMeExpr *varLHS = static_cast<const DassignMeStmt*>(&stmt)->GetVarLHS();
   VarMeExpr *newVarLHS = irMap->CreateVarMeExprVersion(varLHS->GetOst());
   InsertCandsForSSAUpdate(newVarLHS->GetOstIdx(), bb);
-  bb.AddMeStmtLast(irMap->CreateDassignMeStmt(*newVarLHS, *stmt.GetRHS(), bb));
+  bb.AddMeStmtLast(irMap->CreateAssignMeStmt(*newVarLHS, *stmt.GetRHS(), bb));
 }
 
 void LoopUnrolling::CopyIassignStmt(MeStmt &stmt, BB &bb) {
@@ -856,7 +856,7 @@ void LoopUnrolling::UpdateCondGotoBB(BB &bb, VarMeExpr &indVar, MeExpr &tripCoun
   MeExpr *constMeExprForOne = irMap->CreateIntConstMeExpr(1, PTY_i32);
   MeExpr *addMeExpr = irMap->CreateMeExprBinary(OP_add, PTY_i32, indVar, *constMeExprForOne);
   UpdateCondGotoStmt(bb, indVar, tripCount, unrollTimeExpr, offset);
-  bb.AddMeStmtFirst(irMap->CreateDassignMeStmt(*newVarLHS, *addMeExpr, bb));
+  bb.AddMeStmtFirst(irMap->CreateAssignMeStmt(*newVarLHS, *addMeExpr, bb));
 }
 
 void LoopUnrolling::ExchangeSucc(BB &partialExit) {
@@ -966,7 +966,7 @@ void LoopUnrolling::CreateIndVarAndCondGotoStmt(CR &cr, CRNode &varNode, BB &pre
   indVarAndTripCountDefBB->SetKind(kBBFallthru);
   MeExpr *constMeExprForZero = irMap->CreateIntConstMeExpr(0, PTY_i32);
   indVarAndTripCountDefBB->AddMeStmtLast(
-      irMap->CreateDassignMeStmt(*indVar, *constMeExprForZero, *indVarAndTripCountDefBB));
+      irMap->CreateAssignMeStmt(*indVar, *constMeExprForZero, *indVarAndTripCountDefBB));
   InsertCandsForSSAUpdate(indVar->GetOstIdx(), *indVarAndTripCountDefBB);
 
   // create stmt : tripCount = (n - start) / stride.
@@ -980,7 +980,7 @@ void LoopUnrolling::CreateIndVarAndCondGotoStmt(CR &cr, CRNode &varNode, BB &pre
   std::string tripConutName = std::string("__LoopUnrolllTripCount__") + std::to_string(i);
   VarMeExpr *tripCountExpr = CreateIndVarOrTripCountWithName(tripConutName);
   indVarAndTripCountDefBB->AddMeStmtLast(
-      irMap->CreateDassignMeStmt(*tripCountExpr, *divMeExpr, *indVarAndTripCountDefBB));
+      irMap->CreateAssignMeStmt(*tripCountExpr, *divMeExpr, *indVarAndTripCountDefBB));
   InsertCandsForSSAUpdate(tripCountExpr->GetOstIdx(), *indVarAndTripCountDefBB);
   for (size_t idx = 0; idx < preCondGoto.GetPred().size(); ++idx) {
     auto *bb = preCondGoto.GetPred(idx);

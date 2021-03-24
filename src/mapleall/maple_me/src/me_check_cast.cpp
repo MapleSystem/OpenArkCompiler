@@ -564,8 +564,8 @@ bool CheckCast::ProvedByAnnotationInfo(const IntrinsiccallMeStmt &callNode) {
 void CheckCast::RemoveRedundantCheckCast(MeStmt &stmt, BB &bb) {
   if (stmt.GetOp() == OP_intrinsiccallwithtypeassigned) {
     auto *callAssign = static_cast<IntrinsiccallMeStmt*>(&stmt);
-    MeExpr *lhs = callAssign->GetAssignedLHS();
-    DassignMeStmt *newDass = func->GetIRMap()->CreateDassignMeStmt(*lhs, *(callAssign->GetOpnd(0)), bb);
+    ScalarMeExpr *lhs = callAssign->GetAssignedLHS();
+    AssignMeStmt *newDass = func->GetIRMap()->CreateAssignMeStmt(*lhs, *(callAssign->GetOpnd(0)), bb);
     newDass->SetSrcPos(stmt.GetSrcPosition());
     lhs->SetDefByStmt(*newDass);
     bb.InsertMeStmtBefore(&stmt, newDass);

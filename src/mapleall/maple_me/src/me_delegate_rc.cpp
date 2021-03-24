@@ -364,7 +364,7 @@ RegMeExpr *DelegateRC::RHSTempDelegated(MeExpr &rhs, const MeStmt &useStmt) {
     RegMeExpr *curReg = irMap.CreateRegMeExpr(rhsVar);
     refVar2RegMap[&rhsVar] = curReg;  // record this replacement
     // create new regassign statement
-    MeStmt *regass = irMap.CreateRegassignMeStmt(*curReg, *rhsExpr, *defStmt->GetBB());
+    MeStmt *regass = irMap.CreateAssignMeStmt(*curReg, *rhsExpr, *defStmt->GetBB());
     curReg->SetDefByStmt(*regass);
     if (defStmtNeedIncref) {
       regass->EnableNeedIncref();
@@ -644,7 +644,7 @@ void DelegateRC::DelegateHandleNoRCStmt(MeStmt &stmt, bool addDecref) {
   refVar2RegMap[theLhs] = curReg;  // record this replacement
   if (rhsExpr != nullptr) {
     // create new regassign statement
-    MeStmt *regass = irMap.CreateRegassignMeStmt(*curReg, *rhsExpr, *stmt.GetBB());
+    MeStmt *regass = irMap.CreateAssignMeStmt(*curReg, *rhsExpr, *stmt.GetBB());
     curReg->SetDefByStmt(*regass);
     bb.ReplaceMeStmt(newStmt, regass);
     newStmt = regass;  // for inserting defref after it below

@@ -91,7 +91,7 @@ void SubsumRC::SubsumeRC(MeStmt &stmt) {
     // Replace the localvar of the lhs with a register., in case it throws excption just after
     // the dassign stmt, because we ignore the incref of the lhs.
     RegMeExpr *regTemp = irMap->CreateRegRefMeExpr(*lhs);
-    RegassignMeStmt *rass = irMap->CreateRegassignMeStmt(*regTemp, *dass->GetRHS(), *stmt.GetBB());
+    AssignMeStmt *rass = irMap->CreateAssignMeStmt(*regTemp, *dass->GetRHS(), *stmt.GetBB());
     regTemp->SetDefByStmt(*rass);
     if (enabledDebug) {
       LogInfo::MapleLogger() << "Replace dassign stmt:";
@@ -119,7 +119,7 @@ void SubsumRC::SubsumeRC(MeStmt &stmt) {
       stmt.DisableNeedIncref();
       VarMeExpr *tempVar = irMap->CreateVarMeExprVersion(*rhs);
       MeExpr *zeroExpr = irMap->CreateIntConstMeExpr(0, PTY_ref);
-      DassignMeStmt *newDass = irMap->CreateDassignMeStmt(*tempVar, *zeroExpr, *stmt.GetBB());
+      AssignMeStmt *newDass = irMap->CreateAssignMeStmt(*tempVar, *zeroExpr, *stmt.GetBB());
       stmt.GetBB()->InsertMeStmtAfter(&stmt, newDass);
       if (enabledDebug) {
         LogInfo::MapleLogger() << "last subsum for stmt:";
