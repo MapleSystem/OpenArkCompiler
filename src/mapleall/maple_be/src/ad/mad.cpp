@@ -14,7 +14,11 @@
  */
 #include "mad.h"
 #include <string>
+#if TARGAARCH64
 #include "aarch64_operand.h"
+#elif TARGRISCV64
+#include "riscv64_operand.h"
+#endif
 #include "schedule.h"
 #include "insn.h"
 

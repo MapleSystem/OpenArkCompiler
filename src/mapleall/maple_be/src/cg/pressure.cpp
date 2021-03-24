@@ -13,7 +13,11 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "pressure.h"
+#if TARGAARCH64
 #include "aarch64_schedule.h"
+#elif TARGRISCV64
+#include "riscv64_schedule.h"
+#endif
 #include "deps.h"
 
 namespace maplebe {

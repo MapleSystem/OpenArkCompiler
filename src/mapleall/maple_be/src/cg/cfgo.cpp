@@ -15,7 +15,11 @@
 #include "cfgo.h"
 #include "cgbb.h"
 #include "cg.h"
+#if TARGAARCH64
 #include "aarch64_insn.h"
+#elif TARGRISCV64
+#include "riscv64_insn.h"
+#endif
 #include "mpl_logging.h"
 
 /*
