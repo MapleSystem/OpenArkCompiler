@@ -23,6 +23,7 @@
 #include "option.h"
 #include "mir_module.h"
 #include "mir_parser.h"
+#include "driver_runner.h"
 #include "bin_mplt.h"
 
 namespace maple {
@@ -39,7 +40,7 @@ class Compiler {
 
   virtual ~Compiler() = default;
 
-  virtual ErrorCode Compile(const MplOptions &options, std::unique_ptr<MIRModule> &theModule);
+  virtual ErrorCode Compile(MplOptions &options, std::unique_ptr<MIRModule> &theModule);
 
   virtual void GetTmpFilesToDelete(const MplOptions&, std::vector<std::string>&) const {}
 
@@ -104,7 +105,7 @@ class MapleCombCompiler : public Compiler {
 
   ~MapleCombCompiler() = default;
 
-  ErrorCode Compile(const MplOptions &options, std::unique_ptr<MIRModule> &theModule) override;
+  ErrorCode Compile(MplOptions &options, std::unique_ptr<MIRModule> &theModule) override;
   void PrintCommand(const MplOptions &options) const override;
   std::string GetInputFileName(const MplOptions &options) const override;
 
@@ -112,8 +113,9 @@ class MapleCombCompiler : public Compiler {
   std::string realRunningExe;
   std::unordered_set<std::string> GetFinalOutputs(const MplOptions &mplOptions) const override;
   void GetTmpFilesToDelete(const MplOptions &mplOptions, std::vector<std::string> &tempFiles) const override;
-  bool MakeMeOptions(const MplOptions &options);
-  bool MakeMpl2MplOptions(const MplOptions &options);
+  ErrorCode MakeMeOptions(const MplOptions &options, DriverRunner &runner);
+  ErrorCode MakeMpl2MplOptions(const MplOptions &options, DriverRunner &runner);
+  std::string DecideOutExe(const MplOptions &options);
 };
 
 class MplcgCompiler : public Compiler {
@@ -121,12 +123,12 @@ class MplcgCompiler : public Compiler {
   explicit MplcgCompiler(const std::string &name) : Compiler(name) {}
 
   ~MplcgCompiler() = default;
-  ErrorCode Compile(const MplOptions &options, std::unique_ptr<MIRModule> &theModule) override;
+  ErrorCode Compile(MplOptions &options, std::unique_ptr<MIRModule> &theModule) override;
   void PrintCommand(const MplOptions &options) const override;
  private:
   std::string GetInputFileName(const MplOptions &options) const override;
   DefaultOption GetDefaultOptions(const MplOptions &options) const override;
-  bool MakeCGOptions(const MplOptions &options);
+  ErrorCode MakeCGOptions(const MplOptions &options);
   const std::string &GetBinName() const override;
 };
 }  // namespace maple

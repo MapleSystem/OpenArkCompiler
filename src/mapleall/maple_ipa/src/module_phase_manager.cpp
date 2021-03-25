@@ -37,6 +37,7 @@
 #include "coderelayout.h"
 #include "constantfold.h"
 #include "barrierinsertion.h"
+#include "preme.h"
 #endif  // ~MIR_JAVA
 
 namespace {

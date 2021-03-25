@@ -62,7 +62,8 @@ void MeSSALPre::GenerateSaveRealOcc(MeRealOcc &realOcc) {
     // to this statement in order to get to the rhs expression;
     // this assume AssignMeStmt has smaller size then DassignMeStmt and
     // MaydassignMeStmt
-    AssignMeStmt *rass = new (realOcc.GetMeStmt()) AssignMeStmt(OP_regassign, static_cast<RegMeExpr*>(regOrVar), savedRHS);
+    auto *rass =
+        new (realOcc.GetMeStmt()) AssignMeStmt(OP_regassign, static_cast<RegMeExpr*>(regOrVar), savedRHS);
     rass->SetSrcPos(savedSrcPos);
     rass->SetBB(savedBB);
     rass->SetPrev(savedPrev);

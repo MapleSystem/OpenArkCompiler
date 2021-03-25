@@ -293,6 +293,10 @@ class MIRSymbol {
     return isDeleted;
   }
 
+  bool IsVar() const {
+    return sKind == kStVar;
+  }
+
   bool IsPreg() const {
     return sKind == kStPreg;
   }

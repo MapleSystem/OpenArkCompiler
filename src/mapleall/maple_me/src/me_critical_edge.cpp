@@ -32,13 +32,30 @@
 // newbb is always appended at the end of bb_vec_ and pred/succ will be updated.
 // The bblayout phase will determine the final layout order of the bbs.
 namespace maple {
-void MeDoSplitCEdge::UpdateNewBBInTry(BB &newBB, const BB &pred) const {
+// This function is used to find the eh edge when predBB is tryBB.
+void MeDoSplitCEdge::UpdateNewBBInTry(MeFunction &func, BB &newBB, const BB &pred) const {
+  auto tryBB = &pred;
   newBB.SetAttributes(kBBAttrIsTry);
-  for (auto *candCatch : pred.GetSucc()) {
+  // The bb which is returnBB and only have return stmt would not have eh edge,
+  // so need find a try bb which have eh edge continue.
+  if (pred.IsReturnBB()) {
+    int i = 1;
+    tryBB = func.GetBBFromID(newBB.GetBBId() - i);
+    while (tryBB == nullptr || tryBB->IsReturnBB()) {
+      ++i;
+      tryBB = func.GetBBFromID(newBB.GetBBId() - i);
+    }
+    ASSERT_NOT_NULL(tryBB);
+    ASSERT(tryBB->GetAttributes(kBBAttrIsTry), "must be try");
+  }
+  bool setEHEdge = false;
+  for (auto *candCatch : tryBB->GetSucc()) {
     if (candCatch != nullptr && candCatch->GetAttributes(kBBAttrIsCatch)) {
+      setEHEdge = true;
       newBB.AddSucc(*candCatch);
     }
   }
+  ASSERT(setEHEdge, "must set eh edge");
 }
 
 void MeDoSplitCEdge::UpdateGotoLabel(BB &newBB, MeFunction &func, BB &pred, BB &succ) const {
@@ -79,6 +96,21 @@ void MeDoSplitCEdge::UpdateCaseLabel(BB &newBB, MeFunction &func, BB &pred, BB &
   }
 }
 
+void MeDoSplitCEdge::DealWithTryBB(MeFunction &func, BB &pred, BB &succ, BB *&newBB, bool &isInsertAfterPred) const {
+  if (!succ.GetStmtNodes().empty() && succ.GetStmtNodes().front().GetOpCode() == OP_try) {
+    newBB = &func.InsertNewBasicBlock(pred, false);
+    isInsertAfterPred = true;
+    if (pred.GetAttributes(kBBAttrIsTryEnd)) {
+      newBB->SetAttributes(kBBAttrIsTryEnd);
+      pred.ClearAttributes(kBBAttrIsTryEnd);
+      func.SetTryBBByOtherEndTryBB(newBB, &pred);
+    }
+  } else {
+    newBB = &func.InsertNewBasicBlock(succ);
+    isInsertAfterPred = false;
+  }
+}
+
 void MeDoSplitCEdge::BreakCriticalEdge(MeFunction &func, BB &pred, BB &succ) const {
   if (DEBUGFUNC(&func)) {
     LogInfo::MapleLogger() << "******before break : critical edge : BB" << pred.GetBBId() << " -> BB" <<
@@ -90,6 +122,8 @@ void MeDoSplitCEdge::BreakCriticalEdge(MeFunction &func, BB &pred, BB &succ) con
   // create newBB and set pred/succ
   BB *newBB = nullptr;
   // use replace instead of remove/add to keep position in pred/succ
+  bool isInsertAfterPred = false;
+  bool needUpdateTryAttr = true;
   size_t index = succ.GetPred().size();
   if (&pred == func.GetCommonEntryBB()) {
     newBB = &func.InsertNewBasicBlock(*func.GetFirstBB());
@@ -97,8 +131,14 @@ void MeDoSplitCEdge::BreakCriticalEdge(MeFunction &func, BB &pred, BB &succ) con
     succ.ClearAttributes(kBBAttrIsEntry);
     pred.RemoveEntry(succ);
     pred.AddEntry(*newBB);
+    needUpdateTryAttr = false;
   } else {
-    newBB = func.NewBasicBlock();
+    if (pred.GetAttributes(kBBAttrIsTry)) {
+      DealWithTryBB(func, pred, succ, newBB, isInsertAfterPred);
+    } else {
+      newBB = func.NewBasicBlock();
+      needUpdateTryAttr = false;
+    }
     while (index > 0) {
       if (succ.GetPred(index - 1) == &pred) {
         break;
@@ -114,8 +154,12 @@ void MeDoSplitCEdge::BreakCriticalEdge(MeFunction &func, BB &pred, BB &succ) con
   newBB->SetKind(kBBFallthru);  // default kind
   newBB->SetAttributes(kBBAttrArtificial);
 
-  if (pred.GetAttributes(kBBAttrIsTry)) {
-    UpdateNewBBInTry(*newBB, pred);
+  if (needUpdateTryAttr && isInsertAfterPred && pred.GetAttributes(kBBAttrIsTry)) {
+    UpdateNewBBInTry(func, *newBB, pred);
+  }
+  if (needUpdateTryAttr && !isInsertAfterPred && succ.GetAttributes(kBBAttrIsTry) &&
+      (succ.GetStmtNodes().empty() || succ.GetStmtNodes().front().GetOpCode() != OP_try)) {
+    UpdateNewBBInTry(func, *newBB, succ);
   }
   // update statement offset if succ is goto target
   if (pred.GetKind() == kBBCondGoto) {

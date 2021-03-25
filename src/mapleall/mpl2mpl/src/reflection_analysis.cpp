@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -918,7 +918,8 @@ MIRSymbol *ReflectionAnalysis::GetParameterTypesSymbol(uint32 size, uint32 index
     GlobalTables::GetTypeTable().AddFieldToStructType(parameterTypesType, kParameterTypeItemName, *type);
   }
 
-  TyIdx parameterTypesTyIdx = GenMetaStructType(module, parameterTypesType, kParameterTypesName);
+  TyIdx parameterTypesTyIdx = GenMetaStructType(module, parameterTypesType,
+                                                kParameterTypesName + std::to_string(index));
   MIRStructType &parameterTypes =
       static_cast<MIRStructType&>(*GlobalTables::GetTypeTable().GetTypeFromTyIdx(parameterTypesTyIdx));
   MIRSymbol *parameterTypesSt =
@@ -1957,8 +1958,13 @@ bool ReflectionAnalysis::IsLocalClass(const std::string annotationString) {
 
 TyIdx ReflectionAnalysis::GenMetaStructType(MIRModule &mirModule, MIRStructType &metaType, const std::string &str) {
   const GStrIdx strIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(str);
-  TyIdx tyIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&metaType);
-  // Global?
+  TyIdx tyIdx = mirModule.GetTypeNameTab()->GetTyIdxFromGStrIdx(strIdx);
+  // A corresponding dummy type has been created in previous phases, update it with metaType.
+  if (tyIdx != kInitTyIdx) {
+    GlobalTables::GetTypeTable().UpdateMIRType(metaType, tyIdx);
+  } else {
+    tyIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&metaType);
+  }
   mirModule.GetTypeNameTab()->SetGStrIdxToTyIdx(strIdx, tyIdx);
   mirModule.PushbackTypeDefOrder(strIdx);
   if (GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx)->GetNameStrIdx() == 0u) {

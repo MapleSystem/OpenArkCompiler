@@ -88,8 +88,7 @@ AnalysisResult *MeDoAliasClass::Run(MeFunction *func, MeFuncResultMgr *funcResMg
   MemPool *aliasClassMp = NewMemPool();
   KlassHierarchy *kh = nullptr;
   if (func->GetMIRModule().IsJavaModule()) {
-    kh = static_cast<KlassHierarchy*>(moduleResMgr->GetAnalysisResult(
-      MoPhase_CHA, &func->GetMIRModule()));
+    kh = static_cast<KlassHierarchy*>(moduleResMgr->GetAnalysisResult(MoPhase_CHA, &func->GetMIRModule()));
   }
   MeAliasClass *aliasClass = aliasClassMp->New<MeAliasClass>(
       *aliasClassMp, func->GetMIRModule(), *func->GetMeSSATab(), *func, MeOption::lessThrowAlias,

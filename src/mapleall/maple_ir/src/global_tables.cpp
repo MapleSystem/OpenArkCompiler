@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -53,6 +53,7 @@ void TypeTable::SetTypeWithTyIdx(const TyIdx &tyIdx, MIRType &type) {
 #if 0 // cannot delete because typTab in BinaryMplImport is still pointing to it
     delete oldType;
 #endif
+    (void)typeHashTable.insert(&type);
   }
 }
 
@@ -65,6 +66,12 @@ TypeTable::~TypeTable() {
 
 void TypeTable::PutToHashTable(MIRType *mirType) {
   (void)typeHashTable.insert(mirType);
+}
+
+void TypeTable::UpdateMIRType(const MIRType &pType, const TyIdx tyIdx) {
+  MIRType *nType = pType.CopyMIRTypeNode();
+  nType->SetTypeIndex(tyIdx);
+  SetTypeWithTyIdx(tyIdx, *nType);
 }
 
 MIRType *TypeTable::CreateAndUpdateMirTypeNode(MIRType &pType) {
@@ -80,6 +87,8 @@ MIRType *TypeTable::CreateAndUpdateMirTypeNode(MIRType &pType) {
       } else {
         refTypeMap[pty.GetPointedTyIdx()] = nType->GetTypeIndex();
       }
+    } else {
+      (void)typeHashTable.insert(nType);
     }
   } else {
     (void)typeHashTable.insert(nType);

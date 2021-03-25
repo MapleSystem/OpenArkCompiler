@@ -35,6 +35,7 @@ CompilerFactory::CompilerFactory() {
   ADD_COMPILER("jbc2mpl", Jbc2MplCompiler)
   ADD_COMPILER("me", MapleCombCompiler)
   ADD_COMPILER("mpl2mpl", MapleCombCompiler)
+  ADD_COMPILER("maplecomb", MapleCombCompiler)
   ADD_COMPILER("mplcg", MplcgCompiler)
   compilerSelector = new CompilerSelectorImpl();
 }
@@ -78,7 +79,7 @@ ErrorCode CompilerFactory::DeleteTmpFiles(const MplOptions &mplOptions, const st
   return ret == 0 ? kErrorNoError : kErrorFileNotFound;
 }
 
-ErrorCode CompilerFactory::Compile(const MplOptions &mplOptions) {
+ErrorCode CompilerFactory::Compile(MplOptions &mplOptions) {
   if (compileFinished) {
     LogInfo::MapleLogger() <<
         "Failed! Compilation has been completed in previous time and multi-instance compilation is not supported\n";
@@ -103,6 +104,9 @@ ErrorCode CompilerFactory::Compile(const MplOptions &mplOptions) {
     if (ret != kErrorNoError) {
       return ret;
     }
+  }
+  if (mplOptions.HasSetDebugFlag()) {
+    mplOptions.PrintDetailCommand(false);
   }
   // Compiler finished
   compileFinished = true;

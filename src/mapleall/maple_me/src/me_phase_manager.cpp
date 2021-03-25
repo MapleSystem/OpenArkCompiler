@@ -67,6 +67,7 @@
 #include "me_ssa_tab.h"
 #include "mpl_timer.h"
 #include "constantfold.h"
+#include "me_verify.h"
 
 #define JAVALANG (mirModule.IsJavaModule())
 
@@ -139,6 +140,7 @@ void MeFuncPhaseManager::AddPhases(const std::unordered_set<std::string> &skipPh
     addPhase("rclowering");
     addPhase("bblayout");
     addPhase("emit");
+    addPhase("meverify");
   }
 }
 

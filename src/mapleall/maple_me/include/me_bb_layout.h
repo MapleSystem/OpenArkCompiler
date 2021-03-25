@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -104,6 +104,8 @@ class BBLayout{
   void FixEndTryBB(BB &bb);
   void FixTryBB(BB &startTryBB, BB &nextBB);
   void DealWithStartTryBB();
+  void UpdateNewBBWithAttrTry(const BB &bb, BB &fallthru) const;
+  void SetAttrTryForTheCanBeMovedBB(BB &bb, BB &fallthru) const;
 
   MeFunction &func;
   MapleAllocator layoutAlloc;

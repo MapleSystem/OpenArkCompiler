@@ -45,6 +45,7 @@ class MeDoLoopCanon : public MeFuncPhase {
   void SplitCondGotBB(MeFunction &func, LoopDesc &loop);
   void ExecuteLoopCanon(MeFunction &func, MeFuncResultMgr &m, Dominance &dom);
   void ExecuteLoopNormalization(MeFunction &func,  MeFuncResultMgr *m, Dominance &dom);
+  void UpdateTheOffsetOfStmtWhenTargetBBIsChange(MeFunction &func, BB &curBB, const BB &oldSuccBB, BB &newSuccBB) const;
 };
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_MELOOPCANON_H

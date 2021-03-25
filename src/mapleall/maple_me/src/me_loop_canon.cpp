@@ -300,6 +300,31 @@ void MeDoLoopCanon::FindHeadBBs(MeFunction &func, Dominance &dom, const BB *bb) 
   }
 }
 
+void MeDoLoopCanon::UpdateTheOffsetOfStmtWhenTargetBBIsChange(MeFunction &func, BB &curBB,
+                                                              const BB &oldSuccBB, BB &newSuccBB) const {
+  StmtNode *lastStmt = &(curBB.GetStmtNodes().back());
+  if ((lastStmt->GetOpCode() == OP_brtrue || lastStmt->GetOpCode() == OP_brfalse) &&
+      static_cast<CondGotoNode*>(lastStmt)->GetOffset() == oldSuccBB.GetBBLabel()) {
+    LabelIdx label = func.GetOrCreateBBLabel(newSuccBB);
+    static_cast<CondGotoNode*>(lastStmt)->SetOffset(label);
+  } else if (lastStmt->GetOpCode() == OP_goto &&
+             static_cast<GotoNode*>(lastStmt)->GetOffset() == oldSuccBB.GetBBLabel()) {
+    LabelIdx label = func.GetOrCreateBBLabel(newSuccBB);
+    static_cast<GotoNode*>(lastStmt)->SetOffset(label);
+  } else if (lastStmt->GetOpCode() == OP_switch) {
+    SwitchNode *switchNode = static_cast<SwitchNode*>(lastStmt);
+    if (switchNode->GetDefaultLabel() == oldSuccBB.GetBBLabel()) {
+      switchNode->SetDefaultLabel(func.GetOrCreateBBLabel(newSuccBB));
+    }
+    for (size_t i = 0; i < switchNode->GetSwitchTable().size(); ++i) {
+      LabelIdx labelIdx = switchNode->GetCasePair(i).second;
+      if (labelIdx == oldSuccBB.GetBBLabel()) {
+        switchNode->UpdateCaseLabelAt(i, func.GetOrCreateBBLabel(newSuccBB));
+      }
+    }
+  }
+}
+
 // merge backedges with the same headBB
 void MeDoLoopCanon::Merge(MeFunction &func) {
   for (auto iter = heads.begin(); iter != heads.end(); ++iter) {
@@ -312,34 +337,7 @@ void MeDoLoopCanon::Merge(MeFunction &func) {
       if (tail->GetStmtNodes().empty()) {
         continue;
       }
-      if (tail->GetKind() == kBBCondGoto) {
-        CondGotoNode &condGotoNode = static_cast<CondGotoNode&>(tail->GetStmtNodes().back());
-        LabelIdx oldlabIdx = condGotoNode.GetOffset();
-        if (oldlabIdx == head->GetBBLabel()) {
-          LabelIdx label = func.GetOrCreateBBLabel(*latchBB);
-          condGotoNode.SetOffset(label);
-        }
-      } else if (tail->GetKind() == kBBGoto) {
-        GotoNode &gotoStmt = static_cast<GotoNode&>(tail->GetStmtNodes().back());
-        LabelIdx oldlabIdx = gotoStmt.GetOffset();
-        if (oldlabIdx == head->GetBBLabel()) {
-          LabelIdx label = func.GetOrCreateBBLabel(*latchBB);
-          gotoStmt.SetOffset(label);
-        }
-      } else if (tail->GetKind() == kBBSwitch) {
-        SwitchNode &switchNode = static_cast<SwitchNode &>(tail->GetStmtNodes().back());
-        if (switchNode.GetDefaultLabel() == head->GetBBLabel()) {
-          switchNode.SetDefaultLabel(func.GetOrCreateBBLabel(*latchBB));
-        }
-        for (size_t i = 0; i < switchNode.GetSwitchTable().size(); ++i) {
-          LabelIdx labelIdx = switchNode.GetCasePair(i).second;
-          if (labelIdx == head->GetBBLabel()) {
-            switchNode.UpdateCaseLabelAt(i, func.GetOrCreateBBLabel(*latchBB));
-          }
-        }
-      } else if (tail->GetKind() != kBBFallthru) {
-        CHECK_FATAL(false, "can not support");
-      }
+      UpdateTheOffsetOfStmtWhenTargetBBIsChange(func, *tail, *head, *latchBB);
     }
     head->AddPred(*latchBB);
   }
@@ -372,34 +370,7 @@ void MeDoLoopCanon::AddPreheader(MeFunction &func) {
       if (pred->GetStmtNodes().empty()) {
         continue;
       }
-      if (pred->GetKind() == kBBCondGoto) {
-        CondGotoNode &condGotoNode = static_cast<CondGotoNode&>(pred->GetStmtNodes().back());
-        LabelIdx oldlabIdx = condGotoNode.GetOffset();
-        if (oldlabIdx == head->GetBBLabel()) {
-          LabelIdx label = func.GetOrCreateBBLabel(*preheader);
-          condGotoNode.SetOffset(label);
-        }
-      } else if (pred->GetKind() == kBBGoto) {
-        GotoNode &gotoStmt = static_cast<GotoNode&>(pred->GetStmtNodes().back());
-        LabelIdx oldlabIdx = gotoStmt.GetOffset();
-        if (oldlabIdx == head->GetBBLabel()) {
-          LabelIdx label = func.GetOrCreateBBLabel(*preheader);
-          gotoStmt.SetOffset(label);
-        }
-      } else if (pred->GetKind() == kBBSwitch) {
-        SwitchNode &switchNode = static_cast<SwitchNode&>(pred->GetStmtNodes().back());
-        if (switchNode.GetDefaultLabel() == head->GetBBLabel()) {
-          switchNode.SetDefaultLabel(func.GetOrCreateBBLabel(*preheader));
-        }
-        for (size_t i = 0; i < switchNode.GetSwitchTable().size(); ++i) {
-          LabelIdx labelIdx = switchNode.GetCasePair(i).second;
-          if (labelIdx == head->GetBBLabel()) {
-            switchNode.UpdateCaseLabelAt(i, func.GetOrCreateBBLabel(*preheader));
-          }
-        }
-      } else if (pred->GetKind() != kBBFallthru) {
-        CHECK_FATAL(false, "can not support");
-      }
+      UpdateTheOffsetOfStmtWhenTargetBBIsChange(func, *pred, *head, *preheader);
     }
     head->AddPred(*preheader);
   }
@@ -435,16 +406,7 @@ void MeDoLoopCanon::InsertNewExitBB(MeFunction &func, LoopDesc &loop) {
         if (curBB->GetStmtNodes().empty()) {
           continue;
         }
-        StmtNode *lastStmt = &(curBB->GetStmtNodes().back());
-        if ((lastStmt->GetOpCode() == OP_brtrue || lastStmt->GetOpCode() == OP_brfalse) &&
-            static_cast<CondGotoNode*>(lastStmt)->GetOffset() == succBB->GetBBLabel()) {
-          LabelIdx label = func.GetOrCreateBBLabel(*newExitBB);
-          static_cast<CondGotoNode*>(lastStmt)->SetOffset(label);
-        } else if (lastStmt->GetOpCode() == OP_goto &&
-                   static_cast<GotoNode*>(lastStmt)->GetOffset() == succBB->GetBBLabel()) {
-          LabelIdx label = func.GetOrCreateBBLabel(*newExitBB);
-          static_cast<GotoNode*>(lastStmt)->SetOffset(label);
-        }
+        UpdateTheOffsetOfStmtWhenTargetBBIsChange(func, *curBB, *succBB, *newExitBB);
       }
     }
   }

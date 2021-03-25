@@ -135,6 +135,7 @@ void SSARename2Preg::UpdateRegPhi(MePhiNode *mevarphinode, MePhiNode *regphinode
     }
     regphinode->GetOpnds().push_back(opndtemp);
   }
+  regphinode->GetDefBB()->GetMePhiList().insert(std::make_pair(regphinode->GetLHS()->GetOstIdx(), regphinode));
   (void)lhs;
 }
 
@@ -146,6 +147,8 @@ void SSARename2Preg::Rename2PregPhi(MePhiNode *mevarphinode, MapleMap<OStIdx, Me
     MePhiNode *regphinode = meirmap->CreateMePhi(*lhsreg);
     regphinode->SetDefBB(mevarphinode->GetDefBB());
     UpdateRegPhi(mevarphinode, regphinode, lhsreg, lhs);
+    regphinode->SetIsLive(mevarphinode->GetIsLive());
+    mevarphinode->SetIsLive(false);
     (void)regPhiList.insert(std::make_pair(lhsreg->GetOst()->GetIndex(), regphinode));
   }
 }

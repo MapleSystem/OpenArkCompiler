@@ -153,6 +153,18 @@ class BinaryMplExport {
   bool not2mplt;  // this export is not to an mplt file
 
  private:
+  using CallSite = std::pair<CallInfo*, PUIdx>;
+  void WriteEaField(const CallGraph &cg);
+  void WriteEaCgField(EAConnectionGraph *eaCg);
+  void OutEaCgNode(EACGBaseNode &node);
+  void OutEaCgBaseNode(EACGBaseNode &node, bool firstPart);
+  void OutEaCgFieldNode(EACGFieldNode &node);
+  void OutEaCgRefNode(EACGRefNode &node);
+  void OutEaCgActNode(EACGActualNode &node);
+  void OutEaCgObjNode(EACGObjectNode &node);
+  void WriteCgField(uint64 contentIdx, const CallGraph *cg);
+  void WriteSeField();
+  void OutputCallInfo(CallInfo &callInfo);
   void WriteContentField4mplt(int fieldNum, uint64 *fieldStartP);
   void WriteContentField4nonmplt(int fieldNum, uint64 *fieldStartP);
   void WriteContentField4nonJava(int fieldNum, uint64 *fieldStartP);
@@ -188,5 +200,66 @@ class BinaryMplExport {
   static int typeMarkOffset;  // offset of mark (tag in binmplimport) resulting from duplicated function
 };
 
+class DoUpdateMplt : public ModulePhase {
+ public:
+  class ManualSideEffect {
+   public:
+    ManualSideEffect(std::string name, bool p, bool u, bool d, bool o, bool e)
+        : funcName(name), pure(p), defArg(u), def(d), object(o), exception(e) {};
+    virtual ~ManualSideEffect() = default;
+
+    const std::string &GetFuncName() const {
+      return funcName;
+    }
+
+    bool GetPure() const {
+      return pure;
+    }
+
+    bool GetDefArg() const {
+      return defArg;
+    }
+
+    bool GetDef() const {
+      return def;
+    }
+
+    bool GetObject() const {
+      return object;
+    }
+
+    bool GetException() const {
+      return exception;
+    }
+
+    bool GetPrivateUse() const {
+      return privateUse;
+    }
+
+    bool GetPrivateDef() const {
+      return privateDef;
+    }
+
+   private:
+    std::string funcName;
+    bool pure;
+    bool defArg;
+    bool def;
+    bool object;
+    bool exception;
+    bool privateUse = false;
+    bool privateDef = false;
+  };
+
+  explicit DoUpdateMplt(ModulePhaseID id) : ModulePhase(id) {}
+
+  ~DoUpdateMplt() = default;
+
+  void UpdateCgField(BinaryMplt &binMplt, const CallGraph &cg);
+  AnalysisResult *Run(MIRModule *module, ModuleResultMgr *moduleResultMgr) override;
+  std::string PhaseName() const override {
+    return "updatemplt";
+  }
+};
 }  // namespace maple
 #endif  // MAPLE_IR_INCLUDE_BIN_MPL_EXPORT_H
