@@ -35,6 +35,7 @@ enum InputFileType {
   kFileTypeMpl,
   kFileTypeVtableImplMpl,
   kFileTypeS,
+  kFileTypeBpl,
 };
 
 enum OptimizationLevel {

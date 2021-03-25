@@ -154,7 +154,7 @@ ErrorCode MapleCombCompiler::Compile(const MplOptions &options, std::unique_ptr<
 
   LogInfo::MapleLogger() << "Starting mpl2mpl&mplme\n";
   PrintCommand(options);
-  DriverRunner runner(theModule.get(), options.GetRunningExes(), &mpl2mplOptions, fileName, &meOptions,
+  DriverRunner runner(theModule.get(), options.GetRunningExes(), options.GetInputFileType(), &mpl2mplOptions, fileName, &meOptions,
                       fileName, fileName, optMp, fileParsed,
                       options.HasSetTimePhases(), options.HasSetGenVtableImpl(), options.HasSetGenMeMpl());
   ErrorCode nErr = runner.Run();

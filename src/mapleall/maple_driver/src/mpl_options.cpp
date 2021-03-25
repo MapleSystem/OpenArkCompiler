@@ -342,9 +342,9 @@ bool MplOptions::Init(const std::string &inputFile) {
   }
   else if (extensionName == "jar") {
     inputFileType = InputFileType::kFileTypeJar;
-  } else if (extensionName == "mpl") {
+  } else if (extensionName == "mpl" || extensionName == "bpl") {
     if (firstInputFile.find("VtableImpl") == std::string::npos) {
-      inputFileType = InputFileType::kFileTypeMpl;
+      inputFileType = extensionName == "mpl" ? InputFileType::kFileTypeMpl : InputFileType::kFileTypeBpl;
     } else {
       inputFileType = InputFileType::kFileTypeVtableImplMpl;
     }
