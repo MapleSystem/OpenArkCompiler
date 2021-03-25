@@ -284,6 +284,10 @@ class BB {
     return meStmtList.empty();
   }
 
+  bool IsReturnBB() const {
+    return kind == kBBReturn && !stmtNodeList.empty() && stmtNodeList.back().GetOpCode() == OP_return;
+  }
+
   void FindReachableBBs(std::vector<bool> &visitedBBs) const;
   void FindWillExitBBs(std::vector<bool> &visitedBBs) const;
   const PhiNode *PhiofVerStInserted(const VersionSt &versionSt) const;

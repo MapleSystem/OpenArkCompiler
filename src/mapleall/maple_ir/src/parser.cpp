@@ -813,6 +813,7 @@ bool MIRParser::ParseStructType(TyIdx &styIdx) {
   if (!ParseFields(structType)) {
     return false;
   }
+  // Dex file create a struct type with name, but do not check the type field.
   if (styIdx != 0u) {
     MIRType *prevType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(styIdx);
     if (prevType->GetKind() != kTypeByName) {
@@ -848,6 +849,7 @@ bool MIRParser::ParseClassType(TyIdx &styidx) {
   if (!ParseFields(classType)) {
     return false;
   }
+  // Dex file create a strtuct type with name, but donot check the type field.
   MIRType *prevType = nullptr;
   if (styidx != 0u) {
     prevType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(styidx);
@@ -894,6 +896,7 @@ bool MIRParser::ParseInterfaceType(TyIdx &sTyIdx) {
   if (!ParseFields(interfaceType)) {
     return false;
   }
+  // Dex file create a strtuct type with name, but donot check the type field.
   if (sTyIdx != 0u) {
     MIRType *prevType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(sTyIdx);
     ASSERT(prevType->GetKind() == kTypeInterface || prevType->IsIncomplete(),
@@ -1944,6 +1947,10 @@ bool MIRParser::ParseFunction(uint32 fileIdx) {
     maple::MIRBuilder mirBuilder(&mod);
     funcSymbol = mirBuilder.CreateSymbol(TyIdx(0), strIdx, kStFunc, kScText, nullptr, kScopeGlobal);
     SetSrcPos(funcSymbol->GetSrcPosition(), lexer.GetLineNum());
+    // when parsing func in mplt_inline file, set it as tmpunused.
+    if (options & kParseInlineFuncBody) {
+      funcSymbol->SetIsTmpUnused(true);
+    }
     func = mod.GetMemPool()->New<MIRFunction>(&mod, funcSymbol->GetStIdx());
     func->SetPuidx(GlobalTables::GetFunctionTable().GetFuncTable().size());
     GlobalTables::GetFunctionTable().GetFuncTable().push_back(func);
@@ -2292,6 +2299,22 @@ bool MIRParser::ParseMIR(std::ifstream &mplFile) {
   return status;
 }
 
+bool MIRParser::ParseInlineFuncBody(std::ifstream &mplFile) {
+  std::ifstream *origFile = lexer.GetFile();
+  lexer.SetFile(mplFile);
+  // try to read the first line
+  if (lexer.ReadALine() < 0) {
+    lexer.lineNum = 0;
+  } else {
+    lexer.lineNum = 1;
+  }
+  // parse mplFile
+  bool status = ParseMIR(0, kParseOptFunc | kParseInlineFuncBody);
+  // restore airFile
+  lexer.SetFile(*origFile);
+  return status;
+}
+
 bool MIRParser::ParseMIR(uint32 fileIdx, uint32 option, bool isIPA, bool isComb) {
   if ((option & kParseOptFunc) == 0) {
     PrepareParsingMIR();
@@ -2390,6 +2413,10 @@ bool MIRParser::ParseMIRForFunc() {
   if (!ParseFunction(paramFileIdx)) {
     return false;
   }
+  // when parsing function in mplt_inline file, set fromMpltInline as true.
+  if ((this->options & kParseInlineFuncBody) && curFunc) {
+    curFunc->SetFromMpltInline(true);
+  }
   if ((this->options & kParseOptFunc) && curFunc) {
     curFunc->SetAttr(FUNCATTR_optimized);
     mod.AddOptFuncs(curFunc);
@@ -2426,6 +2453,10 @@ bool MIRParser::ParseMIRForVar() {
     maple::MIRBuilder mirBuilder(&mod);
     MIRSymbol *newst = mirBuilder.CreateSymbol(st.GetTyIdx(), st.GetNameStrIdx(), st.GetSKind(), st.GetStorageClass(),
                                                nullptr, kScopeGlobal);
+    // when parsing var in mplt_inline file, set it as tmpunused.
+    if (this->options & kParseInlineFuncBody) {
+      newst->SetIsTmpUnused(true);
+    }
     newst->SetAttrs(st.GetAttrs());
     newst->SetNameStrIdx(st.GetNameStrIdx());
     newst->SetValue(st.GetValue());

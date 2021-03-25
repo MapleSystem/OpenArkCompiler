@@ -296,7 +296,7 @@ class MeFunction : public FuncEmit {
   }
 
   BB *NewBasicBlock();
-  BB &InsertNewBasicBlock(const BB &position);
+  BB &InsertNewBasicBlock(const BB &position, bool isInsertBefore = true);
   void DeleteBasicBlock(const BB &bb);
   BB *NextBB(const BB *bb);
   BB *PrevBB(const BB *bb);

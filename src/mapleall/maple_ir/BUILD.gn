@@ -50,6 +50,7 @@ src_libmplir = [
   "src/bin_func_export.cpp",
   "src/bin_mpl_import.cpp",
   "src/bin_mpl_export.cpp",
+  "${MAPLEALL_ROOT}/maple_ipa/src/ea_connection_graph.cpp",
 ]
 
 src_irbuild = [ "src/driver.cpp" ]

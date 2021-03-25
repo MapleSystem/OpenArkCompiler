@@ -30,7 +30,7 @@ class CompilerFactory {
   CompilerFactory &operator=(const CompilerFactory&) = delete;
   CompilerFactory &operator=(CompilerFactory&&) = delete;
   ~CompilerFactory();
-  ErrorCode Compile(const MplOptions &mplOptions);
+  ErrorCode Compile(MplOptions &mplOptions);
 
  private:
   bool compileFinished = false;

@@ -107,4 +107,19 @@ MIRSymbol *MIRSymbolBuilder::CreatePregFormalSymbol(TyIdx tyIdx, PregIdx pRegIdx
   st->SetPreg(pregTab->PregFromPregIdx(pRegIdx));
   return st;
 }
+
+size_t MIRSymbolBuilder::GetSymbolTableSize(const MIRFunction *func) const {
+  return (func == nullptr) ? GlobalTables::GetGsymTable().GetSymbolTableSize() :
+      func->GetSymTab()->GetSymbolTableSize();
+}
+
+const MIRSymbol *MIRSymbolBuilder::GetSymbolFromStIdx(uint32 idx, const MIRFunction *func) const {
+  if (func == nullptr) {
+    auto &symTab = GlobalTables::GetGsymTable();
+    return symTab.GetSymbolFromStidx(idx);
+  } else {
+    auto &symTab = *func->GetSymTab();
+    return symTab.GetSymbolFromStIdx(idx);
+  }
+}
 } // maple

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -421,6 +421,7 @@ void BBLayout::ResolveUnconditionalFallThru(BB &bb, BB &nextBB) {
   if (fallthru != &nextBB) {
     if (BBCanBeMoved(*fallthru, bb)) {
       AddBB(*fallthru);
+      SetAttrTryForTheCanBeMovedBB(bb, *fallthru);
       ResolveUnconditionalFallThru(*fallthru, nextBB);
       OptimizeBranchTarget(*fallthru);
     } else {
@@ -469,11 +470,23 @@ void BBLayout::DealWithStartTryBB() {
         } else {
           curBB->RemoveAllSucc();
           func.NullifyBBByID(curBB->GetBBId());
+          for (auto it = layoutBBs.begin(); it != layoutBBs.end(); ++it) {
+            if (*it == curBB) {
+              layoutBBs.erase(it);
+              break;
+            }
+          }
         }
         break;
       } else if (j == size - 1) {
         curBB->RemoveAllSucc();
         func.NullifyBBByID(curBB->GetBBId());
+        for (auto it = layoutBBs.begin(); it != layoutBBs.end(); ++it) {
+          if (*it == curBB) {
+            layoutBBs.erase(it);
+            break;
+          }
+        }
       }
     }
     startTryBBVec[i] = false;
@@ -509,6 +522,36 @@ void BBLayout::RemoveUnreachable(BB &bb) {
   }
   bb.RemoveAllSucc();
   func.NullifyBBByID(bb.GetBBId());
+  for (auto it = layoutBBs.begin(); it != layoutBBs.end(); ++it) {
+    if (*it == &bb) {
+      layoutBBs.erase(it);
+      break;
+    }
+  }
+}
+
+
+void BBLayout::UpdateNewBBWithAttrTry(const BB &bb, BB &fallthru) const {
+  auto tryBB = &bb;
+  fallthru.SetAttributes(kBBAttrIsTry);
+  if (bb.IsReturnBB()) {
+    int i = 1;
+    tryBB = func.GetBBFromID(bb.GetBBId() - i);
+    while (tryBB == nullptr || tryBB->IsReturnBB()) {
+      ++i;
+      tryBB = func.GetBBFromID(bb.GetBBId() - i);
+    }
+    ASSERT_NOT_NULL(tryBB);
+    ASSERT(tryBB->GetAttributes(kBBAttrIsTry), "must be try");
+  }
+  bool setEHEdge = false;
+  for (auto *candCatch : tryBB->GetSucc()) {
+    if (candCatch != nullptr && candCatch->GetAttributes(kBBAttrIsCatch)) {
+      setEHEdge = true;
+      fallthru.AddSucc(*candCatch);
+    }
+  }
+  ASSERT(setEHEdge, "must set eh edge");
 }
 
 // create a new fallthru that contains a goto to the original fallthru
@@ -555,6 +598,7 @@ BB *BBLayout::CreateGotoBBAfterCondBB(BB &bb, BB &fallthru) {
     LogInfo::MapleLogger() << "Created fallthru and goto original fallthru" << '\n';
   }
   AddBB(*newFallthru);
+  SetAttrTryForTheCanBeMovedBB(bb, *newFallthru);
   return newFallthru;
 }
 
@@ -579,6 +623,17 @@ void BBLayout::OptimiseCFG() {
     if (bb->GetKind() == kBBCondGoto || bb->GetKind() == kBBGoto) {
       OptimizeBranchTarget(*bb);
     }
+  }
+}
+
+void BBLayout::SetAttrTryForTheCanBeMovedBB(BB &bb, BB &canBeMovedBB) const {
+  if (bb.GetAttributes(kBBAttrIsTryEnd)) {
+    bb.ClearAttributes(kBBAttrIsTryEnd);
+    canBeMovedBB.SetAttributes(kBBAttrIsTryEnd);
+    func.SetTryBBByOtherEndTryBB(&canBeMovedBB, &bb);
+  }
+  if (bb.GetAttributes(kBBAttrIsTry) && !canBeMovedBB.GetAttributes(kBBAttrIsTry)) {
+    UpdateNewBBWithAttrTry(bb, canBeMovedBB);
   }
 }
 
@@ -627,12 +682,21 @@ void BBLayout::LayoutWithoutProf() {
           condGotoNode.SetOffset(fallthruLabel);
           condGotoNode.SetOpCode((condGotoNode.GetOpCode() == OP_brtrue) ? OP_brfalse : OP_brtrue);
         }
+        // The offset of condgotostmt must be the label of second succ bb.
+        ASSERT(bb->GetSucc(0)->GetBBId() == fallthru->GetBBId(), "must be the fallthru");
+        ASSERT(bb->GetSucc(1)->GetBBId() == brTargetBB->GetBBId(), "must be the brTargetBB");
+        bb->SetSucc(0, brTargetBB);
+        bb->SetSucc(1, fallthru);
+        ASSERT(bb->GetSucc(1)->GetBBLabel() == static_cast<CondGotoMeStmt&>(bb->GetMeStmts().back()).GetOffset(),
+            "bbLayout: wrong branch target BB");
         AddBB(*brTargetBB);
+        SetAttrTryForTheCanBeMovedBB(*bb, *brTargetBB);
         ResolveUnconditionalFallThru(*brTargetBB, *nextBB);
         OptimizeBranchTarget(*brTargetBB);
       } else if (fallthru != nextBB) {
         if (BBCanBeMoved(*fallthru, *bb)) {
           AddBB(*fallthru);
+          SetAttrTryForTheCanBeMovedBB(*bb, *fallthru);
           ResolveUnconditionalFallThru(*fallthru, *nextBB);
           OptimizeBranchTarget(*fallthru);
         } else {
@@ -648,6 +712,7 @@ void BBLayout::LayoutWithoutProf() {
 
       if (gotoTarget != nextBB && BBCanBeMoved(*gotoTarget, *bb)) {
         AddBB(*gotoTarget);
+        SetAttrTryForTheCanBeMovedBB(*bb, *gotoTarget);
         ChangeToFallthruFromGoto(*bb);
         ResolveUnconditionalFallThru(*gotoTarget, *nextBB);
         OptimizeBranchTarget(*gotoTarget);
@@ -655,9 +720,11 @@ void BBLayout::LayoutWithoutProf() {
         BB *targetNext = gotoTarget->GetSucc().front();
         if (targetNext != nextBB && BBCanBeMoved(*targetNext, *bb)) {
           AddBB(*gotoTarget);
+          SetAttrTryForTheCanBeMovedBB(*bb, *gotoTarget);
           ChangeToFallthruFromGoto(*bb);
           OptimizeBranchTarget(*gotoTarget);
           AddBB(*targetNext);
+          SetAttrTryForTheCanBeMovedBB(*bb, *targetNext);
           ResolveUnconditionalFallThru(*targetNext, *nextBB);
           OptimizeBranchTarget(*targetNext);
         }

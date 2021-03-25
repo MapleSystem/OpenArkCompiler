@@ -17,6 +17,7 @@
 #include "mir_nodes.h"
 #include "module_phase.h"
 #include "phase_impl.h"
+#include "me_verify.h"
 
 namespace maple {
 class ConstantFold : public FuncOptimizeImpl {
@@ -132,6 +133,9 @@ class DoConstantFold : public ModulePhase {
 
   AnalysisResult *Run(MIRModule *mod, ModuleResultMgr *mrm) override {
     OPT_TEMPLATE(ConstantFold);
+    if (MeOption::meVerify) {
+      VerifyGlobalTypeTable();
+    }
     return nullptr;
   }
 };

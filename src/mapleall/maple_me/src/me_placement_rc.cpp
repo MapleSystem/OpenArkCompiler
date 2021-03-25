@@ -92,7 +92,8 @@ void PlacementRC::HandleThrowOperand(SRealOcc &realOcc, ThrowMeStmt &thwStmt) {
   }
 
   // Generate a copy to tempVar and regard this as the last use of workCand
-  DassignMeStmt *newDass = static_cast<DassignMeStmt *>(irMap->CreateAssignMeStmt(*tempVar, *realOcc.GetVar(), realOcc.GetBB()));
+  DassignMeStmt *newDass =
+      static_cast<DassignMeStmt *>(irMap->CreateAssignMeStmt(*tempVar, *realOcc.GetVar(), realOcc.GetBB()));
   newDass->SetSrcPos(thwStmt.GetSrcPosition());
   newDass->EnableNeedDecref();
   tempVar->SetDefByStmt(*newDass);
@@ -596,7 +597,8 @@ void PlacementRC::CodeMotionForReal(SOcc &occ, const UnaryMeStmt *entryIncref) {
   if (realOcc.GetVar()->PointsToStringLiteral()) {
     MeExpr *zeroExpr = irMap->CreateIntConstMeExpr(0, realOcc.GetVar()->GetPrimType());
     VarMeExpr *newVar = irMap->CreateVarMeExprVersion(*realOcc.GetVar());
-    DassignMeStmt *newstmt = static_cast<DassignMeStmt *>(irMap->CreateAssignMeStmt(*newVar, *zeroExpr, realOcc.GetBB()));
+    DassignMeStmt *newstmt =
+        static_cast<DassignMeStmt *>(irMap->CreateAssignMeStmt(*newVar, *zeroExpr, realOcc.GetBB()));
     realOcc.GetBB().ReplaceMeStmt(decrefStmt, newstmt);
     return;
   }

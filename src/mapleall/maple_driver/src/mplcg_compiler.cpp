@@ -79,39 +79,48 @@ void MplcgCompiler::PrintCommand(const MplOptions &options) const {
                          << " --infile " << GetInputFileName(options) << '\n';
 }
 
-bool MplcgCompiler::MakeCGOptions(const MplOptions &options) {
+ErrorCode MplcgCompiler::MakeCGOptions(const MplOptions &options) {
+  auto it = std::find(options.GetRunningExes().begin(), options.GetRunningExes().end(), kBinNameMplcg);
+  if (it == options.GetRunningExes().end()) {
+    return kErrorNoError;
+  }
   CGOptions &cgOption = CGOptions::GetInstance();
   cgOption.SetOption(CGOptions::kDefaultOptions);
   cgOption.SetOption(CGOptions::kWithMpl);
   cgOption.SetGenerateFlags(CGOptions::kDefaultGflags);
-  auto it = options.GetExeOptions().find(kBinNameMplcg);
-  if (it == options.GetExeOptions().end()) {
-    LogInfo::MapleLogger() << "no me input options\n";
-    return false;
+  auto itOpt = options.GetExeOptions().find(kBinNameMplcg);
+  if (itOpt == options.GetExeOptions().end()) {
+    LogInfo::MapleLogger() << "no mplcg input options\n";
+    return kErrorCompileFail;
   }
-  bool result = cgOption.SolveOptions(it->second, options.HasSetDebugFlag());
+  bool result = cgOption.SolveOptions(itOpt->second, options.HasSetDebugFlag());
   if (result == false) {
     LogInfo::MapleLogger() << "Meet error mplcg options\n";
-    return false;
+    return kErrorCompileFail;
   }
-  return true;
+  return kErrorNoError;
 }
 
-ErrorCode MplcgCompiler::Compile(const MplOptions &options, std::unique_ptr<MIRModule> &theModule) {
-  MemPool *optMp = memPoolCtrler.NewMemPool("maplecg mempool");
+ErrorCode MplcgCompiler::Compile(MplOptions &options, std::unique_ptr<MIRModule> &theModule) {
+  // Append Default cg options for auto mode
+  ErrorCode ret = options.AppendMplcgOptions();
+  if (ret != kErrorNoError) {
+    return kErrorCompileFail;
+  }
   CGOptions &cgOption = CGOptions::GetInstance();
-  bool result = MakeCGOptions(options);
-  if (!result) {
+  ret = MakeCGOptions(options);
+  if (ret != kErrorNoError) {
     return kErrorCompileFail;
   }
   std::string fileName = GetInputFileName(options);
   std::string baseName = options.GetOutputFolder() + FileUtils::GetFileName(fileName, false);
   std::string output = baseName + ".s";
-  bool fileread = true;
+  MemPool *optMp = memPoolCtrler.NewMemPool("maplecg mempool");
+  bool fileRead = true;
   if (theModule == nullptr) {
     MPLTimer timer;
     timer.Start();
-    fileread = false;
+    fileRead = false;
     theModule = std::make_unique<MIRModule>(fileName);
     theModule->SetWithMe(
         std::find(options.GetRunningExes().begin(), options.GetRunningExes().end(),
@@ -147,9 +156,12 @@ ErrorCode MplcgCompiler::Compile(const MplOptions &options, std::unique_ptr<MIRM
   }
 
   LogInfo::MapleLogger() << "Starting mplcg\n";
-  DriverRunner runner(theModule.get(), options.GetRunningExes(), options.GetInputFileType(), fileName, optMp,
-      fileread, options.HasSetTimePhases());
-  PrintCommand(options);
+  DriverRunner runner(theModule.get(), options.GetSelectedExes(), options.GetInputFileType(), fileName, optMp,
+                      fileRead, options.HasSetTimePhases());
+  if (options.HasSetDebugFlag()) {
+    PrintCommand(options);
+  }
+  runner.SetPrintOutExe(kBinNameMplcg);
   runner.SetCGInfo(&cgOption, fileName);
   runner.ProcessCGPhase(output, baseName);
 

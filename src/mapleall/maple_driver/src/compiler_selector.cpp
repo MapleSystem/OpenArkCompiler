@@ -43,8 +43,8 @@ ErrorCode CompilerSelectorImpl::InsertCompilerIfNeeded(std::vector<Compiler*> &s
 ErrorCode CompilerSelectorImpl::Select(const SupportedCompilers &supportedCompilers, const MplOptions &mplOptions,
                                        std::vector<Compiler*> &selected) const {
   bool combPhases = false;
-  if (!mplOptions.GetRunningExes().empty()) {
-    for (const std::string &runningExe : mplOptions.GetRunningExes()) {
+  if (!mplOptions.GetSelectedExes().empty()) {
+    for (const std::string &runningExe : mplOptions.GetSelectedExes()) {
       if (runningExe == kBinNameMe) {
         combPhases = true;
       } else if (runningExe == kBinNameMpl2mpl && combPhases) {

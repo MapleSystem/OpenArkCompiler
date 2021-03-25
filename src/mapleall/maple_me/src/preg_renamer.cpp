@@ -17,6 +17,7 @@
 #include "me_irmap.h"
 #include "preg_renamer.h"
 #include "union_find.h"
+#include "me_verify.h"
 
 namespace maple {
 void PregRenamer::RunSelf() {
@@ -107,8 +108,8 @@ void PregRenamer::RunSelf() {
   }
 }
 
-AnalysisResult *MeDoPregRename::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) {
-  MeIRMap *irmap = static_cast<MeIRMap *>(m->GetAnalysisResult(MeFuncPhase_IRMAPBUILD, func));
+AnalysisResult *MeDoPregRename::Run(MeFunction *func, MeFuncResultMgr *frm, ModuleResultMgr *mrm) {
+  MeIRMap *irmap = static_cast<MeIRMap *>(frm->GetAnalysisResult(MeFuncPhase_IRMAPBUILD, func));
   std::string renamePhaseName = PhaseName();
   MemPool *renamemp = memPoolCtrler.NewMemPool(renamePhaseName);
   PregRenamer pregrenamer(renamemp, func, irmap);
@@ -118,6 +119,21 @@ AnalysisResult *MeDoPregRename::Run(MeFunction *func, MeFuncResultMgr *m, Module
     func->Dump();
   }
   memPoolCtrler.DeleteMemPool(renamemp);
+  if (MeOption::meVerify) {
+    frm->InvalidAnalysisResult(MeFuncPhase_DOMINANCE, func);
+    CHECK_FATAL(mrm != nullptr, "Needs module result manager for ipa");
+    auto *dom = static_cast<Dominance*>(frm->GetAnalysisResult(MeFuncPhase_DOMINANCE, func));
+    ASSERT(dom != nullptr, "dominance phase has problem");
+    auto *kh = static_cast<KlassHierarchy*>(mrm->GetAnalysisResult(MoPhase_CHA, &func->GetMIRModule()));
+    CHECK_FATAL(kh != nullptr, "kh phase has problem");
+    MeVerify verify(*func);
+    for (auto &bb : func->GetAllBBs()) {
+      if (bb == nullptr) {
+        continue;
+      }
+      verify.VerifyPhiNode(*bb, *dom);
+    }
+  }
   return nullptr;
 }
 }  // namespace maple

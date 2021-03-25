@@ -124,7 +124,10 @@ void MeStmtPre::CodeMotion() {
                   (void)candsForSSAUpdate[ostIdx]->insert(occ->GetBB()->GetBBId());
                 }
                 VarMeExpr *newVarVersion = irMap->CreateVarMeExprVersion(*var);
-                call->GetMustDefList()->front().UpdateLHS(*newVarVersion);
+                auto &mustDef = call->GetMustDefList()->front();
+                mustDef.UpdateLHS(*newVarVersion);
+                newVarVersion->SetDefBy(kDefByMustDef);
+                newVarVersion->SetDefMustDef(mustDef);
               }
             }
             if (insertedOcc->GetOpcodeOfMeStmt() == OP_intrinsiccallwithtype &&

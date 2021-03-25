@@ -46,6 +46,7 @@ ADD_PHASE("rename2preg", MeOption::optLevel == 2)
 ADD_PHASE("pregrename", MeOption::optLevel == 2)
 ADD_PHASE("bblayout", MeOption::optLevel == 2 || JAVALANG)
 ADD_PHASE("emit", MeOption::optLevel == 2 || JAVALANG)
+ADD_PHASE("meverify", JAVALANG && MeOption::meVerify)
 // mephase end
 ADD_PHASE("clinit", JAVALANG)
 ADD_PHASE("VtableImpl", JAVALANG)

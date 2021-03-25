@@ -245,14 +245,14 @@ void AArch64MoveRegArgs::GenerateStrInsn(ArgInfo &argInfo, AArch64reg reg2, uint
     GenOneInsn(argInfo, *baseOpnd, part2BitSize, reg2, (stOffset + kSizeOfPtr));
   } else if (numFpRegs > kOneRegister) {
     uint32 fpSizeBits = fpSize * kBitsPerByte;
-    AArch64reg regFp2 = static_cast<AArch64reg>(static_cast<int>(argInfo.reg) + kOneRegister);
+    AArch64reg regFp2 = static_cast<AArch64reg>(argInfo.reg + kOneRegister);
     GenOneInsn(argInfo, *baseOpnd, fpSizeBits, regFp2, (stOffset + static_cast<int>(fpSize)));
     if (numFpRegs > kTwoRegister) {
-      AArch64reg regFp3 = static_cast<AArch64reg>(static_cast<int>(argInfo.reg) + kTwoRegister);
+      AArch64reg regFp3 = static_cast<AArch64reg>(argInfo.reg + kTwoRegister);
       GenOneInsn(argInfo, *baseOpnd, fpSizeBits, regFp3, (stOffset + static_cast<int>(fpSize * k4BitShift)));
     }
     if (numFpRegs > kThreeRegister) {
-      AArch64reg regFp3 = static_cast<AArch64reg>(static_cast<int>(argInfo.reg) + kThreeRegister);
+      AArch64reg regFp3 = static_cast<AArch64reg>(argInfo.reg + kThreeRegister);
       GenOneInsn(argInfo, *baseOpnd, fpSizeBits, regFp3, (stOffset + static_cast<int>(fpSize * k8BitShift)));
     }
   }

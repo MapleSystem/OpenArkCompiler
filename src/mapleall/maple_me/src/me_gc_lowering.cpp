@@ -101,7 +101,14 @@ void GCLowering::HandleVarAssignMeStmt(MeStmt &stmt) {
 }
 
 MIRIntrinsicID GCLowering::SelectWriteBarrier(MeStmt &stmt) {
-  MeExpr *lhs = stmt.GetLHS();
+  MeExpr *lhs = nullptr;
+  if (stmt.GetOp() == OP_dassign) {
+    lhs = stmt.GetLHS();
+  } else if (stmt.GetOp() == OP_iassign) {
+    lhs = static_cast<IassignMeStmt&>(stmt).GetLHSVal();
+  } else {
+    CHECK_FATAL(false, "NIY");
+  }
   CHECK_NULL_FATAL(lhs);
   MeExprOp meOp = lhs->GetMeOp();
   CHECK_FATAL((meOp == kMeOpVar || meOp == kMeOpIvar), "Not Expected meOp");

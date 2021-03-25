@@ -86,6 +86,7 @@ src_libmplme = [
   "src/me_gc_lowering.cpp",
   "src/me_gc_write_barrier_opt.cpp",
   "src/me_subsum_rc.cpp",
+  "src/me_verify.cpp",
 ]
 
 src_libmplmewpo = [
