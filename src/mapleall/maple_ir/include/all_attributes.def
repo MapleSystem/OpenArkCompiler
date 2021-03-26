@@ -77,3 +77,6 @@
   ATTR(localrefvar)
   ATTR(rcunownedthis)
 #endif
+#ifdef FUNC_ATTR
+  ATTR(firstarg_return)
+#endif
