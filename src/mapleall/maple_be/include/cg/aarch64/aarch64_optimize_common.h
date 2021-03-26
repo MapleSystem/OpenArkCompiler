@@ -32,15 +32,11 @@ class AArch64InsnVisitor : public InsnVisitor {
   void ModifyJumpTarget(Operand &targetOperand, BB &bb) override;
   void ModifyJumpTarget(BB &newTarget, BB &bb) override;
   /* Check if it requires to add extra gotos when relocate bb */
-  MOperator FlipConditionOp(MOperator flippedOp, int &targetIdx) override;
   Insn *CloneInsn(Insn &originalInsn) override;
   LabelIdx GetJumpLabel(const Insn &insn) const override;
   bool IsCompareInsn(const Insn &insn) const override;
   bool IsCompareAndBranchInsn(const Insn &insn) const override;
   RegOperand *CreateVregFromReg(const RegOperand &pReg) override;
-
- private:
-  int GetJumpTargetIdx(const Insn &insn) const;
 };
 }  /* namespace maplebe */
 
