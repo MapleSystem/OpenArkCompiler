@@ -159,7 +159,7 @@ class AArch64Insn : public Insn {
 
   uint32 GetJumpTargetIdxFromMOp(MOperator mOp) const override;
 
-  MOperator FlipConditionOp(MOperator flippedOp, int &targetIdx) override;
+  MOperator FlipConditionOp(MOperator flippedOp, uint32 &targetIdx) override;
 
   bool CheckRefField(size_t opndIndex, bool isEmit) const;
 

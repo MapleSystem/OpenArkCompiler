@@ -132,7 +132,7 @@ class CGLowerer {
   BaseNode *LowerIaddrof(const IreadNode &iaddrof);
   BaseNode *SplitBinaryNodeOpnd1(BinaryNode &bNode, BlockNode &blkNode);
   BaseNode *SplitTernaryNodeResult(TernaryNode &tNode, BaseNode &parent, BlockNode &blkNode);
-  bool IsComplexSelect(const TernaryNode &tNode);
+  bool IsComplexSelect(const TernaryNode &tNode) const;
   BaseNode *LowerComplexSelect(TernaryNode &tNode, BaseNode &parent, BlockNode &blkNode);
   BaseNode *LowerFarray(ArrayNode &array);
   BaseNode *LowerArrayDim(ArrayNode &array, int32 dim);

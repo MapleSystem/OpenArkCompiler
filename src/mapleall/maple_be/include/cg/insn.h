@@ -477,10 +477,13 @@ class Insn {
   }
 
   virtual uint32 GetJumpTargetIdxFromMOp(MOperator mOp) const {
+    (void)mOp;
     return 0;
   }
 
-  virtual MOperator FlipConditionOp(MOperator flippedOp, int &targetIdx) {
+  virtual MOperator FlipConditionOp(MOperator flippedOp, uint32 &targetIdx) {
+    (void)flippedOp;
+    (void)targetIdx;
     return 0;
   }
 

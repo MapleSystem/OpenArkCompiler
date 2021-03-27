@@ -1505,7 +1505,7 @@ uint32 AArch64Insn::GetJumpTargetIdxFromMOp(MOperator mOp) const {
   return kOperandPosition0;
 }
 
-MOperator AArch64Insn::FlipConditionOp(MOperator originalOp, int &targetIdx) {
+MOperator AArch64Insn::FlipConditionOp(MOperator originalOp, uint32 &targetIdx) {
   targetIdx = 1;
   switch (originalOp) {
     case AArch64MOP_t::MOP_beq:
