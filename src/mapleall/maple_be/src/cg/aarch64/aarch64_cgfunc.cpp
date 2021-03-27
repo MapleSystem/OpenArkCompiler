@@ -3747,9 +3747,8 @@ Operand *AArch64CGFunc::SelectRetype(TypeCvtNode &node, Operand &opnd0) {
     }
     if ((IsPrimitiveFloat(fromType) && IsPrimitiveInteger(toType)) ||
         (IsPrimitiveFloat(toType) && IsPrimitiveInteger(fromType))) {
-      MOperator mopFmov =
-        isImm ? is64Bits ? MOP_xdfmovri : MOP_wsfmovri
-              : isFromInt ? (is64Bits ? MOP_xvmovdr : MOP_xvmovsr) : (is64Bits ? MOP_xvmovrd : MOP_xvmovrs);
+      MOperator mopFmov = (isImm ? (is64Bits ? MOP_xdfmovri : MOP_wsfmovri) : isFromInt) ?
+          (is64Bits ? MOP_xvmovdr : MOP_xvmovsr) : (is64Bits ? MOP_xvmovrd : MOP_xvmovrs);
       GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(mopFmov, *resOpnd, *newOpnd0));
       return resOpnd;
     } else {

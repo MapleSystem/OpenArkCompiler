@@ -79,9 +79,6 @@ AnalysisResult *DoPreme::Run(MIRModule *mod, ModuleResultMgr *mrm) {
   if (MeOption::optLevel == 2) {
     CreateMIRTypeForLowerGlobalDreads();
   }
-  if (MeOption::meVerify) {
-    VerifyGlobalTypeTable();
-  }
   return nullptr;
 }
 }  // namespace maple

@@ -816,8 +816,7 @@ bool MIRParser::ParseStructType(TyIdx &styIdx) {
   // Dex file create a struct type with name, but do not check the type field.
   if (styIdx != 0u) {
     MIRType *prevType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(styIdx);
-    ASSERT(prevType->GetKind() == kTypeStruct || prevType->IsIncomplete(),
-           "type kind should be consistent.");
+    ASSERT(prevType->GetKind() == kTypeStruct || prevType->IsIncomplete(), "type kind should be consistent.");
     if (static_cast<MIRStructType*>(prevType)->IsIncomplete() && !(structType.IsIncomplete())) {
       structType.SetNameStrIdx(prevType->GetNameStrIdx());
       structType.SetTypeIndex(styIdx);
@@ -1463,7 +1462,6 @@ bool MIRParser::ParseTypedef() {
   const std::string &name = lexer.GetName();
   GStrIdx strIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(name);
   TyIdx prevTyIdx;
-  MIRStructType *prevStructType = nullptr;
   TyIdx tyIdx(0);
   // dbginfo class/interface init
   if (tokenKind == TK_gname) {
@@ -1477,8 +1475,7 @@ bool MIRParser::ParseTypedef() {
       if (!mod.IsCModule()) {
         CHECK_FATAL(prevType->IsStructType(), "type error");
       }
-      prevStructType = dynamic_cast<MIRStructType*>(prevType);
-      if ((prevType->GetKind() != kTypeByName) && (prevStructType && !prevStructType->IsIncomplete())) {
+      if ((prevType->GetKind() != kTypeByName) && !prevType->IsIncomplete()) {
         // allow duplicated type def if kKeepFirst is set which is the default
         if (options & kKeepFirst) {
           lexer.NextToken();
@@ -1502,8 +1499,7 @@ bool MIRParser::ParseTypedef() {
     prevTyIdx = mod.CurFunction()->GetTyIdxFromGStrIdx(strIdx);
     if (prevTyIdx != 0u) {
       MIRType *prevType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(prevTyIdx);
-      prevStructType = dynamic_cast<MIRStructType *>(prevType);
-      if ((prevType->GetKind() != kTypeByName) && (prevStructType && !prevStructType->IsIncomplete())) {
+      if ((prevType->GetKind() != kTypeByName) && !prevType->IsIncomplete()) {
         Error("redefined local type name ");
         return false;
       }
@@ -1544,7 +1540,7 @@ bool MIRParser::ParseTypedef() {
 
   if (prevTyIdx != TyIdx(0) && prevTyIdx != tyIdx) {
     // replace all uses of prev_tyidx by tyIdx in typeTable
-    typeDefIdxMap[prevTyIdx] = tyIdx;                            // record the real tydix
+    typeDefIdxMap[prevTyIdx] = tyIdx; // record the real tydix
     // remove prev_tyidx from classlist
     mod.RemoveClass(prevTyIdx);
   }

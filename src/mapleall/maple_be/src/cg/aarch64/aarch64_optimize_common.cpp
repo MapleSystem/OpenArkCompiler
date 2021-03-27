@@ -18,7 +18,6 @@
 #include "cgbb.h"
 
 namespace maplebe {
-
 void AArch64InsnVisitor::ModifyJumpTarget(Operand &targetOperand, BB &bb) {
   bb.GetLastInsn()->SetOperand(bb.GetLastInsn()->GetJumpTargetIdx(), targetOperand);
 }
@@ -28,7 +27,8 @@ void AArch64InsnVisitor::ModifyJumpTarget(maple::LabelIdx targetLabel, BB &bb) {
 }
 
 void AArch64InsnVisitor::ModifyJumpTarget(BB &newTarget, BB &bb) {
-  ModifyJumpTarget(newTarget.GetLastInsn()->GetOperand(newTarget.GetLastInsn()->GetJumpTargetIdx()), bb);
+  ModifyJumpTarget(newTarget.GetLastInsn()->GetOperand(
+      static_cast<int32>(newTarget.GetLastInsn()->GetJumpTargetIdx())), bb);
 }
 
 Insn *AArch64InsnVisitor::CloneInsn(Insn &originalInsn) {
@@ -49,7 +49,7 @@ Insn *AArch64InsnVisitor::CloneInsn(Insn &originalInsn) {
  * because a register instead of label. So we don't take it as a branching instruction.
  */
 LabelIdx AArch64InsnVisitor::GetJumpLabel(const Insn &insn) const {
-  int operandIdx = insn.GetJumpTargetIdx();
+  int operandIdx = static_cast<int>(insn.GetJumpTargetIdx());
   if (insn.GetOperand(operandIdx).IsLabelOpnd()) {
     return static_cast<LabelOperand&>(insn.GetOperand(operandIdx)).GetLabelIndex();
   }

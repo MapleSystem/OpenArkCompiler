@@ -81,7 +81,6 @@ constexpr uint32 kOperandPosition0 = 0;
 constexpr uint32 kOperandPosition1 = 1;
 constexpr uint32 kOperandPosition2 = 2;
 
-
 /* Size of struct for memcpy */
 constexpr uint32 kParmMemcpySize = 40;
 
