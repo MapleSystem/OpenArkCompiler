@@ -31,6 +31,9 @@ std::string MapleCombCompiler::GetInputFileName(const MplOptions &options) const
   if (options.GetInputFileType() == InputFileType::kFileTypeVtableImplMpl) {
     return options.GetOutputFolder() + options.GetOutputName() + ".VtableImpl.mpl";
   }
+  if (options.GetInputFileType() == InputFileType::kFileTypeBpl) {
+    return options.GetOutputFolder() + options.GetOutputName() + ".bpl";
+  }
   return options.GetOutputFolder() + options.GetOutputName() + ".mpl";
 }
 

@@ -466,6 +466,9 @@ std::string MplOptions::GetInputFileNameForPrint() const{
   if (inputFileType == InputFileType::kFileTypeVtableImplMpl) {
     return outputFolder + outputName + ".VtableImpl.mpl";
   }
+  if (inputFileType == InputFileType::kFileTypeBpl) {
+    return outputFolder + outputName + ".bpl";
+  }
   return outputFolder + outputName + ".mpl";
 }
 
