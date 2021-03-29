@@ -19,6 +19,19 @@
 
 namespace maplebe {
 void AArch64InsnVisitor::ModifyJumpTarget(Operand &targetOperand, BB &bb) {
+  if (bb.GetKind() == BB::kBBIgoto) {
+    bool modified = false;
+    for (Insn *insn = bb.GetLastInsn(); insn != nullptr; insn = insn->GetPrev()) {
+      if (insn->GetMachineOpcode() == MOP_adrp_label) {
+        LabelIdx labIdx = static_cast<LabelOperand&>(targetOperand).GetLabelIndex();
+        ImmOperand &immOpnd = static_cast<AArch64CGFunc *>(GetCGFunc())->CreateImmOperand(labIdx, 8, false);
+        insn->SetOperand(1, immOpnd);
+        modified = true;
+      }
+    }
+    CHECK_FATAL(modified, "ModifyJumpTarget: Could not change jump target");
+    return;
+  }
   bb.GetLastInsn()->SetOperand(bb.GetLastInsn()->GetJumpTargetIdx(), targetOperand);
 }
 
