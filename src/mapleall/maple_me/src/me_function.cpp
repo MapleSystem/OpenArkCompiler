@@ -506,12 +506,16 @@ BB *MeFunction::NewBasicBlock() {
   return newBB;
 }
 
-// new a basic block and insert before position
-BB &MeFunction::InsertNewBasicBlock(const BB &position) {
+// new a basic block and insert before position or after position
+BB &MeFunction::InsertNewBasicBlock(const BB &position, bool isInsertBefore) {
   BB *newBB = memPool->New<BB>(&alloc, &versAlloc, BBId(nextBBId++));
 
   auto bIt = std::find(begin(), end(), &position);
   auto idx = position.GetBBId();
+  if (!isInsertBefore) {
+    ++bIt;
+    ++idx;
+  }
   auto newIt = bbVec.insert(bIt, newBB);
   auto eIt = end();
   // update bb's idx

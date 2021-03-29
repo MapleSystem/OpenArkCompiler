@@ -120,6 +120,7 @@ class MeOption : public MapleDriverOptionBase {
   static bool placementRC;
   static bool subsumRC;
   static std::string inlineFuncList;
+  static bool meVerify;
 #if MIR_JAVA
   static std::string acquireFuncName;
   static std::string releaseFuncName;

@@ -411,8 +411,8 @@ void FlipBRPattern::RelocateThrowBB(BB &curBB) {
   CHECK_FATAL(curBBBranchInsn != nullptr, "curBB(it is a kBBif) has no branch");
 
   /* Reverse the branch */
-  int targetIdx = 1;
-  MOperator mOp = theCFG->GetInsnModifier()->FlipConditionOp(curBBBranchInsn->GetMachineOpcode(), targetIdx);
+  uint32 targetIdx = 1;
+  MOperator mOp = curBBBranchInsn->FlipConditionOp(curBBBranchInsn->GetMachineOpcode(), targetIdx);
   LabelOperand &brTarget = cgFunc->GetOrCreateLabelOperand(*ftBB);
   curBBBranchInsn->SetMOperator(mOp);
   curBBBranchInsn->SetOperand(targetIdx, brTarget);
@@ -471,9 +471,8 @@ bool FlipBRPattern::Optimize(BB &curBB) {
       ASSERT(brInsn != nullptr, "FlipBRPattern: ftBB has no branch");
 
       /* Reverse the branch */
-      int targetIdx = 1;
-      MOperator mOp = cgFunc->GetTheCFG()->GetInsnModifier()->FlipConditionOp(curBBBranchInsn->GetMachineOpcode(),
-                                                                              targetIdx);
+      uint32 targetIdx = brInsn->GetJumpTargetIdx();
+      MOperator mOp = curBBBranchInsn->FlipConditionOp(curBBBranchInsn->GetMachineOpcode(), targetIdx);
       if (mOp == 0) {
         return false;
       }
@@ -484,7 +483,7 @@ bool FlipBRPattern::Optimize(BB &curBB) {
            (!IsLabelInLSDAOrSwitchTable(tgtBB->GetLabIdx()) &&
             cgFunc->GetTheCFG()->CanMerge(*ftBB, *tgtBB)))) {
         curBBBranchInsn->SetMOperator(mOp);
-        Operand &brTarget = brInsn->GetOperand(0);
+        Operand &brTarget = brInsn->GetOperand(static_cast<int>(brInsn->GetJumpTargetIdx()));
         curBBBranchInsn->SetOperand(targetIdx, brTarget);
         /* Insert ftBB's insn at the beginning of tgtBB. */
         if (!ftBB->IsSoloGoto()) {

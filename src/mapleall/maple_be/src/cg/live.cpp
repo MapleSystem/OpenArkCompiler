@@ -309,7 +309,7 @@ AnalysisResult *CgDoLiveAnalysis::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncRes
   ASSERT(cgFunc != nullptr, "expect a cgFunc in CgDoLiveAnalysis");
   MemPool *liveMemPool = NewMemPool();
   LiveAnalysis *liveAnalysis = nullptr;
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
   liveAnalysis = liveMemPool->New<AArch64LiveAnalysis>(*cgFunc, *liveMemPool);
 #endif
 #if TARGARM32

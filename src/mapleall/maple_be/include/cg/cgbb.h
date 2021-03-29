@@ -341,6 +341,9 @@ class BB {
   void SetLastInsn(Insn *arg) {
     lastInsn = arg;
   }
+  bool IsLastInsn(const Insn *insn) const{
+    return (lastInsn == insn);
+  }
   const MapleList<BB*> &GetPreds() const {
     return preds;
   }

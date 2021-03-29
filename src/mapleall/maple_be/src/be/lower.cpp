@@ -25,7 +25,11 @@
 #include "intrinsic_op.h"
 #include "mir_builder.h"
 #include "opcode_info.h"
+#if TARGAARCH64
 #include "aarch64_rt.h"
+#elif TARGRISCV64
+#include "riscv64_rt.h"
+#endif
 #include "securec.h"
 #include "string_utils.h"
 
@@ -185,6 +189,134 @@ BaseNode *CGLowerer::LowerIaddrof(const IreadNode &iaddrof) {
   addNode->SetBOpnd(iaddrof.Opnd(0), 0);
   addNode->SetBOpnd(offsetNode, 1);
   return addNode;
+}
+
+BaseNode *CGLowerer::SplitBinaryNodeOpnd1(BinaryNode &bNode, BlockNode &blkNode) {
+  if (Globals::GetInstance()->GetOptimLevel() != 0) {
+    return &bNode;
+  }
+  MIRBuilder *mirbuilder = mirModule.GetMIRBuilder();
+  static uint32 val = 0;
+  std::string name("bnaryTmp");
+  name.append(std::to_string(val++));
+
+  BaseNode *opnd1 = bNode.Opnd(1);
+  MIRType *ty = GlobalTables::GetTypeTable().GetTypeFromTyIdx((TyIdx)(opnd1->GetPrimType()));
+  MIRSymbol *dnodeSt = mirbuilder->GetOrCreateLocalDecl(const_cast<const std::string&>(name), *ty);
+  DassignNode *dnode = mirbuilder->CreateStmtDassign(const_cast<MIRSymbol&>(*dnodeSt), 0, opnd1);
+  blkNode.InsertAfter(blkNode.GetLast(), dnode);
+
+  BaseNode *dreadNode = mirbuilder->CreateExprDread(*dnodeSt);
+  bNode.SetOpnd(dreadNode, 1);
+
+  return &bNode;
+}
+
+BaseNode *CGLowerer::SplitTernaryNodeResult(TernaryNode &tNode, BaseNode &parent, BlockNode &blkNode) {
+  if (Globals::GetInstance()->GetOptimLevel() != 0) {
+    return &tNode;
+  }
+  MIRBuilder *mirbuilder = mirModule.GetMIRBuilder();
+  static uint32 val = 0;
+  std::string name("tnaryTmp");
+  name.append(std::to_string(val++));
+
+  MIRType *ty = GlobalTables::GetTypeTable().GetTypeFromTyIdx((TyIdx)(tNode.GetPrimType()));
+  MIRSymbol *dassignNodeSym = mirbuilder->GetOrCreateLocalDecl(const_cast<const std::string&>(name), *ty);
+  DassignNode *dassignNode = mirbuilder->CreateStmtDassign(const_cast<MIRSymbol&>(*dassignNodeSym), 0, &tNode);
+  blkNode.InsertAfter(blkNode.GetLast(), dassignNode);
+
+  BaseNode *dreadNode = mirbuilder->CreateExprDread(*dassignNodeSym);
+  for (size_t i = 0; i < parent.NumOpnds(); i++) {
+    if (parent.Opnd(i) == &tNode) {
+      parent.SetOpnd(dreadNode, i);
+      break;
+    }
+  }
+
+  return dreadNode;
+}
+
+/* Check if the operand of the select node is complex enough for either
+ * functionality or performance reason so we need to lower it to if-then-else.
+ */
+bool CGLowerer::IsComplexSelect(const TernaryNode &tNode) const {
+    if (tNode.GetPrimType() == PTY_agg)
+      return true;
+
+    /* Iread may have side effect which may cause correctness issue. */
+    if (tNode.Opnd(1)->op == OP_iread || tNode.Opnd(2)->op == OP_iread)
+      return true;
+
+    return false;
+}
+
+/* Lower agg select node back to if-then-else stmt. */
+BaseNode *CGLowerer::LowerComplexSelect(TernaryNode &tNode, BaseNode &parent, BlockNode &blkNode) {
+  MIRBuilder *mirbuilder = mirModule.GetMIRBuilder();
+  static uint32 val = 0;
+  std::string name("ComplexSelectTmp");
+  name.append(std::to_string(val++));
+
+  MIRType *resultTy = 0;
+  if (tNode.GetPrimType() == PTY_agg) {
+    if (tNode.Opnd(1)->op == OP_dread) {
+      DreadNode *trueNode = static_cast<DreadNode *>(tNode.Opnd(1));
+      resultTy = mirModule.CurFunction()->GetLocalOrGlobalSymbol(trueNode->GetStIdx())->GetType();
+    } else if (tNode.Opnd(1)->op == OP_iread) {
+      IreadNode *trueNode = static_cast<IreadNode *>(tNode.Opnd(1));
+      MIRPtrType *ptrty =
+          static_cast<MIRPtrType *>(GlobalTables::GetTypeTable().GetTypeFromTyIdx(trueNode->GetTyIdx()));
+      resultTy = static_cast<MIRStructType *>(GlobalTables::GetTypeTable().GetTypeFromTyIdx(ptrty->GetPointedTyIdx()));
+      if (trueNode->GetFieldID() != 0) {
+        MIRStructType *structty = static_cast<MIRStructType *>(resultTy);
+        resultTy = GlobalTables::GetTypeTable().GetTypeFromTyIdx(structty->GetFieldTyIdx(trueNode->GetFieldID()));
+      }
+    } else {
+      CHECK_FATAL(false, "NYI: LowerComplexSelect");
+    }
+  } else {
+    resultTy =  GlobalTables::GetTypeTable().GetTypeFromTyIdx((TyIdx)(tNode.GetPrimType()));
+  }
+
+  MIRSymbol *resultSym = mirbuilder->GetOrCreateLocalDecl(const_cast<std::string&>(name), *resultTy);
+  CondGotoNode *brTargetStmt = mirModule.CurFuncCodeMemPool()->New<CondGotoNode>(OP_brfalse);
+  brTargetStmt->SetOpnd(tNode.Opnd(0), 0);
+  LabelIdx targetIdx = mirModule.CurFunction()->GetLabelTab()->CreateLabel();
+  mirModule.CurFunction()->GetLabelTab()->AddToStringLabelMap(targetIdx);
+  brTargetStmt->SetOffset(targetIdx);
+  blkNode.InsertAfter(blkNode.GetLast(), brTargetStmt);
+
+  DassignNode *dassignTrue = mirbuilder->CreateStmtDassign(const_cast<MIRSymbol&>(*resultSym), 0, tNode.Opnd(1));
+  blkNode.InsertAfter(blkNode.GetLast(), dassignTrue);
+
+  GotoNode *gotoStmt = mirModule.CurFuncCodeMemPool()->New<GotoNode>(OP_goto);
+  LabelIdx EndIdx = mirModule.CurFunction()->GetLabelTab()->CreateLabel();
+  mirModule.CurFunction()->GetLabelTab()->AddToStringLabelMap(EndIdx);
+  gotoStmt->SetOffset(EndIdx);
+  blkNode.InsertAfter(blkNode.GetLast(), gotoStmt);
+
+  LabelNode *lableStmt = mirModule.CurFuncCodeMemPool()->New<LabelNode>();
+  lableStmt->SetLabelIdx(targetIdx);
+  blkNode.InsertAfter(blkNode.GetLast(), lableStmt);
+
+  DassignNode *dassignFalse =
+      mirbuilder->CreateStmtDassign(static_cast<MIRSymbol&>(*resultSym), 0, tNode.Opnd(2));
+  blkNode.InsertAfter(blkNode.GetLast(), dassignFalse);
+
+  lableStmt = mirModule.CurFuncCodeMemPool()->New<LabelNode>();
+  lableStmt->SetLabelIdx(EndIdx);
+  blkNode.InsertAfter(blkNode.GetLast(), lableStmt);
+
+  BaseNode *dreadNode = mirbuilder->CreateExprDread(*resultSym);
+  for (size_t i = 0; i < parent.NumOpnds(); i++) {
+    if (parent.Opnd(i) == &tNode) {
+      parent.SetOpnd(dreadNode, i);
+      break;
+    }
+  }
+
+  return dreadNode;
 }
 
 BaseNode *CGLowerer::LowerFarray(ArrayNode &array) {
@@ -661,7 +793,7 @@ void CGLowerer::LowerTypePtr(BaseNode &node) const {
 }
 
 
-#if TARGARM32 || TARGAARCH64
+#if TARGARM32 || TARGAARCH64 || TARGRISCV64
 BlockNode *CGLowerer::LowerReturnStruct(NaryStmtNode &retNode) {
   BlockNode *blk = mirModule.CurFuncCodeMemPool()->New<BlockNode>();
   for (size_t i = 0; i < retNode.GetNopndSize(); ++i) {
@@ -1177,14 +1309,14 @@ BlockNode *CGLowerer::LowerBlock(BlockNode &block) {
       case OP_intrinsiccall:
       case OP_call:
       case OP_icall:
-#if TARGARM32 || TARGAARCH64
+#if TARGARM32 || TARGAARCH64 || TARGRISCV64
         LowerCallStmt(*stmt, nextStmt, *newBlk);
 #else
         LowerStmt(*stmt, *newBlk);
 #endif
         break;
       case OP_return: {
-#if TARGARM32 || TARGAARCH64
+#if TARGARM32 || TARGAARCH64 || TARGRISCV64
         if (GetCurrentFunc()->IsReturnStruct()) {
           newBlk->AppendStatementsFromBlock(*LowerReturnStruct(static_cast<NaryStmtNode&>(*stmt)));
         } else {
@@ -1197,7 +1329,7 @@ BlockNode *CGLowerer::LowerBlock(BlockNode &block) {
           CHECK_FATAL(tmpBlockNode != nullptr, "nullptr is not expected");
           newBlk->AppendStatementsFromBlock(*tmpBlockNode);
         }
-#if TARGARM32 || TARGAARCH64
+#if TARGARM32 || TARGAARCH64 || TARGRISCV64
         }
 #endif
         break;
@@ -1332,7 +1464,7 @@ StmtNode *CGLowerer::LowerCall(CallNode &callNode, StmtNode *&nextStmt, BlockNod
 
   for (size_t i = 0; i < callNode.GetNopndSize(); ++i) {
     BaseNode *newOpnd = LowerExpr(callNode, *callNode.GetNopndAt(i), newBlk);
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
     callNode.SetOpnd(newOpnd, i);
 #else
     SplitCallArg(callNode, newOpnd, i, newBlk);
@@ -1856,7 +1988,7 @@ void CGLowerer::ProcessArrayExpr(BaseNode &expr, BlockNode &blkNode) {
   }
 }
 
-BaseNode *CGLowerer::LowerExpr(const BaseNode &parent, BaseNode &expr, BlockNode &blkNode) {
+BaseNode *CGLowerer::LowerExpr(BaseNode &parent, BaseNode &expr, BlockNode &blkNode) {
   if (expr.GetPrimType() == PTY_u1) {
     expr.SetPrimType(PTY_u8);
   }
@@ -1907,6 +2039,13 @@ BaseNode *CGLowerer::LowerExpr(const BaseNode &parent, BaseNode &expr, BlockNode
     case OP_iaddrof:
       return LowerIaddrof(static_cast<IreadNode&>(expr));
 
+    case OP_select:
+      if (IsComplexSelect(static_cast<TernaryNode&>(expr))) {
+        return LowerComplexSelect(static_cast<TernaryNode&>(expr), parent, blkNode);
+      } else {
+        return SplitTernaryNodeResult(static_cast<TernaryNode&>(expr), parent, blkNode);
+      }
+
     case OP_sizeoftype: {
       CHECK(static_cast<SizeoftypeNode&>(expr).GetTyIdx() < beCommon.GetSizeOfTypeSizeTable(),
             "index out of range in CGLowerer::LowerExpr");
@@ -1941,10 +2080,10 @@ BaseNode *CGLowerer::LowerExpr(const BaseNode &parent, BaseNode &expr, BlockNode
 
     case OP_cand:
       expr.SetOpCode(OP_land);
-      return &expr;
+      return SplitBinaryNodeOpnd1(static_cast<BinaryNode&>(expr), blkNode);
     case OP_cior:
       expr.SetOpCode(OP_lior);
-      return &expr;
+      return SplitBinaryNodeOpnd1(static_cast<BinaryNode&>(expr), blkNode);
     default:
       return &expr;
   }
@@ -2567,6 +2706,12 @@ BaseNode *CGLowerer::LowerIntrinsicop(const BaseNode &parent, IntrinsicopNode &i
   }
   if (intrinNode.GetIntrinsic() == INTRN_MPL_READ_ARRAYCLASS_CACHE_ENTRY) {
     return &intrinNode;
+  }
+  if (intrnID == INTRN_C_constant_p) {
+    BaseNode *opnd = intrinNode.Opnd(0);
+    int64 val = (opnd->op == OP_constval || opnd->op == OP_sizeoftype ||
+                 opnd->op == OP_conststr || opnd->op == OP_conststr16) ? 1 : 0;
+    return mirModule.GetMIRBuilder()->CreateIntConst(val, PTY_i32);
   }
   CHECK_FATAL(false, "unexpected intrinsic type in CGLowerer::LowerIntrinsicop");
   return &intrinNode;

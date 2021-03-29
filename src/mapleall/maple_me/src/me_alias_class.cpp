@@ -86,15 +86,13 @@ AnalysisResult *MeDoAliasClass::Run(MeFunction *func, MeFuncResultMgr *funcResMg
   timer.Start();
   (void)funcResMgr->GetAnalysisResult(MeFuncPhase_SSATAB, func);
   MemPool *aliasClassMp = NewMemPool();
-  auto *kh = static_cast<KlassHierarchy*>(moduleResMgr->GetAnalysisResult(
-      MoPhase_CHA, &func->GetMIRModule()));
-  auto *aliasClass = aliasClassMp->New<MeAliasClass>(
+  KlassHierarchy *kh = nullptr;
+  if (func->GetMIRModule().IsJavaModule()) {
+    kh = static_cast<KlassHierarchy*>(moduleResMgr->GetAnalysisResult(MoPhase_CHA, &func->GetMIRModule()));
+  }
+  MeAliasClass *aliasClass = aliasClassMp->New<MeAliasClass>(
       *aliasClassMp, func->GetMIRModule(), *func->GetMeSSATab(), *func, MeOption::lessThrowAlias,
       MeOption::ignoreIPA, DEBUGFUNC(func), MeOption::setCalleeHasSideEffect, kh);
-  // pass 1 through the program statements
-  if (DEBUGFUNC(func)) {
-    LogInfo::MapleLogger() << "\n============ Alias Classification Pass 1 ============" << '\n';
-  }
   aliasClass->DoAliasAnalysis();
   timer.Stop();
   if (DEBUGFUNC(func)) {

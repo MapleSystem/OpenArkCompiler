@@ -102,6 +102,18 @@ class TypeTable {
     return typeTable;
   }
 
+  auto &GetTypeHashTable() const {
+    return typeHashTable;
+  }
+
+  auto &GetPtrTypeMap() const {
+    return ptrTypeMap;
+  }
+
+  auto &GetRefTypeMap() const {
+    return refTypeMap;
+  }
+
   MIRType *GetTypeFromTyIdx(TyIdx tyIdx) {
     return const_cast<MIRType*>(const_cast<const TypeTable*>(this)->GetTypeFromTyIdx(tyIdx));
   }
@@ -316,6 +328,7 @@ class TypeTable {
     return voidPtrType;
   }
 
+  void UpdateMIRType(const MIRType &pType, const TyIdx tyIdx);
   MIRArrayType *GetOrCreateArrayType(const MIRType &elem, uint8 dim, const uint32 *sizeArray);
   MIRArrayType *GetOrCreateArrayType(const MIRType &elem, uint32 size);  // For one dimention array
   MIRType *GetOrCreateFarrayType(const MIRType &elem);

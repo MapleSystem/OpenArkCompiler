@@ -17,6 +17,7 @@
 #include "mir_nodes.h"
 #include "module_phase.h"
 #include "phase_impl.h"
+#include "me_verify.h"
 
 namespace maple {
 class ConstantFold : public FuncOptimizeImpl {

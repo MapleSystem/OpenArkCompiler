@@ -29,7 +29,7 @@ AnalysisResult *CgDoFPLROffsetAdjustment::Run(CGFunc *cgFunc, CgFuncResultMgr *c
   MemPool *memPool = NewMemPool();
   FPLROffsetAdjustment *offsetAdjustment = nullptr;
   ASSERT(cgFunc != nullptr, "expect a cgfun in CgDoFPLROffsetAdjustment");
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
   offsetAdjustment = memPool->New<AArch64FPLROffsetAdjustment>(*cgFunc);
 #endif
 #if TARGARM32

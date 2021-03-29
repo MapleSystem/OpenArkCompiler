@@ -14,6 +14,8 @@
  */
 #if TARGAARCH64
 #include "aarch64_strldr.h"
+#elif TARGRISCV64
+#include "riscv64_strldr.h"
 #endif
 #if TARGARM32
 #include "arm32_strldr.h"
@@ -44,7 +46,7 @@ AnalysisResult *CgDoStoreLoadOpt::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncRes
   }
   MemPool *storeMemPool = NewMemPool();
   StoreLoadOpt *storeLoadOpt = nullptr;
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
   storeLoadOpt = storeMemPool->New<AArch64StoreLoadOpt>(*cgFunc, *storeMemPool);
 #endif
 #if TARGARM32

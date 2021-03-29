@@ -71,7 +71,7 @@ AnalysisResult *CgDoGlobalOpt::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResult
   reachingDef->SetAnalysisMode(kRDAllAnalysis);
   MemPool *globalMemPool = NewMemPool();
   GlobalOpt *globalOpt = nullptr;
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
   globalOpt = globalMemPool->New<AArch64GlobalOpt>(*cgFunc);
 #endif
 #if TARGARM32

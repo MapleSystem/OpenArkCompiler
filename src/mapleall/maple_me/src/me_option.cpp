@@ -94,6 +94,7 @@ bool MeOption::enableEA = false;
 bool MeOption::placementRC = false;
 bool MeOption::subsumRC = false;
 std::string MeOption::inlineFuncList = "";
+bool MeOption::meVerify = false;
 #if MIR_JAVA
 std::string MeOption::acquireFuncName = "Landroid/location/LocationManager;|requestLocationUpdates|";
 std::string MeOption::releaseFuncName = "Landroid/location/LocationManager;|removeUpdates|";
@@ -197,6 +198,7 @@ enum OptionIndex {
   kMeInlineHint,
   kMeThreads,
   kMeIgnoreInferredRetType,
+  kMeVerify,
 };
 
 const Descriptor kUsage[] = {
@@ -914,6 +916,15 @@ const Descriptor kUsage[] = {
     "  --no-ignore-inferred-ret-type\tDo not ignore func return type inferred by ssadevirt\n",
     "me",
     {} },
+  { kMeVerify,
+    kEnable,
+    "",
+    "meverify",
+    kBuildTypeProduct,
+    kArgCheckPolicyNone,
+    "  --meverify                       \tenable meverify features\n",
+    "me",
+    {}},
 #if MIR_JAVA
   { kMeAcquireFunc,
     0,
@@ -1297,6 +1308,9 @@ bool MeOption::SolveOptions(const std::vector<mapleOption::Option> &opts, bool i
         break;
       case kMeIgnoreInferredRetType:
         ignoreInferredRetType = (opt.Type() == kEnable);
+        break;
+      case kMeVerify:
+        meVerify = (opt.Type() == kEnable);
         break;
 #if MIR_JAVA
       case kMeAcquireFunc:

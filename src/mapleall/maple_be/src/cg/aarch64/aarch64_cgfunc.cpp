@@ -750,6 +750,9 @@ AArch64MemOperand &AArch64CGFunc::SplitOffsetWithAddInstruction(const AArch64Mem
       q1 = opndVal - addend;
     }
     ImmOperand &immAddend = CreateImmOperand(addend, k64BitSize, true);
+    if (memOpnd.GetOffsetImmediate()->GetVary() == kUnAdjustVary) {
+      immAddend.SetVary(kUnAdjustVary);
+    }
     RegOperand &resOpnd = (baseRegNum == AArch64reg::kRinvalid)
                            ? CreateRegisterOperandOfType(PTY_i64)
                            : GetOrCreatePhysicalRegisterOperand(baseRegNum, kSizeOfPtr * kBitsPerByte, kRegTyInt);
@@ -1545,9 +1548,9 @@ RegOperand *AArch64CGFunc::SelectRegread(RegreadNode &expr) {
   RegOperand &reg = GetOrCreateVirtualRegisterOperand(GetVirtualRegNOFromPseudoRegIdx(pregIdx));
   if (Globals::GetInstance()->GetOptimLevel() == 0) {
     MemOperand *src = GetPseudoRegisterSpillMemoryOperand(pregIdx);
-    PrimType stype = GetTypeFromPseudoRegIdx(pregIdx);
     MIRPreg *preg = GetFunction().GetPregTab()->PregFromPregIdx(pregIdx);
-    uint32 srcBitLength = GetPrimTypeSize(preg->GetPrimType()) * kBitsPerByte;
+    PrimType stype = preg->GetPrimType();
+    uint32 srcBitLength = GetPrimTypeSize(stype) * kBitsPerByte;
     GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(PickLdInsn(srcBitLength, stype), reg, *src));
   }
   return &reg;
@@ -3698,7 +3701,7 @@ static bool LIsPrimitivePointer(PrimType ptype) {
 }
 
 Operand *AArch64CGFunc::SelectRetype(TypeCvtNode &node, Operand &opnd0) {
-  PrimType fromType = node.FromType();
+  PrimType fromType = node.Opnd(0)->GetPrimType();
   PrimType toType = node.GetPrimType();
   ASSERT(GetPrimTypeSize(fromType) == GetPrimTypeSize(toType), "retype bit widith doesn' match");
   if (LIsPrimitivePointer(fromType) && LIsPrimitivePointer(toType)) {
@@ -3742,11 +3745,15 @@ Operand *AArch64CGFunc::SelectRetype(TypeCvtNode &node, Operand &opnd0) {
     } else {
       newOpnd0 = &LoadIntoRegister(opnd0, itype);
     }
-    uint32 mopFmov =
-        isImm ? is64Bits ? MOP_xdfmovri : MOP_wsfmovri
-              : isFromInt ? (is64Bits ? MOP_xvmovdr : MOP_xvmovsr) : (is64Bits ? MOP_xvmovrd : MOP_xvmovrs);
-    GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(mopFmov, *resOpnd, *newOpnd0));
-    return resOpnd;
+    if ((IsPrimitiveFloat(fromType) && IsPrimitiveInteger(toType)) ||
+        (IsPrimitiveFloat(toType) && IsPrimitiveInteger(fromType))) {
+      MOperator mopFmov = (isImm ? (is64Bits ? MOP_xdfmovri : MOP_wsfmovri) : isFromInt) ?
+          (is64Bits ? MOP_xvmovdr : MOP_xvmovsr) : (is64Bits ? MOP_xvmovrd : MOP_xvmovrs);
+      GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(mopFmov, *resOpnd, *newOpnd0));
+      return resOpnd;
+    } else {
+      return newOpnd0;
+    }
   } else {
     CHECK_FATAL(false, "NYI retype");
   }

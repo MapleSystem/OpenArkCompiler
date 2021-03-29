@@ -18,59 +18,6 @@
 #include "cgbb.h"
 
 namespace maplebe {
-namespace {
-constexpr int kTbxTargetIdx = 2;
-};
-
-MOperator AArch64InsnVisitor::FlipConditionOp(MOperator originalOp, int &targetIdx) {
-  targetIdx = 1;
-  switch (originalOp) {
-    case AArch64MOP_t::MOP_beq:
-      return AArch64MOP_t::MOP_bne;
-    case AArch64MOP_t::MOP_bge:
-      return AArch64MOP_t::MOP_blt;
-    case AArch64MOP_t::MOP_bgt:
-      return AArch64MOP_t::MOP_ble;
-    case AArch64MOP_t::MOP_bhi:
-      return AArch64MOP_t::MOP_bls;
-    case AArch64MOP_t::MOP_bhs:
-      return AArch64MOP_t::MOP_blo;
-    case AArch64MOP_t::MOP_ble:
-      return AArch64MOP_t::MOP_bgt;
-    case AArch64MOP_t::MOP_blo:
-      return AArch64MOP_t::MOP_bhs;
-    case AArch64MOP_t::MOP_bls:
-      return AArch64MOP_t::MOP_bhi;
-    case AArch64MOP_t::MOP_blt:
-      return AArch64MOP_t::MOP_bge;
-    case AArch64MOP_t::MOP_bne:
-      return AArch64MOP_t::MOP_beq;
-    case AArch64MOP_t::MOP_xcbnz:
-      return AArch64MOP_t::MOP_xcbz;
-    case AArch64MOP_t::MOP_wcbnz:
-      return AArch64MOP_t::MOP_wcbz;
-    case AArch64MOP_t::MOP_xcbz:
-      return AArch64MOP_t::MOP_xcbnz;
-    case AArch64MOP_t::MOP_wcbz:
-      return AArch64MOP_t::MOP_wcbnz;
-    case AArch64MOP_t::MOP_wtbnz:
-      targetIdx = kTbxTargetIdx;
-      return AArch64MOP_t::MOP_wtbz;
-    case AArch64MOP_t::MOP_wtbz:
-      targetIdx = kTbxTargetIdx;
-      return AArch64MOP_t::MOP_wtbnz;
-    case AArch64MOP_t::MOP_xtbnz:
-      targetIdx = kTbxTargetIdx;
-      return AArch64MOP_t::MOP_xtbz;
-    case AArch64MOP_t::MOP_xtbz:
-      targetIdx = kTbxTargetIdx;
-      return AArch64MOP_t::MOP_xtbnz;
-    default:
-      break;
-  }
-  return AArch64MOP_t::MOP_undef;
-}
-
 void AArch64InsnVisitor::ModifyJumpTarget(Operand &targetOperand, BB &bb) {
   if (bb.GetKind() == BB::kBBIgoto) {
     bool modified = false;
@@ -85,7 +32,7 @@ void AArch64InsnVisitor::ModifyJumpTarget(Operand &targetOperand, BB &bb) {
     CHECK_FATAL(modified, "ModifyJumpTarget: Could not change jump target");
     return;
   }
-  bb.GetLastInsn()->SetOperand(GetJumpTargetIdx(*(bb.GetLastInsn())), targetOperand);
+  bb.GetLastInsn()->SetOperand(bb.GetLastInsn()->GetJumpTargetIdx(), targetOperand);
 }
 
 void AArch64InsnVisitor::ModifyJumpTarget(maple::LabelIdx targetLabel, BB &bb) {
@@ -93,7 +40,8 @@ void AArch64InsnVisitor::ModifyJumpTarget(maple::LabelIdx targetLabel, BB &bb) {
 }
 
 void AArch64InsnVisitor::ModifyJumpTarget(BB &newTarget, BB &bb) {
-  ModifyJumpTarget(newTarget.GetLastInsn()->GetOperand(GetJumpTargetIdx(*(newTarget.GetLastInsn()))), bb);
+  ModifyJumpTarget(newTarget.GetLastInsn()->GetOperand(
+      static_cast<int32>(newTarget.GetLastInsn()->GetJumpTargetIdx())), bb);
 }
 
 Insn *AArch64InsnVisitor::CloneInsn(Insn &originalInsn) {
@@ -109,58 +57,12 @@ Insn *AArch64InsnVisitor::CloneInsn(Insn &originalInsn) {
 
 /*
  * Precondition: The given insn is a jump instruction.
- * Get the jump target label operand index from the given instruction.
- * Note: MOP_xbr is a jump instruction, but the target is unknown at compile time,
- * because a register instead of label. So we don't take it as a branching instruction.
- */
-int AArch64InsnVisitor::GetJumpTargetIdx(const Insn &insn) const {
-  MOperator mOp = insn.GetMachineOpcode();
-  switch (mOp) {
-    /* unconditional jump */
-    case MOP_xuncond: {
-      return 0;
-    }
-    /* conditional jump */
-    case MOP_bmi:
-    case MOP_bvc:
-    case MOP_bls:
-    case MOP_blt:
-    case MOP_ble:
-    case MOP_blo:
-    case MOP_beq:
-    case MOP_bpl:
-    case MOP_bhs:
-    case MOP_bvs:
-    case MOP_bhi:
-    case MOP_bgt:
-    case MOP_bge:
-    case MOP_bne:
-    case MOP_wcbz:
-    case MOP_xcbz:
-    case MOP_wcbnz:
-    case MOP_xcbnz: {
-      return 1;
-    }
-    case MOP_wtbz:
-    case MOP_xtbz:
-    case MOP_wtbnz:
-    case MOP_xtbnz: {
-      return kTbxTargetIdx;
-    }
-    default:
-      CHECK_FATAL(false, "Not a jump insn");
-  }
-  return 0;
-}
-
-/*
- * Precondition: The given insn is a jump instruction.
  * Get the jump target label from the given instruction.
  * Note: MOP_xbr is a branching instruction, but the target is unknown at compile time,
  * because a register instead of label. So we don't take it as a branching instruction.
  */
 LabelIdx AArch64InsnVisitor::GetJumpLabel(const Insn &insn) const {
-  int operandIdx = GetJumpTargetIdx(insn);
+  int operandIdx = static_cast<int>(insn.GetJumpTargetIdx());
   if (insn.GetOperand(operandIdx).IsLabelOpnd()) {
     return static_cast<LabelOperand&>(insn.GetOperand(operandIdx)).GetLabelIndex();
   }

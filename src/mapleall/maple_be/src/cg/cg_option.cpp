@@ -54,7 +54,7 @@ bool CGOptions::fastAlloc = false;
 uint64 CGOptions::lsraBBOptSize = 150000;
 uint64 CGOptions::lsraInsnOptSize = 200000;
 uint64 CGOptions::overlapNum = 28;
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
 bool CGOptions::useBarriersForVolatile = false;
 #else
 bool CGOptions::useBarriersForVolatile = true;
