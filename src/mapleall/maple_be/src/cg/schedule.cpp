@@ -14,6 +14,8 @@
  */
 #if TARGAARCH64
 #include "aarch64_schedule.h"
+#elif TARGRISCV64
+#include "riscv64_schedule.h"
 #endif
 #if TARGARM32
 #include "arm32_schedule.h"
@@ -520,7 +522,7 @@ AnalysisResult* CgDoPreScheduling::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncRe
 
   MemPool *scheduleMp = NewMemPool();
   Schedule *schedule = nullptr;
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
   schedule = scheduleMp->New<AArch64Schedule>(*cgFunc, *scheduleMp, *live, PhaseName());
 #endif
 #if TARGARM32
@@ -548,7 +550,7 @@ AnalysisResult* CgDoScheduling::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResMg
 
   MemPool *scheduleMp = NewMemPool();
   Schedule *schedule = nullptr;
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
   schedule = scheduleMp->New<AArch64Schedule>(*cgFunc, *scheduleMp, *live, PhaseName());
 #endif
 #if TARGARM32

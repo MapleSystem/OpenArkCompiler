@@ -105,7 +105,7 @@ void CgFuncPhaseManager::AddPhases(std::vector<std::string> &phases) {
         ADDPHASE("cfgo");
       }
 
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
       if (JAVALANG && CGOptions::DoStoreLoadOpt()) {
         ADDPHASE("storeloadopt");
       }

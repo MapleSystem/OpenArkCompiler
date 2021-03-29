@@ -63,7 +63,7 @@ bool PeepPattern::IfOperandIsLiveAfterInsn(const RegOperand &regOpnd, Insn &insn
       if (tmpRegOpnd.GetRegisterNumber() != regOpnd.GetRegisterNumber()) {
         continue;
       }
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
       const AArch64MD *md = &AArch64CG::kMd[static_cast<AArch64Insn*>(nextInsn)->GetMachineOpcode()];
       auto *regProp = static_cast<AArch64OpndProp*>(md->operand[i]);
 #endif
@@ -147,7 +147,7 @@ ReturnType PeepPattern::IsOpndLiveinBB(const RegOperand &regOpnd, const BB &bb) 
     if (!insn->IsMachineInstruction()) {
       continue;
     }
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
     const AArch64MD *md = &AArch64CG::kMd[static_cast<const AArch64Insn*>(insn)->GetMachineOpcode()];
 #endif
 #if TARGARM32
@@ -156,7 +156,7 @@ ReturnType PeepPattern::IsOpndLiveinBB(const RegOperand &regOpnd, const BB &bb) 
     int32 lastOpndId = insn->GetOperandSize() - 1;
     for (int32 i = lastOpndId; i >= 0; --i) {
       Operand &opnd = insn->GetOperand(i);
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
       auto *regProp = static_cast<AArch64OpndProp*>(md->operand[i]);
 #endif
 #if TARGARM32
@@ -214,7 +214,7 @@ ReturnType PeepPattern::IsOpndLiveinBB(const RegOperand &regOpnd, const BB &bb) 
 
 bool PeepPattern::IsMemOperandOptPattern(const Insn &insn, Insn &nextInsn) {
   /* Check if base register of nextInsn and the dest operand of insn are identical. */
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
   AArch64MemOperand *memOpnd = static_cast<AArch64MemOperand*>(nextInsn.GetMemOpnd());
   ASSERT(memOpnd != nullptr, "null ptr check");
   /* Only for AddrMode_B_OI addressing mode. */
@@ -279,7 +279,7 @@ int32 PeepOptimizer::index = 0;
 void PeepHoleOptimizer::Peephole0() {
   MemPool *memPool = memPoolCtrler.NewMemPool("peepholeOptObj");
   PeepOptimizer peepOptimizer(*cgFunc, memPool);
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
   peepOptimizer.Run<AArch64PeepHole0>();
 #endif
 #if TARGARM32
@@ -291,7 +291,7 @@ void PeepHoleOptimizer::Peephole0() {
 void PeepHoleOptimizer::PeepholeOpt() {
   MemPool *memPool = memPoolCtrler.NewMemPool("peepholeOptObj");
   PeepOptimizer peepOptimizer(*cgFunc, memPool);
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
   peepOptimizer.Run<AArch64PeepHole>();
 #endif
 #if TARGARM32
@@ -303,7 +303,7 @@ void PeepHoleOptimizer::PeepholeOpt() {
 void PeepHoleOptimizer::PrePeepholeOpt() {
   MemPool *memPool = memPoolCtrler.NewMemPool("peepholeOptObj");
   PeepOptimizer peepOptimizer(*cgFunc, memPool);
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
   peepOptimizer.Run<AArch64PrePeepHole>();
 #endif
 #if TARGARM32
@@ -315,7 +315,7 @@ void PeepHoleOptimizer::PrePeepholeOpt() {
 void PeepHoleOptimizer::PrePeepholeOpt1() {
   MemPool *memPool = memPoolCtrler.NewMemPool("peepholeOptObj");
   PeepOptimizer peepOptimizer(*cgFunc, memPool);
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
   peepOptimizer.Run<AArch64PrePeepHole1>();
 #endif
 #if TARGARM32

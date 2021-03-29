@@ -28,7 +28,7 @@ AnalysisResult *CgDoMoveRegArgs::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResu
   MemPool *memPool = NewMemPool();
   MoveRegArgs *movRegArgs = nullptr;
   ASSERT(cgFunc != nullptr, "expect a cgfunc in CgDoMoveRegArgs");
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
   movRegArgs = memPool->New<AArch64MoveRegArgs>(*cgFunc);
 #endif
 #if TARGARM32

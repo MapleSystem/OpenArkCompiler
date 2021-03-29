@@ -35,7 +35,7 @@ VtableImpl::VtableImpl(MIRModule &mod, KlassHierarchy *kh, bool dump)
   mccItabFunc = builder->GetOrCreateFunction(kInterfaceMethod, TyIdx(PTY_ptr));
   mccItabFunc->SetAttr(FUNCATTR_nosideeffect);
 }
-#if defined(TARGARM) || defined(TARGAARCH64)
+#if defined(TARGARM) || defined(TARGAARCH64) || defined(TARGRISCV64)
 bool VtableImpl::Intrinsify(MIRFunction &func, CallNode &cnode) {
   MIRFunction *calleeFunc = GlobalTables::GetFunctionTable().GetFunctionFromPuidx(cnode.GetPUIdx());
   const std::string funcName = calleeFunc->GetName();
@@ -91,7 +91,7 @@ void VtableImpl::ProcessFunc(MIRFunction *func) {
   while (stmt != nullptr) {
     next = stmt->GetNext();
     Opcode opcode = stmt->GetOpCode();
-#if defined(TARGARM) || defined(TARGAARCH64)
+#if defined(TARGARM) || defined(TARGAARCH64) || defined(TARGRISCV64)
     if (kOpcodeInfo.IsCallAssigned(opcode)) {
       CallNode *cnode = static_cast<CallNode*>(stmt);
       MIRFunction *calleefunc = GlobalTables::GetFunctionTable().GetFunctionFromPuidx(cnode->GetPUIdx());
