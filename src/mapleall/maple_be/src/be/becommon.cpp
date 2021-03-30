@@ -138,7 +138,7 @@ void BECommon::ComputeStructTypeSizesAligns(MIRType &ty, const TyIdx &tyIdx) {
       fieldTypeSize = GetTypeSize(fieldTyIdx);
     }
     uint8 fieldAlign = GetTypeAlign(fieldTyIdx);
-    uint8 fieldAlignBits = fieldAlign * kBitsPerByte;
+    uint64 fieldAlignBits = fieldAlign * kBitsPerByte;
     CHECK_FATAL(fieldAlign != 0, "expect fieldAlign not equal 0");
     if ((fieldType->GetKind() == kTypeStruct) || (fieldType->GetKind() == kTypeClass)) {
       AppendStructFieldCount(structType.GetTypeIndex(), GetStructFieldCount(fieldTyIdx));
@@ -180,7 +180,7 @@ void BECommon::ComputeStructTypeSizesAligns(MIRType &ty, const TyIdx &tyIdx) {
           /* pad alloced_size according to the field alignment */
           allocedSize = RoundUp(allocedSize, fieldAlign);
           allocedSize += fieldTypeSize;
-          allocedSizeInBits = allocedSize * 8;
+          allocedSizeInBits = allocedSize * kBitsPerByte;
         }
       }
     } else {  /* for unions, bitfields are treated as non-bitfields */
@@ -557,7 +557,7 @@ std::pair<int32, int32> BECommon::GetFieldOffset(MIRStructType &structType, Fiel
     MIRType *fieldType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(fieldTyIdx);
     uint32 fieldTypeSize = GetTypeSize(fieldTyIdx);
     uint8 fieldAlign = GetTypeAlign(fieldTyIdx);
-    uint8 fieldAlignBits = fieldAlign * kBitsPerByte;
+    uint64 fieldAlignBits = fieldAlign * kBitsPerByte;
     CHECK_FATAL(fieldAlign != 0, "fieldAlign should not equal 0");
     if (structType.GetKind() != kTypeUnion) {
       if (fieldType->GetKind() == kTypeBitField) {
@@ -589,7 +589,7 @@ std::pair<int32, int32> BECommon::GetFieldOffset(MIRStructType &structType, Fiel
       } else {
         uint32 fldSizeInBits = fieldTypeSize * k8BitSize;
         bool leftOverBits = false;
-        uint32 offset = 0;
+        uint64 offset = 0;
 
         if (allocedSizeInBits == allocedSize * k8BitSize) {
           allocedSize = RoundUp(allocedSize, fieldAlign);
@@ -682,7 +682,7 @@ MIRType *BECommon::BeGetOrCreatePointerType(const MIRType &pointedType) {
 
 MIRType *BECommon::BeGetOrCreateFunctionType(TyIdx tyIdx, const std::vector<TyIdx> &vecTy,
                                              const std::vector<TypeAttrs> &vecAt) {
-  MIRType *newType = GlobalTables::GetTypeTable().GetOrCreateFunctionType(mirModule, tyIdx, vecTy, vecAt);
+  MIRType *newType = GlobalTables::GetTypeTable().GetOrCreateFunctionType(tyIdx, vecTy, vecAt);
   if (TyIsInSizeAlignTable(*newType)) {
     return newType;
   }

@@ -24,7 +24,7 @@ void AArch64InsnVisitor::ModifyJumpTarget(Operand &targetOperand, BB &bb) {
     for (Insn *insn = bb.GetLastInsn(); insn != nullptr; insn = insn->GetPrev()) {
       if (insn->GetMachineOpcode() == MOP_adrp_label) {
         LabelIdx labIdx = static_cast<LabelOperand&>(targetOperand).GetLabelIndex();
-        ImmOperand &immOpnd = static_cast<AArch64CGFunc *>(GetCGFunc())->CreateImmOperand(labIdx, 8, false);
+        ImmOperand &immOpnd = static_cast<AArch64CGFunc *>(GetCGFunc())->CreateImmOperand(labIdx, k8BitSize, false);
         insn->SetOperand(1, immOpnd);
         modified = true;
       }

@@ -151,7 +151,7 @@ void MIRFunction::SetReturnStruct(MIRType &retType) {
     flag |= kFuncPropRetStruct;
   }
 }
-void MIRFunction::SetReturnStruct(MIRType *retType) {
+void MIRFunction::SetReturnStruct(const MIRType *retType) {
   switch (retType->GetKind()) {
     case kTypeUnion:
     case kTypeStruct:

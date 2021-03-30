@@ -223,7 +223,7 @@ class CGLowerer {
    * Such intrinsics will bypass the lowering of "assigned",
    * and let mplcg handle the intrinsic results which are not return values.
    */
-  bool IsIntrinsicCallHandledAtLowerLevel(MIRIntrinsicID intrinsic);
+  bool IsIntrinsicCallHandledAtLowerLevel(MIRIntrinsicID intrinsic) const;
 
   bool IsIntrinsicOpHandledAtLowerLevel(MIRIntrinsicID intrinsic);
 
