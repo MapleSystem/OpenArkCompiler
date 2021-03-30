@@ -140,7 +140,8 @@ void BECommon::ComputeStructTypeSizesAligns(MIRType &ty, const TyIdx &tyIdx) {
     uint8 fieldAlign = GetTypeAlign(fieldTyIdx);
     uint64 fieldAlignBits = fieldAlign * kBitsPerByte;
     CHECK_FATAL(fieldAlign != 0, "expect fieldAlign not equal 0");
-    if ((fieldType->GetKind() == kTypeStruct) || (fieldType->GetKind() == kTypeClass)) {
+    if ((fieldType->GetKind() == kTypeStruct) || (fieldType->GetKind() == kTypeClass) ||
+        (fieldType->GetKind() == kTypeUnion)) {
       AppendStructFieldCount(structType.GetTypeIndex(), GetStructFieldCount(fieldTyIdx));
     }
     if (structType.GetKind() != kTypeUnion) {
@@ -304,9 +305,13 @@ void BECommon::ComputeArrayTypeSizesAligns(MIRType &ty, const TyIdx &tyIdx) {
     ComputeTypeSizesAligns(*elemType);
     elemSize = GetTypeSize(elemType->GetTypeIndex());
   }
-  CHECK_FATAL(elemSize != 0, "elemSize should not equal 0");
-  CHECK_FATAL(elemType->GetTypeIndex() != 0u, "elemType's idx should not equal 0");
+  if (!mirModule.IsCModule()) {
+    CHECK_FATAL(elemSize != 0, "elemSize should not equal 0");
+    CHECK_FATAL(elemType->GetTypeIndex() != 0u, "elemType's idx should not equal 0");
+  }
+  uint32 elemAlign = arrayType.GetTypeAttrs().GetAlign();
   elemSize = std::max(elemSize, static_cast<uint32>(GetTypeAlign(elemType->GetTypeIndex())));
+  elemSize = std::max(elemSize, elemAlign);
   /* compute total number of elements from the multipel dimensions */
   uint64 numElems = 1;
   for (int d = 0; d < arrayType.GetDim(); ++d) {
@@ -607,15 +612,17 @@ std::pair<int32, int32> BECommon::GetFieldOffset(MIRStructType &structType, Fiel
 
         if (curFieldID == fieldID) {
           return std::pair<int32, int32>(offset, 0);
-        } else if (fieldType->GetKind() == kTypeStruct) {
-          if ((curFieldID + GetStructFieldCount(fieldTyIdx)) >= fieldID) {
-            MIRStructType *subStructType = static_cast<MIRStructType*>(fieldType);
-            std::pair<int32, int32> result = GetFieldOffset(*subStructType, fieldID - curFieldID);
-            return std::pair<int32, int32>(result.first + allocedSize, result.second);
-          }
-          curFieldID += GetStructFieldCount(fieldTyIdx) + 1;
         } else {
-          ++curFieldID;
+          MIRStructType *subStructType = fieldType->EmbeddedStructType();
+          if (subStructType != nullptr) {
+            if ((curFieldID + GetStructFieldCount(fieldTyIdx)) >= fieldID) {
+              std::pair<int32, int32> result = GetFieldOffset(*subStructType, fieldID - curFieldID);
+              return std::pair<int32, int32>(result.first + allocedSize, result.second);
+            }
+            curFieldID += GetStructFieldCount(fieldTyIdx) + 1;
+          } else {
+            ++curFieldID;
+          }
         }
 
         if (leftOverBits) {
