@@ -331,7 +331,7 @@ BB &AArch64GenProEpilog::GenStackGuardCheckInsn(BB &bb) {
   cgFunc.SelectBxor(stAddrOpnd, stAddrOpnd, checkOp, PTY_u64);
   LabelIdx failLable = aarchCGFunc.CreateLabel();
   aarchCGFunc.SelectCondGoto(aarchCGFunc.GetOrCreateLabelOperand(failLable), OP_brtrue, OP_eq,
-                             stAddrOpnd, aarchCGFunc.CreateImmOperand(0, k64BitSize, false), PTY_u64);
+                             stAddrOpnd, aarchCGFunc.CreateImmOperand(0, k64BitSize, false), PTY_u64, false);
 
   MIRSymbol *failFunc = GlobalTables::GetGsymTable().GetSymbolFromStrIdx(
       GlobalTables::GetStrTable().GetStrIdxFromName(std::string("__stack_chk_fail")));
