@@ -167,7 +167,7 @@ class MIRFunction {
     return funcType->GetParamTypeList().size();
   }
 
-  const MapleVector<TyIdx> &GetParamTypes() const {
+  auto &GetParamTypes() const {
     CHECK_FATAL(funcType != nullptr, "funcType is nullptr");
     return funcType->GetParamTypeList();
   }
@@ -390,7 +390,7 @@ class MIRFunction {
   void SetHasSetjmp();
   bool HasSetjmp() const;
 
-  void SetReturnStruct(MIRType *retType);
+  void SetReturnStruct(const MIRType *retType);
 
   bool IsEmpty() const;
   bool IsClinit() const;

@@ -228,7 +228,7 @@ MIRFunction *MIRBuilder::GetOrCreateFunction(const std::string &str, TyIdx retTy
   }
   auto *fn = mirModule->GetMemPool()->New<MIRFunction>(mirModule, funcSt->GetStIdx());
   fn->SetPuidx(GlobalTables::GetFunctionTable().GetFuncTable().size());
-  MIRFuncType funcType(mirModule->GetMPAllocator());
+  MIRFuncType funcType;
   funcType.SetRetTyIdx(retTyIdx);
   auto funcTyIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&funcType);
   auto *funcTypeInTypeTable = static_cast<MIRFuncType*>(GlobalTables::GetTypeTable().GetTypeFromTyIdx(funcTyIdx));
@@ -282,7 +282,7 @@ MIRFunction *MIRBuilder::CreateFunction(const std::string &name, const MIRType &
     }
   }
   funcSymbol->SetTyIdx(GlobalTables::GetTypeTable().GetOrCreateFunctionType(
-      *mirModule, returnType.GetTypeIndex(), funcVecType, funcVecAttrs, isVarg)->GetTypeIndex());
+      returnType.GetTypeIndex(), funcVecType, funcVecAttrs, isVarg)->GetTypeIndex());
   auto *funcType = static_cast<MIRFuncType*>(funcSymbol->GetType());
   fn->SetMIRFuncType(funcType);
   funcSymbol->SetFunction(fn);
@@ -299,7 +299,7 @@ MIRFunction *MIRBuilder::CreateFunction(StIdx stIdx, bool addToTable) const {
     GlobalTables::GetFunctionTable().GetFuncTable().push_back(fn);
   }
 
-  auto *funcType = mirModule->GetMemPool()->New<MIRFuncType>(mirModule->GetMPAllocator());
+  auto *funcType = mirModule->GetMemPool()->New<MIRFuncType>();
   fn->SetMIRFuncType(funcType);
   return fn;
 }

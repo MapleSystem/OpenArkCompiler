@@ -469,8 +469,7 @@ MIRFunction *FETypeManager::CreateFunction(const GStrIdx &nameIdx, const TyIdx &
     argsAttr.emplace_back(TypeAttrs());
   }
   mirFunc->SetBaseClassFuncNames(nameIdx);
-  funcSymbol->SetTyIdx(GlobalTables::GetTypeTable().GetOrCreateFunctionType(module, retTypeIdx,
-                                                                            argsTypeIdx, argsAttr,
+  funcSymbol->SetTyIdx(GlobalTables::GetTypeTable().GetOrCreateFunctionType(retTypeIdx, argsTypeIdx, argsAttr,
                                                                             isVarg)->GetTypeIndex());
   funcSymbol->SetFunction(mirFunc);
   MIRFuncType *functype = static_cast<MIRFuncType*>(funcSymbol->GetType());

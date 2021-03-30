@@ -932,7 +932,8 @@ bool IpaSideEffect::UpdateSideEffectWithStmt(MeStmt &meStmt,
     case OP_interfaceicallassigned:
     case OP_customcallassigned:
     case OP_polymorphiccallassigned:
-    case OP_icallassigned: {
+    case OP_icallassigned:
+    case OP_superclasscallassigned: {
       hasPrivateDef = hasThrException = true;
       SetHasDef();
       for (size_t i = 0; i < meStmt.NumMeStmtOpnds(); ++i) {

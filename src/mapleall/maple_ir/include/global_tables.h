@@ -333,8 +333,8 @@ class TypeTable {
   MIRArrayType *GetOrCreateArrayType(const MIRType &elem, uint32 size);  // For one dimention array
   MIRType *GetOrCreateFarrayType(const MIRType &elem);
   MIRType *GetOrCreateJarrayType(const MIRType &elem);
-  MIRType *GetOrCreateFunctionType(MIRModule &module, TyIdx, const std::vector<TyIdx>&, const std::vector<TypeAttrs>&,
-                                   bool isVarg = false, bool isSimpCreate = false);
+  MIRType *GetOrCreateFunctionType(const TyIdx&, const std::vector<TyIdx>&, const std::vector<TypeAttrs>&,
+                                   bool isVarg = false);
   MIRType *GetOrCreateStructType(const std::string &name, const FieldVector &fields, const FieldVector &prntFields,
                                  MIRModule &module) {
     return GetOrCreateStructOrUnion(name, fields, prntFields, module);

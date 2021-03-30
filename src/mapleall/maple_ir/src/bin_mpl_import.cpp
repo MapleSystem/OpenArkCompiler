@@ -612,7 +612,7 @@ TyIdx BinaryMplImport::ImportType(bool forPointedType) {
       return origType->GetTypeIndex();
     }
     case kBinKindTypeFunction: {
-      MIRFuncType type(strIdx, mod.GetMPAllocator());
+      MIRFuncType type(strIdx);
       type.SetNameIsLocal(nameIsLocal);
       size_t idx = typTab.size();
       typTab.push_back(nullptr);

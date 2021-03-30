@@ -3129,7 +3129,7 @@ void CGLowerer::LowerJarrayMalloc(const StmtNode &stmt, const JarrayMallocNode &
   blkNode.AppendStatementsFromBlock(*LowerCallAssignedStmt(*callAssign));
 }
 
-bool CGLowerer::IsIntrinsicCallHandledAtLowerLevel(MIRIntrinsicID intrinsic) {
+bool CGLowerer::IsIntrinsicCallHandledAtLowerLevel(MIRIntrinsicID intrinsic) const {
   /* only INTRN_MPL_ATOMIC_EXCHANGE_PTR now. */
   return intrinsic == INTRN_MPL_ATOMIC_EXCHANGE_PTR;
 }

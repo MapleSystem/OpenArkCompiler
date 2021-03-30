@@ -193,14 +193,11 @@ MIRType *TypeTable::GetOrCreateJarrayType(const MIRType &elem) {
   return typeTable.at(tyIdx);
 }
 
-MIRType *TypeTable::GetOrCreateFunctionType(MIRModule &module, TyIdx retTyIdx, const std::vector<TyIdx> &vecType,
-                                            const std::vector<TypeAttrs> &vecAttrs, bool isVarg, bool isSimpCreate) {
-  auto *funcType = module.GetMemPool()->New<MIRFuncType>(retTyIdx, vecType, vecAttrs, module.GetMPAllocator());
-  funcType->SetVarArgs(isVarg);
-  if (isSimpCreate) {
-    return funcType;
-  }
-  TyIdx tyIdx = GetOrCreateMIRType(funcType);
+MIRType *TypeTable::GetOrCreateFunctionType(const TyIdx &retTyIdx, const std::vector<TyIdx> &vecType,
+                                            const std::vector<TypeAttrs> &vecAttrs, bool isVarg) {
+  MIRFuncType funcType(retTyIdx, vecType, vecAttrs);
+  funcType.SetVarArgs(isVarg);
+  TyIdx tyIdx = GetOrCreateMIRType(&funcType);
   ASSERT(tyIdx < typeTable.size(), "index out of range in TypeTable::GetOrCreateFunctionType");
   return typeTable.at(tyIdx);
 }

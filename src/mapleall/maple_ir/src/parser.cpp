@@ -787,7 +787,7 @@ bool MIRParser::ParseFields(MIRStructType &type) {
   return false;
 }
 
-bool MIRParser::ParseStructType(TyIdx &styIdx) {
+bool MIRParser::ParseStructType(TyIdx &styIdx, const GStrIdx &strIdx) {
   MIRTypeKind tkind = kTypeInvalid;
   switch (lexer.GetTokenKind()) {
     case TK_struct:
@@ -806,7 +806,7 @@ bool MIRParser::ParseStructType(TyIdx &styIdx) {
     Error("expect { parsing struct body");
     return false;
   }
-  MIRStructType structType(tkind);
+  MIRStructType structType(tkind, strIdx);
   if (mod.GetSrcLang() == kSrcLangCPlusPlus) {
     structType.SetIsCPlusPlus(true);
   }
@@ -829,7 +829,7 @@ bool MIRParser::ParseStructType(TyIdx &styIdx) {
   return true;
 }
 
-bool MIRParser::ParseClassType(TyIdx &styidx) {
+bool MIRParser::ParseClassType(TyIdx &styidx, const GStrIdx &strIdx) {
   MIRTypeKind tkind = (lexer.GetTokenKind() == TK_class) ? kTypeClass : kTypeClassIncomplete;
   TyIdx parentTypeIdx(0);
   if (lexer.NextToken() == TK_langle) {
@@ -839,7 +839,7 @@ bool MIRParser::ParseClassType(TyIdx &styidx) {
       return false;
     }
   }
-  MIRClassType classType(tkind);
+  MIRClassType classType(tkind, strIdx);
   classType.SetParentTyIdx(parentTypeIdx);
   if (!ParseFields(classType)) {
     return false;
@@ -872,7 +872,7 @@ bool MIRParser::ParseClassType(TyIdx &styidx) {
   return true;
 }
 
-bool MIRParser::ParseInterfaceType(TyIdx &sTyIdx) {
+bool MIRParser::ParseInterfaceType(TyIdx &sTyIdx, const GStrIdx &strIdx) {
   MIRTypeKind tkind = (lexer.GetTokenKind() == TK_interface) ? kTypeInterface : kTypeInterfaceIncomplete;
   std::vector<TyIdx> parents;
   TokenKind tk = lexer.NextToken();
@@ -886,7 +886,7 @@ bool MIRParser::ParseInterfaceType(TyIdx &sTyIdx) {
     parents.push_back(parentTypeIdx);
     tk = lexer.GetTokenKind();
   }
-  MIRInterfaceType interfaceType(tkind);
+  MIRInterfaceType interfaceType(tkind, strIdx);
   interfaceType.SetParentsTyIdx(parents);
   if (!ParseFields(interfaceType)) {
     return false;
@@ -1249,7 +1249,7 @@ bool MIRParser::ParseFuncType(TyIdx &tyIdx) {
     Error("expect return type for function type but get ");
     return false;
   }
-  MIRFuncType functype(retTyIdx, vecTyIdx, vecAttrs, mod.GetMPAllocator());
+  MIRFuncType functype(retTyIdx, vecTyIdx, vecAttrs);
   functype.SetVarArgs(varargs);
   tyIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&functype);
   return true;
@@ -1289,7 +1289,7 @@ bool MIRParser::ParseGenericInstantVector(MIRInstantVectorType &insVecType) {
   return false;
 }
 
-bool MIRParser::ParseDerivedType(TyIdx &tyIdx, MIRTypeKind kind) {
+bool MIRParser::ParseDerivedType(TyIdx &tyIdx, MIRTypeKind kind, const GStrIdx &strIdx) {
   if (lexer.GetTokenKind() != TK_langle) {
     Error("expect langle but get ");
     return false;
@@ -1318,21 +1318,21 @@ bool MIRParser::ParseDerivedType(TyIdx &tyIdx, MIRTypeKind kind) {
       case TK_struct:            // struct type
       case TK_structincomplete:  // structincomplete type
       case TK_union:             // union type
-        if (!ParseStructType(tyIdx)) {
+        if (!ParseStructType(tyIdx, strIdx)) {
           Error("struct/union type wrong when parsing derived type at ");
           return false;
         }
         break;
       case TK_class:  // class type
       case TK_classincomplete:
-        if (!ParseClassType(tyIdx)) {
+        if (!ParseClassType(tyIdx, strIdx)) {
           Error("class type wrong when parsing derived type at ");
           return false;
         }
         break;
       case TK_interface:  // interface type
       case TK_interfaceincomplete:
-        if (!ParseInterfaceType(tyIdx)) {
+        if (!ParseInterfaceType(tyIdx, strIdx)) {
           Error("interface type wrong when parsing derived type at ");
           return false;
         }
@@ -1514,7 +1514,7 @@ bool MIRParser::ParseTypedef() {
       Error("expect primitive type after typedef but get ");
       return false;
     }
-  } else if (!ParseDerivedType(tyIdx, kTypeUnknown)) {
+  } else if (!ParseDerivedType(tyIdx, kTypeUnknown, strIdx)) {
     Error("error passing derived type at ");
     return false;
   }
@@ -1525,17 +1525,12 @@ bool MIRParser::ParseTypedef() {
     mod.CurFunction()->SetGStrIdxToTyIdx(strIdx, tyIdx);
     ASSERT(GlobalTables::GetTypeTable().GetTypeTable().empty() == false, "container check");
     if (GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx)->GetNameStrIdx() == 0u) {
-      GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx)->SetNameStrIdx(strIdx);
       GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx)->SetNameIsLocal(true);
     }
   } else {
     prevTyIdx = mod.GetTypeNameTab()->GetTyIdxFromGStrIdx(strIdx);
     mod.GetTypeNameTab()->SetGStrIdxToTyIdx(strIdx, tyIdx);
     mod.PushbackTypeDefOrder(strIdx);
-    ASSERT(GlobalTables::GetTypeTable().GetTypeTable().empty() == false, "container check");
-    if (GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx)->GetNameStrIdx() == 0u) {
-      GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx)->SetNameStrIdx(strIdx);
-    }
   }
 
   if (prevTyIdx != TyIdx(0) && prevTyIdx != tyIdx) {
@@ -1849,7 +1844,7 @@ bool MIRParser::ParsePrototype(MIRFunction &func, MIRSymbol &funcSymbol, TyIdx &
   MIRType *retType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx);
   func.SetReturnStruct(*retType);
   MIRType *funcType =
-      GlobalTables::GetTypeTable().GetOrCreateFunctionType(mod, tyIdx, vecTy, vecAt, varArgs, false);
+      GlobalTables::GetTypeTable().GetOrCreateFunctionType(tyIdx, vecTy, vecAt, varArgs);
   funcTyIdx = funcType->GetTypeIndex();
   funcSymbol.SetTyIdx(funcTyIdx);
   func.SetMIRFuncType(static_cast<MIRFuncType*>(funcType));
