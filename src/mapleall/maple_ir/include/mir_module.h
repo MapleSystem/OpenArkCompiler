@@ -548,6 +548,16 @@ class MIRModule {
     eaSummary[funcNameIdx] = eaCg;
   }
 
+  DebugInfo *GetDbgInfo() {
+    return dbgInfo;
+  }
+  void SetWithDbgInfo(bool v) {
+    withDbgInfo = v;
+  }
+  bool IsWithDbgInfo() {
+    return withDbgInfo;
+  }
+
  private:
   void DumpTypeTreeToCxxHeaderFile(MIRType &ty, std::unordered_set<MIRType*> &dumpedClasses) const;
 
@@ -574,6 +584,10 @@ class MIRModule {
   std::string fileName;
   TyIdx throwableTyIdx{0};  // a special type that is the base of java exception type. only used for java
   bool withProfileInfo = false;
+
+  DebugInfo *dbgInfo;
+  bool withDbgInfo = false;
+
   // for cg in mplt
   BinaryMplt *binMplt = nullptr;
   bool inIPA = false;

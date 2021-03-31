@@ -23,6 +23,7 @@
 #include "mir_preg.h"
 #include "mir_function.h"
 #include "mir_builder.h"
+#include "debug_info.h"
 #include "intrinsics.h"
 #include "bin_mplt.h"
 
@@ -55,6 +56,7 @@ MIRModule::MIRModule(const std::string &fn)
   GlobalTables::GetGsymTable().SetModule(this);
   typeNameTab = memPool->New<MIRTypeNameTable>(memPoolAllocator);
   mirBuilder = memPool->New<MIRBuilder>(this);
+  dbgInfo = memPool->New<DebugInfo>(this);
   IntrinDesc::InitMIRModule(this);
 }
 
@@ -637,6 +639,9 @@ void MIRModule::OutputAsciiMpl(const char *phaseName, const char *suffix,
     std::streambuf *backup = LogInfo::MapleLogger().rdbuf();
     LogInfo::MapleLogger().rdbuf(mplFile.rdbuf());  // change LogInfo::MapleLogger()'s buffer to that of file
     Dump(emitStructureType, dumpFuncSet);
+    if (withDbgInfo) {
+      dbgInfo->Dump(0);
+    }
     LogInfo::MapleLogger().rdbuf(backup);  // restore LogInfo::MapleLogger()'s buffer
     mplFile.close();
   } else {
