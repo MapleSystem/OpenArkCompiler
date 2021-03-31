@@ -575,6 +575,8 @@ class AArch64CGFunc : public CGFunc {
   }
 
   void CreateCallStructParamPassByStack(int32 symSize, MIRSymbol *sym, RegOperand *addrOpnd, int32 baseOffset);
+  AArch64RegOperand *SelectParmListDreadAccessField(MIRSymbol &sym, FieldID fieldID, PLocInfo &ploc, int32 offset,
+                                                    uint32 parmNum);
   void CreateCallStructParamPassByReg(AArch64reg reg, MemOperand &memOpnd, AArch64ListOperand &srcOpnds,
                                       fpParamState state);
   void CreateCallStructParamMemcpy(const MIRSymbol *sym, RegOperand *addropnd,
@@ -582,9 +584,9 @@ class AArch64CGFunc : public CGFunc {
   AArch64RegOperand *CreateCallStructParamCopyToStack(uint32 numMemOp, MIRSymbol *sym, RegOperand *addropnd,
                                                       int32 copyOffset, const PLocInfo &pLoc);
   void SelectParmListDreadSmallAggregate(MIRSymbol &sym, MIRType &structType, AArch64ListOperand &srcOpnds,
-                                         ParmLocator &parmLocator);
+                                         int32 offset, ParmLocator &parmLocator, FieldID fieldID);
   void SelectParmListIreadSmallAggregate(const IreadNode &iread, MIRType &structType, AArch64ListOperand &srcOpnds,
-                                         ParmLocator &parmLocator);
+                                         int32 offset, ParmLocator &parmLocator);
   void SelectParmListDreadLargeAggregate(MIRSymbol &sym, MIRType &structType, AArch64ListOperand &srcOpnds,
                                          ParmLocator &parmLocator, int32 &structCopyOffset);
   void SelectParmListIreadLargeAggregate(const IreadNode &iread, MIRType &structType, AArch64ListOperand &srcOpnds,
