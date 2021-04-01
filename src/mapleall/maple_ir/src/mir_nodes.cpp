@@ -166,6 +166,9 @@ void BlockNode::AddStatement(StmtNode *stmt) {
 }
 
 void BlockNode::AppendStatementsFromBlock(BlockNode &blk) {
+  if (blk.GetStmtNodes().empty()) {
+    return;
+  }
   stmtNodeList.splice(stmtNodeList.end(), blk.GetStmtNodes());
 }
 

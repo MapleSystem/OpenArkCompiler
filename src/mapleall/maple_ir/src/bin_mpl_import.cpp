@@ -509,7 +509,7 @@ void BinaryMplImport::CompleteAggInfo(TyIdx tyIdx) {
     auto *classType = static_cast<MIRClassType*>(type);
     ImportStructTypeData(*classType);
     ImportClassTypeData(*classType);
-  } else if (type->GetKind() == kTypeStruct) {
+  } else if (type->GetKind() == kTypeStruct || type->GetKind() == kTypeUnion) {
     auto *structType = static_cast<MIRStructType*>(type);
     ImportStructTypeData(*structType);
   } else {
@@ -741,7 +741,7 @@ MIRType &BinaryMplImport::InsertInTypeTables(MIRType &type) {
          (!IsIncomplete(*prevType) && !IsIncomplete(type)) ||
          (!IsIncomplete(*prevType) && IsIncomplete(type)))) {
       resultTypePtr = prevType->CopyMIRTypeNode();
-      if (resultTypePtr->GetKind() == kTypeStruct || resultTypePtr->GetKind() == kTypeStructIncomplete) {
+      if (resultTypePtr->GetKind() == kTypeStruct || resultTypePtr->GetKind() == kTypeUnion || resultTypePtr->GetKind() == kTypeStructIncomplete) {
         tmpStruct.push_back(static_cast<MIRStructType*>(resultTypePtr));
       } else if (resultTypePtr->GetKind() == kTypeClass || resultTypePtr->GetKind() == kTypeClassIncomplete) {
         tmpClass.push_back(static_cast<MIRClassType*>(resultTypePtr));
