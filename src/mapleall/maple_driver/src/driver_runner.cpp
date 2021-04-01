@@ -197,12 +197,6 @@ ErrorCode DriverRunner::ParseInput() const {
 void DriverRunner::ProcessMpl2mplAndMePhases(const std::string &outputFile, const std::string &vtableImplFile) const {
   CHECK_MODULE();
   theMIRModule = theModule;
-
-  if (hasDebugFlag) {
-    std::cout << "set up debug info " << std::endl;
-    theMIRModule->GetDbgInfo()->BuildDebugInfo();
-  }
-
   if (mpl2mplOptions != nullptr || meOptions != nullptr) {
     LogInfo::MapleLogger() << "Processing maplecomb" << '\n';
 

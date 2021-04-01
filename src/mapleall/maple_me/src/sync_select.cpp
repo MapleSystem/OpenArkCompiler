@@ -29,6 +29,7 @@ class SyncSelect {
  public:
   explicit SyncSelect(MeFunction &func)
       : func(func) {
+    AddFunc(SyncKind::kDefault, "Landroid_2Fos_2FParcel_3B_7Crecycle_7C_28_29V");
   }
   ~SyncSelect() = default;
 
@@ -41,8 +42,8 @@ class SyncSelect {
   }
 
  private:
-  void AddFunc(uint8 kind, const std::string &funcName) {
-    syncMap[funcName] = static_cast<SyncKind>(kind);
+  void AddFunc(SyncKind kind, const std::string &funcName) {
+    syncMap[funcName] = kind;
   }
 
   void SetAllSyncKind(SyncKind kind) {

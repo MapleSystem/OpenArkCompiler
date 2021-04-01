@@ -16,7 +16,7 @@
 #define MAPLE_IPA_INCLUDE_RETYPE_H
 #include "module_phase.h"
 #include "mir_nodes.h"
-#include "class_hierarchy.h"
+#include "inline.h"
 
 namespace maple {
 class Retype {

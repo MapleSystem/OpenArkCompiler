@@ -257,7 +257,6 @@ std::vector<int64> CG::GetReferenceOffsets64(const BECommon &beCommon, MIRStruct
   return result;
 }
 
-
 const std::string CG::ExtractFuncName(const std::string &str) {
   /* 3: length of "_7C" */
   size_t offset = 3;

@@ -12,6 +12,7 @@
  * FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v1 for more details.
  */
+MODAPHASE(MoPhase_METHODREPLACE, DoMethodReplace)
 MODAPHASE(MoPhase_CLONE, DoClone)
 MODAPHASE(MoPhase_CHA, DoKlassHierarchy)
 MODAPHASE(MoPhase_VERIFICATION, DoVerification)
@@ -19,6 +20,8 @@ MODAPHASE(MoPhase_VERIFYMARK, DoVerifyMark)
 MODAPHASE(MoPhase_CLINIT, DoClassInit)
 MODAPHASE(MoPhase_CALLGRAPH_ANALYSIS, DoCallGraph)
 MODAPHASE(MoPhase_PREME, DoPreme)
+MODAPHASE(MoPhase_IPO_DEVIRTULIZE, DoIPODevirtulize)
+MODAPHASE(MoPhase_UPDATEMPLT_ANALYSIS, DoUpdateMplt)
 #if MIR_JAVA
 MODTPHASE(MoPhase_GENNATIVESTUBFUNC, DoGenerateNativeStubFunc)
 MODAPHASE(MoPhase_VTABLEANALYSIS, DoVtableAnalysis)
@@ -32,4 +35,6 @@ MODTPHASE(MoPhase_MUIDREPLACEMENT, DoMUIDReplacement)
 MODTPHASE(MoPhase_CHECKCASTGENERATION, DoCheckCastGeneration)
 MODTPHASE(MoPhase_CodeReLayout, DoCodeReLayout)
 #endif
+MODTPHASE(MoPhase_INLINE, DoInline)
+MODTPHASE(MoPhase_OPENPROFILE, DoOpenProfile)
 MODTPHASE(MoPhase_CONSTANTFOLD, DoConstantFold)

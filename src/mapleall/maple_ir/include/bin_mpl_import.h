@@ -93,7 +93,6 @@ class BinaryMplImport {
   void InsertInHashTable(MIRType &ptype);
   void SetupEHRootType();
   void UpdateMethodSymbols();
-  void UpdateDebugInfo();
   void ImportConstBase(MIRConstKind &kind, MIRTypePtr &type, uint32 &fieldID);
   MIRConst *ImportConst(MIRFunction *func);
   GStrIdx ImportStr();
