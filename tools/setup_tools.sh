@@ -158,11 +158,11 @@ if [ ! -f $TOOLS/open64_prebuilt/x86/riscv64/bin/clangfe ]; then
   echo Downloaded open64_prebuilt.
 fi
 
-if [ ! -f $MAPLE_ROOT/third_party/dwarf/include/Dwarf.h ]; then
+if [ ! -f $MAPLE_ROOT/third_party/dwarf_h/include/Dwarf.h ]; then
   cd $TOOLS
-  rm -rf dwarf $MAPLE_ROOT/third_party/dwarf
-  git clone https://gitee.com/hu-_-wen/dwarf_h.git dwarf
-  mv dwarf $MAPLE_ROOT/third_party/
+  rm -rf dwarf $MAPLE_ROOT/third_party/dwarf*
+  git clone https://gitee.com/hu-_-wen/dwarf_h.git
+  mv dwarf_h $MAPLE_ROOT/third_party/
   echo Downloaded dwarf header files.
 fi
 
