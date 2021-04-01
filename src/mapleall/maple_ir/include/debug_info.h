@@ -24,10 +24,7 @@
 #include "lexer.h"
 #include "Dwarf.h"
 
-using namespace maple;
-
 namespace maple {
-
 // for more color code: http://ascii-table.com/ansi-escape-sequences.php
 #define RESET "\x1B[0m"
 #define BOLD "\x1B[1m"
@@ -152,7 +149,7 @@ class DBGExprLoc {
   virtual ~DBGExprLoc() {}
 
   bool IsSimp() const {
-    return (exprVec.size() == 0 && simpLoc->GetVal() != (int)kDbgDefaultVal);
+    return (exprVec.size() == 0 && simpLoc->GetVal() != static_cast<int>(kDbgDefaultVal));
   }
 
   int GetFboffset() const {
@@ -326,7 +323,7 @@ class DBGDie {
   DBGDieAttr *AddAttr(DwAt attr, DwForm form, uint64 val);
   DBGDieAttr *AddSimpLocAttr(DwAt at, DwForm form, uint64 val);
   DBGDieAttr *AddGlobalLocAttr(DwAt at, DwForm form, uint64 val);
-  DBGDieAttr *AddFrmBaseAttr(DwAt at, DwForm form, uint64 val);
+  DBGDieAttr *AddFrmBaseAttr(DwAt at, DwForm form);
   DBGExprLoc *GetExprLoc();
   bool SetAttr(DwAt attr, uint64 val);
   bool SetAttr(DwAt attr, int64 val);
@@ -654,7 +651,7 @@ class DebugInfo {
 
   DBGDieAttr *CreateAttr(DwAt attr, DwForm form, uint64 val);
 
-  DBGDie *CreateVarDie(MIRSymbol *sym, uint32 lnum);
+  DBGDie *CreateVarDie(MIRSymbol *sym);
   DBGDie *CreateFormalParaDie(MIRFunction *func, MIRType *type, MIRSymbol *sym);
   DBGDie *CreateFieldDie(maple::FieldPair pair, uint32 lnum);
   DBGDie *CreateBitfieldDie(MIRBitFieldType *type, GStrIdx idx);
@@ -667,7 +664,7 @@ class DebugInfo {
   DBGDie *GetOrCreateTypeAttrDie(MIRSymbol *sym);
   DBGDie *GetOrCreateConstTypeDie(TypeAttrs attr, DBGDie *typedie);
   DBGDie *GetOrCreateVolatileTypeDie(TypeAttrs attr, DBGDie *typedie);
-  DBGDie *GetOrCreateFuncDeclDie(MIRFunction *func, uint32 lnum);
+  DBGDie *GetOrCreateFuncDeclDie(MIRFunction *func);
   DBGDie *GetOrCreateFuncDefDie(MIRFunction *func, uint32 lnum);
   DBGDie *GetOrCreatePrimTypeDie(PrimType pty);
   DBGDie *GetOrCreateTypeDie(MIRType *type);
@@ -707,7 +704,5 @@ class DebugInfo {
   MapleMap<MIRFunction *, std::map<uint32, LabelIdx>> funcLstrIdxLabIdxMap;
   MapleSet<uint32> strps;
 };
-
 } // namespace maple
-
 #endif // MAPLE_IR_INCLUDE_DBG_INFO_H

@@ -507,6 +507,7 @@ void Schedule::InitIDAndLoc() {
     }
   }
 }
+
 AnalysisResult* CgDoPreScheduling::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResMgr) {
   ASSERT(cgFunc != nullptr, "expect a cgfunc in CgDoPreScheduling");
   CHECK_NULL_FATAL(cgFuncResMgr);

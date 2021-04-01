@@ -297,7 +297,7 @@ void MIRFunction::Dump(bool withoutBody) {
   // class and interface decls.  these has nothing in formals
   // they do have paramtypelist_. this can not skip ones without args
   // but for them at least the func decls are valid
-  if ((module->IsJavaModule() && GetParamSize() != formalDefVec.size()) || 
+  if ((module->IsJavaModule() && GetParamSize() != formalDefVec.size()) ||
       GetAttr(FUNCATTR_optimized)) {
     return;
   }

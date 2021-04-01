@@ -25,7 +25,6 @@
 #include "mpl_logging.h"
 
 namespace maple {
-
 #define TOSTR(s) #s
 // utility functions to get the string from tag value etc.
 // GetDwTagName(unsigned n)
@@ -37,7 +36,7 @@ const char *GetDwTagName(unsigned n) {
     case DW_TAG_hi_user: return "DW_TAG_hi_user";
     case DW_TAG_user_base: return "DW_TAG_user_base";
   }
-  return 0;
+  return nullptr;
 }
 
 // GetDwFormName(unsigned n)
@@ -47,7 +46,7 @@ const char *GetDwFormName(unsigned n) {
 #include "Dwarf.def"
     case DW_FORM_lo_user: return "DW_FORM_lo_user";
   }
-  return 0;
+  return nullptr;
 }
 
 // GetDwAtName(unsigned n)
@@ -57,7 +56,7 @@ const char *GetDwAtName(unsigned n) {
 #include "Dwarf.def"
     case DW_AT_lo_user: return "DW_AT_lo_user";
   }
-  return 0;
+  return nullptr;
 }
 
 // GetDwOpName(unsigned n)
@@ -72,7 +71,7 @@ const char *GetDwOpName(unsigned n) {
     case DW_OP_LLVM_tag_offset: return "DW_OP_LLVM_tag_offset";
     case DW_OP_LLVM_entry_value: return "DW_OP_LLVM_entry_value";
   }
-  return 0;
+  return nullptr;
 }
 
 #define DW_ATE_void 0x20
@@ -85,7 +84,7 @@ const char *GetDwAteName(unsigned n) {
     case DW_ATE_hi_user: return "DW_ATE_hi_user";
     case DW_ATE_void: return "DW_ATE_void";
   }
-  return 0;
+  return nullptr;
 }
 
 // GetDwCfaName(unsigned n)
@@ -98,7 +97,7 @@ const char *GetDwCfaName(unsigned n) {
     case DW_CFA_lo_user: return "DW_CFA_lo_user";
     case DW_CFA_hi_user: return "DW_CFA_hi_user";
   }
-  return 0;
+  return nullptr;
 }
 
 DwAte GetAteFromPTY(PrimType pty) {
@@ -136,5 +135,4 @@ DwAte GetAteFromPTY(PrimType pty) {
       return DW_ATE_void;
   }
 }
-
 }  // namespace maple

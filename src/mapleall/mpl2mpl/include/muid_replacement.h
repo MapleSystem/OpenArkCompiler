@@ -121,11 +121,20 @@ class MUIDReplacement : public FuncOptimizeImpl {
   void ReplaceFieldTypeTable(const std::string &name);
   BaseNode *ReplaceDreadExpr(MIRFunction *currentFunc, StmtNode *stmt, BaseNode *expr);
   BaseNode *ReplaceDread(MIRFunction &currentFunc, const StmtNode *stmt, BaseNode *opnd);
+  void CollectFieldCallSite();
+  void CollectDreadStmt(MIRFunction *currentFunc, BlockNode *block, StmtNode *stmt);
+  BaseNode *CollectDreadExpr(MIRFunction *currentFunc, BlockNode &block, StmtNode *stmt, BaseNode *expr);
   void CollectDread(MIRFunction &currentFunc, StmtNode &stmt, BaseNode &opnd);
   void DumpMUIDFile(bool isFunc);
   void ReplaceStmts();
   void GenerateGlobalRootList();
   void CollectImplicitUndefClassInfo(StmtNode &stmt);
+  void CollectFuncAndData();
+  void InsertFunctionProfile(MIRFunction &currentFunc, int64 index);
+  void GenericSourceMuid();
+  void GenCompilerMfileStatus();
+  bool FindFuncNameInSimplfy(const std::string &name);
+  bool CheckFunctionIsUsed(const MIRFunction &mirFunc) const;
   void ReplaceMethodMetaFuncAddr(MIRSymbol &funcSymbol, int64 index);
   void ReplaceFieldMetaStaticAddr(const MIRSymbol &mirSymbol, uint32 index);
   void CollectFuncAndDataFromKlasses();
@@ -169,11 +178,13 @@ class MUIDReplacement : public FuncOptimizeImpl {
 #define __MRT_MAGIC_PASTE2(x, y) x##y
 #define CLASS_PREFIX(classname) TO_STR(__MRT_MAGIC_PASTE(CLASSINFO_PREFIX, classname)),
   const std::unordered_set<std::string> preloadedClassInfo = {
+#include "white_list.def"
   };
 #undef CLASS_PREFIX
 #undef __MRT_MAGIC_PASTE2
 #undef __MRT_MAGIC_PASTE
   const std::unordered_set<std::string> reflectionList = {
+#include "reflection_list.def"
   };
   bool isLibcore = false;
   MIRSymbol *funcDefTabSym = nullptr;

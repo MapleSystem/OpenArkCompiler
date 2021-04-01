@@ -22,7 +22,7 @@ include_directories = [
   "${MAPLEALL_ROOT}/maple_ipa/include",
   "${MAPLEALL_ROOT}/maple_me/include",
   "${MAPLEALL_ROOT}/maple_phase/include",
-  "${MAPLE_ROOT}/third_party/dwarf/include",
+  "${MAPLE_ROOT}/third_party/dwarf_h/include",
 ]
 
 src_libmplir = [
@@ -51,9 +51,9 @@ src_libmplir = [
   "src/bin_func_export.cpp",
   "src/bin_mpl_import.cpp",
   "src/bin_mpl_export.cpp",
-  "${MAPLEALL_ROOT}/maple_ipa/src/ea_connection_graph.cpp",
   "src/debug_info.cpp",
   "src/debug_info_util.cpp",
+  "${MAPLEALL_ROOT}/maple_ipa/src/ea_connection_graph.cpp",
 ]
 
 src_irbuild = [ "src/driver.cpp" ]

@@ -2662,7 +2662,6 @@ void Emitter::EmitHexUnsigned(uint64 num) {
   outStream.flags(flag);
 }
 
-
 #define XSTR(s) str(s)
 #define str(s) #s
 
@@ -2681,7 +2680,6 @@ void Emitter::EmitDIHeaderFileInfo() {
   Emit("// dummy header file 2\n");
   Emit("// dummy header file 3\n");
 }
-
 
 void Emitter::EmitHugeSoRoutines(bool lastRoutine) {
   if (!lastRoutine && (javaInsnCount < (static_cast<uint64>(hugeSoSeqence) *

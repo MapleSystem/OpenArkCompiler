@@ -639,9 +639,6 @@ void MIRModule::OutputAsciiMpl(const char *phaseName, const char *suffix,
     std::streambuf *backup = LogInfo::MapleLogger().rdbuf();
     LogInfo::MapleLogger().rdbuf(mplFile.rdbuf());  // change LogInfo::MapleLogger()'s buffer to that of file
     Dump(emitStructureType, dumpFuncSet);
-    if (withDbgInfo) {
-      dbgInfo->Dump(0);
-    }
     LogInfo::MapleLogger().rdbuf(backup);  // restore LogInfo::MapleLogger()'s buffer
     mplFile.close();
   } else {
@@ -649,6 +646,13 @@ void MIRModule::OutputAsciiMpl(const char *phaseName, const char *suffix,
     binaryMplt.GetBinExport().not2mplt = true;
     binaryMplt.Export(outfileName);
   }
+  std::ofstream mplFile;
+  mplFile.open(outfileName, std::ios::trunc);
+  std::streambuf *backup = LogInfo::MapleLogger().rdbuf();
+  LogInfo::MapleLogger().rdbuf(mplFile.rdbuf());  // change cout's buffer to that of file
+  Dump(emitStructureType);
+  LogInfo::MapleLogger().rdbuf(backup);  // restore cout's buffer
+  mplFile.close();
 }
 
 uint32 MIRModule::GetFileinfo(GStrIdx strIdx) const {

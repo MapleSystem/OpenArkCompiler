@@ -133,6 +133,9 @@ class DoConstantFold : public ModulePhase {
 
   AnalysisResult *Run(MIRModule *mod, ModuleResultMgr *mrm) override {
     OPT_TEMPLATE(ConstantFold);
+    if (MeOption::meVerify) {
+      VerifyGlobalTypeTable();
+    }
     return nullptr;
   }
 };
