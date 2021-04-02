@@ -2613,14 +2613,14 @@ bool MIRParser::ParseScalarValue(MIRConstPtr &stype, MIRType &type, uint32 field
       Error("constant value incompatible with single-precision float type at ");
       return false;
     }
-    MIRFloatConst *fConst = GlobalTables::GetFpConstTable().GetOrCreateFloatConst(lexer.GetTheFloatVal());
+    MIRFloatConst *fConst = GlobalTables::GetFpConstTable().GetOrCreateFloatConst(lexer.GetTheFloatVal(), fieldID);
     stype = fConst;
   } else if (ptp == PTY_f64) {
     if (lexer.GetTokenKind() != TK_doubleconst && lexer.GetTokenKind() != TK_intconst) {
       Error("constant value incompatible with double-precision float type at ");
       return false;
     }
-    MIRDoubleConst *dconst = GlobalTables::GetFpConstTable().GetOrCreateDoubleConst(lexer.GetTheDoubleVal());
+    MIRDoubleConst *dconst = GlobalTables::GetFpConstTable().GetOrCreateDoubleConst(lexer.GetTheDoubleVal(), fieldID);
     stype = dconst;
   } else {
     return false;
