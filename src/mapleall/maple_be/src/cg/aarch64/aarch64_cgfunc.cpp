@@ -7348,6 +7348,12 @@ Operand *AArch64CGFunc::SelectCclz(IntrinsicopNode &intrnnode) {
   PrimType ptype = argexpr->GetPrimType();
   Operand *opnd = HandleExpr(intrnnode, *argexpr);
   MOperator mop;
+  if (opnd->IsMemoryAccessOperand()) {
+    RegOperand &ldDest = CreateRegisterOperandOfType(ptype);
+    Insn &insn = GetCG()->BuildInstruction<AArch64Insn>(PickLdInsn(GetPrimTypeBitSize(ptype), ptype), ldDest, *opnd);
+    GetCurBB()->AppendInsn(insn);
+    opnd = &ldDest;
+  }
   if (GetPrimTypeSize(ptype) == k4ByteSize) {
     mop = MOP_wclz;
   } else {
@@ -7362,6 +7368,12 @@ Operand *AArch64CGFunc::SelectCctz(IntrinsicopNode &intrnnode) {
   BaseNode *argexpr = intrnnode.Opnd(0);
   PrimType ptype = argexpr->GetPrimType();
   Operand *opnd = HandleExpr(intrnnode, *argexpr);
+  if (opnd->IsMemoryAccessOperand()) {
+    RegOperand &ldDest = CreateRegisterOperandOfType(ptype);
+    Insn &insn = GetCG()->BuildInstruction<AArch64Insn>(PickLdInsn(GetPrimTypeBitSize(ptype), ptype), ldDest, *opnd);
+    GetCurBB()->AppendInsn(insn);
+    opnd = &ldDest;
+  }
   MOperator clzmop;
   MOperator rbitmop;
   if (GetPrimTypeSize(ptype) == k4ByteSize) {
