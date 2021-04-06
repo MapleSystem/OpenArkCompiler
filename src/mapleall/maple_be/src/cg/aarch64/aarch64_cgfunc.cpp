@@ -5239,7 +5239,7 @@ void AArch64CGFunc::SelectParmListIreadSmallAggregate(const IreadNode &iread, MI
 }
 
 void AArch64CGFunc::SelectParmListDreadLargeAggregate(MIRSymbol &sym, MIRType &structType, AArch64ListOperand &srcOpnds,
-                                                      ParmLocator &parmLocator, int32 structCopyOffset,
+                                                      ParmLocator &parmLocator, int32 &structCopyOffset,
                                                       int32 fromOffset) {
   /*
    * Pass larger sized struct on stack.
@@ -5275,7 +5275,7 @@ void AArch64CGFunc::SelectParmListDreadLargeAggregate(MIRSymbol &sym, MIRType &s
 
 void AArch64CGFunc::SelectParmListIreadLargeAggregate(const IreadNode &iread, MIRType &structType,
                                                       AArch64ListOperand &srcOpnds, ParmLocator &parmLocator,
-                                                      int32 structCopyOffset, int32 fromOffset) {
+                                                      int32 &structCopyOffset, int32 fromOffset) {
   int32 symSize = GetBecommon().GetTypeSize(structType.GetTypeIndex().GetIdx());
   RegOperand *addrOpnd0 = static_cast<RegOperand*>(HandleExpr(iread, *(iread.Opnd(0))));
   RegOperand *addrOpnd1 = &LoadIntoRegister(*addrOpnd0, iread.Opnd(0)->GetPrimType());
