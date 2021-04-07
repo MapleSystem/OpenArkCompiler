@@ -252,9 +252,12 @@ class BCUtil {
   static PrimType GetPrimType(const GStrIdx &name);
   static bool IsJavaReferenceType(const GStrIdx &typeNameIdx);
   static bool IsJavaPrimitveType(const GStrIdx &typeNameIdx);
+  static bool IsJavaPrimitiveTypeName(const std::string typeName);
   static bool IsArrayType(const GStrIdx &typeNameIdx);
   static std::string TrimArrayModifier(const std::string &typeName);
   static void AddDefaultDepSet(std::unordered_set<std::string> &typeSet);
+  static uint32 Name2RegNum(const std::string &name);
+  static bool HasContainSuffix(const std::string &value, const std::string &suffix);
 };  // BCUtil
 }  // namespace bc
 }  // namespace maple

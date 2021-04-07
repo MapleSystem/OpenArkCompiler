@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -53,26 +53,21 @@ bool FEInputStructHelper::ProcessDeclImpl() {
     return false;
   }
   if (!FEOptions::GetInstance().IsGenMpltOnly() && !isOnDemandLoad) {
-    // Create Symbol
     CreateSymbol();
   }
-  // Process SuperClass
   ProcessDeclSuperClass();
-  // Process Interface
   ProcessDeclImplements();
-  // Process Info
   ProcessDeclDefInfo();
   // Process Fields
   InitFieldHelpers();
   ProcessFieldDef();
+  ProcessExtraFields();
   if (!FEOptions::GetInstance().IsGenMpltOnly() && !isOnDemandLoad) {
     ProcessStaticFields();
   }
   // Process Methods
   InitMethodHelpers();
   ProcessMethodDef();
-  // Process Pragma
-  // Process File Name
   return true;
 }
 
@@ -95,9 +90,7 @@ void FEInputStructHelper::CreateSymbol() {
 }
 
 void FEInputStructHelper::ProcessDeclSuperClass() {
-  if (srcLang == kSrcLangJava) {
-    ProcessDeclSuperClassForJava();
-  }
+  ProcessDeclSuperClassForJava();
 }
 
 void FEInputStructHelper::ProcessDeclSuperClassForJava() {
@@ -187,12 +180,10 @@ void FEInputStructHelper::ProcessDeclDefInfo() {
   std::string classNameOrig = GetStructNameOrin();
   GStrIdx classNameOrigIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(classNameOrig);
   SET_CLASS_INFO_PAIR(mirStructType, "INFO_classnameorig", classNameOrigIdx.GetIdx(), true);
-  // INFO_superclassname
   if (srcLang == kSrcLangJava) {
+    // INFO_superclassname
     ProcessDeclDefInfoSuperNameForJava();
-  }
-  // INFO_implements
-  if (srcLang == kSrcLangJava) {
+    // INFO_implements
     ProcessDeclDefInfoImplementNameForJava();
   }
   // INFO_attribute_string
@@ -202,6 +193,8 @@ void FEInputStructHelper::ProcessDeclDefInfo() {
   SET_CLASS_INFO_PAIR(mirStructType, "INFO_attribute_string", attrsNameIdx.GetIdx(), true);
   // INFO_access_flags
   SET_CLASS_INFO_PAIR(mirStructType, "INFO_access_flags", GetRawAccessFlags(), false);
+  // INFO_ir_srcfile_signature
+  SET_CLASS_INFO_PAIR(mirStructType, "INFO_ir_srcfile_signature", GetIRSrcFileSigIdx(), true);
 }
 
 void FEInputStructHelper::ProcessDeclDefInfoSuperNameForJava() {
@@ -233,13 +226,17 @@ void FEInputStructHelper::ProcessDeclDefInfoImplementNameForJava() {
 
 void FEInputStructHelper::ProcessStaticFields() {
   uint32 i = 0;
-  uint32 stringIDCount = 0;
   FieldVector::iterator it;
   for (it = mirStructType->GetStaticFields().begin(); it != mirStructType->GetStaticFields().end(); ++i, ++it) {
+#ifndef USE_OPS
+    StIdx stIdx = SymbolBuilder::Instance().GetStIdxFromStrIdx(it->first);
+#else
     StIdx stIdx = GlobalTables::GetGsymTable().GetStIdxFromStrIdx(it->first);
+#endif
     const std::string &fieldName = GlobalTables::GetStrTable().GetStringFromStrIdx(it->first);
     MIRConst *cst = nullptr;
     MIRType *type = GlobalTables::GetTypeTable().GetTypeFromTyIdx(it->second.first);
+    MapleAllocator &alloc = FEManager::GetModule().GetMPAllocator();
     if (i < staticFieldsConstVal.size()) {
       cst = staticFieldsConstVal[i];
       if (cst != nullptr && cst->GetKind() == kConstStr16Const) {
@@ -249,19 +246,17 @@ void FEInputStructHelper::ProcessStaticFields() {
         if (literalVar == nullptr) {
           literalVar = FEManager::GetJavaStringManager().CreateLiteralVar(FEManager::GetMIRBuilder(), str16, true);
         }
-        if (!FEOptions::GetInstance().IsAOT()) {
-          AddrofNode *expr = FEManager::GetMIRBuilder().CreateExprAddrof(0, *literalVar,
+        AddrofNode *expr = FEManager::GetMIRBuilder().CreateExprAddrof(0, *literalVar,
             FEManager::GetModule().GetMemPool());
-          MIRType *ptrType = GlobalTables::GetTypeTable().GetTypeTable()[PTY_ptr];
-          // Judge null pointer is not required.
-          cst = new(std::nothrow) MIRAddrofConst(expr->GetStIdx(), expr->GetFieldID(), *ptrType);
-        } else {
-          uint32 stringID = finalStaticStringID[stringIDCount++];
-          cst = new(std::nothrow) MIRIntConst(stringID, *GlobalTables::GetTypeTable().GetInt64());
-        }
+        MIRType *ptrType = GlobalTables::GetTypeTable().GetTypeTable()[PTY_ptr];
+        cst = alloc.GetMemPool()->New<MIRAddrofConst>(expr->GetStIdx(), expr->GetFieldID(), *ptrType);
       }
     }
+#ifndef USE_OPS
+    MIRSymbol *fieldVar = SymbolBuilder::Instance().GetSymbolFromStIdx(stIdx.Idx());
+#else
     MIRSymbol *fieldVar = GlobalTables::GetGsymTable().GetSymbolFromStidx(stIdx.Idx());
+#endif
     if (fieldVar == nullptr) {
       fieldVar = FEManager::GetMIRBuilder().GetOrCreateGlobalDecl(fieldName, *type);
       fieldVar->SetAttrs(it->second.second.ConvertToTypeAttrs());
@@ -284,6 +279,38 @@ void FEInputStructHelper::ProcessFieldDef() {
     } else {
       ERR(kLncErr, "Error occurs in ProcessFieldDef for %s", GetStructNameOrin().c_str());
     }
+  }
+}
+
+void FEInputStructHelper::ProcessExtraFields() {
+  // add to this set to add extrafield into a class, in this format: classname, fieldname, type, attributes
+  std::vector<ExtraField> extraFields = {
+    { "Lcom_2Fandroid_2Finternal_2Fos_2FBinderCallsStats_3B", "mCallSessionsPoolSize", "i32", "private" },
+    { "Ljava_2Flang_2FObject_3B", "shadow_24__klass__", "Ljava_2Flang_2FClass_3B", "private transient final" },
+  };
+  for (auto it = extraFields.begin(); it != extraFields.end(); ++it) {
+    bool isCreat = false;
+    MIRStructType *structType = FEManager::GetTypeManager().GetOrCreateClassOrInterfaceType(it->klass,
+        false, FETypeFlag::kSrcUnknown, isCreat);
+    if (structType->IsImported()) {
+      continue;
+    }
+    GStrIdx fieldStrIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(it->field);
+    MIRType *fieldType = FEManager::GetTypeManager().GetOrCreateTypeFromName(it->type, FETypeFlag::kSrcUnknown, true);
+    std::vector<std::string> attrs = FEUtils::Split(it->attr, ' ');
+    FieldAttrs typeAttrs;
+    for (auto ait = attrs.begin(); ait != attrs.end(); ++ait) {
+      FEInputFieldHelper::SetFieldAttribute(*ait, typeAttrs);
+    }
+    for (auto fit = structType->GetFields().begin(); fit != structType->GetFields().end(); ++fit) {
+      if (fit->first == fieldStrIdx) {
+        (void)structType->GetFields().erase(fit);
+        break;
+      }
+    }
+    // insert at the beginning
+    structType->GetFields().insert(structType->GetFields().begin(),
+        FieldPair(fieldStrIdx, TyIdxFieldAttrPair(fieldType->GetTypeIndex(), typeAttrs)));
   }
 }
 
@@ -312,39 +339,7 @@ void FEInputStructHelper::ProcessPragma() {
 
 // ---------- FEInputMethodHelper ----------
 bool FEInputMethodHelper::ProcessDeclImpl(MapleAllocator &allocator) {
-  MPLFE_PARALLEL_FORBIDDEN();
-  ASSERT(srcLang != kSrcLangUnknown, "src lang not set");
-  std::string methodShortName = GetMethodName(false, false);
-  std::string methodName = GetMethodName(true);
-  CHECK_FATAL(!methodName.empty(), "error: method name is empty");
-  if (methodShortName.compare("main") == 0) {
-    FEManager::GetMIRBuilder().GetMirModule().SetEntryFuncName(methodName);
-  }
-  methodNameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(methodName);
-  SolveReturnAndArgTypes(allocator);
-  FuncAttrs attrs = GetAttrs();
-  bool isStatic = IsStatic();
-  bool isVarg = IsVarg();
-  CHECK_FATAL(retType != nullptr, "function must have return type");
-  MIRType *mirReturnType = nullptr;
-  bool usePtr = (srcLang == kSrcLangJava);
-  if (retType->GetPrimType() == PTY_void) {
-    mirReturnType = retType->GenerateMIRType(srcLang, false);
-  } else {
-    mirReturnType = retType->GenerateMIRType(srcLang, usePtr);
-  }
-  ASSERT(mirReturnType != nullptr, "return type is nullptr");
-  std::vector<TyIdx> argsTypeIdx;
-  for (FEIRType *type : argTypes) {
-    MIRType *argType = type->GenerateMIRType(srcLang, usePtr);
-    argsTypeIdx.push_back(argType->GetTypeIndex());
-  }
-  mirFunc = FEManager::GetTypeManager().CreateFunction(methodNameIdx, mirReturnType->GetTypeIndex(),
-                                                       argsTypeIdx, isVarg, isStatic);
-  mirMethodPair.first = mirFunc->GetStIdx();
-  mirMethodPair.second.first = mirFunc->GetMIRFuncType()->GetTypeIndex();
-  mirMethodPair.second.second = attrs;
-  mirFunc->SetFuncAttrs(attrs);
+  CHECK_FATAL(false, "NYI");
   return true;
 }
 

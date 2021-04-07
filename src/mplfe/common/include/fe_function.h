@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -84,6 +84,7 @@ class FEFunction {
   virtual bool LabelGeneralBBs(const std::string &phaseName);
   virtual bool ProcessFEIRFunction();
   virtual bool GenerateArgVarList(const std::string &phaseName) = 0;
+  virtual bool GenerateAliasVars(const std::string &phaseName) = 0;
   virtual bool EmitToFEIRStmt(const std::string &phaseName) = 0;
   virtual bool BuildMapLabelStmt(const std::string &phaseName);
   virtual bool SetupFEIRStmtJavaTry(const std::string &phaseName);
@@ -193,6 +194,9 @@ class FEFunction {
   void InsertCvtStmt(const FEIRVarTypeScatter &fromVar, const FEIRType &toType);
   void InsertJavaMergeStmt(const FEIRVarTypeScatter &fromVar, const FEIRType &toType);
   void InsertDAssignStmt4TypeCvt(const FEIRVarTypeScatter &fromVar, const FEIRType &toType, UniqueFEIRExpr expr);
+  bool WithFinalFieldsNeedBarrier(MIRClassType *classType, bool isStatic) const;
+  bool IsNeedInsertBarrier();
+
   std::list<std::unique_ptr<GeneralStmt>> genStmtList;
   std::list<std::unique_ptr<GeneralBB>> genBBList;
   std::list<UniqueFEIRStmt> feirStmtList;

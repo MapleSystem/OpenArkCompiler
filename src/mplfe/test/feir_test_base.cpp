@@ -14,6 +14,7 @@
  */
 #include "feir_test_base.h"
 #include "mplfe_ut_environment.h"
+#include "fe_utils.h"
 
 namespace maple {
 MemPool *FEIRTestBase::mp = nullptr;
@@ -23,11 +24,12 @@ FEIRTestBase::FEIRTestBase()
       mirBuilder(&MPLFEUTEnvironment::GetMIRModule()),
       func(&MPLFEUTEnvironment::GetMIRModule(), StIdx(0, 0)) {
   func.Init();
+  func.NewBody();
   mirBuilder.SetCurrentFunction(func);
 }
 
 void FEIRTestBase::SetUpTestCase() {
-  mp = memPoolCtrler.NewMemPool("MemPool for FEIRTestBase", false /* isLocalPool */);
+  mp = FEUtils::NewMempool("MemPool for FEIRTestBase", false /* isLocalPool */);
 }
 
 void FEIRTestBase::TearDownTestCase() {

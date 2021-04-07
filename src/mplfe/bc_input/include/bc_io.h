@@ -78,6 +78,7 @@ class BCReader : public BCIO, public BasicIORead {
   ClassElem GetClassFieldFromIdx(uint32 idx) const;
   std::string GetSignature(uint32 idx) const;
   uint32 GetFileIndex() const;
+  std::string GetIRSrcFileSignature() const;
 
  protected:
   virtual std::string GetStringFromIdxImpl(uint32 idx) const = 0;
@@ -87,6 +88,7 @@ class BCReader : public BCIO, public BasicIORead {
   virtual std::string GetSignatureImpl(uint32 idx) const = 0;
   virtual uint32 GetFileIndexImpl() const = 0;
   virtual bool RetrieveHeaderImpl(RawData &data);
+  std::string irSrcFileSignature;
 };
 }  // namespace bc
 }  // namespace maple

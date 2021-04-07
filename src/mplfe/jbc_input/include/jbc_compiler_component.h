@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -28,11 +28,8 @@ class JBCCompilerComponent : public MPLFECompilerComponent {
  protected:
   bool ParseInputImpl() override;
   bool LoadOnDemandTypeImpl() override;
-  bool PreProcessDeclImpl() override;
-  bool ProcessDeclImpl() override;
   void ProcessPragmaImpl() override;
-  bool PreProcessWithoutFunctionImpl() override;
-  bool PreProcessWithFunctionImpl() override;
+  std::unique_ptr<FEFunction> CreatFEFunctionImpl(FEInputMethodHelper *methodHelper) override;
   std::string GetComponentNameImpl() const override;
   bool ParallelableImpl() const override;
   void DumpPhaseTimeTotalImpl() const override;

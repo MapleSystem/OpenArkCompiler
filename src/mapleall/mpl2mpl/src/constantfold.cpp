@@ -743,9 +743,9 @@ ConstvalNode *ConstantFold::FoldFPConstBinary(Opcode opcode, PrimType resultType
       break;
   }
   if (resultType == PTY_f64) {
-    resultConst->SetConstVal(GlobalTables::GetFpConstTable().GetOrCreateDoubleConst(constValueDouble, 0));
+    resultConst->SetConstVal(GlobalTables::GetFpConstTable().GetOrCreateDoubleConst(constValueDouble));
   } else {
-    resultConst->SetConstVal(GlobalTables::GetFpConstTable().GetOrCreateFloatConst(constValueFloat, 0));
+    resultConst->SetConstVal(GlobalTables::GetFpConstTable().GetOrCreateFloatConst(constValueFloat));
   }
   return resultConst;
 }
@@ -1029,9 +1029,9 @@ ConstvalNode *ConstantFold::FoldFPConstUnary(Opcode opcode, PrimType resultType,
   auto *resultConst = mirModule->CurFuncCodeMemPool()->New<ConstvalNode>();
   resultConst->SetPrimType(resultType);
   if (resultType == PTY_f32) {
-    resultConst->SetConstVal(GlobalTables::GetFpConstTable().GetOrCreateFloatConst(constValue, 0));
+    resultConst->SetConstVal(GlobalTables::GetFpConstTable().GetOrCreateFloatConst(constValue));
   } else {
-    resultConst->SetConstVal(GlobalTables::GetFpConstTable().GetOrCreateDoubleConst(constValue, 0));
+    resultConst->SetConstVal(GlobalTables::GetFpConstTable().GetOrCreateDoubleConst(constValue));
   }
   return resultConst;
 }
@@ -1261,13 +1261,13 @@ MIRConst *ConstantFold::FoldRoundMIRConst(const MIRConst &cst, PrimType fromType
       int64 fromValue = constValue.GetValue();
       float floatValue = round(static_cast<float>(fromValue));
       if (static_cast<int64>(floatValue) == fromValue) {
-        return GlobalTables::GetFpConstTable().GetOrCreateFloatConst(floatValue, 0);
+        return GlobalTables::GetFpConstTable().GetOrCreateFloatConst(floatValue);
       }
     } else {
       uint64 fromValue = static_cast<uint64>(constValue.GetValue());
       float floatValue = round(static_cast<float>(fromValue));
       if (static_cast<uint64>(floatValue) == fromValue) {
-        return GlobalTables::GetFpConstTable().GetOrCreateFloatConst(floatValue, 0);
+        return GlobalTables::GetFpConstTable().GetOrCreateFloatConst(floatValue);
       }
     }
   } else if (toType == PTY_f64 && IsPrimitiveInteger(fromType)) {
@@ -1276,13 +1276,13 @@ MIRConst *ConstantFold::FoldRoundMIRConst(const MIRConst &cst, PrimType fromType
       int64 fromValue = constValue.GetValue();
       double doubleValue = round(static_cast<double>(fromValue));
       if (static_cast<int64>(doubleValue) == fromValue) {
-        return GlobalTables::GetFpConstTable().GetOrCreateDoubleConst(doubleValue, 0);
+        return GlobalTables::GetFpConstTable().GetOrCreateDoubleConst(doubleValue);
       }
     } else {
       uint64 fromValue = static_cast<uint64>(constValue.GetValue());
       double doubleValue = round(static_cast<double>(fromValue));
       if (static_cast<uint64>(doubleValue) == fromValue) {
-        return GlobalTables::GetFpConstTable().GetOrCreateDoubleConst(doubleValue, 0);
+        return GlobalTables::GetFpConstTable().GetOrCreateDoubleConst(doubleValue);
       }
     }
   }
@@ -1353,14 +1353,14 @@ MIRConst *ConstantFold::FoldTypeCvtMIRConst(const MIRConst &cst, PrimType fromTy
       const MIRDoubleConst *fromValue = safe_cast<MIRDoubleConst>(cst);
       ASSERT_NOT_NULL(fromValue);
       float floutValue = static_cast<float>(fromValue->GetValue());
-      MIRFloatConst *toValue = GlobalTables::GetFpConstTable().GetOrCreateFloatConst(floutValue, 0);
+      MIRFloatConst *toValue = GlobalTables::GetFpConstTable().GetOrCreateFloatConst(floutValue);
       toConst = toValue;
     } else {
       ASSERT(GetPrimTypeBitSize(toType) == 64, "We suppot F32 and F64");
       const MIRFloatConst *fromValue = safe_cast<MIRFloatConst>(cst);
       ASSERT_NOT_NULL(fromValue);
       double doubleValue = static_cast<double>(fromValue->GetValue());
-      MIRDoubleConst *toValue = GlobalTables::GetFpConstTable().GetOrCreateDoubleConst(doubleValue, 0);
+      MIRDoubleConst *toValue = GlobalTables::GetFpConstTable().GetOrCreateDoubleConst(doubleValue);
       toConst = toValue;
     }
     return toConst;

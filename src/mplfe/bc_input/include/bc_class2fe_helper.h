@@ -33,9 +33,14 @@ class BCClass2FEHelper : public FEInputStructHelper {
   std::string GetSourceFileNameImpl() const override;
   MIRStructType *CreateMIRStructTypeImpl(bool &error) const override;
   uint64 GetRawAccessFlagsImpl() const override;
+  GStrIdx GetIRSrcFileSigIdxImpl() const override;
+  bool IsMultiDefImpl() const override;
   std::string GetSrcFileNameImpl() const override;
 
   BCClass &klass;
+
+ private:
+  void TryMarkMultiDefClass(MIRStructType &typeImported) const;
 };
 
 class BCClassField2FEHelper : public FEInputFieldHelper {

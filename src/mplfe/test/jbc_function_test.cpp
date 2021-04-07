@@ -38,7 +38,7 @@ class JBCFunctionTest : public testing::Test, public RedirectBuffer {
   ~JBCFunctionTest() = default;
 
   static void SetUpTestCase() {
-    mp = memPoolCtrler.NewMemPool("MemPool for JBCFunctionTest", false /* isLcalPool */);
+    mp = FEUtils::NewMempool("MemPool for JBCFunctionTest", false /* isLcalPool */);
   }
 
   static void TearDownTestCase() {

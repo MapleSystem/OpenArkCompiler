@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -463,6 +463,8 @@ class IDexMethodItem {
                            std::map<uint32_t, std::unique_ptr<IDexInstruction>> &pcInstructionMap) const;
   void GetTryItems(const IDexFile &dexFile, std::vector<const IDexTryItem*> &tryItems) const;
   void GetSrcPositionInfo(const IDexFile &dexFile, std::map<uint32_t, uint32_t> &srcPosInfo) const;
+  void GetSrcLocalInfo(const IDexFile &dexFile,
+                       std::map<uint16_t, std::set<std::tuple<std::string, std::string, std::string>>> &srcLocal) const;
 
  private:
   uint32_t methodIdx;           // input parameter
@@ -621,6 +623,7 @@ class IDexHeader {
   static const IDexHeader *GetInstance(const IDexFile &dexFile);
   uint8_t GetMagic(uint32_t index) const;
   uint32_t GetChecksum() const;
+  std::string GetSignature() const;
   uint32_t GetFileSize() const;
   uint32_t GetHeaderSize() const;
   uint32_t GetEndianTag() const;

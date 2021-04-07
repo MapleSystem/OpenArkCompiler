@@ -24,13 +24,10 @@
 
 namespace maple {
 namespace bc {
-#define SET_FUNC_INFO_PAIR(A, B, C, D)                                    \
-  A->PushbackMIRInfo(MIRInfoPair(GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(B), C)); \
-  A->PushbackIsString(D)
 template <class T>
 BCCompilerComponent<T>::BCCompilerComponent(MIRModule &module)
     : MPLFECompilerComponent(module, kSrcLangJava),
-      mp(memPoolCtrler.NewMemPool("MemPool for BCCompilerComponent")),
+      mp(FEUtils::NewMempool("MemPool for BCCompilerComponent", false /* isLcalPool */)),
       allocator(mp),
       bcInput(std::make_unique<bc::BCInput<T>>(module)) {}
 
@@ -58,13 +55,10 @@ bool BCCompilerComponent<T>::ParseInputImpl() {
   while (klass != nullptr) {
     if (typeid(T) == typeid(DexReader)) {
       FEInputStructHelper *structHelper = allocator.GetMemPool()->template New<DexClass2FEHelper>(allocator, *klass);
-      FEInputPragmaHelper *pragmaHelper = allocator.GetMemPool()->template New<BCInputPragmaHelper>(
-          *(klass->GetAnnotationsDirectory()));
+      FEInputPragmaHelper *pragmaHelper =
+          allocator.GetMemPool()->template New<BCInputPragmaHelper>(*(klass->GetAnnotationsDirectory()));
       structHelper->SetPragmaHelper(pragmaHelper);
       structHelper->SetStaticFieldsConstVal(klass->GetStaticFieldsConstVal());
-      if (FEOptions::GetInstance().IsAOT()) {
-        structHelper->SetFinalStaticStringIDVec(klass->GetFinalStaticStringIDVec());
-      }
       structHelpers.push_back(structHelper);
     } else {
       CHECK_FATAL(false, "Reader is not supported. Exit.");
@@ -140,8 +134,8 @@ bool BCCompilerComponent<T>::LoadOnDemandBCClass2FEClass(
     bool isEmitDepsMplt) {
   for (const std::unique_ptr<bc::BCClass> &klass : klassList) {
     std::unique_ptr<FEInputStructHelper> structHelper = std::make_unique<bc::DexClass2FEHelper>(allocator, *klass);
-    FEInputPragmaHelper *pragmaHelper = allocator.GetMemPool()->template New<bc::BCInputPragmaHelper>(
-        *(klass->GetAnnotationsDirectory()));
+    FEInputPragmaHelper *pragmaHelper =
+        allocator.GetMemPool()->template New<bc::BCInputPragmaHelper>(*(klass->GetAnnotationsDirectory()));
     structHelper->SetPragmaHelper(pragmaHelper);
     structHelper->SetIsOnDemandLoad(true);
     structHelpers.push_back(std::move(structHelper));
@@ -179,41 +173,18 @@ bool BCCompilerComponent<T>::LoadOnDemandBCClass2FEClass(
       FEManager::GetTypeManager().SetMirImportedTypes(FETypeFlag::kSrcMplt);
       break;
   }
+#ifndef USE_OPS
+  for (uint32 i = 1; i < SymbolBuilder::Instance().GetSymbolTableSize(); ++i) {
+    MIRSymbol *symbol = SymbolBuilder::Instance().GetSymbolFromStIdx(i);
+#else
   for (uint32 i = 1; i < GlobalTables::GetGsymTable().GetSymbolTableSize(); ++i) {
     MIRSymbol *symbol = GlobalTables::GetGsymTable().GetSymbol(i);
+#endif
     if ((symbol != nullptr) && (symbol->GetSKind() == kStFunc)) {
       symbol->SetIsImportedDecl(true);
     }
   }
   return true;
-}
-
-template <class T>
-bool BCCompilerComponent<T>::PreProcessDeclImpl() {
-  FETimer timer;
-  timer.StartAndDump("BCCompilerComponent::PreProcessDecl()");
-  FE_INFO_LEVEL(FEOptions::kDumpLevelInfo, "===== Process BCCompilerComponent::PreProcessDecl() =====");
-  bool success = true;
-  for (FEInputStructHelper *helper : structHelpers) {
-    ASSERT_NOT_NULL(helper);
-    success = helper->PreProcessDecl() ? success : false;
-  }
-  timer.StopAndDumpTimeMS("BCCompilerComponent::PreProcessDecl()");
-  return success;
-}
-
-template <class T>
-bool BCCompilerComponent<T>::ProcessDeclImpl() {
-  FETimer timer;
-  timer.StartAndDump("BCCompilerComponent::ProcessDecl()");
-  FE_INFO_LEVEL(FEOptions::kDumpLevelInfo, "===== Process BCCompilerComponent::ProcessDecl() =====");
-  bool success = true;
-  for (FEInputStructHelper *helper : structHelpers) {
-    ASSERT_NOT_NULL(helper);
-    success = helper->ProcessDecl() ? success : false;
-  }
-  timer.StopAndDumpTimeMS("BCCompilerComponent::ProcessDecl()");
-  return success;
 }
 
 template <class T>
@@ -229,48 +200,16 @@ void BCCompilerComponent<T>::ProcessPragmaImpl() {
 }
 
 template <class T>
-bool BCCompilerComponent<T>::PreProcessWithoutFunctionImpl() {
-  return false;
-}
-
-template <class T>
-bool BCCompilerComponent<T>::PreProcessWithFunctionImpl() {
-  FETimer timer;
-  timer.StartAndDump("BCCompilerComponent::PreProcessWithFunction()");
-  FE_INFO_LEVEL(FEOptions::kDumpLevelInfo, "===== Process BCCompilerComponent::PreProcessWithFunction() =====");
-  for (FEInputStructHelper *structHelper : structHelpers) {
-    ASSERT_NOT_NULL(structHelper);
-    for (FEInputMethodHelper *methodHelper : structHelper->GetMethodHelpers()) {
-      ASSERT_NOT_NULL(methodHelper);
-      BCClassMethod2FEHelper *bcMethodHelper = static_cast<BCClassMethod2FEHelper*>(methodHelper);
-      GStrIdx methodNameIdx = methodHelper->GetMethodNameIdx();
-      bool isStatic = methodHelper->IsStatic();
-      MIRFunction *mirFunc = FEManager::GetTypeManager().GetMIRFunction(methodNameIdx, isStatic);
-      CHECK_NULL_FATAL(mirFunc);
-      std::unique_ptr<FEFunction> feFunction = std::make_unique<BCFunction>(*bcMethodHelper, *mirFunc,
-                                                                            phaseResultTotal);
-      module.AddFunction(mirFunc);
-      if (FEOptions::GetInstance().IsAOT()) {
-        const std::unique_ptr<BCClassMethod> &method = bcMethodHelper->GetMethod();
-        GStrIdx idx = module.GetMIRBuilder()->GetOrCreateStringIndex(bcMethodHelper->GetMethodName(false));
-        SET_FUNC_INFO_PAIR(mirFunc, "INFO_fullname", idx, true);
-        const std::string className = method->GetClassName();
-        idx = module.GetMIRBuilder()->GetOrCreateStringIndex(className);
-        SET_FUNC_INFO_PAIR(mirFunc, "INFO_classname", idx, true);
-        const std::string methodName = method->GetName();
-        idx = module.GetMIRBuilder()->GetOrCreateStringIndex(methodName);
-        SET_FUNC_INFO_PAIR(mirFunc, "INFO_funcname", idx, true);
-        SET_FUNC_INFO_PAIR(mirFunc, "INFO_methodidx", method->GetIdx(), false);
-        SET_FUNC_INFO_PAIR(mirFunc, "INFO_registers", method->GetRegisterTotalSize(), false);
-        SET_FUNC_INFO_PAIR(mirFunc, "INFO_dexthisreg", method->GetThisRegNum(), false);
-      }
-      feFunction->Init();
-      feFunction->SetSrcFileName(structHelper->GetSrcFileName());
-      functions.push_back(std::move(feFunction));
-    }
-  }
-  timer.StopAndDumpTimeMS("BCCompilerComponent::PreProcessWithFunction()");
-  return true;
+std::unique_ptr<FEFunction> BCCompilerComponent<T>::CreatFEFunctionImpl(FEInputMethodHelper *methodHelper) {
+  BCClassMethod2FEHelper *bcMethodHelper = static_cast<BCClassMethod2FEHelper*>(methodHelper);
+  GStrIdx methodNameIdx = methodHelper->GetMethodNameIdx();
+  bool isStatic = methodHelper->IsStatic();
+  MIRFunction *mirFunc = FEManager::GetTypeManager().GetMIRFunction(methodNameIdx, isStatic);
+  CHECK_NULL_FATAL(mirFunc);
+  std::unique_ptr<FEFunction> feFunction = std::make_unique<BCFunction>(*bcMethodHelper, *mirFunc, phaseResultTotal);
+  module.AddFunction(mirFunc);
+  feFunction->Init();
+  return feFunction;
 }
 
 template <class T>

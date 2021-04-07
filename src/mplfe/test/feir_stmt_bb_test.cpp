@@ -45,7 +45,7 @@ class FEIRStmtBBTest : public FEIRTestBase {
         jbcFunction(jbcMethodHelper, mirFunction, std::make_unique<FEFunctionPhaseResult>(true)) {}
   virtual ~FEIRStmtBBTest() = default;
   static void SetUpTestCase() {
-    mp = memPoolCtrler.NewMemPool("MemPool for FEIRStmtBBTest", false /* isLcalPool */);
+    mp = FEUtils::NewMempool("MemPool for FEIRStmtBBTest", false /* isLcalPool */);
   }
 
   static void TearDownTestCase() {

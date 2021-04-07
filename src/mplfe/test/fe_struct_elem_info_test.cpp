@@ -34,7 +34,7 @@ class FEStructFieldInfoTest : public testing::Test, public RedirectBuffer {
 
 TEST_F(FEStructFieldInfoTest, FEStructFieldInfo) {
   StructElemNameIdx *structElemNameIdx = new StructElemNameIdx("Ljava/lang/Integer;", "MIN_VALUE", "I");
-  FEStructFieldInfo info(*structElemNameIdx, kSrcLangJava, true);
+  FEStructFieldInfo info(mirBuilder.GetMirModule().GetMPAllocator(), *structElemNameIdx, kSrcLangJava, true);
   std::string structName = GlobalTables::GetStrTable().GetStringFromStrIdx(structElemNameIdx->klass);
   std::string elemName = GlobalTables::GetStrTable().GetStringFromStrIdx(structElemNameIdx->elem);
   std::string signatureName = GlobalTables::GetStrTable().GetStringFromStrIdx(structElemNameIdx->type);
@@ -47,7 +47,7 @@ TEST_F(FEStructFieldInfoTest, FEStructFieldInfo) {
 
 TEST_F(FEStructFieldInfoTest, SearchStructFieldJava) {
   StructElemNameIdx *structElemNameIdx = new StructElemNameIdx("Ljava/lang/Integer;", "MIN_VALUE", "I");
-  FEStructFieldInfo info(*structElemNameIdx, kSrcLangJava, true);
+  FEStructFieldInfo info(mirBuilder.GetMirModule().GetMPAllocator(), *structElemNameIdx, kSrcLangJava, true);
   MIRStructType *structType =
       FEManager::GetTypeManager().GetStructTypeFromName(namemangler::EncodeName("Ljava/lang/Integer;"));
   delete structElemNameIdx;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -41,6 +41,7 @@ class FEIRVarReg : public FEIRVar {
  protected:
   std::string GetNameImpl(const MIRType &mirType) const override;
   std::string GetNameRawImpl() const override;
+  MIRSymbol *GenerateLocalMIRSymbolImpl(MIRBuilder &builder) const override;
   std::unique_ptr<FEIRVar> CloneImpl() const override;
   bool EqualsToImpl(const std::unique_ptr<FEIRVar> &var) const override;
   size_t HashImpl() const override;

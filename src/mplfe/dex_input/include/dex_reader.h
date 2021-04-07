@@ -48,6 +48,8 @@ class DexReader : public BCReader {
   std::unique_ptr<std::list<std::unique_ptr<BCTryInfo>>> ResolveTryInfos(const IDexMethodItem* dexMethodItem) const;
   void ResovleSrcPositionInfo(const IDexMethodItem* dexMethodItem,
                               std::map<uint32, uint32> &srcPosInfo) const;
+  std::unique_ptr<std::map<uint16, std::set<std::tuple<std::string, std::string, std::string>>>> ResovleSrcLocalInfo(
+      const IDexMethodItem &dexMethodItem) const;
   bool ReadAllDepTypeNames(std::unordered_set<std::string> &depSet);
   bool ReadMethodDepTypeNames(std::unordered_set<std::string> &depSet,
                               uint32 classIdx, uint32 methodItemx, bool isVirtual) const;
@@ -60,6 +62,7 @@ class DexReader : public BCReader {
   const uint16 *GetMethodInstOffset(const IDexMethodItem* dexMethodItem) const;
   uint16 GetClassMethodRegisterTotalSize(const IDexMethodItem* dexMethodItem) const;
   uint16 GetClassMethodRegisterInSize(const IDexMethodItem* dexMethodItem) const;
+  uint32 GetCodeOff(const IDexMethodItem* dexMethodItem) const;
 
  private:
   std::string GetStringFromIdxImpl(uint32 idx) const override;

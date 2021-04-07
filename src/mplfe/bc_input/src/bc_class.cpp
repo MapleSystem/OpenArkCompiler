@@ -91,6 +91,14 @@ uint16 BCClassMethod::GetRegisterTotalSize() const{
   return registerTotalSize;
 }
 
+void BCClassMethod::SetCodeOff(uint32 off) {
+  codeOff = off;
+}
+
+uint32 BCClassMethod::GetCodeOff() const {
+  return codeOff;
+}
+
 void BCClassMethod::SetRegisterInsSize(uint16 size) {
   registerInsSize = size;
 }
@@ -236,10 +244,11 @@ void BCClassMethod::ProcessTryCatch() {
 // Use linear scan with SSA
 // We insert phi behind the def in a edge before the dominance if the reg is alive under this dominance.
 // A reg is default dead at its definition, we mark a reg alive only when it was used.
-// We transfer reg live info through shared memory, record live-interval in dominancesMap.
+// And insert the reg def-type into `used alive types` if it is defined in a determinate type.
+// We transfer reg live info through shared memory, record live-interval in dominancesMap and BCRegType::livesBegins.
 // After a multi-in pos, we create a new TypeInferItem for a new live range.
+// Insert `in-edge` into dominance `prevs`, for record complete reg use in circles by one pass.
 void BCClassMethod::TypeInfer() {
-  std::list<std::unique_ptr<BCClassMethod::TypeInferItem>> typeInferItems;
   std::set<uint32> visitedSet;
   // [pc, [regNum, TypeInferItem*]]
   std::list<std::pair<uint32, std::vector<TypeInferItem*>>> pcDefedRegsList;
@@ -247,12 +256,23 @@ void BCClassMethod::TypeInfer() {
   std::vector<std::vector<TypeInferItem*>> dominances((*pcBCInstructionMap).rbegin()->first + 1);
   std::vector<TypeInferItem*> regTypeMap(registerTotalSize, nullptr);
   for (auto &reg : argRegs) {
-    regTypeMap[reg->regNum] = RegisterTypeInferItem(typeInferItems, reg.get(), nullptr);
+    regTypeMap[reg->regNum] = ConstructTypeInferItem(allocator, 0, reg.get(), nullptr);
     regTypes.emplace_back(reg->regType);
   }
-  pcDefedRegsList.emplace_front(0, regTypeMap);
-  dominances[0] = regTypeMap;
   visitedSet.emplace(0);
+  if (multiInDegreeSet.find(0) != multiInDegreeSet.end()) {
+    std::vector<TypeInferItem*> typeMap = ConstructNewRegTypeMap(allocator, 1, regTypeMap);
+    pcDefedRegsList.emplace_front(0, typeMap);
+    dominances[0] = typeMap;
+  } else {
+    pcDefedRegsList.emplace_front(0, regTypeMap);
+  }
+  Traverse(pcDefedRegsList, dominances, visitedSet);
+  PrecisifyRegType();
+}
+
+void BCClassMethod::Traverse(std::list<std::pair<uint32, std::vector<TypeInferItem*>>> &pcDefedRegsList,
+                             std::vector<std::vector<TypeInferItem*>> &dominances, std::set<uint32> &visitedSet) {
   while (!pcDefedRegsList.empty()) {
     auto head = pcDefedRegsList.front();
     pcDefedRegsList.pop_front();
@@ -264,24 +284,12 @@ void BCClassMethod::TypeInfer() {
       CHECK_FATAL(defedItem != nullptr && defedItem->reg != nullptr,
           "Cannot find Reg%u defination at 0x%x:0x%x in method %s",
           usedReg->regNum, head.first, currInst->GetOpcode(), GetFullName().c_str());
-      if (usedReg->regTypeItem == nullptr) {
-        usedReg->regTypeItem = defedItem->reg->regTypeItem;
-        usedReg->regValue = defedItem->reg->regValue;
-      } else {
-        if (defedItem->reg->regTypeItem->isIndeterminate ||
-            !(*(defedItem->reg->regTypeItem) == *(usedReg->regTypeItem))) {
-          defedItem->reg->regType->UpdateDefTypeFromUse(usedReg->regTypeItem);
-        }
-      }
+      usedReg->regValue = defedItem->reg->regValue;
       usedReg->regType = defedItem->reg->regType;
       currInst->SetRegTypeInTypeInfer();
       // Make the reg alive when it used, live range [defPos, usePos]
-      defedItem->aliveUsedTypes.emplace(usedReg->regTypeItem);
-      TypeInferItem *item = defedItem->prev;
-      while (item != nullptr) {
-        item->aliveUsedTypes.emplace(usedReg->regTypeItem);
-        item = item->prev;
-      }
+      usedReg->regTypeItem->SetPos(currInst->GetPC());
+      defedItem->InsertUniqueAliveType(nullptr, usedReg->regTypeItem);
     }
     auto defedRegs = currInst->GetDefedRegs();
     auto exHandlerTargets = currInst->GetHandlerTargets();
@@ -293,18 +301,17 @@ void BCClassMethod::TypeInfer() {
         continue;
       }
       if ((multiInDegreeSet.find(exHandlerTarget) != multiInDegreeSet.end())) {
-        std::vector<TypeInferItem*> typeMap = ConstructNewRegTypeMap(nextRegTypeMap, typeInferItems);
+        std::vector<TypeInferItem*> typeMap = ConstructNewRegTypeMap(allocator, exHandlerTarget + 1, nextRegTypeMap);
         pcDefedRegsList.emplace_front(exHandlerTarget, typeMap);
-        if (multiInDegreeSet.find(exHandlerTarget) != multiInDegreeSet.end()) {
-          dominances[exHandlerTarget] = typeMap;
-        }
+        dominances[exHandlerTarget] = typeMap;
       } else {
         pcDefedRegsList.emplace_front(exHandlerTarget, nextRegTypeMap);
       }
     }
     for (auto defedReg : *defedRegs) {
-      TypeInferItem *item = RegisterTypeInferItem(typeInferItems, defedReg, nullptr);
+      TypeInferItem *item = ConstructTypeInferItem(allocator, currInst->GetPC() + 1, defedReg, nullptr);
       nextRegTypeMap[defedReg->regNum] = item;
+      defedReg->regType->SetPos(currInst->GetPC());
       regTypes.emplace_back(defedReg->regType);
     }
     if (currInst->IsFallThru() && next <= pcBCInstructionMap->rbegin()->first) {
@@ -313,11 +320,9 @@ void BCClassMethod::TypeInfer() {
         InsertPhi(domIt, nextRegTypeMap);
       } else {
         if (multiInDegreeSet.find(next) != multiInDegreeSet.end()) {
-          std::vector<TypeInferItem*> typeMap = ConstructNewRegTypeMap(nextRegTypeMap, typeInferItems);
+          std::vector<TypeInferItem*> typeMap = ConstructNewRegTypeMap(allocator, next + 1, nextRegTypeMap);
           pcDefedRegsList.emplace_front(next, typeMap);
-          if (multiInDegreeSet.find(next) != multiInDegreeSet.end()) {
-            dominances[next] = typeMap;
-          }
+          dominances[next] = typeMap;
         } else {
           pcDefedRegsList.emplace_front(next, nextRegTypeMap);
         }
@@ -326,12 +331,12 @@ void BCClassMethod::TypeInfer() {
     auto normalTargets = currInst->GetTargets();
     for (auto normalTarget : normalTargets) {
       if (visitedSet.emplace(normalTarget).second == false) {
-        auto domIt = dominances[normalTarget];
+        auto &domIt = dominances[normalTarget];
         InsertPhi(domIt, nextRegTypeMap);
         continue;
       }
       if (multiInDegreeSet.find(normalTarget) != multiInDegreeSet.end()) {
-        std::vector<TypeInferItem*> typeMap = ConstructNewRegTypeMap(nextRegTypeMap, typeInferItems);
+        std::vector<TypeInferItem*> typeMap = ConstructNewRegTypeMap(allocator, normalTarget + 1, nextRegTypeMap);
         pcDefedRegsList.emplace_front(normalTarget, typeMap);
         dominances[normalTarget] = typeMap;
       } else {
@@ -339,49 +344,42 @@ void BCClassMethod::TypeInfer() {
       }
     }
   }
-  PrecisifyRegType();
 }
 
-void BCClassMethod::InsertPhi(const std::vector<TypeInferItem*> &dest, std::vector<TypeInferItem*> &src) {
-  for (auto &d : dest) {
-    if (d == nullptr || d->aliveUsedTypes.empty()) {
+void BCClassMethod::InsertPhi(const std::vector<TypeInferItem*> &dom, std::vector<TypeInferItem*> &src) {
+  for (auto &d : dom) {
+    if (d == nullptr) {
       continue;
     }
-    auto item = src[d->reg->regNum];
-    if (item != nullptr) {
-      for (auto aliveType : d->aliveUsedTypes) {
-        item->aliveUsedTypes.emplace(aliveType);
-      }
-      TypeInferItem *prevItem = item->prev;
-      while (prevItem != nullptr) {
-        for (auto aliveType : d->aliveUsedTypes) {
-          prevItem->aliveUsedTypes.emplace(aliveType);
-        }
-        prevItem = prevItem->prev;
-      }
-      item->reg->regType->UpdateDefTypeThroughPhi(*(d->reg), d->aliveUsedTypes);
+    auto srcItem = src[d->reg->regNum];
+    if (srcItem == d) {
+      continue;
+    }
+    d->RegisterInPrevs(srcItem);
+
+    if (d->isAlive == false) {
+      continue;
+    }
+    CHECK_FATAL(srcItem != nullptr, "ByteCode RA error.");
+    for (auto ty : *(d->aliveUsedTypes)) {
+      srcItem->InsertUniqueAliveType(d, ty);
     }
   }
 }
 
-BCClassMethod::TypeInferItem *BCClassMethod::RegisterTypeInferItem(
-    std::list<std::unique_ptr<BCClassMethod::TypeInferItem>> &items, BCReg *bcReg, TypeInferItem *prev) {
-  std::unique_ptr<TypeInferItem> item = std::make_unique<TypeInferItem>();
-  item->reg = bcReg;
-  item->prev = prev;
-  TypeInferItem *ptr = item.get();
-  items.emplace_back(std::move(item));
-  return ptr;
+TypeInferItem *BCClassMethod::ConstructTypeInferItem(
+    MapleAllocator &alloc, uint32 pos, BCReg *bcReg, TypeInferItem *prev) {
+  TypeInferItem *item = alloc.GetMemPool()->New<TypeInferItem>(alloc, pos, bcReg, prev);
+  return item;
 }
 
-std::vector<BCClassMethod::TypeInferItem*> BCClassMethod::ConstructNewRegTypeMap(
-    const std::vector<TypeInferItem*> &regTypeMap,
-    std::list<std::unique_ptr<BCClassMethod::TypeInferItem>> &items) {
+std::vector<TypeInferItem*> BCClassMethod::ConstructNewRegTypeMap(MapleAllocator &alloc, uint32 pos,
+    const std::vector<TypeInferItem*> &regTypeMap) {
   std::vector<TypeInferItem*> res(regTypeMap.size(), nullptr);
   size_t i = 0;
   for (const auto &elem : regTypeMap) {
     if (elem != nullptr) {
-      res[i] = RegisterTypeInferItem(items, elem->reg, elem);
+      res[i] = ConstructTypeInferItem(alloc, pos, elem->reg, elem);
     }
     ++i;
   }
@@ -415,7 +413,8 @@ std::list<UniqueFEIRStmt> BCClassMethod::EmitInstructionsToFEIR() const {
     uint32 typeID = UINT32_MAX;
     if (FEOptions::GetInstance().IsAOT()) {
       const std::string &mplClassName = GetBCClass().GetClassName(true);
-      typeID = FEManager::GetTypeManager().GetTypeIDFromMplClassName(mplClassName);
+      int32 dexFileHashCode = GetBCClass().GetBCParser().GetFileNameHashId();
+      typeID = FEManager::GetTypeManager().GetTypeIDFromMplClassName(mplClassName, dexFileHashCode);
     }
     UniqueFEIRStmt stmt =
         std::make_unique<FEIRStmtIntrinsicCallAssign>(INTRN_JAVA_CLINIT_CHECK,
@@ -570,6 +569,14 @@ const std::vector<std::string> &BCClass::GetSuperInterfaceNames() const {
 
 std::string BCClass::GetSourceFileName() const {
   return GlobalTables::GetStrTable().GetStringFromStrIdx(srcFileNameIdx);
+}
+
+GStrIdx BCClass::GetIRSrcFileSigIdx() const {
+  return irSrcFileSigIdx;
+}
+
+uint32 BCClass::GetFileNameHashId() const {
+  return parser.GetFileNameHashId();
 }
 
 uint32 BCClass::GetAccessFlag() const {

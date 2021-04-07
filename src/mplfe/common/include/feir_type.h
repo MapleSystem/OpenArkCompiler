@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -22,6 +22,7 @@
 #include "mir_type.h"
 #include "global_tables.h"
 #include "fe_configs.h"
+#include "fe_utils_ast.h"
 
 namespace maple {
 enum FEIRTypeKind {
@@ -179,6 +180,7 @@ class FEIRTypeDefault : public FEIRType {
   FEIRTypeDefault(const FEIRTypeDefault&) = delete;
   FEIRTypeDefault &operator=(const FEIRTypeDefault&) = delete;
   void LoadFromJavaTypeName(const std::string &typeName, bool inMpl = true);
+  void LoadFromASTTypeName(const std::string &typeName);
   MIRType *GenerateMIRTypeForPrim() const;
   FEIRTypeDefault &SetTypeNameIdx(const GStrIdx &argTypeNameIdx) {
     typeNameIdx = argTypeNameIdx;

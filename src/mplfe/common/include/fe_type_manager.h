@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -109,6 +109,8 @@ class FETypeManager {
     return CreateClassOrInterfaceType(nameIdx, isInterface, typeFlag);
   }
 
+  MIRStructType *GetOrCreateStructType(const std::string &name);
+  MIRStructType *CreateStructType(const std::string &name);
   MIRStructType *GetOrCreateClassOrInterfaceType(const GStrIdx &nameIdx, bool isInterface, FETypeFlag typeFlag,
                                                  bool &isCreate);
   MIRStructType *GetOrCreateClassOrInterfaceType(const std::string &name, bool isInterface, FETypeFlag typeFlag,
@@ -126,7 +128,7 @@ class FETypeManager {
   }
 
 
-  uint32 GetTypeIDFromMplClassName(const std::string &mplClassName) const;
+  uint32 GetTypeIDFromMplClassName(const std::string &mplClassName, int32 dexFileHashCode) const;
   MIRStructType *GetStructTypeFromName(const std::string &name);
   MIRStructType *GetStructTypeFromName(const GStrIdx &nameIdx);
   MIRType *GetOrCreateTypeFromName(const std::string &name, FETypeFlag typeFlag, bool usePtr);
@@ -202,11 +204,28 @@ class FETypeManager {
   }
   static void SetComplete(MIRStructType &structType);
   static std::string TypeAttrsToString(const TypeAttrs &attrs);
+
   bool IsImportedType(const GStrIdx &typeNameIdx) const {
     return structNameTypeMap.find(typeNameIdx) != structNameTypeMap.end();
   }
+
+  MIRStructType *GetImportedType(const GStrIdx &typeNameIdx) const {
+    auto it = structNameTypeMap.find(typeNameIdx);
+    if (it != structNameTypeMap.end()) {
+      return it->second.first;
+    }
+    return nullptr;
+  }
+
+  const std::unordered_map<GStrIdx, FEStructTypePair, GStrIdxHash> &GetStructNameTypeMap() const {
+    return structNameTypeMap;
+  }
   void MarkExternStructType();
   void SetMirImportedTypes(FETypeFlag flag);
+
+  void SetSrcLang(const MIRSrcLang &argSrcLang) {
+    srcLang = argSrcLang;
+  }
 
  private:
   void UpdateStructNameTypeMapFromTypeTable(const std::string &mpltName, FETypeFlag flag);
@@ -216,7 +235,7 @@ class FETypeManager {
 
   // MCC function
   void InitFuncMCCGetOrInsertLiteral();
-  void InitFuncMCCStaticField();
+  using mirFuncPair = std::pair<char, MIRFunction*>;
 
   MIRModule &module;
   MemPool *mp;
@@ -232,8 +251,8 @@ class FETypeManager {
   MIRSrcLang srcLang;
 
   // ---------- class name ---> type id map info ----------
-  std::unordered_map<std::string, uint32> classNameTypeIDMap;
-
+  using classNameTypeIDMapT = std::unordered_map<std::string, uint32>;
+  std::map<int32, classNameTypeIDMapT> classNameTypeIDMapAllDex; // dexFileHashCode className classTpyeID
   // ---------- struct elem info ----------
   std::map<GStrIdx, FEStructElemInfo*> mapStructElemInfo;
 

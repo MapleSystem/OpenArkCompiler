@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -140,13 +140,15 @@ std::string FEJavaStringManager::GetLiteralGlobalName(const std::u16string &strU
   return literalGlobalName;
 }
 
+// Valid ASCII characters are in range 1..0x7f. Zero is not considered ASCII
+// because it would complicate the detection of ASCII strings in Modified-UTF8.
 bool FEJavaStringManager::IsAllASCII(const std::u16string &strU16) {
   if (strU16.length() == 0) {
     return false;
   }
   for (size_t i = 0; i < strU16.length(); ++i) {
     uint16 val = ExchangeBytesPosition(strU16[i]);
-    if (val >= CHAR_MAX) {
+    if ((val - 1u) >= 0x7fu) {
       return false;
     }
   }

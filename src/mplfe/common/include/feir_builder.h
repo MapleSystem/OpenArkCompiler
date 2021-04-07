@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -39,6 +39,7 @@ class FEIRBuilder {
                                      bool withType = false);
   // Expr
   static UniqueFEIRExpr CreateExprDRead(UniqueFEIRVar srcVar);
+  static UniqueFEIRExpr CreateExprAddrof(const std::vector<uint32> &array);
   static UniqueFEIRExpr CreateExprConstRefNull();
   static UniqueFEIRExpr CreateExprConstI8(int8 val);
   static UniqueFEIRExpr CreateExprConstI16(int16 val);
@@ -58,8 +59,11 @@ class FEIRBuilder {
   static UniqueFEIRExpr CreateExprCvtPrim(UniqueFEIRExpr srcExpr, PrimType dstType);
   static UniqueFEIRExpr CreateExprJavaNewInstance(UniqueFEIRType type);
   static UniqueFEIRExpr CreateExprJavaNewInstance(UniqueFEIRType type, uint32 argTypeID);
+  static UniqueFEIRExpr CreateExprJavaNewInstance(UniqueFEIRType type, uint32 argTypeID, bool isRcPermanent);
   static UniqueFEIRExpr CreateExprJavaNewArray(UniqueFEIRType type, UniqueFEIRExpr exprSize);
   static UniqueFEIRExpr CreateExprJavaNewArray(UniqueFEIRType type, UniqueFEIRExpr exprSize, uint32 typeID);
+  static UniqueFEIRExpr CreateExprJavaNewArray(UniqueFEIRType type, UniqueFEIRExpr exprSize, uint32 typeID,
+                                               bool isRcPermanent);
   static UniqueFEIRExpr CreateExprJavaArrayLength(UniqueFEIRExpr exprArray);
   // Stmt
   static UniqueFEIRStmt CreateStmtDAssign(UniqueFEIRVar dstVar, UniqueFEIRExpr srcExpr, bool hasException = false);
@@ -67,7 +71,7 @@ class FEIRBuilder {
   static UniqueFEIRStmt CreateStmtCondGoto(uint32 targetLabelIdx, Opcode op, UniqueFEIRExpr expr);
   static UniqueFEIRStmt CreateStmtSwitch(UniqueFEIRExpr expr);
   static UniqueFEIRStmt CreateStmtJavaConstClass(UniqueFEIRVar dstVar, UniqueFEIRType type);
-  static UniqueFEIRStmt CreateStmtJavaConstString(UniqueFEIRVar dstVar, const GStrIdx &strIdx);
+  static UniqueFEIRStmt CreateStmtJavaConstString(UniqueFEIRVar dstVar, const std::string &strVal);
   static UniqueFEIRStmt CreateStmtJavaCheckCast(UniqueFEIRVar dstVar, UniqueFEIRVar srcVar, UniqueFEIRType type);
   static UniqueFEIRStmt CreateStmtJavaCheckCast(UniqueFEIRVar dstVar, UniqueFEIRVar srcVar, UniqueFEIRType type,
                                                                                             uint32 argTypeID);

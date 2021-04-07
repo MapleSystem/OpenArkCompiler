@@ -15,6 +15,10 @@
 #include "bc_function.h"
 #include "fe_macros.h"
 #include "fe_manager.h"
+#include "feir_type_helper.h"
+#include "feir_builder.h"
+#include "rc_setter.h"
+
 namespace maple {
 namespace bc {
 BCFunction::BCFunction(const BCClassMethod2FEHelper &argMethodHelper, MIRFunction &mirFunc,
@@ -31,6 +35,20 @@ void BCFunction::InitImpl() {
   FEFunction::InitImpl();
 }
 
+void BCFunction::SetMIRFunctionInfo() {
+  GStrIdx idx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(method->GetFullName());
+  SET_FUNC_INFO_PAIR(mirFunction, "INFO_fullname", idx, true);
+  idx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(method->GetClassName());
+  SET_FUNC_INFO_PAIR(mirFunction, "INFO_classname", idx, true);
+  idx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(method->GetName());
+  SET_FUNC_INFO_PAIR(mirFunction, "INFO_funcname", idx, true);
+  SET_FUNC_INFO_PAIR(mirFunction, "INFO_methodidx", method->GetIdx(), false);
+  SET_FUNC_INFO_PAIR(mirFunction, "INFO_registers", method->GetRegisterTotalSize(), false);
+  SET_FUNC_INFO_PAIR(mirFunction, "INFO_tries_size", method->GetTriesSize(), false);
+  SET_FUNC_INFO_PAIR(mirFunction, "INFO_dexthisreg", method->GetThisRegNum(), false);
+  SET_FUNC_INFO_PAIR(mirFunction, "INFO_codeoff", method->GetCodeOff(), false);
+}
+
 bool BCFunction::ProcessImpl() {
   FE_INFO_LEVEL(FEOptions::kDumpLevelInfoDetail, "BCFunction::Process() for %s", method->GetFullName().c_str());
   bool success = true;
@@ -38,6 +56,7 @@ bool BCFunction::ProcessImpl() {
                                                        method->GetBCClass().GetClassIdx(),
                                                        method->GetItemIdx(),
                                                        method->IsVirtual());
+  SetMIRFunctionInfo();
   success = success && GenerateArgVarList("gen arg var list");
   success = success && EmitToFEIRStmt("emit to feir");
   success = success && ProcessFEIRFunction();
@@ -46,6 +65,35 @@ bool BCFunction::ProcessImpl() {
     ERR(kLncErr, "BCFunction::Process() failed for %s", method->GetFullName().c_str());
   }
   return success;
+}
+
+bool BCFunction::GenerateAliasVars(const std::string &phaseName) {
+  phaseResult.RegisterPhaseNameAndStart(phaseName);
+  if (method == nullptr || method->GetSrcLocalInfoPtr() == nullptr) {
+    return phaseResult.Finish(true);
+  }
+  // map<regNum, set<tuple<name, typeName, signature>>>
+  for (auto &local : *method->GetSrcLocalInfoPtr()) {
+    for (auto &item : local.second) {
+      if (std::get<0>(item) == "this") {
+        continue;
+      }
+      UniqueFEIRType type = FEIRTypeHelper::CreateTypeByJavaName(std::get<1>(item), false, false);
+      MIRType *mirType = FEManager::GetTypeManager().GetOrCreateTypeFromName(
+          namemangler::EncodeName(std::get<1>(item)), FETypeFlag::kSrcUnknown, true);
+      UniqueFEIRVar localVar = FEIRBuilder::CreateVarReg(local.first, std::move(type));
+      GStrIdx nameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(
+          namemangler::EncodeName(std::get<0>(item)));
+      MIRAliasVars aliasVar;
+      aliasVar.memPoolStrIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(localVar->GetName(*mirType));
+      aliasVar.tyIdx = mirType->GetTypeIndex();
+      if (!std::get<2>(item).empty()) {
+        aliasVar.sigStrIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(std::get<2>(item));
+      }
+      mirFunction.SetAliasVarMap(nameIdx, aliasVar);
+    }
+  }
+  return phaseResult.Finish(true);
 }
 
 bool BCFunction::ProcessFEIRFunction() {
@@ -90,6 +138,10 @@ void BCFunction::InsertFEIRStmtsBefore(FEIRStmt &pos, std::list<UniqueFEIRStmt> 
 void BCFunction::FinishImpl() {
   (void)UpdateFormal("finish/update formal");
   (void)EmitToMIR("finish/emit to mir");
+  (void)GenerateAliasVars("finish/generate alias vars");
+  if (FEOptions::GetInstance().IsRC()) {
+    RCSetter::GetRCSetter().GetUnownedVarInLocalVars(*method, mirFunction);
+  }
   bool recordTime = FEOptions::GetInstance().IsDumpPhaseTime() || FEOptions::GetInstance().IsDumpPhaseTimeDetail();
   if (phaseResultTotal != nullptr && recordTime) {
     phaseResultTotal->Combine(phaseResult);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -60,6 +60,7 @@ std::unique_ptr<FEIRType> FEIRType::NewType(FEIRTypeKind argKind) {
 std::map<MIRSrcLang, std::tuple<bool, PrimType>> FEIRType::InitLangConfig() {
   std::map<MIRSrcLang, std::tuple<bool, PrimType>> ans;
   ans[kSrcLangJava] = std::make_tuple(true, PTY_ref);
+  ans[kSrcLangC] = std::make_tuple(true, PTY_ref);
   return ans;
 }
 
@@ -220,8 +221,36 @@ void FEIRTypeDefault::LoadFromJavaTypeName(const std::string &typeName, bool inM
   }
 }
 
+void FEIRTypeDefault::LoadFromASTTypeName(const std::string &typeName) {
+  const static std::map<std::string, PrimType> mapASTTypeNameToType = {
+      {"bool", PTY_u1},
+      {"uint8", PTY_u8},
+      {"uint16", PTY_u16},
+      {"uint32", PTY_u32},
+      {"uint64", PTY_u64},
+      {"int8", PTY_i8},
+      {"int16", PTY_i16},
+      {"int32", PTY_i32},
+      {"int64", PTY_i64},
+      {"float", PTY_f32},
+      {"double", PTY_f64},
+      {"void", PTY_void}
+  };
+  auto it = mapASTTypeNameToType.find(typeName);
+  if (it != mapASTTypeNameToType.end()) {
+    primType = it->second;
+  } else {
+    primType = PTY_ref;
+    typeNameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(typeName);
+  }
+}
+
 MIRType *FEIRTypeDefault::GenerateMIRTypeForPrim() const {
   switch (primType) {
+    case PTY_i8:
+      return GlobalTables::GetTypeTable().GetInt8();
+    case PTY_i16:
+      return GlobalTables::GetTypeTable().GetInt16();
     case PTY_i32:
       return GlobalTables::GetTypeTable().GetInt32();
     case PTY_i64:
@@ -232,12 +261,14 @@ MIRType *FEIRTypeDefault::GenerateMIRTypeForPrim() const {
       return GlobalTables::GetTypeTable().GetDouble();
     case PTY_u1:
       return GlobalTables::GetTypeTable().GetUInt1();
-    case PTY_i8:
-      return GlobalTables::GetTypeTable().GetInt8();
-    case PTY_i16:
-      return GlobalTables::GetTypeTable().GetInt16();
+    case PTY_u8:
+      return GlobalTables::GetTypeTable().GetUInt8();
     case PTY_u16:
       return GlobalTables::GetTypeTable().GetUInt16();
+    case PTY_u32:
+      return GlobalTables::GetTypeTable().GetUInt32();
+    case PTY_u64:
+      return GlobalTables::GetTypeTable().GetUInt64();
     case PTY_void:
       return GlobalTables::GetTypeTable().GetVoid();
     case PTY_a32:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -109,6 +109,16 @@ TypeAttrs JBCClass2FEHelper::GetStructAttributeFromInputImpl() const {
 
 uint64 JBCClass2FEHelper::GetRawAccessFlagsImpl() const {
   return uint64{ klass.GetAccessFlag() };
+}
+
+GStrIdx JBCClass2FEHelper::GetIRSrcFileSigIdxImpl() const {
+  // Not implemented, just return a invalid value
+  return GStrIdx(0);
+}
+
+bool JBCClass2FEHelper::IsMultiDefImpl() const {
+  // Not implemented, alway return false
+  return false;
 }
 
 void JBCClass2FEHelper::InitFieldHelpersImpl() {

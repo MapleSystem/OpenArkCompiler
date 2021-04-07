@@ -142,6 +142,10 @@ bool JBCFunction::VerifyGeneral() {
 void JBCFunction::VerifyGeneralFailCallBack() {
 }
 
+bool JBCFunction::GenerateAliasVars(const std::string &phaseName) {
+  return true;
+}
+
 bool JBCFunction::GenerateArgVarList(const std::string &phaseName) {
   phaseResult.RegisterPhaseNameAndStart(phaseName);
   InitStack2FEHelper();

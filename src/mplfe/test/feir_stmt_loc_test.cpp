@@ -45,7 +45,7 @@ class FEIRStmtLOCTest : public FEIRTestBase {
   ~FEIRStmtLOCTest() = default;
 
   static void SetUpTestCase() {
-    mp = memPoolCtrler.NewMemPool("MemPool for FEIRStmtLOCTest", false /* isLcalPool */);
+    mp = FEUtils::NewMempool("MemPool for FEIRStmtLOCTest", false /* isLcalPool */);
   }
 
   static void TearDownTestCase() {

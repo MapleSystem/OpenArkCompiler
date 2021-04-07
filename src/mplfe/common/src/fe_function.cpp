@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -429,7 +429,11 @@ bool FEFunction::UpdateFormal(const std::string &phaseName) {
   for (const std::unique_ptr<FEIRVar> &argVar : argVarList) {
     MIRSymbol *sym = argVar->GenerateMIRSymbol(FEManager::GetMIRBuilder());
     sym->SetStorageClass(kScFormal);
+#ifndef USE_OPS
+    mirFunction.AddFormal(sym);
+#else
     mirFunction.AddArgument(sym);
+#endif
     idx++;
   }
   return phaseResult.Finish();
@@ -622,9 +626,7 @@ bool FEFunction::UpdateRegNum2This(const std::string &phaseName) {
   }
   const std::unique_ptr<FEIRVar> &firstArg = argVarList.front();
   std::unique_ptr<FEIRVar> varReg = firstArg->Clone();
-  GStrIdx thisNameIdx = GlobalTables::GetStrTable().GetStrIdxFromName("_this");
-  uint32 nameIdx = static_cast<uint32>(thisNameIdx);
-  CHECK_FATAL((nameIdx != 0), "StringIndex for \"_this\" should has been created before this phase");
+  GStrIdx thisNameIdx = FEUtils::GetThisIdx();
   std::unique_ptr<FEIRVar> varThisAsParam = std::make_unique<FEIRVarName>(thisNameIdx, varReg->GetType()->Clone());
   if (!IsNative()) {
     std::unique_ptr<FEIRVar> varThisAsLocalVar = std::make_unique<FEIRVarName>(thisNameIdx, varReg->GetType()->Clone());
@@ -1180,11 +1182,61 @@ FEIRStmt &FEFunction::GetStmtByDefVarTypeScatter(const FEIRVarTypeScatter &varTy
   return *(it->second);
 }
 
+bool FEFunction::WithFinalFieldsNeedBarrier(MIRClassType *classType, bool isStatic) const {
+  // final field
+  if (isStatic) {
+    // final static fields with non-primitive types
+    // the one with primitive types are all inlined
+    for (auto it : classType->GetStaticFields()) {
+      MIRType *type = GlobalTables::GetTypeTable().GetTypeFromTyIdx(it.second.first);
+      if (it.second.second.GetAttr(FLDATTR_final) && type->GetPrimType() == PTY_ref) {
+        return true;
+      }
+    }
+  } else {
+    for (auto it : classType->GetFields()) {
+      if (it.second.second.GetAttr(FLDATTR_final)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool FEFunction::IsNeedInsertBarrier() {
+  if (mirFunction.GetAttr(FUNCATTR_constructor) ||
+      mirFunction.GetName().find("_7Cclone_7C") != std::string::npos ||
+      mirFunction.GetName().find("_7CcopyOf_7C") != std::string::npos) {
+    const std::string &className = mirFunction.GetBaseClassName();
+    MIRType *type = FEManager::GetTypeManager().GetClassOrInterfaceType(className);
+    if (type->GetKind() == kTypeClass) {
+      MIRClassType *currClass = static_cast<MIRClassType*>(type);
+      if (!mirFunction.GetAttr(FUNCATTR_constructor) ||
+          WithFinalFieldsNeedBarrier(currClass, mirFunction.GetAttr(FUNCATTR_static))) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 void FEFunction::EmitToMIRStmt() {
+  bool isNeedBarrier = false;
+  bool isWithReturn = false;
+  if (!FEOptions::GetInstance().IsNoBarrier()) {
+    isNeedBarrier = false; // Do not insert it here.
+  }
   FELinkListNode *nodeStmt = feirStmtHead->GetNext();
   while (nodeStmt != nullptr && nodeStmt != feirStmtTail) {
     FEIRStmt *stmt = static_cast<FEIRStmt*>(nodeStmt);
     std::list<StmtNode*> mirStmts = stmt->GenMIRStmts(FEManager::GetMIRBuilder());
+    if (isNeedBarrier && stmt->GetKind() == kStmtReturn) {
+      isWithReturn = true;
+      StmtNode *barrier = mirFunction.GetAttr(FUNCATTR_constructor) ?
+                          mirFunction.GetCodeMempool()->New<StmtNode>(OP_membarrelease) :
+                          mirFunction.GetCodeMempool()->New<StmtNode>(OP_membarstorestore);
+      mirStmts.emplace_front(barrier);
+    }
 #ifdef DEBUG
     // LOC info has been recorded in FEIRStmt already, this could be removed later.
     AddLocForStmt(*stmt, mirStmts);
@@ -1193,6 +1245,12 @@ void FEFunction::EmitToMIRStmt() {
       FEManager::GetMIRBuilder().AddStmtInCurrentFunctionBody(*mirStmt);
     }
     nodeStmt = nodeStmt->GetNext();
+  }
+  if (isNeedBarrier && !isWithReturn) {
+    StmtNode *barrier = mirFunction.GetAttr(FUNCATTR_constructor) ?
+                        mirFunction.GetCodeMempool()->New<StmtNode>(OP_membarrelease) :
+                        mirFunction.GetCodeMempool()->New<StmtNode>(OP_membarstorestore);
+    FEManager::GetMIRBuilder().AddStmtInCurrentFunctionBody(*barrier);
   }
 }
 

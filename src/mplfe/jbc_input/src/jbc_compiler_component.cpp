@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -21,7 +21,7 @@
 namespace maple {
 JBCCompilerComponent::JBCCompilerComponent(MIRModule &module)
     : MPLFECompilerComponent(module, kSrcLangJava),
-      mp(memPoolCtrler.NewMemPool("MemPool for JBCCompilerComponent")),
+      mp(FEUtils::NewMempool("MemPool for JBCCompilerComponent", false /* isLocalPool */)),
       allocator(mp),
       jbcInput(module) {}
 
@@ -60,61 +60,18 @@ bool JBCCompilerComponent::LoadOnDemandTypeImpl() {
   return false;
 }
 
-bool JBCCompilerComponent::PreProcessDeclImpl() {
-  FETimer timer;
-  timer.StartAndDump("JBCCompilerComponent::PreProcessDecl()");
-  FE_INFO_LEVEL(FEOptions::kDumpLevelInfo, "===== Process JBCCompilerComponent::PreProcessDecl() =====");
-  bool success = true;
-  for (FEInputStructHelper *helper : structHelpers) {
-    ASSERT(helper != nullptr, "nullptr check");
-    success = helper->PreProcessDecl() ? success : false;
-  }
-  timer.StopAndDumpTimeMS("JBCCompilerComponent::PreProcessDecl()");
-  return success;
-}
-
-bool JBCCompilerComponent::ProcessDeclImpl() {
-  FETimer timer;
-  timer.StartAndDump("JBCCompilerComponent::ProcessDecl()");
-  FE_INFO_LEVEL(FEOptions::kDumpLevelInfo, "===== Process JBCCompilerComponent::ProcessDecl() =====");
-  bool success = true;
-  for (FEInputStructHelper *helper : structHelpers) {
-    ASSERT(helper != nullptr, "nullptr check");
-    success = helper->ProcessDecl() ? success : false;
-  }
-  timer.StopAndDumpTimeMS("JBCCompilerComponent::ProcessDecl()");
-  return success;
-}
-
 void JBCCompilerComponent::ProcessPragmaImpl() {}
 
-bool JBCCompilerComponent::PreProcessWithoutFunctionImpl() {
-  return false;
-}
-
-bool JBCCompilerComponent::PreProcessWithFunctionImpl() {
-  FETimer timer;
-  timer.StartAndDump("JBCCompilerComponent::PreProcessWithFunction()");
-  FE_INFO_LEVEL(FEOptions::kDumpLevelInfo, "===== Process JBCCompilerComponent::PreProcessWithFunction() =====");
-  for (FEInputStructHelper *structHelper : structHelpers) {
-    ASSERT(structHelper != nullptr, "nullptr check");
-    for (FEInputMethodHelper *methodHelper : structHelper->GetMethodHelpers()) {
-      ASSERT(methodHelper != nullptr, "nullptr check");
-      JBCClassMethod2FEHelper *jbcMethodHelper = static_cast<JBCClassMethod2FEHelper*>(methodHelper);
-      GStrIdx methodNameIdx = methodHelper->GetMethodNameIdx();
-      bool isStatic = methodHelper->IsStatic();
-      MIRFunction *mirFunc = FEManager::GetTypeManager().GetMIRFunction(methodNameIdx, isStatic);
-      CHECK_NULL_FATAL(mirFunc);
-      std::unique_ptr<FEFunction> feFunction = std::make_unique<JBCFunction>(*jbcMethodHelper, *mirFunc,
-                                                                             phaseResultTotal);
-      module.AddFunction(mirFunc);
-      feFunction->Init();
-      feFunction->SetSrcFileName(structHelper->GetSrcFileName());
-      functions.push_back(std::move(feFunction));
-    }
-  }
-  timer.StopAndDumpTimeMS("JBCCompilerComponent::PreProcessWithFunction()");
-  return true;
+std::unique_ptr<FEFunction> JBCCompilerComponent::CreatFEFunctionImpl(FEInputMethodHelper *methodHelper) {
+  JBCClassMethod2FEHelper *jbcMethodHelper = static_cast<JBCClassMethod2FEHelper*>(methodHelper);
+  GStrIdx methodNameIdx = methodHelper->GetMethodNameIdx();
+  bool isStatic = methodHelper->IsStatic();
+  MIRFunction *mirFunc = FEManager::GetTypeManager().GetMIRFunction(methodNameIdx, isStatic);
+  CHECK_NULL_FATAL(mirFunc);
+  std::unique_ptr<FEFunction> feFunction = std::make_unique<JBCFunction>(*jbcMethodHelper, *mirFunc, phaseResultTotal);
+  module.AddFunction(mirFunc);
+  feFunction->Init();
+  return feFunction;
 }
 
 std::string JBCCompilerComponent::GetComponentNameImpl() const {

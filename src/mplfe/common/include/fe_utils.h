@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -20,6 +20,7 @@
 #include "mpl_logging.h"
 #include "prim_types.h"
 #include "global_tables.h"
+#include "mempool.h"
 
 namespace maple {
 class FEUtils {
@@ -35,6 +36,8 @@ class FEUtils {
   static uint8 GetDim(const std::string &typeName);
   static std::string GetBaseTypeName(const std::string &typeName);
   static PrimType GetPrimType(const GStrIdx &typeNameIdx);
+  static std::string GetSequentialName0(const std::string &prefix, uint32_t num);
+  static std::string GetSequentialName(const std::string &prefix);
 
   static const std::string kBoolean;
   static const std::string kByte;
@@ -45,6 +48,7 @@ class FEUtils {
   static const std::string kFloat;
   static const std::string kDouble;
   static const std::string kVoid;
+  static const std::string kThis;
   static const std::string kMCCStaticFieldGetBool;
   static const std::string kMCCStaticFieldGetByte;
   static const std::string kMCCStaticFieldGetChar;
@@ -64,6 +68,14 @@ class FEUtils {
   static const std::string kMCCStaticFieldSetFloat;
   static const std::string kMCCStaticFieldSetDouble;
   static const std::string kMCCStaticFieldSetObject;
+
+  static inline MemPool *NewMempool(const std::string &name, bool isLocalPool) {
+#ifndef USE_OPS
+    return memPoolCtrler.NewMemPool(name, isLocalPool);
+#else
+    return memPoolCtrler.NewMemPool(name);
+#endif
+  }
 
   static inline GStrIdx &GetBooleanIdx() {
     static GStrIdx booleanIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(kBoolean);
@@ -108,6 +120,11 @@ class FEUtils {
   static inline GStrIdx &GetVoidIdx() {
     static GStrIdx voidIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(kVoid);
     return voidIdx;
+  }
+
+  static inline GStrIdx &GetThisIdx() {
+    static GStrIdx thisIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(kThis);
+    return thisIdx;
   }
 
   static inline GStrIdx &GetMCCStaticFieldGetBoolIdx() {

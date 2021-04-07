@@ -29,11 +29,8 @@ class BCCompilerComponent : public MPLFECompilerComponent {
  protected:
   bool ParseInputImpl() override;
   bool LoadOnDemandTypeImpl() override;
-  bool PreProcessDeclImpl() override;
-  bool ProcessDeclImpl() override;
   void ProcessPragmaImpl() override;
-  bool PreProcessWithoutFunctionImpl() override;
-  bool PreProcessWithFunctionImpl() override;
+  std::unique_ptr<FEFunction> CreatFEFunctionImpl(FEInputMethodHelper *methodHelper) override;
   std::string GetComponentNameImpl() const override;
   bool ParallelableImpl() const override;
   void DumpPhaseTimeTotalImpl() const override;

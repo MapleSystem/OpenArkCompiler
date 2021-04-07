@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -357,7 +357,7 @@ std::list<UniqueFEIRStmt> JBCStmtInst::EmitToFEIRForOpLdc(JBCFunctionContext &co
     case jbc::kConstString: {
       const jbc::JBCConstString *constString = static_cast<const jbc::JBCConstString*>(constRaw);
       UniqueFEIRVar varDst = stack2feHelper.PushItem(PTY_ref);
-      stmtDAssign = FEIRBuilder::CreateStmtJavaConstString(std::move(varDst), constString->GetStrIdx());
+      stmtDAssign = FEIRBuilder::CreateStmtJavaConstString(std::move(varDst), constString->GetString());
       break;
     }
     case jbc::kConstClass: {
@@ -655,7 +655,7 @@ std::list<UniqueFEIRStmt> JBCStmtInst::EmitToFEIRForOpStaticFieldOpr(JBCFunction
   const jbc::JBCConstRef *constRef = static_cast<const jbc::JBCConstRef*>(constRaw);
   FEStructFieldInfo *fieldInfo = static_cast<FEStructFieldInfo*>(constRef->GetFEStructElemInfo());
   CHECK_NULL_FATAL(fieldInfo);
-  const UniqueFEIRType &fieldType = fieldInfo->GetType();
+  const FEIRType *fieldType = fieldInfo->GetType();
   PrimType pty = fieldType->IsScalar() ? fieldType->GetPrimType() : PTY_ref;
   pty = JBCStack2FEHelper::SimplifyPrimType(pty);
   if (op.GetOpcode() == jbc::kOpGetStatic) {
@@ -681,7 +681,7 @@ std::list<UniqueFEIRStmt> JBCStmtInst::EmitToFEIRForOpFieldOpr(JBCFunctionContex
   const jbc::JBCConstRef *constRef = static_cast<const jbc::JBCConstRef*>(constRaw);
   FEStructFieldInfo *fieldInfo = static_cast<FEStructFieldInfo*>(constRef->GetFEStructElemInfo());
   CHECK_NULL_FATAL(fieldInfo);
-  const UniqueFEIRType &fieldType = fieldInfo->GetType();
+  const FEIRType *fieldType = fieldInfo->GetType();
   PrimType pty = fieldType->IsScalar() ? fieldType->GetPrimType() : PTY_ref;
   pty = JBCStack2FEHelper::SimplifyPrimType(pty);
   if (op.GetOpcode() == jbc::kOpGetField) {
@@ -721,9 +721,9 @@ void JBCStmtInst::PrepareInvokeParametersAndReturn(JBCStack2FEHelper &stack2feHe
                                                    const FEStructMethodInfo &info,
                                                    FEIRStmtCallAssign &callStmt,
                                                    bool isStatic) const {
-  const std::vector<UniqueFEIRType> &argTypes = info.GetArgTypes();
+  const MapleVector<FEIRType*> &argTypes = info.GetArgTypes();
   for (size_t i = argTypes.size(); i > 0; --i) {
-    const UniqueFEIRType &argType = argTypes[static_cast<uint32>(i - 1)];
+    const FEIRType *argType = argTypes[static_cast<uint32>(i - 1)];
     PrimType pty = argType->GetPrimType();
     UniqueFEIRVar var = stack2feHelper.PopItem(JBCStack2FEHelper::SimplifyPrimType(pty));
     UniqueFEIRExpr expr = FEIRBuilder::CreateExprDRead(std::move(var));
@@ -731,14 +731,14 @@ void JBCStmtInst::PrepareInvokeParametersAndReturn(JBCStack2FEHelper &stack2feHe
   }
   if (!isStatic) {
     // push this
-    const UniqueFEIRType &thisType = info.GetOwnerType();
+    const FEIRType *thisType = info.GetOwnerType();
     PrimType pty = thisType->GetPrimType();
     UniqueFEIRVar var = stack2feHelper.PopItem(JBCStack2FEHelper::SimplifyPrimType(pty));
     UniqueFEIRExpr expr = FEIRBuilder::CreateExprDRead(std::move(var));
     callStmt.AddExprArgReverse(std::move(expr));
   }
   if (!info.IsReturnVoid()) {
-    const UniqueFEIRType &retType = info.GetReturnType();
+    const FEIRType *retType = info.GetReturnType();
     PrimType pty = retType->GetPrimType();
     UniqueFEIRVar var = stack2feHelper.PushItem(JBCStack2FEHelper::SimplifyPrimType(pty));
     callStmt.SetVar(std::move(var));
@@ -901,9 +901,11 @@ std::list<UniqueFEIRStmt> JBCStmtInst::EmitToFEIRForOpMultiANewArray(JBCFunction
     return ans;
   }
   const jbc::JBCConstClass *constClass = static_cast<const jbc::JBCConstClass*>(constRaw);
-  UniqueFEIRStmt stmt = std::make_unique<FEIRStmtJavaMultiANewArray>(nullptr, constClass->GetFEIRType()->Clone());
+  UniqueFEIRStmt stmt = std::make_unique<FEIRStmtJavaMultiANewArray>(nullptr, constClass->GetFEIRType()->Clone(),
+                                                                     nullptr);
   std::vector<jbc::JBCPrimType> stackInTypes = op.GetInputTypesFromStack(constPool);
   std::reverse(stackInTypes.begin(), stackInTypes.end());
+  FEIRStmtJavaMultiANewArray *javaMultiANewArray = static_cast<FEIRStmtJavaMultiANewArray*>(stmt.get());
   for (jbc::JBCPrimType popType : stackInTypes) {
     PrimType pty = JBCStack2FEHelper::JBCStackItemTypeToPrimType(popType);
     UniqueFEIRVar var = stack2feHelper.PopItem(pty);
@@ -911,7 +913,7 @@ std::list<UniqueFEIRStmt> JBCStmtInst::EmitToFEIRForOpMultiANewArray(JBCFunction
       success = false;
       return ans;
     }
-    static_cast<FEIRStmtJavaMultiANewArray*>(stmt.get())->AddVarSizeRev(std::move(var));
+    javaMultiANewArray->AddVarSizeRev(std::move(var));
   }
   jbc::JBCPrimType stackOutType = op.GetOutputTypesToStack(constPool);
   if (stackOutType == jbc::JBCPrimType::kTypeDefault) {
@@ -920,7 +922,8 @@ std::list<UniqueFEIRStmt> JBCStmtInst::EmitToFEIRForOpMultiANewArray(JBCFunction
   }
   PrimType pty = JBCStack2FEHelper::JBCStackItemTypeToPrimType(stackOutType);
   UniqueFEIRVar varRet = stack2feHelper.PushItem(pty);
-  static_cast<FEIRStmtJavaMultiANewArray*>(stmt.get())->SetVar(std::move(varRet));
+  javaMultiANewArray->SetArrayType(varRet->GetType()->Clone());
+  javaMultiANewArray->SetVar(std::move(varRet));
   ans.push_back(std::move(stmt));
   return ans;
 }

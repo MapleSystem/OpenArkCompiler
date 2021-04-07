@@ -70,10 +70,10 @@ bool BCUtil::IsMorePrecisePrimitiveType(const GStrIdx &name0, const GStrIdx &nam
       BCUtil::GetByteIdx(),
       BCUtil::GetCharIdx(),
       BCUtil::GetShortIdx(),
-      BCUtil::GetFloatIdx(),
       BCUtil::GetIntIdx(),
-      BCUtil::GetDoubleIdx(),
-      BCUtil::GetLongIdx()
+      BCUtil::GetFloatIdx(),
+      BCUtil::GetLongIdx(),
+      BCUtil::GetDoubleIdx()
   };
   if (name0 == name1) {
     return false;
@@ -135,6 +135,12 @@ bool BCUtil::IsJavaPrimitveType(const GStrIdx &typeNameIdx) {
   return !IsJavaReferenceType(typeNameIdx);
 }
 
+bool BCUtil::IsJavaPrimitiveTypeName(const std::string typeName) {
+  return ((typeName == kBoolean) || (typeName == kByte) || (typeName == kBoolean) || (typeName == kShort) ||
+          (typeName == kChar) || (typeName == kInt) || (typeName == kLong) || (typeName == kFloat) ||
+          (typeName == kDouble));
+}
+
 bool BCUtil::IsArrayType(const GStrIdx &typeNameIdx) {
   std::string typeName = GlobalTables::GetStrTable().GetStringFromStrIdx(typeNameIdx);
   uint8 dim = FEUtils::GetDim(typeName);
@@ -175,6 +181,37 @@ void BCUtil::AddDefaultDepSet(std::unordered_set<std::string> &typeTable) {
   typeTable.insert("Ljava/io/UnixFileSystem;");
   typeTable.insert("Ljava/util/concurrent/atomic/AtomicInteger;");
   typeTable.insert("Ljava/lang/reflect/Method;");
+}
+
+// get the serial number in register name, for example 2 in Reg2_I
+uint32 BCUtil::Name2RegNum(const std::string &name) {
+  const uint16 regPrefixLen = strlen("Reg");
+  int numLen = name.length() - regPrefixLen;
+  // Nonreg names also reach here, e.g. "_this". Make sure they are not handle.
+  const uint16 regVarMinLen = 6;
+  if (numLen < regVarMinLen - regPrefixLen || name.compare(0, regPrefixLen, "Reg") != 0) {
+    return UINT32_MAX;
+  }
+  std::string regName = name.substr(regPrefixLen);
+  int i = 0;
+  for (; i < numLen; i++) {
+    if (regName[i] < '0' || regName[i] > '9') {
+      break;
+    }
+  }
+
+  if (i == 0) {
+    return UINT32_MAX;
+  }
+  int regNum = std::stoi(regName.substr(0, i));
+  return regNum;
+}
+
+bool BCUtil::HasContainSuffix(const std::string &value, const std::string &suffix) {
+  if (suffix.size() > value.size()) {
+    return false;
+  }
+  return std::equal(suffix.rbegin(), suffix.rend(), value.rbegin());
 }
 }  // namespace bc
 }  // namespace maple

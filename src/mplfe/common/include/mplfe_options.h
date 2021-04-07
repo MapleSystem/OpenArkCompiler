@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -56,6 +56,9 @@ class MPLFEOptions : public maple::MapleDriverOptionBase {
   bool ProcessInClass(const mapleOption::Option &opt);
   bool ProcessInJar(const mapleOption::Option &opt);
   bool ProcessInDex(const mapleOption::Option &opt);
+#ifdef ENABLE_MPLFE_AST
+  bool ProcessInAST(const mapleOption::Option &opt);
+#endif // ~/ENABLE_MPLFE_AST
   bool ProcessInputMplt(const mapleOption::Option &opt);
   bool ProcessInputMpltFromSys(const mapleOption::Option &opt);
   bool ProcessInputMpltFromApk(const mapleOption::Option &opt);
@@ -85,6 +88,10 @@ class MPLFEOptions : public maple::MapleDriverOptionBase {
   bool ProcessDumpJBCErrorOnly(const mapleOption::Option &opt);
   bool ProcessDumpJBCFuncName(const mapleOption::Option &opt);
   bool ProcessEmitJBCLocalVarInfo(const mapleOption::Option &opt);
+
+  // bc compiler options
+  bool ProcessRC(const mapleOption::Option &opt);
+  bool ProcessNoBarrier(const mapleOption::Option &opt);
 
   // general stmt/bb/cfg debug options
   bool ProcessDumpGeneralCFGGraph(const mapleOption::Option &opt);

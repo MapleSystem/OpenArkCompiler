@@ -89,8 +89,14 @@ ErrorCode DriverRunner::Run() {
   outputFile.append(GetPostfix());
   if (mpl2mplOptions != nullptr || meOptions != nullptr) {
     std::string vtableImplFile = originBaseName;
-    vtableImplFile.append(".VtableImpl.mpl");
-    originBaseName.append(".VtableImpl");
+    std::string postFix = "";
+    if (theModule->GetSrcLang() == kSrcLangC) {
+      postFix = ".me";
+    } else {
+      postFix = ".VtableImpl";
+    }
+    vtableImplFile.append(postFix + ".mpl");
+    originBaseName.append(postFix);
     ProcessMpl2mplAndMePhases(outputFile, vtableImplFile);
   }
   ProcessCGPhase(outputFile, originBaseName);
@@ -184,7 +190,7 @@ ErrorCode DriverRunner::ParseInput() const {
       LogInfo::MapleLogger() << "Starting parse " << inputInline << '\n';
       bool parsed = parser.ParseInlineFuncBody(optFile);
       if (!parsed) {
-        parser.EmitError(outputFile);
+        parser.EmitError(actualInput);
       }
       optFile.close();
     }
@@ -197,6 +203,10 @@ ErrorCode DriverRunner::ParseInput() const {
 void DriverRunner::ProcessMpl2mplAndMePhases(const std::string &outputFile, const std::string &vtableImplFile) const {
   CHECK_MODULE();
   theMIRModule = theModule;
+  if (hasDebugFlag) {
+    std::cout << "set up debug info " << std::endl;
+    theMIRModule->GetDbgInfo()->BuildDebugInfo();
+  }
   if (mpl2mplOptions != nullptr || meOptions != nullptr) {
     LogInfo::MapleLogger() << "Processing maplecomb" << '\n';
 

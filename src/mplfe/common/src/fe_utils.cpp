@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -27,6 +27,7 @@ const std::string FEUtils::kLong = "J";
 const std::string FEUtils::kFloat = "F";
 const std::string FEUtils::kDouble = "D";
 const std::string FEUtils::kVoid = "V";
+const std::string FEUtils::kThis = "_this";
 const std::string FEUtils::kMCCStaticFieldGetBool   = "MCC_StaticFieldGetBool";
 const std::string FEUtils::kMCCStaticFieldGetByte   = "MCC_StaticFieldGetByte";
 const std::string FEUtils::kMCCStaticFieldGetShort  = "MCC_StaticFieldGetShort";
@@ -177,6 +178,19 @@ PrimType FEUtils::GetPrimType(const GStrIdx &typeNameIdx) {
     return PTY_void;
   }
   return PTY_ref;
+}
+
+std::string FEUtils::GetSequentialName0(const std::string &prefix, uint32_t num) {
+  std::stringstream ss;
+  ss << prefix << num;
+  return ss.str();
+}
+
+std::string FEUtils::GetSequentialName(const std::string &prefix) {
+  static uint32 unnamedSymbolIdx = 1;
+  std::string name = GetSequentialName0(prefix, unnamedSymbolIdx);
+  ++unnamedSymbolIdx;
+  return name;
 }
 
 // ---------- FELinkListNode ----------

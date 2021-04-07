@@ -25,6 +25,7 @@
 #include "dex_strfac.h"
 #include "fe_options.h"
 #include "feir_var_name.h"
+#include "ark_annotation_processor.h"
 
 namespace maple {
 namespace bc {
@@ -71,20 +72,28 @@ DexOpMove::DexOpMove(MapleAllocator &allocatorIn, uint32 pcIn, DexOpCode opcodeI
 void DexOpMove::SetVAImpl(uint32 num) {
   vA.regNum = num;
   vA.isDef = true;
-  vA.regType = allocator.GetMemPool()->New<BCRegType>(allocator, vA, GStrIdx(0), false, true);
+  GStrIdx typeNameIdx;
+  if (kDexOpMove <= opcode && opcode <= kDexOpMove16) {
+    typeNameIdx = BCUtil::GetIntIdx();
+  } else if (kDexOpMoveWide <= opcode && opcode <= kDexOpMoveWide16) {
+    typeNameIdx = BCUtil::GetLongIdx();
+  } else if (kDexOpMoveObject <= opcode && opcode <= kDexOpMoveObject16) {
+    typeNameIdx = BCUtil::GetJavaObjectNameMplIdx();
+  } else {
+    CHECK_FATAL(false, "invalid opcode: %x in `DexOpMove`", opcode);
+  }
+  vA.regType = allocator.GetMemPool()->New<BCRegType>(allocator, vA, typeNameIdx, true);
   defedRegs.emplace_back(&vA);
 }
 
 void DexOpMove::SetVBImpl(uint32 num) {
   vB.regNum = num;
+  vB.regTypeItem = vA.regTypeItem;
   usedRegs.emplace_back(&vB);
 }
 
 void DexOpMove::SetRegTypeInTypeInferImpl() {
-  vA.regTypeItem = vB.regTypeItem;
-  vA.regType->SetRegTypeItem(vB.regTypeItem);
-  vA.regType->UpdateUsedSet(vB.regTypeItem);
-  vA.regValue = vB.regValue;
+  vB.regType->RegisterRelatedBCRegType(vA.regType);
 }
 
 std::list<UniqueFEIRStmt> DexOpMove::EmitToFEIRStmtsImpl() {
@@ -144,12 +153,14 @@ void DexOpMoveException::SetBCRegTypeImpl(const BCInstruction &inst) {
   GStrIdx exceptionTypeNameIdx = *(catchedExTypeNamesIdx.begin());
   vA.regType = allocator.GetMemPool()->New<BCRegType>(allocator, vA, exceptionTypeNameIdx);
   // If exception type is primitive type, it should be <* void>
-  vA.regTypeItem->isPrimPtr = (vA.GetBasePrimType() != PTY_ref);
+  if (vA.GetBasePrimType() != PTY_ref) {
+    vA.regTypeItem->typeNameIdx = BCUtil::GetJavaThrowableNameMplIdx();
+  }
 }
 
 std::list<UniqueFEIRStmt> DexOpMoveException::EmitToFEIRStmtsImpl() {
   std::list<UniqueFEIRStmt> stmts;
-  std::unique_ptr<FEIRExpr> readExpr = std::make_unique<FEIRExprRegRead>(PTY_ptr, -kSregThrownval);
+  std::unique_ptr<FEIRExpr> readExpr = std::make_unique<FEIRExprRegRead>(PTY_ref, -kSregThrownval);
   UniqueFEIRStmt stmt = std::make_unique<FEIRStmtDAssign>(vA.GenFEIRVarReg(), std::move(readExpr));
   stmts.emplace_back(std::move(stmt));
   return stmts;
@@ -168,7 +179,7 @@ void DexOpReturn::SetVAImpl(uint32 num) {
   usedRegs.emplace_back(&vA);
 }
 
-void DexOpReturn::ParseImpl(const BCClassMethod &method) {
+void DexOpReturn::ParseImpl(BCClassMethod &method) {
   GStrIdx usedTypeNameIdx =
       GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(namemangler::EncodeName(method.GetSigTypeNames().at(0)));
   vA.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(usedTypeNameIdx);
@@ -194,19 +205,8 @@ DexOpConst::DexOpConst(MapleAllocator &allocatorIn, uint32 pcIn, DexOpCode opcod
 
 void DexOpConst::SetVAImpl(uint32 num) {
   vA.regNum = num;
-  GStrIdx typeNameIdx;
-  if (isWide) {
-    typeNameIdx = BCUtil::GetLongIdx();
-  } else {
-    typeNameIdx = BCUtil::GetIntIdx();
-  }
-  vA.regType = allocator.GetMemPool()->New<BCRegType>(allocator, vA, typeNameIdx, false, true);
-  vA.regValue = allocator.GetMemPool()->New<BCRegValue>();
   vA.isDef = true;
-
-  vAtmp.regNum = num;
-  vAtmp.regType = allocator.GetMemPool()->New<BCRegType>(allocator, vAtmp, typeNameIdx, false, true);
-  vAtmp.regValue = vA.regValue;
+  vA.regValue = allocator.GetMemPool()->New<BCRegValue>();
   defedRegs.emplace_back(&vA);
 }
 
@@ -214,17 +214,32 @@ void DexOpConst::SetVBImpl(uint32 num) {
   if (opcode != kDexOpConstWide) {
     vA.regValue->primValue.raw32 = num;
   }
+  if (!isWide) {
+    vA.regType = allocator.GetMemPool()->New<BCRegType>(allocator, vA, BCUtil::GetIntIdx());
+  }
 }
 
 void DexOpConst::SetWideVBImpl(uint64 num) {
   if (opcode == kDexOpConstWide) {
     vA.regValue->primValue.raw64 = num;
   }
+  if (isWide) {
+    vA.regType = allocator.GetMemPool()->New<BCRegType>(allocator, vA, BCUtil::GetLongIdx());
+  }
 }
 
 std::list<UniqueFEIRStmt> DexOpConst::EmitToFEIRStmtsImpl() {
   std::list<UniqueFEIRStmt> ans;
   UniqueFEIRExpr expr;
+  DexReg vATmp;
+  vATmp.regNum = vA.regNum;
+  GStrIdx typeNameIdx;
+  if (isWide) {
+    typeNameIdx = BCUtil::GetLongIdx();
+  } else {
+    typeNameIdx = BCUtil::GetIntIdx();
+  }
+  vATmp.regType = allocator.GetMemPool()->New<BCRegType>(allocator, vATmp, typeNameIdx, true);
   switch (opcode) {
     case kDexOpConst4: {
       expr = FEIRBuilder::CreateExprConstI8(static_cast<int8>(vA.regValue->primValue.raw32));
@@ -273,10 +288,10 @@ std::list<UniqueFEIRStmt> DexOpConst::EmitToFEIRStmtsImpl() {
       break;
     }
   }
-  UniqueFEIRStmt stmt = FEIRBuilder::CreateStmtDAssign(vAtmp.GenFEIRVarReg(), std::move(expr));
+  UniqueFEIRStmt stmt = FEIRBuilder::CreateStmtDAssign(vATmp.GenFEIRVarReg(), std::move(expr));
   ans.emplace_back(std::move(stmt));
-  if (!(*vA.regTypeItem == *vAtmp.regTypeItem)) {
-    stmt = FEIRBuilder::CreateStmtRetype(vA.GenFEIRVarReg(), vAtmp.GenFEIRVarReg());
+  if (!(*vA.regTypeItem == *vATmp.regTypeItem)) {
+    stmt = FEIRBuilder::CreateStmtRetype(vA.GenFEIRVarReg(), vATmp.GenFEIRVarReg());
     ans.emplace_back(std::move(stmt));
   }
   return ans;
@@ -284,12 +299,11 @@ std::list<UniqueFEIRStmt> DexOpConst::EmitToFEIRStmtsImpl() {
 
 // ========== DexOpConstString ==========
 DexOpConstString::DexOpConstString(MapleAllocator &allocatorIn, uint32 pcIn, DexOpCode opcodeIn)
-    : DexOp(allocatorIn, pcIn, opcodeIn) {}
+    : DexOp(allocatorIn, pcIn, opcodeIn), strValue(allocator.GetMemPool()) {}
 
 void DexOpConstString::SetVAImpl(uint32 num) {
   vA.regNum = num;
   vA.regType = allocator.GetMemPool()->New<BCRegType>(allocator, vA, BCUtil::GetJavaStringNameMplIdx());
-  vA.regValue = allocator.GetMemPool()->New<BCRegValue>();
   vA.isDef = true;
   defedRegs.emplace_back(&vA);
 }
@@ -298,16 +312,22 @@ void DexOpConstString::SetVBImpl(uint32 num) {
   vA.dexLitStrIdx = num;
 }
 
-void DexOpConstString::ParseImpl(const BCClassMethod &method) {
-  const std::string &literalString = method.GetBCClass().GetBCParser().GetReader()->GetStringFromIdx(vA.dexLitStrIdx);
-  vA.regValue->literalStrIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(literalString);
+void DexOpConstString::ParseImpl(BCClassMethod &method) {
+  fileIdx = method.GetBCClass().GetBCParser().GetReader()->GetFileIndex();
+  strValue = method.GetBCClass().GetBCParser().GetReader()->GetStringFromIdx(vA.dexLitStrIdx);
+  if (FEOptions::GetInstance().IsRC() && !method.IsRcPermanent() &&
+      ArkAnnotation::GetInstance().IsPermanent(strValue.c_str())) {
+    // "Lcom/huawei/ark/annotation/Permanent;" and "Lark/annotation/Permanent;"
+    // indicates next new-instance / new-array Permanent object
+    method.SetIsRcPermanent(true);
+  }
 }
 
 std::list<UniqueFEIRStmt> DexOpConstString::EmitToFEIRStmtsImpl() {
   std::list<UniqueFEIRStmt> stmts;
   UniqueFEIRVar dstVar = vA.GenFEIRVarReg();
-  UniqueFEIRStmt stmt = std::make_unique<FEIRStmtJavaConstString>(std::move(dstVar), vA.regValue->literalStrIdx,
-                                                                  vA.dexLitStrIdx);
+  UniqueFEIRStmt stmt = std::make_unique<FEIRStmtJavaConstString>(std::move(dstVar), strValue.c_str(),
+                                                                  fileIdx, vA.dexLitStrIdx);
   stmts.emplace_back(std::move(stmt));
   return stmts;
 }
@@ -327,15 +347,15 @@ void DexOpConstClass::SetVBImpl(uint32 num) {
   dexTypeIdx = num;
 }
 
-void DexOpConstClass::ParseImpl(const BCClassMethod &method) {
-  typeName = method.GetBCClass().GetBCParser().GetReader()->GetTypeNameFromIdx(dexTypeIdx);
+void DexOpConstClass::ParseImpl(BCClassMethod &method) {
+  const std::string &typeName = method.GetBCClass().GetBCParser().GetReader()->GetTypeNameFromIdx(dexTypeIdx);
+  const std::string &mplTypeName = namemangler::EncodeName(typeName);
+  mplTypeNameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(mplTypeName);
 }
 
 std::list<UniqueFEIRStmt> DexOpConstClass::EmitToFEIRStmtsImpl() {
   std::list<UniqueFEIRStmt> stmts;
   UniqueFEIRVar dstVar = vA.GenFEIRVarReg();
-  const std::string &mplTypeName = namemangler::EncodeName(typeName);
-  GStrIdx mplTypeNameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(mplTypeName);
   UniqueFEIRType refType = std::make_unique<FEIRTypeDefault>(BCUtil::GetPrimType(mplTypeNameIdx), mplTypeNameIdx);
   UniqueFEIRExpr expr = std::make_unique<FEIRExprIntrinsicop>(std::move(refType), INTRN_JAVA_CONST_CLASS,
                                                               std::make_unique<FEIRTypeDefault>(PTY_ref), dexTypeIdx);
@@ -350,6 +370,7 @@ DexOpMonitor::DexOpMonitor(MapleAllocator &allocatorIn, uint32 pcIn, DexOpCode o
 
 void DexOpMonitor::SetVAImpl(uint32 num) {
   vA.regNum = num;
+  vA.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(BCUtil::GetJavaObjectNameMplIdx(), true);
   usedRegs.emplace_back(&vA);
 }
 
@@ -374,6 +395,7 @@ DexOpCheckCast::DexOpCheckCast(MapleAllocator &allocatorIn, uint32 pcIn, DexOpCo
 
 void DexOpCheckCast::SetVAImpl(uint32 num) {
   vA.regNum = num;
+  vA.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(BCUtil::GetJavaObjectNameMplIdx(), true);
   usedRegs.emplace_back(&vA); // use vA to gen vDef
   vDef.regNum = num;
   vDef.isDef = true;
@@ -384,7 +406,7 @@ void DexOpCheckCast::SetVBImpl(uint32 num) {
   targetDexTypeIdx = num;
 }
 
-void DexOpCheckCast::ParseImpl(const BCClassMethod &method) {
+void DexOpCheckCast::ParseImpl(BCClassMethod &method) {
   const std::string &typeName = method.GetBCClass().GetBCParser().GetReader()->GetTypeNameFromIdx(targetDexTypeIdx);
   targetTypeNameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(namemangler::EncodeName(typeName));
   vDef.regType = allocator.GetMemPool()->New<BCRegType>(allocator, vDef, targetTypeNameIdx);
@@ -422,6 +444,7 @@ void DexOpInstanceOf::SetVAImpl(uint32 num) {
 
 void DexOpInstanceOf::SetVBImpl(uint32 num) {
   vB.regNum = num;
+  vB.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(BCUtil::GetJavaObjectNameMplIdx(), true);
   usedRegs.emplace_back(&vB);
 }
 
@@ -429,7 +452,7 @@ void DexOpInstanceOf::SetVCImpl(uint32 num) {
   targetDexTypeIdx = num;
 }
 
-void DexOpInstanceOf::ParseImpl(const BCClassMethod &method) {
+void DexOpInstanceOf::ParseImpl(BCClassMethod &method) {
   typeName = method.GetBCClass().GetBCParser().GetReader()->GetTypeNameFromIdx(targetDexTypeIdx);
 }
 
@@ -440,6 +463,8 @@ std::list<UniqueFEIRStmt> DexOpInstanceOf::EmitToFEIRStmtsImpl() {
                                                               FEIRBuilder::CreateTypeByJavaName(targetTypeName, true),
                                                               targetDexTypeIdx);
   stmts.emplace_back(std::move(stmt));
+  typeName.clear();
+  typeName.shrink_to_fit();
   return stmts;
 }
 
@@ -456,10 +481,14 @@ void DexOpArrayLength::SetVAImpl(uint32 num) {
 
 void DexOpArrayLength::SetVBImpl(uint32 num) {
   vB.regNum = num;
+  vB.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(BCUtil::GetABooleanIdx(), true);
   usedRegs.emplace_back(&vB);
 }
 
 std::list<UniqueFEIRStmt> DexOpArrayLength::EmitToFEIRStmtsImpl() {
+  CHECK_FATAL(BCUtil::IsArrayType(vB.regTypeItem->typeNameIdx),
+      "Invalid array type: %s in DexOpArrayLength",
+      GlobalTables::GetStrTable().GetStringFromStrIdx(vB.regTypeItem->typeNameIdx).c_str());
   std::list<UniqueFEIRStmt> stmts;
   UniqueFEIRStmt stmt = FEIRBuilder::CreateStmtArrayLength(vA.GenFEIRVarReg(), vB.GenFEIRVarReg());
   stmts.emplace_back(std::move(stmt));
@@ -479,7 +508,7 @@ void DexOpNewInstance::SetVBImpl(uint32 num) {
   vA.dexTypeIdx = num;
 }
 
-void DexOpNewInstance::ParseImpl(const BCClassMethod &method) {
+void DexOpNewInstance::ParseImpl(BCClassMethod &method) {
   const std::string &typeName = method.GetBCClass().GetBCParser().GetReader()->GetTypeNameFromIdx(vA.dexTypeIdx);
   // we should register vA in defs, even if it was new-instance java.lang.String.
   // Though new-instance java.lang.String would be replaced by StringFactory at following java.lang.String.<init>,
@@ -488,6 +517,10 @@ void DexOpNewInstance::ParseImpl(const BCClassMethod &method) {
   vA.regType = allocator.GetMemPool()->New<BCRegType>(allocator, vA,
       GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(namemangler::EncodeName(typeName)));
   defedRegs.emplace_back(&vA);
+  if (method.IsRcPermanent()) {
+    isRcPermanent = true;
+    method.SetIsRcPermanent(false);
+  }
 }
 
 std::list<UniqueFEIRStmt> DexOpNewInstance::EmitToFEIRStmtsImpl() {
@@ -499,7 +532,8 @@ std::list<UniqueFEIRStmt> DexOpNewInstance::EmitToFEIRStmtsImpl() {
       INTRN_JAVA_CLINIT_CHECK, std::make_unique<FEIRTypeDefault>(PTY_ref, vA.regTypeItem->typeNameIdx), nullptr,
                                                                  vA.dexTypeIdx);
   stmts.emplace_back(std::move(stmtCall));
-  UniqueFEIRExpr exprJavaNewInstance = FEIRBuilder::CreateExprJavaNewInstance(vA.GenFEIRType(), vA.dexTypeIdx);
+  UniqueFEIRExpr exprJavaNewInstance = FEIRBuilder::CreateExprJavaNewInstance(
+      vA.GenFEIRType(), vA.dexTypeIdx, isRcPermanent);
   UniqueFEIRStmt stmt = FEIRBuilder::CreateStmtDAssign(vA.GenFEIRVarReg(), std::move(exprJavaNewInstance));
   stmts.emplace_back(std::move(stmt));
   return stmts;
@@ -525,17 +559,21 @@ void DexOpNewArray::SetVCImpl(uint32 num) {
   vA.dexTypeIdx = num;
 }
 
-void DexOpNewArray::ParseImpl(const BCClassMethod &method) {
+void DexOpNewArray::ParseImpl(BCClassMethod &method) {
   const std::string &typeName = method.GetBCClass().GetBCParser().GetReader()->GetTypeNameFromIdx(vA.dexTypeIdx);
   vA.regType = allocator.GetMemPool()->New<BCRegType>(allocator, vA,
       GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(namemangler::EncodeName(typeName)));
+  if (method.IsRcPermanent()) {
+    isRcPermanent = true;
+    method.SetIsRcPermanent(false);
+  }
 }
 
 std::list<UniqueFEIRStmt> DexOpNewArray::EmitToFEIRStmtsImpl() {
   std::list<UniqueFEIRStmt> stmts;
   UniqueFEIRExpr exprSize = FEIRBuilder::CreateExprDRead(vB.GenFEIRVarReg());
   UniqueFEIRExpr exprJavaNewArray = FEIRBuilder::CreateExprJavaNewArray(vA.GenFEIRType(), std::move(exprSize),
-                                                                        vA.dexTypeIdx);
+                                                                        vA.dexTypeIdx, isRcPermanent);
   UniqueFEIRStmt stmt = FEIRBuilder::CreateStmtDAssign(vA.GenFEIRVarReg(), std::move(exprJavaNewArray));
   stmts.emplace_back(std::move(stmt));
   return stmts;
@@ -563,8 +601,8 @@ GStrIdx DexOpFilledNewArray::GetReturnType() const {
   return arrayTypeNameIdx;
 }
 
-void DexOpFilledNewArray::ParseImpl(const BCClassMethod &method) {
-  typeName = method.GetBCClass().GetBCParser().GetReader()->GetTypeNameFromIdx(dexArrayTypeIdx);
+void DexOpFilledNewArray::ParseImpl(BCClassMethod &method) {
+  const std::string &typeName = method.GetBCClass().GetBCParser().GetReader()->GetTypeNameFromIdx(dexArrayTypeIdx);
   const std::string &typeNameMpl = namemangler::EncodeName(typeName);
   arrayTypeNameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(typeNameMpl);
   const std::string &elemTypeName = GetArrayElementTypeFromArrayType(typeNameMpl);
@@ -608,6 +646,7 @@ DexOpFillArrayData::DexOpFillArrayData(MapleAllocator &allocatorIn, uint32 pcIn,
 
 void DexOpFillArrayData::SetVAImpl(uint32 num) {
   vA.regNum = num;
+  vA.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(BCUtil::GetVoidIdx(), true);
   usedRegs.emplace_back(&vA);
 }
 
@@ -615,18 +654,25 @@ void DexOpFillArrayData::SetVBImpl(uint32 num) {
   offset = static_cast<int32>(num); // signed value in unsigned data buffer
 }
 
-void DexOpFillArrayData::ParseImpl(const BCClassMethod &method) {
+void DexOpFillArrayData::ParseImpl(BCClassMethod &method) {
   const uint16 *data = method.GetInstPos() + pc + offset;
   size = *(reinterpret_cast<const uint32*>(&data[2]));
   arrayData = reinterpret_cast<const int8*>(&data[4]);
 }
 
 std::list<UniqueFEIRStmt> DexOpFillArrayData::EmitToFEIRStmtsImpl() {
+  CHECK_FATAL(BCUtil::IsArrayType(vA.regTypeItem->typeNameIdx),
+      "Invalid array type: %s in DexOpFillArrayData",
+      GlobalTables::GetStrTable().GetStringFromStrIdx(vA.regTypeItem->typeNameIdx).c_str());
   std::list<UniqueFEIRStmt> stmts;
   thread_local static std::stringstream ss("");
   ss.str("");
   ss << "const_array_" << funcNameIdx << "_" << pc;
   UniqueFEIRVar arrayReg = vA.GenFEIRVarReg();
+  const std::string &arrayTypeName = GlobalTables::GetStrTable().GetStringFromStrIdx(vA.regTypeItem->typeNameIdx);
+  CHECK_FATAL(arrayTypeName.size() > 1 && arrayTypeName.at(0) == 'A' &&
+      BCUtil::IsJavaPrimitveType(GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(arrayTypeName.substr(1))),
+      "Invalid type %s", arrayTypeName.c_str());
   UniqueFEIRStmt stmt = FEIRBuilder::CreateStmtJavaFillArrayData(std::move(arrayReg), arrayData, size, ss.str());
   stmts.emplace_back(std::move(stmt));
   return stmts;
@@ -638,24 +684,27 @@ DexOpThrow::DexOpThrow(MapleAllocator &allocatorIn, uint32 pcIn, DexOpCode opcod
 
 void DexOpThrow::SetVAImpl(uint32 num) {
   vA.regNum = num;
+  vA.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(BCUtil::GetJavaThrowableNameMplIdx(), true);
   usedRegs.emplace_back(&vA);
 }
 
 std::list<UniqueFEIRStmt> DexOpThrow::EmitToFEIRStmtsImpl() {
   std::list<UniqueFEIRStmt> stmts;
-  DexReg vATmp;
-  vATmp.regNum = vA.regNum;
-  if (vA.GetPrimType() != PTY_ref) {
-    // avoid type degraded, cast const 0 to Throwable as default.
-    vATmp.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(BCUtil::GetJavaThrowableNameMplIdx(), false, true);
-    UniqueFEIRStmt stmtRetype = FEIRBuilder::CreateStmtRetype(vATmp.GenFEIRVarReg(), vA.GenFEIRVarReg());
-    stmts.emplace_back(std::move(stmtRetype));
+  if (BCUtil::IsJavaReferenceType(vA.regTypeItem->typeNameIdx)) {
+    UniqueFEIRExpr expr = FEIRBuilder::CreateExprDRead(vA.GenFEIRVarReg());
+    UniqueFEIRStmt stmt = std::make_unique<FEIRStmtUseOnly>(OP_throw, std::move(expr));
+    stmts.emplace_back(std::move(stmt));
   } else {
-    vATmp.regTypeItem = vA.regTypeItem;
+    CHECK_FATAL(vA.regValue != nullptr && vA.regValue->primValue.raw32 == 0, "only null or ref can be thrown.");
+    DexReg vAtmp;
+    vAtmp.regNum = vA.regNum;
+    vAtmp.regType = allocator.GetMemPool()->New<BCRegType>(allocator, vAtmp, BCUtil::GetJavaThrowableNameMplIdx());
+    UniqueFEIRStmt retypeStmt = FEIRBuilder::CreateStmtRetype(vAtmp.GenFEIRVarReg(), vA.GenFEIRVarReg());
+    stmts.emplace_back(std::move(retypeStmt));
+    UniqueFEIRExpr expr = FEIRBuilder::CreateExprDRead(vAtmp.GenFEIRVarReg());
+    UniqueFEIRStmt stmt = std::make_unique<FEIRStmtUseOnly>(OP_throw, std::move(expr));
+    stmts.emplace_back(std::move(stmt));
   }
-  UniqueFEIRExpr expr = FEIRBuilder::CreateExprDRead(vATmp.GenFEIRVarReg());
-  UniqueFEIRStmt stmt = std::make_unique<FEIRStmtUseOnly>(OP_throw, std::move(expr));
-  stmts.emplace_back(std::move(stmt));
   return stmts;
 }
 
@@ -673,7 +722,7 @@ std::vector<uint32> DexOpGoto::GetTargetsImpl() const {
   return res;
 }
 
-void DexOpGoto::ParseImpl(const BCClassMethod &method) {
+void DexOpGoto::ParseImpl(BCClassMethod &method) {
   target = offset + pc;
 }
 
@@ -686,7 +735,7 @@ std::list<UniqueFEIRStmt> DexOpGoto::EmitToFEIRStmtsImpl() {
 
 // ========== DexOpSwitch =========
 DexOpSwitch::DexOpSwitch(MapleAllocator &allocatorIn, uint32 pcIn, DexOpCode opcodeIn)
-    : DexOp(allocatorIn, pcIn, opcodeIn) {
+    : DexOp(allocatorIn, pcIn, opcodeIn), keyTargetOPpcMap(allocator.Adapter()) {
   isPacked = (opcode == kDexOpPackedSwitch);
 }
 
@@ -700,7 +749,7 @@ void DexOpSwitch::SetVBImpl(uint32 num) {
   offset = static_cast<int32>(num);
 }
 
-void DexOpSwitch::ParseImpl(const BCClassMethod &method) {
+void DexOpSwitch::ParseImpl(BCClassMethod &method) {
   const uint16 *data = method.GetInstPos() + pc + offset;
   if (isPacked) {
     uint16 size = data[1];
@@ -800,11 +849,13 @@ DexOpIfTest::DexOpIfTest(MapleAllocator &allocatorIn, uint32 pcIn, DexOpCode opc
 
 void DexOpIfTest::SetVAImpl(uint32 num) {
   vA.regNum = num;
+  vA.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(BCUtil::GetIntIdx(), true);
   usedRegs.emplace_back(&vA);
 }
 
 void DexOpIfTest::SetVBImpl(uint32 num) {
   vB.regNum = num;
+  vB.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(BCUtil::GetIntIdx(), true);
   usedRegs.emplace_back(&vB);
 }
 
@@ -818,7 +869,7 @@ std::vector<uint32> DexOpIfTest::GetTargetsImpl() const {
   return res;
 }
 
-void DexOpIfTest::ParseImpl(const BCClassMethod &method) {
+void DexOpIfTest::ParseImpl(BCClassMethod &method) {
   target = offset + pc;
 }
 
@@ -870,6 +921,7 @@ DexOpIfTestZ::DexOpIfTestZ(MapleAllocator &allocatorIn, uint32 pcIn, DexOpCode o
 
 void DexOpIfTestZ::SetVAImpl(uint32 num) {
   vA.regNum = num;
+  vA.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(BCUtil::GetIntIdx(), true);
   usedRegs.emplace_back(&vA);
 }
 
@@ -883,7 +935,7 @@ std::vector<uint32> DexOpIfTestZ::GetTargetsImpl() const {
   return res;
 }
 
-void DexOpIfTestZ::ParseImpl(const BCClassMethod &method) {
+void DexOpIfTestZ::ParseImpl(BCClassMethod &method) {
   target = offset + pc;
 }
 
@@ -922,16 +974,16 @@ void DexOpAget::SetVAImpl(uint32 num) {
 
 void DexOpAget::SetVBImpl(uint32 num) {
   vB.regNum = num;
-  usedRegs.emplace_front(&vB);
+  usedRegs.emplace_back(&vB);
 }
 
 void DexOpAget::SetVCImpl(uint32 num) {
   vC.regNum = num;
   vC.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(BCUtil::GetIntIdx());
-  usedRegs.emplace_back(&vC);
+  usedRegs.emplace_front(&vC);
 }
 
-void DexOpAget::ParseImpl(const BCClassMethod &method) {
+void DexOpAget::ParseImpl(BCClassMethod &method) {
   GStrIdx elemTypeNameIdx;
   GStrIdx usedTypeNameIdx;
   bool isIndeterminateType = false;
@@ -980,29 +1032,34 @@ void DexOpAget::ParseImpl(const BCClassMethod &method) {
       break;
     }
   }
-  vA.regType = allocator.GetMemPool()->New<BCRegType>(allocator, vA, elemTypeNameIdx, false, isIndeterminateType);
-  if (!vA.regType->IsIndeterminate()) {
-    vB.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(usedTypeNameIdx);
-  }
+  vA.regType = allocator.GetMemPool()->New<BCRegType>(allocator, vA, elemTypeNameIdx, isIndeterminateType);
+  vB.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(usedTypeNameIdx, isIndeterminateType);
 }
 
 void DexOpAget::SetRegTypeInTypeInferImpl() {
-  if (vB.regTypeItem->isIndeterminate) {
+  if (vB.regType != nullptr && vC.regType != nullptr) {
     vB.regType->AddElemType(vA.regType);
-  } else {
-    std::string arrayTypeName = GlobalTables::GetStrTable().GetStringFromStrIdx(vB.regTypeItem->typeNameIdx);
-    if (arrayTypeName.size() > 1 && arrayTypeName.at(0) == 'A') {
-      vA.regType->SetTypeNameIdx(GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(arrayTypeName.substr(1)));
-      vA.regType->SetIsIndeterminate(false);
-    } else {
-      CHECK_FATAL(false, "Invalid array type %s", arrayTypeName.c_str());
-    }
   }
 }
 
 std::list<UniqueFEIRStmt> DexOpAget::EmitToFEIRStmtsImpl() {
-  std::list<UniqueFEIRStmt> stmts = FEIRBuilder::CreateStmtArrayLoad(vA.GenFEIRVarReg(), vB.GenFEIRVarReg(),
+  DexReg vAtmp;
+  vAtmp.regNum = vA.regNum;
+  const std::string arrayTypeName = GlobalTables::GetStrTable().GetStringFromStrIdx(vB.regTypeItem->typeNameIdx);
+  if (arrayTypeName.size() > 1 && arrayTypeName.at(0) == 'A') {
+    vAtmp.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(
+        GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(arrayTypeName.substr(1)));
+  } else {
+    CHECK_FATAL(false, "Invalid array type %s", arrayTypeName.c_str());
+  }
+  std::list<UniqueFEIRStmt> stmts = FEIRBuilder::CreateStmtArrayLoad(vAtmp.GenFEIRVarReg(), vB.GenFEIRVarReg(),
                                                                      vC.GenFEIRVarReg());
+
+  if (!((*vAtmp.regTypeItem) == (*vA.regTypeItem))) {
+    UniqueFEIRStmt retypeStmt =
+        FEIRBuilder::CreateStmtRetype(vA.GenFEIRVarReg(), vAtmp.GenFEIRVarReg());
+    stmts.emplace_back(std::move(retypeStmt));
+  }
   return stmts;
 }
 
@@ -1017,7 +1074,7 @@ void DexOpAput::SetVAImpl(uint32 num) {
 
 void DexOpAput::SetVBImpl(uint32 num) {
   vB.regNum = num;
-  usedRegs.emplace_front(&vB);  // Determine array type first
+  usedRegs.emplace_back(&vB);
 }
 
 void DexOpAput::SetVCImpl(uint32 num) {
@@ -1026,7 +1083,7 @@ void DexOpAput::SetVCImpl(uint32 num) {
   usedRegs.emplace_back(&vC);
 }
 
-void DexOpAput::ParseImpl(const BCClassMethod &method) {
+void DexOpAput::ParseImpl(BCClassMethod &method) {
   GStrIdx elemTypeNameIdx;
   GStrIdx usedTypeNameIdx;
   bool isIndeterminate = false;
@@ -1075,29 +1132,13 @@ void DexOpAput::ParseImpl(const BCClassMethod &method) {
       break;
     }
   }
-  if (isIndeterminate) {
-    return;
-  }
-  vA.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(elemTypeNameIdx, false, isIndeterminate);
-  vB.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(usedTypeNameIdx, false, isIndeterminate);
+  vA.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(elemTypeNameIdx, isIndeterminate);
+  vB.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(usedTypeNameIdx, isIndeterminate);
 }
 
 void DexOpAput::SetRegTypeInTypeInferImpl() {
-  if (vA.regType == nullptr && vB.regType != nullptr) {
-    if (!vB.regTypeItem->isIndeterminate) {
-      const std::string &arrayTypeName = GlobalTables::GetStrTable().GetStringFromStrIdx(vB.regTypeItem->typeNameIdx);
-      if (arrayTypeName.size() > 1 && arrayTypeName.at(0) == 'A') {
-        vA.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(
-            GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(arrayTypeName.substr(1)));
-      } else {
-        CHECK_FATAL(false, "Invalid array type %s", arrayTypeName.c_str());
-      }
-    }
-  } else if (vA.regType != nullptr && vB.regType != nullptr) {
-    if (vB.regTypeItem->isIndeterminate) {
-      vA.regType->AddArrayType(vB.regType);
-      vB.regType->AddElemType(vA.regType);
-    }
+  if (vA.regType != nullptr && vB.regType != nullptr && vC.regType != nullptr) {
+    vB.regType->AddElemType(vA.regType);
   }
 }
 
@@ -1140,7 +1181,7 @@ void DexOpIget::SetVCImpl(uint32 num) {
   index = num;
 }
 
-void DexOpIget::ParseImpl(const BCClassMethod &method) {
+void DexOpIget::ParseImpl(BCClassMethod &method) {
   BCReader::ClassElem field = method.GetBCClass().GetBCParser().GetReader()->GetClassFieldFromIdx(index);
   uint64 mapIdx = (static_cast<uint64>(method.GetBCClass().GetBCParser().GetReader()->GetFileIndex()) << 32) | index;
   structElemNameIdx = FEManager::GetManager().GetFieldStructElemNameIdx(mapIdx);
@@ -1180,7 +1221,7 @@ void DexOpIput::SetVCImpl(uint32 num) {
   index = num;
 }
 
-void DexOpIput::ParseImpl(const BCClassMethod &method) {
+void DexOpIput::ParseImpl(BCClassMethod &method) {
   BCReader::ClassElem field = method.GetBCClass().GetBCParser().GetReader()->GetClassFieldFromIdx(index);
   uint64 mapIdx = (static_cast<uint64>(method.GetBCClass().GetBCParser().GetReader()->GetFileIndex()) << 32) | index;
   structElemNameIdx = FEManager::GetManager().GetFieldStructElemNameIdx(mapIdx);
@@ -1216,7 +1257,7 @@ void DexOpSget::SetVBImpl(uint32 num) {
   index = num;
 }
 
-void DexOpSget::ParseImpl(const BCClassMethod &method) {
+void DexOpSget::ParseImpl(BCClassMethod &method) {
   BCReader::ClassElem field = method.GetBCClass().GetBCParser().GetReader()->GetClassFieldFromIdx(index);
   uint64 mapIdx = (static_cast<uint64>(method.GetBCClass().GetBCParser().GetReader()->GetFileIndex()) << 32) | index;
   structElemNameIdx = FEManager::GetManager().GetFieldStructElemNameIdx(mapIdx);
@@ -1226,6 +1267,7 @@ void DexOpSget::ParseImpl(const BCClassMethod &method) {
     FEManager::GetManager().SetFieldStructElemNameIdx(mapIdx, *structElemNameIdx);
   }
   vA.regType = allocator.GetMemPool()->New<BCRegType>(allocator, vA, structElemNameIdx->type);
+  dexFileHashCode = method.GetBCClass().GetBCParser().GetFileNameHashId();
 }
 
 std::list<UniqueFEIRStmt> DexOpSget::EmitToFEIRStmtsImpl() {
@@ -1235,7 +1277,7 @@ std::list<UniqueFEIRStmt> DexOpSget::EmitToFEIRStmtsImpl() {
   CHECK_NULL_FATAL(fieldInfo);
   fieldInfo->SetFieldID(index);
   UniqueFEIRVar var = vA.GenFEIRVarReg();
-  UniqueFEIRStmt stmt = std::make_unique<FEIRStmtFieldLoad>(nullptr, std::move(var), *fieldInfo, true);
+  UniqueFEIRStmt stmt = std::make_unique<FEIRStmtFieldLoad>(nullptr, std::move(var), *fieldInfo, true, dexFileHashCode);
   ans.emplace_back(std::move(stmt));
   return ans;
 }
@@ -1253,7 +1295,7 @@ void DexOpSput::SetVBImpl(uint32 num) {
   index = num;
 }
 
-void DexOpSput::ParseImpl(const BCClassMethod &method) {
+void DexOpSput::ParseImpl(BCClassMethod &method) {
   BCReader::ClassElem field = method.GetBCClass().GetBCParser().GetReader()->GetClassFieldFromIdx(index);
   uint64 mapIdx = (static_cast<uint64>(method.GetBCClass().GetBCParser().GetReader()->GetFileIndex()) << 32) | index;
   structElemNameIdx = FEManager::GetManager().GetFieldStructElemNameIdx(mapIdx);
@@ -1263,6 +1305,7 @@ void DexOpSput::ParseImpl(const BCClassMethod &method) {
     FEManager::GetManager().SetFieldStructElemNameIdx(mapIdx, *structElemNameIdx);
   }
   vA.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(structElemNameIdx->type);
+  dexFileHashCode = method.GetBCClass().GetBCParser().GetFileNameHashId();
 }
 
 std::list<UniqueFEIRStmt> DexOpSput::EmitToFEIRStmtsImpl() {
@@ -1272,7 +1315,8 @@ std::list<UniqueFEIRStmt> DexOpSput::EmitToFEIRStmtsImpl() {
   CHECK_NULL_FATAL(fieldInfo);
   UniqueFEIRVar var = vA.GenFEIRVarReg();
   fieldInfo->SetFieldID(index);
-  UniqueFEIRStmt stmt = std::make_unique<FEIRStmtFieldStore>(nullptr, std::move(var), *fieldInfo, true);
+  UniqueFEIRStmt stmt = std::make_unique<FEIRStmtFieldStore>(nullptr, std::move(var), *fieldInfo, true,
+                                                             dexFileHashCode);
   stmts.emplace_back(std::move(stmt));
   return stmts;
 }
@@ -1325,7 +1369,7 @@ bool DexOpInvoke::ReplaceStringFactory(BCReader::ClassElem &methodInfo, MapleLis
   return true;
 }
 
-void DexOpInvoke::ParseImpl(const BCClassMethod &method) {
+void DexOpInvoke::ParseImpl(BCClassMethod &method) {
   MapleList<uint32> &argRegNums = argRegs;
   uint64 mapIdx = (static_cast<uint64>(method.GetBCClass().GetBCParser().GetReader()->GetFileIndex()) << 32) |
       methodIdx;
@@ -1366,7 +1410,7 @@ void DexOpInvoke::ParseImpl(const BCClassMethod &method) {
 
 void DexOpInvoke::PrepareInvokeParametersAndReturn(const FEStructMethodInfo &feMethodInfo,
                                                    FEIRStmtCallAssign &stmt) const {
-  const std::vector<UniqueFEIRType> &argTypes = feMethodInfo.GetArgTypes();
+  const MapleVector<FEIRType*> &argTypes = feMethodInfo.GetArgTypes();
   for (size_t i = argTypes.size(); i > 0; --i) {
     UniqueFEIRVar var = argVRegs[i - 1 + (IsStatic() ? 0 : 1)].GenFEIRVarReg();
     UniqueFEIRExpr expr = FEIRBuilder::CreateExprDRead(std::move(var));
@@ -1534,7 +1578,11 @@ void DexOpBinaryOp::SetVBImpl(uint32 num) {
 
 void DexOpBinaryOp::SetVCImpl(uint32 num) {
   vC.regNum = num;
-  vC.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(*(vA.regTypeItem));
+  if (kDexOpShlLong <= opcode && opcode <= kDexOpUshrLong) {
+    vC.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(BCUtil::GetIntIdx());
+  } else {
+    vC.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(*(vA.regTypeItem));
+  }
   usedRegs.emplace_back(&vC);
 }
 
@@ -1571,21 +1619,36 @@ void DexOpBinaryOp2Addr::SetVAImpl(uint32 num) {
   vA.regNum = num;
   defedRegs.emplace_back(&vDef);
   usedRegs.emplace_back(&vA);
-  GStrIdx typeNameIdx; // typeName of A, B are same
+  // typeName of A, B are same, except `shl-long/2addr` ~ `ushr-long/2addr`
+  GStrIdx typeNameAIdx;
+  GStrIdx typeNameBIdx;
   if (kDexOpAddInt2Addr <= opcode && opcode <= kDexOpUshrInt2Addr) {
-    typeNameIdx = BCUtil::GetIntIdx();
-  } else if (kDexOpAddLong2Addr <= opcode && opcode <= kDexOpUshrLong2Addr) {
-    typeNameIdx = BCUtil::GetLongIdx();
+    typeNameAIdx = BCUtil::GetIntIdx();
+    typeNameBIdx = typeNameAIdx;
+  } else if (kDexOpAddLong2Addr <= opcode && opcode <= kDexOpXorLong2Addr) {
+    typeNameAIdx = BCUtil::GetLongIdx();
+    typeNameBIdx = typeNameAIdx;
+  } else if (kDexOpShlLong2Addr <= opcode && opcode <= kDexOpUshrLong2Addr) {
+    typeNameAIdx = BCUtil::GetLongIdx();
+    typeNameBIdx = BCUtil::GetIntIdx();
   } else if (kDexOpAddFloat2Addr <= opcode && opcode <= kDexOpRemFloat2Addr) {
-    typeNameIdx = BCUtil::GetFloatIdx();
+    typeNameAIdx = BCUtil::GetFloatIdx();
+    typeNameBIdx = typeNameAIdx;
   } else if (kDexOpAddDouble2Addr <= opcode && opcode <= kDexOpRemDouble2Addr) {
-    typeNameIdx = BCUtil::GetDoubleIdx();
+    typeNameAIdx = BCUtil::GetDoubleIdx();
+    typeNameBIdx = typeNameAIdx;
   } else {
     CHECK_FATAL(false, "Invalid opcode: 0x%x in DexOpBinaryOp2Addr", opcode);
   }
-  vDef.regType = allocator.GetMemPool()->New<BCRegType>(allocator, vDef, typeNameIdx);
-  vA.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(typeNameIdx);
-  vB.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(typeNameIdx);
+  vDef.regType = allocator.GetMemPool()->New<BCRegType>(allocator, vDef, typeNameAIdx);
+  vA.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(typeNameAIdx);
+  vB.regTypeItem = allocator.GetMemPool()->New<BCRegTypeItem>(typeNameBIdx);
+}
+
+void DexOpBinaryOp2Addr::SetVBImpl(uint32 num) {
+  vB.regNum = num;
+  // type is set in SetVAImpl
+  usedRegs.emplace_back(&vB);
 }
 
 Opcode DexOpBinaryOp2Addr::GetOpcodeFromDexIns(void) const {
@@ -1608,12 +1671,6 @@ std::list<UniqueFEIRStmt> DexOpBinaryOp2Addr::EmitToFEIRStmtsImpl() {
     CHECK_FATAL(false, "Invalid opcode: 0x%x in DexOpBinaryOp2Addr", opcode);
   }
   return stmts;
-}
-
-void DexOpBinaryOp2Addr::SetVBImpl(uint32 num) {
-  vB.regNum = num;
-  // type is set in SetVAImpl
-  usedRegs.emplace_back(&vB);
 }
 
 // ========== DexOpBinaryOpLit =========
@@ -1675,14 +1732,15 @@ void DexOpInvokePolymorphic::SetVHImpl(uint32 num) {
   protoIdx = num;
 }
 
-void DexOpInvokePolymorphic::ParseImpl(const BCClassMethod &method) {
+void DexOpInvokePolymorphic::ParseImpl(BCClassMethod &method) {
   isStatic = method.IsStatic();
   const BCReader::ClassElem &methodInfo =
       method.GetBCClass().GetBCParser().GetReader()->GetClassMethodFromIdx(methodIdx);
   const std::string &funcName = methodInfo.className + "|" + methodInfo.elemName + "|" + methodInfo.typeName;
   if (FEOptions::GetInstance().IsAOT()) {
     std::string callerClassName = method.GetBCClass().GetClassName(true);
-    callerClassID = FEManager::GetTypeManager().GetTypeIDFromMplClassName(callerClassName);
+    int32 dexFileHashCode = method.GetBCClass().GetBCParser().GetFileNameHashId();
+    callerClassID = FEManager::GetTypeManager().GetTypeIDFromMplClassName(callerClassName, dexFileHashCode);
   }
   fullNameMpl = namemangler::EncodeName(funcName);
   protoName = method.GetBCClass().GetBCParser().GetReader()->GetSignature(protoIdx);

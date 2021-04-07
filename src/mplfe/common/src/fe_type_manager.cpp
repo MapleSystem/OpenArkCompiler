@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -22,6 +22,7 @@
 #include "fe_config_parallel.h"
 #include "feir_type_helper.h"
 #include "fe_macros.h"
+#include "types_def.h"
 
 namespace maple {
 const UniqueFEIRType FETypeManager::kPrimFEIRTypeUnknown = std::make_unique<FEIRTypeDefault>(PTY_unknown);
@@ -42,7 +43,7 @@ const UniqueFEIRType FETypeManager::kFEIRTypeJavaString = std::make_unique<FEIRT
 
 FETypeManager::FETypeManager(MIRModule &moduleIn)
     : module(moduleIn),
-      mp(memPoolCtrler.NewMemPool("mempool for FETypeManager")),
+      mp(FEUtils::NewMempool("mempool for FETypeManager", false /* isLcalPool */)),
       allocator(mp),
       builder(&module),
       srcLang(kSrcLangJava),
@@ -151,8 +152,13 @@ void FETypeManager::SetMirImportedTypes(FETypeFlag flag) {
 }
 
 void FETypeManager::UpdateNameFuncMapFromTypeTable() {
+#ifndef USE_OPS
+  for (uint32 i = 1; i < SymbolBuilder::Instance().GetSymbolTableSize(); i++) {
+    MIRSymbol *symbol = SymbolBuilder::Instance().GetSymbolFromStIdx(i);
+#else
   for (uint32 i = 1; i < GlobalTables::GetGsymTable().GetSymbolTableSize(); i++) {
-    MIRSymbol *symbol = GlobalTables::GetGsymTable().GetSymbol(i);
+    MIRSymbol *symbol = GlobalTables::GetGsymTable().GetSymbolFromStidx(i);
+#endif
     CHECK_FATAL(symbol, "Symbol is null");
     if (symbol->GetSKind() == kStFunc) {
       CHECK_FATAL(symbol->GetFunction(), "Function in symbol is null");
@@ -185,6 +191,31 @@ void FETypeManager::CheckSameNamePolicy() const {
   if (result.size() > 0 && sameNamePolicy.IsFatal()) {
     FATAL(kLncFatal, "Structs with the same name exsited. Exit.");
   }
+}
+
+MIRStructType *FETypeManager::CreateStructType(const std::string &name) {
+  MIRStructType type(kTypeStruct);
+  GStrIdx strIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(name);
+  TyIdx tyIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&type);
+  module.GetTypeNameTab()->SetGStrIdxToTyIdx(strIdx, tyIdx);
+  if (GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx.GetIdx())->GetNameStrIdx() == 0) {
+    GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx.GetIdx())->SetNameStrIdx(strIdx);
+  }
+  auto *structType = static_cast<MIRStructType*>(GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx.GetIdx()));
+  structNameTypeMap[strIdx] = std::make_pair(structType, FETypeFlag::kSrcInput);
+  return structType;
+}
+
+MIRStructType *FETypeManager::GetOrCreateStructType(const std::string &name) {
+  GStrIdx nameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(name);
+  const std::unordered_map<GStrIdx, FEStructTypePair, GStrIdxHash>::iterator &it  = structNameTypeMap.find(nameIdx);
+  if (it != structNameTypeMap.end()) {
+    return it->second.first;
+  }
+  MIRStructType *structType = CreateStructType(name);
+  module.PushbackTypeDefOrder(nameIdx);
+  CHECK_NULL_FATAL(structType);
+  return structType;
 }
 
 MIRStructType *FETypeManager::GetClassOrInterfaceType(const GStrIdx &nameIdx) const {
@@ -298,10 +329,15 @@ MIRStructType *FETypeManager::GetStructTypeFromName(const GStrIdx &nameIdx) {
   }
 }
 
-uint32 FETypeManager::GetTypeIDFromMplClassName(const std::string &mplClassName) const {
-  auto const &it = classNameTypeIDMap.find(mplClassName);
-  if (it != classNameTypeIDMap.end()) {
-    return it->second;
+uint32 FETypeManager::GetTypeIDFromMplClassName(const std::string &mplClassName, int32 dexFileHashCode) const {
+  auto const &itMap = classNameTypeIDMapAllDex.find(dexFileHashCode);
+  if (itMap != classNameTypeIDMapAllDex.end()) {
+    auto const &thisDexClassNameTypeIDMap =  itMap->second;
+    auto const &it = thisDexClassNameTypeIDMap.find(mplClassName);
+    if (it != thisDexClassNameTypeIDMap.end()) {
+      return it->second;
+    }
+    return UINT32_MAX;
   }
   return UINT32_MAX; // some type id not in the dex file, give UINT32_MAX
 }
@@ -357,6 +393,7 @@ MIRType *FETypeManager::GetOrCreatePointerType(const MIRType &type, PrimType pty
 MIRType *FETypeManager::GetOrCreateArrayType(MIRType &elemType, uint8 dim, PrimType ptyPtr) {
   switch (srcLang) {
     case kSrcLangJava:
+    case kSrcLangC: // Need to be optimized
       return GetOrCreateJArrayType(elemType, dim, ptyPtr);
     default:
       CHECK_FATAL(false, "unsupported src lang: %d", srcLang);
@@ -389,7 +426,7 @@ FEStructElemInfo *FETypeManager::RegisterStructFieldInfo(
   if (ptrInfo != nullptr) {
     return ptrInfo;
   }
-  ptrInfo = mp->New<FEStructFieldInfo>(structElemNameIdx, argSrcLang, isStatic);
+  ptrInfo = allocator.GetMemPool()->New<FEStructFieldInfo>(allocator, structElemNameIdx, argSrcLang, isStatic);
   CHECK_FATAL(mapStructElemInfo.insert(std::make_pair(structElemNameIdx.full, ptrInfo)).second == true,
               "register struct elem info failed");
   return ptrInfo;
@@ -402,7 +439,7 @@ FEStructElemInfo *FETypeManager::RegisterStructMethodInfo(
   if (ptrInfo != nullptr) {
     return ptrInfo;
   }
-  ptrInfo = mp->New<FEStructMethodInfo>(structElemNameIdx, argSrcLang, isStatic);
+  ptrInfo = allocator.GetMemPool()->New<FEStructMethodInfo>(allocator, structElemNameIdx, argSrcLang, isStatic);
   CHECK_FATAL(mapStructElemInfo.insert(std::make_pair(structElemNameIdx.full, ptrInfo)).second == true,
               "register struct elem info failed");
   return ptrInfo;
@@ -443,6 +480,20 @@ MIRFunction *FETypeManager::CreateFunction(const GStrIdx &nameIdx, const TyIdx &
   if (mirFunc != nullptr) {
     return mirFunc;
   }
+#ifndef USE_OPS
+  MIRSymbol *funcSymbol = SymbolBuilder::Instance().GetSymbolFromStrIdx(nameIdx);
+  if (funcSymbol == nullptr) {
+    funcSymbol = SymbolBuilder::Instance().CreateSymbol(TyIdx(), nameIdx, kStFunc, kScText);
+    SymbolBuilder::Instance().AddToStringSymbolMap(*funcSymbol);
+  } else {
+    mirFunc = funcSymbol->GetFunction();
+    if (mirFunc != nullptr) {
+      return mirFunc;
+    }
+    funcSymbol->SetStorageClass(kScText);
+    funcSymbol->SetSKind(kStFunc);
+  }
+#else
   MIRSymbol *funcSymbol = GlobalTables::GetGsymTable().CreateSymbol(kScopeGlobal);
   funcSymbol->SetNameStrIdx(nameIdx);
   bool added = GlobalTables::GetGsymTable().AddToStringSymbolMap(*funcSymbol);
@@ -455,10 +506,15 @@ MIRFunction *FETypeManager::CreateFunction(const GStrIdx &nameIdx, const TyIdx &
   }
   funcSymbol->SetStorageClass(kScText);
   funcSymbol->SetSKind(kStFunc);
+#endif
   MemPool *mpModule = module.GetMemPool();
   ASSERT(mpModule, "mem pool is nullptr");
   mirFunc = mpModule->New<MIRFunction>(&module, funcSymbol->GetStIdx());
+#ifndef USE_OPS
+  mirFunc->Init();
+#else
   mirFunc->AllocSymTab();
+#endif
   size_t idx = GlobalTables::GetFunctionTable().GetFuncTable().size();
   CHECK_FATAL(idx < UINT32_MAX, "PUIdx is out of range");
   mirFunc->SetPuidx(static_cast<uint32>(idx));
@@ -469,8 +525,14 @@ MIRFunction *FETypeManager::CreateFunction(const GStrIdx &nameIdx, const TyIdx &
     argsAttr.emplace_back(TypeAttrs());
   }
   mirFunc->SetBaseClassFuncNames(nameIdx);
+#ifndef USE_OPS
+  funcSymbol->SetTyIdx(GlobalTables::GetTypeTable().GetOrCreateFunctionType(module, retTypeIdx,
+                                                                            argsTypeIdx, argsAttr,
+                                                                            isVarg)->GetTypeIndex());
+#else
   funcSymbol->SetTyIdx(GlobalTables::GetTypeTable().GetOrCreateFunctionType(retTypeIdx, argsTypeIdx, argsAttr,
                                                                             isVarg)->GetTypeIndex());
+#endif
   funcSymbol->SetFunction(mirFunc);
   MIRFuncType *functype = static_cast<MIRFuncType*>(funcSymbol->GetType());
   mirFunc->SetMIRFuncType(functype);
@@ -513,6 +575,9 @@ const FEIRType *FETypeManager::GetOrCreateFEIRTypeByName(const std::string &type
     case kSrcLangJava:
       uniType = FEIRTypeHelper::CreateTypeByJavaName(typeName, true, false);
       break;
+    case kSrcLangC:
+      WARN(kLncWarn, "kSrcLangC GetOrCreateFEIRTypeByName NYI");
+      break;
     default:
       CHECK_FATAL(false, "unsupported language");
       return nullptr;
@@ -554,20 +619,18 @@ bool FETypeManager::IsStructType(const MIRType &type) {
   MIRTypeKind kind = type.GetKind();
   return kind == kTypeStruct || kind == kTypeStructIncomplete ||
          kind == kTypeClass || kind == kTypeClassIncomplete ||
-         kind == kTypeInterface || kind == kTypeInterfaceIncomplete;
+         kind == kTypeInterface || kind == kTypeInterfaceIncomplete ||
+         kind == kTypeUnion;
 }
 
 PrimType FETypeManager::GetPrimType(const std::string &name) {
 #define LOAD_ALGO_PRIMARY_TYPE
-#define PRIMTYPE(P)
-  static std::unordered_map<std::string, PrimType> typeMap = {
-#include "prim_types.def"
-  };
-#undef PRIMTYPE
-  auto it = typeMap.find(name);
-  if (it != typeMap.end()) {
-    return it->second;
+#define PRIMTYPE(P)            \
+  if (name.compare(#P) == 0) { \
+    return PTY_##P;            \
   }
+#include "prim_types.def"
+#undef PRIMTYPE
   return kPtyInvalid;
 }
 
@@ -648,9 +711,8 @@ void FETypeManager::MarkExternStructType() {
 }
 
 void FETypeManager::InitMCCFunctions() {
-  InitFuncMCCGetOrInsertLiteral();
-  if (FEOptions::GetInstance().IsAOT()) {
-    InitFuncMCCStaticField();
+  if (srcLang == kSrcLangJava) {
+    InitFuncMCCGetOrInsertLiteral();
   }
 }
 
@@ -666,38 +728,6 @@ void FETypeManager::InitFuncMCCGetOrInsertLiteral() {
   nameMCCFuncMap[nameIdx] = funcMCCGetOrInsertLiteral;
 }
 
-void FETypeManager::InitFuncMCCStaticField() {
-  std::map<GStrIdx, std::pair<char, MIRFunction*>> MCCIdxFuncMap = {
-      { FEUtils::GetMCCStaticFieldGetBoolIdx(),   std::make_pair('Z', funcMCCStaticFieldGetBool) },
-      { FEUtils::GetMCCStaticFieldGetByteIdx(),   std::make_pair('B', funcMCCStaticFieldGetByte) },
-      { FEUtils::GetMCCStaticFieldGetShortIdx(),  std::make_pair('S', funcMCCStaticFieldGetShort) },
-      { FEUtils::GetMCCStaticFieldGetCharIdx(),   std::make_pair('C', funcMCCStaticFieldGetChar) },
-      { FEUtils::GetMCCStaticFieldGetIntIdx(),    std::make_pair('I', funcMCCStaticFieldGetInt) },
-      { FEUtils::GetMCCStaticFieldGetLongIdx(),   std::make_pair('J', funcMCCStaticFieldGetLong) },
-      { FEUtils::GetMCCStaticFieldGetFloatIdx(),  std::make_pair('F', funcMCCStaticFieldGetFloat) },
-      { FEUtils::GetMCCStaticFieldGetDoubleIdx(), std::make_pair('D', funcMCCStaticFieldGetDouble) },
-      { FEUtils::GetMCCStaticFieldGetObjectIdx(), std::make_pair('R', funcMCCStaticFieldGetObject) },
-      { FEUtils::GetMCCStaticFieldSetBoolIdx(),   std::make_pair('Z', funcMCCStaticFieldSetBool) },
-      { FEUtils::GetMCCStaticFieldSetByteIdx(),   std::make_pair('B', funcMCCStaticFieldSetByte) },
-      { FEUtils::GetMCCStaticFieldSetShortIdx(),  std::make_pair('S', funcMCCStaticFieldSetShort) },
-      { FEUtils::GetMCCStaticFieldSetCharIdx(),   std::make_pair('C', funcMCCStaticFieldSetChar) },
-      { FEUtils::GetMCCStaticFieldSetIntIdx(),    std::make_pair('I', funcMCCStaticFieldSetInt) },
-      { FEUtils::GetMCCStaticFieldSetLongIdx(),   std::make_pair('J', funcMCCStaticFieldSetLong) },
-      { FEUtils::GetMCCStaticFieldSetFloatIdx(),  std::make_pair('F', funcMCCStaticFieldSetFloat) },
-      { FEUtils::GetMCCStaticFieldSetDoubleIdx(), std::make_pair('D', funcMCCStaticFieldSetDouble) },
-      { FEUtils::GetMCCStaticFieldSetObjectIdx(), std::make_pair('R', funcMCCStaticFieldSetObject) },
-  };
-
-  for (auto &idxFun : MCCIdxFuncMap) {
-    std::vector<TyIdx> argsType;
-    MIRType *typeMCC = GetMIRTypeForPrim(idxFun.second.first);
-    idxFun.second.second = CreateFunction(idxFun.first, typeMCC->GetTypeIndex(), argsType, false, false);
-    idxFun.second.second->SetAttr(FUNCATTR_pure);
-    idxFun.second.second->SetAttr(FUNCATTR_nosideeffect);
-    idxFun.second.second->SetAttr(FUNCATTR_noprivate_defeffect);
-    nameMCCFuncMap[idxFun.first] = idxFun.second.second;
-  }
-}
 
 MIRFunction *FETypeManager::GetMCCFunction(const std::string &funcName) const {
   GStrIdx funcNameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(funcName);
