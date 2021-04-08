@@ -115,6 +115,8 @@ void DexParser::ProcessDexClassDef(std::unique_ptr<DexClass> &dexClass) {
   dexClass->SetClassName(className);
   dexClass->SetIsInterface(reader->IsInterface(classIdx));
   dexClass->SetSuperClasses(reader->GetSuperClasses(classIdx));
+  GStrIdx irSrcFileSigIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(reader->GetIRSrcFileSignature());
+  dexClass->SetIRSrcFileSigIdx(irSrcFileSigIdx);
   ProcessDexClassInterfaceParent(dexClass);
 }
 
@@ -153,6 +155,7 @@ void DexParser::ProcessMethodBodyImpl(BCClassMethod &method,
   method.SetMethodInstOffset(reader->GetMethodInstOffset(dexMethodItem.get()));
   method.SetPCBCInstructionMap(
       reader->ResolveInstructions(method.GetAllocator(), dexMethodItem.get()));
+  method.SetSrcLocalInfo(reader->ResovleSrcLocalInfo(*dexMethodItem));
   method.SetTryInfos(reader->ResolveTryInfos(dexMethodItem.get()));
 #ifdef DEBUG
   std::map<uint32_t, uint32_t> srcPosInfo;
@@ -177,6 +180,7 @@ void DexParser::ProcessDexClassMethod(std::unique_ptr<DexClass> &dexClass,
   }
   method->SetRegisterTotalSize(reader->GetClassMethodRegisterTotalSize(dexMethodItem.get()));
   method->SetRegisterInsSize(reader->GetClassMethodRegisterInSize(dexMethodItem.get()));
+  method->SetCodeOff(reader->GetCodeOff(dexMethodItem.get()));
   dexClass->SetMethod(std::move(method));
 }
 

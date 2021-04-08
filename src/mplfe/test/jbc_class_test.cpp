@@ -16,6 +16,7 @@
 #include <gmock/gmock.h>
 #include "base64.h"
 #include "jbc_class.h"
+#include "fe_utils.h"
 
 namespace maple {
 namespace jbc {
@@ -62,7 +63,7 @@ class JBCClassTest : public testing::Test {
   BasicIORead *ioJBC0001;
 
   static void SetUpTestCase() {
-    mp = memPoolCtrler.NewMemPool("MemPool for JBCClassTest", false /* isLocalPool */);
+    mp = FEUtils::NewMempool("MemPool for JBCClassTest", false /* isLocalPool */);
   }
 
   static void TearDownTestCase() {

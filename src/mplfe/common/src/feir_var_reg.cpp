@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -13,6 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "feir_var_reg.h"
+#include "fe_options.h"
 #include <sstream>
 #include <functional>
 #include "mir_type.h"
@@ -41,6 +42,21 @@ std::string FEIRVarReg::GetNameRawImpl() const {
   ss.str("");
   ss << "Reg" << regNum;
   return ss.str();
+}
+
+MIRSymbol *FEIRVarReg::GenerateLocalMIRSymbolImpl(MIRBuilder &builder) const {
+  MPLFE_PARALLEL_FORBIDDEN();
+  MIRType *mirType = type->GenerateMIRTypeAuto();
+  std::string name = GetName(*mirType);
+#ifndef USE_OPS
+  MIRSymbol *ret = SymbolBuilder::Instance().GetOrCreateLocalSymbol(*mirType, name, *builder.GetCurrentFunction());
+  if (FEOptions::GetInstance().IsAOT()) {
+    ret->SetVregNo(regNum);
+  }
+#else
+  MIRSymbol *ret = builder.GetOrCreateLocalDecl(name, *mirType);
+#endif
+  return ret;
 }
 
 std::unique_ptr<FEIRVar> FEIRVarReg::CloneImpl() const {

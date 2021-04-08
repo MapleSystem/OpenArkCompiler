@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -53,4 +53,14 @@ void FEOptions::AddInputDexFile(const std::string &fileName) {
   }
 }
 
+#ifdef ENABLE_MPLFE_AST
+void FEOptions::AddInputASTFile(const std::string &fileName) {
+  FEFileType::FileType type = FEFileType::GetInstance().GetFileTypeByMagicNumber(fileName);
+  if (type == FEFileType::FileType::kAST) {
+    inputASTFiles.push_back(fileName);
+  } else {
+    WARN(kLncWarn, "invalid input AST file %s...skipped", fileName.c_str());
+  }
+}
+#endif // ~/ENABLE_MPLFE_AST
 }  // namespace maple

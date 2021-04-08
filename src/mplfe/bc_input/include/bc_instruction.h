@@ -71,13 +71,13 @@ class BCInstruction {
   void SetSrcPositionInfo(uint32 fileIdxIn, uint32 lineNumIn);
   void SetOpName(const char *name);
   const char *GetOpName() const;
-  void Parse(const BCClassMethod &method);
+  void Parse(BCClassMethod &method);
   void SetExceptionType(const GStrIdx &typeNameIdx);
   std::list<UniqueFEIRStmt> EmitToFEIRStmts();
 
  protected:
   virtual std::vector<uint32> GetTargetsImpl() const;
-  virtual void ParseImpl(const BCClassMethod &method) = 0;
+  virtual void ParseImpl(BCClassMethod &method) = 0;
   virtual std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() = 0;
   void GenCommentStmt(std::list<UniqueFEIRStmt> &stmts) const;
   UniqueFEIRStmt GenLabelStmt() const;
@@ -115,30 +115,27 @@ class BCInstruction {
 
 // Forward declaration
 struct BCReg;
+struct TypeInferItem;
 
 struct BCRegTypeItem {
-  BCRegTypeItem(const GStrIdx &idx, bool isPrimPtrIn = false, bool isIndeterminateIn = false)
-      : typeNameIdx(idx), isPrimPtr(isPrimPtrIn), isIndeterminate(isIndeterminateIn) {}
+  BCRegTypeItem(const GStrIdx &idx, bool isIndeterminateIn = false, bool isDefIn = false)
+      : typeNameIdx(idx), isIndeterminate(isIndeterminateIn), isDef(isDefIn) {}
   BCRegTypeItem(const BCRegTypeItem &item)
-      : typeNameIdx(item.typeNameIdx), isPrimPtr(item.isPrimPtr), isIndeterminate(item.isIndeterminate) {}
+      : typeNameIdx(item.typeNameIdx), isIndeterminate(item.isIndeterminate) {}
   ~BCRegTypeItem() = default;
-  GStrIdx typeNameIdx;
-  bool isPrimPtr = false;
-  bool isIndeterminate = false;
 
   PrimType GetPrimType() const;
   PrimType GetBasePrimType() const;
   BCRegTypeItem *Clone(const MapleAllocator &allocator) {
-    return allocator.GetMemPool()->New<BCRegTypeItem>(typeNameIdx, isPrimPtr, isIndeterminate);
+    return allocator.GetMemPool()->New<BCRegTypeItem>(typeNameIdx, isIndeterminate);
   }
 
   void Copy(const BCRegTypeItem &src) {
     typeNameIdx = src.typeNameIdx;
-    isPrimPtr = src.isPrimPtr;
     isIndeterminate = src.isIndeterminate;
   }
   bool operator==(const BCRegTypeItem &item) const {
-    return typeNameIdx == item.typeNameIdx && isPrimPtr == item.isPrimPtr;
+    return typeNameIdx == item.typeNameIdx;
   }
 
   bool IsRef() const {
@@ -146,12 +143,25 @@ struct BCRegTypeItem {
   }
 
   bool IsMorePreciseType(const BCRegTypeItem &typeItemIn) const;
+
+  // for debug
+  void DumpTypeName() const {
+    LogInfo::MapleLogger(kLlDbg) << GlobalTables::GetStrTable().GetStringFromStrIdx(typeNameIdx) << "\n";
+  }
+
+  void SetPos(uint32 pc) {
+    pos = pc;
+  }
+
+  GStrIdx typeNameIdx;
+  bool isIndeterminate = false;
+  bool isDef = false;
+  uint32 pos = UINT32_MAX;
 };
 
 class BCRegType {
  public:
-  BCRegType(MapleAllocator &allocatorIn, BCReg &reg, const GStrIdx &typeNameIdxIn,
-            bool isPrimPtrIn = false, bool isIndeterminateIn = false);
+  BCRegType(MapleAllocator &allocatorIn, BCReg &reg, const GStrIdx &typeNameIdxIn, bool isIndeterminateIn = false);
   ~BCRegType() = default;
   MapleAllocator &GetAllocator() {
     return allocator;
@@ -159,10 +169,6 @@ class BCRegType {
 
   void SetTypeNameIdx(const GStrIdx &idx) {
     regTypeItem->typeNameIdx = idx;
-  }
-
-  void SetIsPrimPtr(bool flag) {
-    regTypeItem->isPrimPtr = flag;
   }
 
   bool IsIndeterminate() const {
@@ -173,13 +179,9 @@ class BCRegType {
     regTypeItem->isIndeterminate = flag;
   }
 
-  void UpdateDefTypeFromUse(BCRegTypeItem *typeItem);
-
-  void UpdateDefTypeThroughPhi(BCReg &defedReg, const std::set<BCRegTypeItem*> &usedTypes);
-
-  static void InsertUniqueTypeItem(MapleVector<BCRegTypeItem*> &itemSet, BCRegTypeItem *item) {
+  static void InsertUniqueTypeItem(MapleList<BCRegTypeItem*> &itemSet, BCRegTypeItem *item) {
     for (auto &elem : itemSet) {
-      if (!elem->isIndeterminate && (*elem) == (*item)) {
+      if ((!elem->isIndeterminate && !item->isIndeterminate && (*elem) == (*item)) || elem == item) {
         return;
       }
     }
@@ -187,11 +189,16 @@ class BCRegType {
   }
 
   void UpdateUsedSet(BCRegTypeItem *typeItem) {
-    if (regTypeItem->isIndeterminate && !typeItem->isIndeterminate && ((*regTypeItem) == (*typeItem))) {
-      // Make reg type determinate ASAP
-      regTypeItem->Copy(*typeItem);
+    if (typeItem->isIndeterminate) {
+      InsertUniqueTypeItem(fuzzyTypesUsedAs, typeItem);
     }
-    InsertUniqueTypeItem(typesUsedAs, typeItem);
+    InsertUniqueTypeItem(*typesUsedAs, typeItem);
+  }
+
+  void UpdateFuzzyUsedSet(BCRegTypeItem *typeItem) {
+    if (typeItem->isIndeterminate) {
+      InsertUniqueTypeItem(fuzzyTypesUsedAs, typeItem);
+    }
   }
 
   void SetRegTypeItem(BCRegTypeItem *item) {
@@ -202,37 +209,68 @@ class BCRegType {
     return regTypeItem;
   }
 
-  void UpdateTypeSetFromPhi(BCReg &defedReg, const std::set<BCRegTypeItem*> &usedTypes);
-
-  MapleVector<BCRegTypeItem*> *GetUsedTypes() {
-    return &typesUsedAs;
+  MapleList<BCRegTypeItem*> *GetUsedTypes() {
+    return typesUsedAs;
   }
 
-  void PrecisifyTypes();
+  void PrecisifyTypes(bool isTry = false);
+
+  void PrecisifyRelatedTypes(BCRegTypeItem *realType);
+
+  void PrecisifyElemTypes(BCRegTypeItem *realType);
 
   bool IsPrecisified() const {
     return precisified;
   }
 
-  static BCRegTypeItem *GetMostPreciseType(const MapleVector<BCRegTypeItem*> &types);
+  static BCRegTypeItem *GetMostPreciseType(const MapleList<BCRegTypeItem*> &types);
 
   void AddElemType(BCRegType *item) {
     elemTypes.emplace(item);
   }
 
-  void AddArrayType(BCRegType *regType) {
-    arrayTypes.emplace(regType);
+  void SetUsedTypes(MapleList<BCRegTypeItem*> *types) {
+    typesUsedAs = types;
+  }
+
+  void SetPos(uint32 pc) {
+    pos = pc;
+  }
+
+  void RegisterRelatedBCRegType(BCRegType *ty) {
+    relatedBCRegTypes.emplace_back(ty);
+  }
+
+  void RegisterLivesInfo(uint32 pos) {
+    livesBegins.emplace_back(pos);
+  }
+
+  bool IsBefore(uint32 pos, uint32 end) const {
+    for (auto p : livesBegins) {
+      if (p == pos) {
+        return true;
+      }
+      if (p == end) {
+        return false;
+      }
+    }
+    CHECK_FATAL(false, "Should not get here.");
+    return true;
   }
 
  private:
-  MapleAllocator allocator;
+  MapleAllocator &allocator;
   BCReg &curReg;
   BCRegTypeItem *regTypeItem;
-  // <typeNameIdx, isPrimPtr>
-  MapleVector<BCRegTypeItem*> typesUsedAs;
+  MapleList<BCRegTypeItem*> *typesUsedAs = nullptr;
+  MapleList<BCRegTypeItem*> fuzzyTypesUsedAs;
   bool precisified = false;
   MapleSet<BCRegType*> elemTypes;
-  MapleSet<BCRegType*> arrayTypes;
+  uint32 pos = UINT32_MAX;
+  // `0` for args, `pc + 1` for local defs
+  MapleVector<uint32> livesBegins;
+
+  std::list<BCRegType*> relatedBCRegTypes;
 };
 
 struct BCRegValue {
@@ -240,7 +278,6 @@ struct BCRegValue {
     uint64 raw64 = 0;
     uint32 raw32;
   } primValue;
-  GStrIdx literalStrIdx = GStrIdx(0);  // literal string
 };
 
 struct BCReg {
@@ -270,6 +307,77 @@ struct BCReg {
   virtual UniqueFEIRType GenFEIRTypeImpl() const;
   virtual UniqueFEIRVar GenFEIRVarRegImpl() const;
   virtual std::unique_ptr<BCReg> CloneImpl() const;
+};
+
+// for TypeInfer
+struct TypeInferItem {
+  TypeInferItem(MapleAllocator &alloc, uint32 pos, BCReg *regIn, TypeInferItem *prev)
+      : beginPos(pos),
+        prevs(alloc.Adapter()),
+        aliveUsedTypes(alloc.GetMemPool()->New<MapleList<BCRegTypeItem*>>(alloc.Adapter())),
+        reg(regIn) {
+    if (prev == nullptr) {
+      reg->regType->SetUsedTypes(aliveUsedTypes);
+    } else {
+      RegisterInPrevs(prev);
+    }
+    reg->regType->RegisterLivesInfo(pos);
+  }
+
+  void RegisterInPrevs(TypeInferItem *prev) {
+    for (auto e : prevs) {
+      if (e == prev) {
+        return;
+      }
+    }
+    prevs.emplace_back(prev);
+  }
+
+  void InsertUniqueAliveType(TypeInferItem *end, BCRegTypeItem *type) {
+    std::vector<TypeInferItem*> workList;
+    uint32 index = 0;
+    if (end != nullptr && end->reg == this->reg && end->reg->regType->IsBefore(this->beginPos, end->beginPos)) {
+      return;
+    }
+    workList.emplace_back(this);
+    while (index < workList.size()) {
+      auto currItem = workList[index++];
+      currItem->isAlive = true;
+      bool duplicate = false;
+      for (auto ty : *(currItem->aliveUsedTypes)) {
+        if (ty == type) {
+          duplicate = true;
+          break;
+        }
+      }
+      if (!duplicate) {
+        currItem->aliveUsedTypes->emplace_back(type);
+        reg->regType->UpdateFuzzyUsedSet(type);
+      }
+      // insert into its prevs cyclely
+      for (auto prev : currItem->prevs) {
+        if (end != nullptr && end->reg == prev->reg && end->reg->regType->IsBefore(prev->beginPos, end->beginPos)) {
+          continue;
+        }
+        bool exist = false;
+        for (uint32 i = 0; i < workList.size(); ++i) {
+          if (workList[i] == prev) {
+            exist = true;
+            break;
+          }
+        }
+        if (!exist) {
+          workList.emplace_back(prev);
+        }
+      }
+    }
+  }
+
+  uint32 beginPos;
+  MapleList<TypeInferItem*> prevs;
+  MapleList<BCRegTypeItem*> *aliveUsedTypes = nullptr;
+  BCReg *reg = nullptr;
+  bool isAlive = false;
 };
 }  // namespace bc
 }  // namespace maple

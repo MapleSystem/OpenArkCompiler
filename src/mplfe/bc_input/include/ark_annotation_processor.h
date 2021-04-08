@@ -29,6 +29,16 @@ class ArkAnnotation {
   bool IsFastNative(TyIdx tyIdx);
   bool IsCriticalNative(TyIdx tyIdx);
   bool IsCallerSensitive(TyIdx tyIdx);
+  bool IsPermanent(TyIdx tyIdx);
+  bool IsPermanent(const std::string &str) const;
+  bool IsRCUnowned(TyIdx tyIdx);
+  bool IsRCUnownedCap(TyIdx tyIdx);
+  bool IsRCUnownedCapList(TyIdx tyIdx);
+  bool IsRCUnownedLocal(TyIdx tyIdx);
+  bool IsRCUnownedLocalOld(TyIdx tyIdx);
+  bool IsRCUnownedThis(TyIdx tyIdx);
+  bool IsRCUnownedOuter(TyIdx tyIdx);
+  bool IsRCWeak(TyIdx tyIdx);
   static ArkAnnotation &GetInstance() {
     return instance;
   }
@@ -46,6 +56,15 @@ class ArkAnnotation {
   std::set<GStrIdx> typeNameSetForFastNative;
   std::set<GStrIdx> typeNameSetForCriticalNative;
   std::set<GStrIdx> typeNameSetForCallerSensitive;
+  std::set<GStrIdx> typeNameSetForPermanent;
+  std::set<GStrIdx> typeNameSetForRCUnowned;
+  std::set<GStrIdx> typeNameSetForRCUnownedCap;
+  std::set<GStrIdx> typeNameSetForRCUnownedCapList;
+  std::set<GStrIdx> typeNameSetForRCUnownedLocal;
+  std::set<GStrIdx> typeNameSetForRCUnownedThis;
+  std::set<GStrIdx> typeNameSetForRCUnownedOuter;
+  std::set<GStrIdx> typeNameSetForRCWeak;
+  GStrIdx typeNameIdxForRCUnownedLocalOld;
 };
 }  // namespace bc
 }  // namespace maple

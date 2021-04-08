@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -69,6 +69,7 @@ class JBCFunction : public FEFunction {
   bool LabelLabelIdx(const std::string &phaseName);
   bool CheckJVMStack(const std::string &phaseName);
   bool GenerateArgVarList(const std::string &phaseName) override;
+  bool GenerateAliasVars(const std::string &phaseName) override;
   bool ProcessFunctionArgs(const std::string &phaseName);
   bool EmitLocalVarInfo(const std::string &phaseName);
   bool EmitToFEIRStmt(const std::string &phaseName) override;

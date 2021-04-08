@@ -19,6 +19,10 @@
 
 namespace maple {
 namespace bc {
+#define SET_FUNC_INFO_PAIR(A, B, C, D)                                    \
+  A.PushbackMIRInfo(MIRInfoPair(GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(B), C)); \
+  A.PushbackIsString(D)
+
 class BCFunction : public FEFunction {
  public:
   BCFunction(const BCClassMethod2FEHelper &argMethodHelper, MIRFunction &mirFunc,
@@ -32,6 +36,7 @@ class BCFunction : public FEFunction {
   }
 
   bool GenerateArgVarList(const std::string &phaseName) override;
+  bool GenerateAliasVars(const std::string &phaseName) override;
 
   bool PreProcessTypeNameIdx() override {
     return true;
@@ -58,6 +63,7 @@ class BCFunction : public FEFunction {
   bool EmitToFEIRStmt(const std::string &phaseName) override;
 
   void InitImpl() override;
+  void SetMIRFunctionInfo();
   void PreProcessImpl() override;
   bool ProcessImpl() override;
   bool ProcessFEIRFunction() override;

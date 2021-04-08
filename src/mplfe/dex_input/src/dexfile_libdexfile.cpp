@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -647,6 +647,23 @@ void IDexMethodItem::GetSrcPositionInfo(const IDexFile &dexFile, std::map<uint32
     return false;
   });
 }
+
+void IDexMethodItem::GetSrcLocalInfo(const IDexFile &dexFile, std::map<uint16_t,
+    std::set<std::tuple<std::string, std::string, std::string>>> &srcLocal) const {
+  const art::dex::CodeItem *artCodeItem = GetDexFile(dexFile)->GetCodeItem(GetMethodCodeOff(this));
+  if (artCodeItem == nullptr) {
+    return;
+  }
+  art::CodeItemDebugInfoAccessor accessor(*GetDexFile(dexFile), artCodeItem, this->GetMethodIdx());
+  (void)accessor.DecodeDebugLocalInfo(this->IsStatic(), this->GetMethodIdx(),
+                                      [&](const art::DexFile::LocalInfo &entry) {
+    if (entry.name_ != nullptr && entry.descriptor_ != nullptr) {
+      std::string signature = entry.signature_ != nullptr ? entry.signature_ : "";
+      auto item = std::make_tuple(entry.name_, entry.descriptor_, signature);
+      srcLocal[entry.reg_].insert(item);
+    }
+  });
+}
 // =====IDexMethodItem end==========
 // =====IDexFieldIdItem start=======
 const art::dex::FieldId *GetFieldId(const IDexFieldIdItem *item) {
@@ -1087,6 +1104,20 @@ uint8_t IDexHeader::GetMagic(uint32_t index) const {
 
 uint32_t IDexHeader::GetChecksum() const {
   return GetDexFile(this)->GetHeader().checksum_;
+}
+
+std::string IDexHeader::GetSignature() const {
+  static const char *kHex = "0123456789abcdef";
+  static constexpr size_t kHexNum = 16;
+  static constexpr size_t kSignatureSize = 20;
+  const uint8_t *signature = GetDexFile(this)->GetHeader().signature_;
+  std::string result;
+  for (size_t i = 0; i < kSignatureSize; ++i) {
+    uint8_t value = signature[i];
+    result.push_back(kHex[value / kHexNum]);
+    result.push_back(kHex[value % kHexNum]);
+  }
+  return result;
 }
 
 uint32_t IDexHeader::GetFileSize() const {

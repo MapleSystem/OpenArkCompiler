@@ -31,7 +31,7 @@ class JBCClass2FEHelperTest : public testing::Test, public RedirectBuffer {
   ~JBCClass2FEHelperTest() = default;
 
   static void SetUpTestCase() {
-    mp = memPoolCtrler.NewMemPool("MemPool for JBCClass2FEHelperTest", false /* isLcalPool */);
+    mp = FEUtils::NewMempool("MemPool for JBCClass2FEHelperTest", false /* isLcalPool */);
   }
 
   static void TearDownTestCase() {
@@ -52,7 +52,7 @@ class JBCClassField2FEHelperTest : public testing::Test, public RedirectBuffer {
   ~JBCClassField2FEHelperTest() = default;
 
   static void SetUpTestCase() {
-    mp = memPoolCtrler.NewMemPool("MemPool for JBCClassField2FEHelperTest", false /* isLocalPool */);
+    mp = FEUtils::NewMempool("MemPool for JBCClassField2FEHelperTest", false /* isLocalPool */);
   }
 
   static void TearDownTestCase() {

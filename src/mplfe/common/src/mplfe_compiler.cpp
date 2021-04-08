@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -17,11 +17,13 @@
 #include "fe_manager.h"
 #include "fe_file_type.h"
 #include "fe_timer.h"
+#include "rc_setter.h"
 
 namespace maple {
 MPLFECompiler::MPLFECompiler(MIRModule &argModule)
     : module(argModule),
-      mp(memPoolCtrler.NewMemPool("MemPool for MPLFECompiler")),
+      srcLang(kSrcLangJava),
+      mp(FEUtils::NewMempool("MemPool for MPLFECompiler", false /* isLcalPool */)),
       allocator(mp) {}
 
 MPLFECompiler::~MPLFECompiler() {
@@ -30,11 +32,11 @@ MPLFECompiler::~MPLFECompiler() {
 
 void MPLFECompiler::Init() {
   FEManager::Init(module);
-  FEStructMethodInfo::InitJavaPolymorphicWhiteList();
   module.SetFlavor(maple::kFeProduced);
-  // The default language is Java.
-  module.SetSrcLang(maple::kSrcLangJava);
   module.GetImportFiles().clear();
+  if (FEOptions::GetInstance().IsRC()) {
+    bc::RCSetter::InitRCSetter("");
+  }
 }
 
 void MPLFECompiler::Release() {
@@ -49,41 +51,28 @@ void MPLFECompiler::Run() {
   bool success = true;
   Init();
   CheckInput();
+  RegisterCompilerComponent();
   success = success && LoadMplt();
   SetupOutputPathAndName();
-  if (FEOptions::GetInstance().HasJBC()) {
-    FEOptions::GetInstance().SetTypeInferKind(FEOptions::TypeInferKind::kNo);
-    std::unique_ptr<MPLFECompilerComponent> jbcCompilerComp = std::make_unique<JBCCompilerComponent>(module);
-    RegisterCompilerComponent(std::move(jbcCompilerComp));
-  }
-  if (FEOptions::GetInstance().GetInputDexFiles().size() != 0) {
-    bc::ArkAnnotationProcessor::Process();
-    std::unique_ptr<MPLFECompilerComponent> bcCompilerComp =
-        std::make_unique<bc::BCCompilerComponent<bc::DexReader>>(module);
-    RegisterCompilerComponent(std::move(bcCompilerComp));
-  }
   ParseInputs();
   if (!FEOptions::GetInstance().GetXBootClassPath().empty()) {
     LoadOnDemandTypes();
   }
-  FEManager::GetJavaStringManager().GenStringMetaClassVar();
   PreProcessDecls();
   ProcessDecls();
   ProcessPragmas();
   if (!FEOptions::GetInstance().IsGenMpltOnly()) {
-    FEManager::GetTypeManager().InitMCCFunctions();
-    PreProcessWithFunctions();
     FETypeHierarchy::GetInstance().InitByGlobalTable();
     ProcessFunctions();
-  }
-  FEManager::GetManager().ReleaseStructElemMempool();
-  CHECK_FATAL(success, "Compile Error");
-  if (!FEOptions::GetInstance().IsNoMplFile()) {
-    ExportMpltFile();
-    if (!FEOptions::GetInstance().IsGenMpltOnly()) {
-      ExportMplFile();
+    if (FEOptions::GetInstance().IsRC()) {
+      bc::RCSetter::GetRCSetter().MarkRCAttributes();
     }
   }
+  bc::RCSetter::ReleaseRCSetter();
+  FEManager::GetManager().ReleaseStructElemMempool();
+  CHECK_FATAL(success, "Compile Error");
+  ExportMpltFile();
+  ExportMplFile();
   MPLFEEnv::GetInstance().Finish();
   Release();
 }
@@ -119,6 +108,16 @@ void MPLFECompiler::CheckInput() {
     }
   }
 
+#ifdef ENABLE_MPLFE_AST
+  // check input ast files
+  const std::vector<std::string> &inputASTNames = FEOptions::GetInstance().GetInputASTFiles();
+  if (!inputASTNames.empty()) {
+    nInput += inputASTNames.size();
+    if (firstInputName.empty()) {
+      firstInputName = inputASTNames[0];
+    }
+  }
+#endif // ~/ENABLE_MPLFE_AST
   CHECK_FATAL(nInput > 0, "Error occurs: no inputs. exit.");
 }
 
@@ -188,17 +187,31 @@ bool MPLFECompiler::LoadMplt() {
 }
 
 void MPLFECompiler::ExportMpltFile() {
-  FETimer timer;
-  timer.StartAndDump("Output mplt");
-  module.DumpToHeaderFile(!FEOptions::GetInstance().IsGenAsciiMplt());
-  timer.StopAndDumpTimeMS("Output mplt");
+  if (!FEOptions::GetInstance().IsNoMplFile()) {
+    FETimer timer;
+    timer.StartAndDump("Output mplt");
+    module.DumpToHeaderFile(!FEOptions::GetInstance().IsGenAsciiMplt());
+    timer.StopAndDumpTimeMS("Output mplt");
+  }
 }
 
 void MPLFECompiler::ExportMplFile() {
-  FETimer timer;
-  timer.StartAndDump("Output mpl");
-  module.OutputAsciiMpl("", ".mpl", nullptr, false, false);
-  timer.StopAndDumpTimeMS("Output mpl");
+  if (!FEOptions::GetInstance().IsNoMplFile() && !FEOptions::GetInstance().IsGenMpltOnly()) {
+    FETimer timer;
+    timer.StartAndDump("Output mpl");
+    bool emitStructureType = false;
+    // Currently, struct types cannot be dumped to mplt.
+    // After mid-end interfaces are optimized, the judgment can be deleted.
+    if (srcLang == kSrcLangC) {
+      emitStructureType = true;
+    }
+#ifndef USE_OPS
+    module.OutputAsciiMpl("", emitStructureType);
+#else
+    module.OutputAsciiMpl("", ".mpl", nullptr, false, false);
+#endif
+    timer.StopAndDumpTimeMS("Output mpl");
+  }
 }
 
 void MPLFECompiler::RegisterCompilerComponent(std::unique_ptr<MPLFECompilerComponent> comp) {
@@ -231,7 +244,6 @@ void MPLFECompiler::LoadOnDemandTypes() {
 void MPLFECompiler::PreProcessDecls() {
   FETimer timer;
   timer.StartAndDump("MPLFECompiler::PreProcessDecls()");
-  (void)GlobalTables::GetStrTable().GetOrCreateStrIdxFromName("_this");
   for (const std::unique_ptr<MPLFECompilerComponent> &comp : components) {
     ASSERT(comp != nullptr, "nullptr check");
     bool success = comp->PreProcessDecl();
@@ -261,18 +273,6 @@ void MPLFECompiler::ProcessPragmas() {
   timer.StopAndDumpTimeMS("MPLFECompiler::ProcessPragmas()");
 }
 
-void MPLFECompiler::PreProcessWithFunctions() {
-  FETimer timer;
-  timer.StartAndDump("MPLFECompiler::PreProcessWithFunctions()");
-  (void)GlobalTables::GetStrTable().GetOrCreateStrIdxFromName("_this");
-  for (const std::unique_ptr<MPLFECompilerComponent> &comp : components) {
-    ASSERT(comp != nullptr, "nullptr check");
-    bool success = comp->PreProcessWithFunction();
-    CHECK_FATAL(success, "Error occurs in MPLFECompiler::PreProcessWithFunctions(). exit.");
-  }
-  timer.StopAndDumpTimeMS("MPLFECompiler::PreProcessWithFunctions()");
-}
-
 void MPLFECompiler::ProcessFunctions() {
   FETimer timer;
   bool success = true;
@@ -280,15 +280,8 @@ void MPLFECompiler::ProcessFunctions() {
   uint32 funcSize = 0;
   for (const std::unique_ptr<MPLFECompilerComponent> &comp : components) {
     ASSERT(comp != nullptr, "nullptr check");
+    success = comp->ProcessFunctionSerial() && success;
     funcSize += comp->GetFunctionsSize();
-    uint32 nthreads = FEOptions::GetInstance().GetNThreads();
-    if (comp->Parallelable() && nthreads > 0) {
-      FEConfigParallel::GetInstance().EnableParallel();
-      success = comp->ProcessFunctionParallel(nthreads) && success;
-      FEConfigParallel::GetInstance().DisableParallel();
-    } else {
-      success = comp->ProcessFunctionSerial() && success;
-    }
     if (!success) {
       const std::set<FEFunction*> &failedFEFunctions = comp->GetCompileFailedFEFunctions();
       compileFailedFEFunctions.insert(failedFEFunctions.begin(), failedFEFunctions.end());
@@ -303,6 +296,29 @@ void MPLFECompiler::ProcessFunctions() {
   FindMinCompileFailedFEFunctions();
   timer.StopAndDumpTimeMS("MPLFECompiler::ProcessFunctions()");
   CHECK_FATAL(success, "ProcessFunction error");
+}
+
+void MPLFECompiler::RegisterCompilerComponent() {
+  if (FEOptions::GetInstance().HasJBC()) {
+    FEOptions::GetInstance().SetTypeInferKind(FEOptions::TypeInferKind::kNo);
+    std::unique_ptr<MPLFECompilerComponent> jbcCompilerComp = std::make_unique<JBCCompilerComponent>(module);
+    RegisterCompilerComponent(std::move(jbcCompilerComp));
+  }
+  if (FEOptions::GetInstance().GetInputDexFiles().size() != 0) {
+    bc::ArkAnnotationProcessor::Process();
+    std::unique_ptr<MPLFECompilerComponent> bcCompilerComp =
+        std::make_unique<bc::BCCompilerComponent<bc::DexReader>>(module);
+    RegisterCompilerComponent(std::move(bcCompilerComp));
+  }
+#ifdef ENABLE_MPLFE_AST
+  if (FEOptions::GetInstance().GetInputASTFiles().size() != 0) {
+    srcLang = kSrcLangC;
+    std::unique_ptr<MPLFECompilerComponent> astCompilerComp = std::make_unique<ASTCompilerComponent>(module);
+    RegisterCompilerComponent(std::move(astCompilerComp));
+  }
+#endif // ~/ENABLE_MPLFE_AST
+  module.SetSrcLang(srcLang);
+  FEManager::GetTypeManager().SetSrcLang(srcLang);
 }
 
 void MPLFECompiler::FindMinCompileFailedFEFunctions() {

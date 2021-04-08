@@ -31,6 +31,7 @@ bool DexReader::OpenAndMap() {
     return false;
   }
   iDexFile->SetFileIdx(fileIdx);
+  irSrcFileSignature = iDexFile->GetHeader()->GetSignature();
   return true;
 }
 
@@ -145,6 +146,9 @@ uint16 DexReader::GetClassMethodRegisterInSize(const IDexMethodItem* dexMethodIt
   return dexMethodItem->GetInsSize(*iDexFile);
 }
 
+uint32 DexReader::GetCodeOff(const IDexMethodItem* dexMethodItem) const {
+  return dexMethodItem->GetCodeOff();
+}
 
 BCReader::ClassElem DexReader::GetClassMethodFromIdxImpl(uint32 idx) const {
   ClassElem elem;
@@ -170,6 +174,14 @@ void DexReader::ResovleSrcPositionInfo(
     const IDexMethodItem* dexMethodItem,
     std::map<uint32, uint32> &srcPosInfo) const {
   dexMethodItem->GetSrcPositionInfo(GetIDexFile(), srcPosInfo);
+}
+
+
+std::unique_ptr<std::map<uint16, std::set<std::tuple<std::string, std::string, std::string>>>>
+    DexReader::ResovleSrcLocalInfo(const IDexMethodItem &dexMethodItem) const {
+  auto srcLocals = std::make_unique<std::map<uint16, std::set<std::tuple<std::string, std::string, std::string>>>>();
+  dexMethodItem.GetSrcLocalInfo(GetIDexFile(), *srcLocals);
+  return srcLocals;
 }
 
 MapleMap<uint32, BCInstruction*> *DexReader::ResolveInstructions(
@@ -297,7 +309,6 @@ std::unique_ptr<std::list<std::unique_ptr<BCCatchInfo>>> DexReader::ConstructBCC
 }
 
 bool DexReader::ReadAllDepTypeNames(std::unordered_set<std::string> &depSet) {
-  bool isSuccess = true;
   for (uint32 i = 0; i < iDexFile->GetHeader()->GetTypeIdsSize(); ++i) {
     std::string typeName = iDexFile->GetStringByTypeIndex(i);
     std::string trimmedTypeName = BCUtil::TrimArrayModifier(typeName);
@@ -305,13 +316,7 @@ bool DexReader::ReadAllDepTypeNames(std::unordered_set<std::string> &depSet) {
       depSet.insert(trimmedTypeName);
     }
   }
-  std::unordered_set<std::string> classSet;
-  isSuccess = isSuccess && ReadAllClassNames(classSet);
-  BCUtil::AddDefaultDepSet(depSet);  // DepSet = DefaultTypeSet + TypeSet - ClassSet;
-  for (const auto &elem : classSet) {
-    depSet.erase(elem);
-  }
-  return isSuccess;
+  return true;
 }
 
 bool DexReader::ReadAllClassNames(std::unordered_set<std::string> &classSet) const {
@@ -363,8 +368,6 @@ bool DexReader::ReadMethodDepTypeNames(std::unordered_set<std::string> &depSet,
       AddDepTypeName(depSet, iDexFile->GetStringByTypeIndex(inst->GetVRegC()), true);
     } else if (op == kOpNewInstance) {
       AddDepTypeName(depSet, iDexFile->GetStringByTypeIndex(inst->GetVRegB()), false);
-    } else if (op == kOpThrow) {
-      AddDepTypeName(depSet, iDexFile->GetStringByTypeIndex(inst->GetVRegA()), true);
     }
     ReadMethodTryCatchDepTypeNames(depSet, *method);
   }

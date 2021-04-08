@@ -124,12 +124,15 @@ class MplcgCompiler : public Compiler {
 
   ~MplcgCompiler() = default;
   ErrorCode Compile(MplOptions &options, std::unique_ptr<MIRModule> &theModule) override;
-  void PrintCommand(const MplOptions &options) const override;
+  void PrintMplcgCommand(const MplOptions &options, const MIRModule &md) const;
+  void SetOutputFileName(const MplOptions &options, const MIRModule &md);
+  std::string GetInputFile(const MplOptions &options, const MIRModule &md) const;
  private:
-  std::string GetInputFileName(const MplOptions &options) const override;
   DefaultOption GetDefaultOptions(const MplOptions &options) const override;
   ErrorCode MakeCGOptions(const MplOptions &options);
   const std::string &GetBinName() const override;
+  std::string baseName;
+  std::string outputFile;
 };
 }  // namespace maple
 #endif  // MAPLE_DRIVER_INCLUDE_COMPILER_H

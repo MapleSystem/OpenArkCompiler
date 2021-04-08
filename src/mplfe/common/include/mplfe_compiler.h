@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -25,6 +25,9 @@
 #include "bc_compiler_component.h"
 #include "ark_annotation_processor.h"
 #include "dex_reader.h"
+#ifdef ENABLE_MPLFE_AST
+#include "ast_compiler_component.h"
+#endif // ~/ENABLE_MPLFE_AST
 #include "fe_errno.h"
 #include "mpl_timer.h"
 #include "mplfe_env.h"
@@ -53,13 +56,14 @@ class MPLFECompiler {
   void PreProcessDecls();
   void ProcessDecls();
   void ProcessPragmas();
-  void PreProcessWithFunctions();
   void ProcessFunctions();
 
  private:
+  void RegisterCompilerComponent();
   inline void InsertImportInMpl(const std::list<std::string> &mplt) const;
   void FindMinCompileFailedFEFunctions();
   MIRModule &module;
+  MIRSrcLang srcLang;
   MemPool *mp;
   MapleAllocator allocator;
   std::string firstInputName;

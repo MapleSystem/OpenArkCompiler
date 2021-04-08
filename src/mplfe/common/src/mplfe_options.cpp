@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -32,6 +32,9 @@ enum OptionIndex : uint32 {
   kInClass,
   kInJar,
   kInDex,
+#ifdef ENABLE_MPLFE_AST
+  kInAST,
+#endif // ~/ENABLE_MPLFE_AST
   // output control options
   kOutputPath,
   kOutputName,
@@ -46,6 +49,9 @@ enum OptionIndex : uint32 {
   kDumpLOC,
   kDumpPhaseTime,
   kDumpPhaseTimeDetail,
+  // bc bytecode compile options
+  kRC,
+  kNoBarrier,
   // java bytecode compile options
   kJavaStaticFieldName,
   kJBCInfoUsePathName,
@@ -110,6 +116,12 @@ const Descriptor kUsage[] = {
     kBuildTypeAll, kArgCheckPolicyRequired,
     "  --in-dex file1.dex,file2.dex\n"
     "                         : input dex files", "mplfe", {} },
+#ifdef ENABLE_MPLFE_AST
+  { kInAST, 0, "", "in-ast",
+    kBuildTypeAll, kArgCheckPolicyRequired,
+    "  --in-ast file1.ast,file2.ast\n"
+    "                         : input ast files", "mplfe", {} },
+#endif // ~/ENABLE_MPLFE_AST
 
   // output control options
   { kUnknown, 0, "", "",
@@ -161,6 +173,16 @@ const Descriptor kUsage[] = {
     kBuildTypeAll, kArgCheckPolicyNone,
     "  --dump-phase-time-detail"
     "                         : dump phase time for each method", "mplfe", {} },
+  // bc bytecode compile options
+  { kUnknown, 0, "", "",
+    kBuildTypeAll, kArgCheckPolicyUnknown,
+    "========== BC Bytecode Compile Options ==========", "mplfe", {} },
+  { kRC, 0, "", "rc",
+    kBuildTypeAll, kArgCheckPolicyNone,
+    "  --rc                   : enable rc", "mplfe", {} },
+  { kNoBarrier, 0, "", "nobarrier",
+    kBuildTypeAll, kArgCheckPolicyNone,
+    "  --nobarrier            : no barrier", "mplfe", {} },
   // java bytecode compile options
   { kUnknown, 0, "", "",
     kBuildTypeAll, kArgCheckPolicyUnknown,
@@ -282,6 +304,10 @@ bool MPLFEOptions::InitFactory() {
                                                 &MPLFEOptions::ProcessInJar);
   RegisterFactoryFunction<OptionProcessFactory>(kInDex,
                                                 &MPLFEOptions::ProcessInDex);
+#ifdef ENABLE_MPLFE_AST
+  RegisterFactoryFunction<OptionProcessFactory>(kInAST,
+                                                &MPLFEOptions::ProcessInAST);
+#endif // ~/ENABLE_MPLFE_AST
 
   // output control options
   RegisterFactoryFunction<OptionProcessFactory>(kOutputPath,
@@ -337,6 +363,10 @@ bool MPLFEOptions::InitFactory() {
   RegisterFactoryFunction<OptionProcessFactory>(kDumpThreadTime,
                                                 &MPLFEOptions::ProcessDumpThreadTime);
 
+  RegisterFactoryFunction<OptionProcessFactory>(kRC,
+                                                &MPLFEOptions::ProcessRC);
+  RegisterFactoryFunction<OptionProcessFactory>(kNoBarrier,
+                                                &MPLFEOptions::ProcessNoBarrier);
   // On Demand Type Creation
   RegisterFactoryFunction<OptionProcessFactory>(kXBootClassPath,
                                                 &MPLFEOptions::ProcessXbootclasspath);
@@ -437,6 +467,15 @@ bool MPLFEOptions::ProcessInDex(const Option &opt) {
   return true;
 }
 
+#ifdef ENABLE_MPLFE_AST
+bool MPLFEOptions::ProcessInAST(const Option &opt) {
+  std::list<std::string> listFiles = SplitByComma(opt.Args());
+  for (const std::string &fileName : listFiles) {
+    FEOptions::GetInstance().AddInputASTFile(fileName);
+  }
+  return true;
+}
+#endif // ~/ENABLE_MPLFE_AST
 
 bool MPLFEOptions::ProcessInputMplt(const Option &opt) {
   std::list<std::string> listFiles = SplitByComma(opt.Args());
@@ -584,6 +623,17 @@ bool MPLFEOptions::ProcessEmitJBCLocalVarInfo(const Option &opt) {
   return true;
 }
 
+// bc compiler options
+bool MPLFEOptions::ProcessRC(const Option &opt) {
+  FEOptions::GetInstance().SetRC(true);
+  return true;
+}
+
+bool MPLFEOptions::ProcessNoBarrier(const Option &opt) {
+  FEOptions::GetInstance().SetNoBarrier(true);
+  return true;
+}
+
 // general stmt/bb/cfg debug options
 bool MPLFEOptions::ProcessDumpGeneralCFGGraph(const Option &opt) {
   FEOptions::GetInstance().SetIsDumpGeneralCFGGraph(true);
@@ -623,6 +673,12 @@ void MPLFEOptions::ProcessInputFiles(const std::vector<std::string> &inputs) {
         FE_INFO_LEVEL(FEOptions::kDumpLevelInfoDetail, "DEX file detected: %s", inputName.c_str());
         FEOptions::GetInstance().AddInputDexFile(inputName);
         break;
+#ifdef ENABLE_MPLFE_AST
+      case FEFileType::kAST:
+        FE_INFO_LEVEL(FEOptions::kDumpLevelInfoDetail, "AST file detected: %s", inputName.c_str());
+        FEOptions::GetInstance().AddInputASTFile(inputName);
+        break;
+#endif // ~/ENABLE_MPLFE_AST
       default:
         WARN(kLncErr, "unsupported file format (%s)", inputName.c_str());
         break;

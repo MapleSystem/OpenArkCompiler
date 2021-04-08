@@ -55,7 +55,7 @@ void BCInstruction::SetInstructionKind(BCInstructionKind kind) {
   instKind = static_cast<BCInstructionKind>(static_cast<uint32>(instKind) | static_cast<uint32>(kind));
 }
 
-void BCInstruction::Parse(const BCClassMethod &method) {
+void BCInstruction::Parse(BCClassMethod &method) {
   ParseImpl(method);
 }
 
@@ -290,11 +290,7 @@ const char *BCInstruction::GetOpName() const {
 
 // ========== BCRegTypeItem ==========
 PrimType BCRegTypeItem::GetPrimType() const {
-  if (isPrimPtr) {
-    return PTY_ref;
-  } else {
-    return GetBasePrimType();
-  }
+  return GetBasePrimType();
 }
 
 PrimType BCRegTypeItem::GetBasePrimType() const {
@@ -312,7 +308,25 @@ bool BCRegTypeItem::IsMorePreciseType(const BCRegTypeItem &typeItemIn) const {
     uint8 dim0 = FEUtils::GetDim(name0);
     uint8 dim1 = FEUtils::GetDim(name1);
     if (dim0 == dim1) {
-      return name0.substr(dim0).compare(BCUtil::kJavaObjectName) != 0;
+      GStrIdx name0Idx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(name0.substr(dim0));
+      GStrIdx name1Idx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(name1.substr(dim0));
+      if (name0Idx == name1Idx || dim0 == 0) {
+        if (!isIndeterminate && typeItemIn.isIndeterminate) {
+          return true;
+        } else if (isIndeterminate && !typeItemIn.isIndeterminate) {
+          return false;
+        } else if (isIndeterminate && typeItemIn.isIndeterminate) {
+          return name1Idx == BCUtil::GetJavaObjectNameMplIdx();
+        } else {
+          return isDef ?
+                 (name0Idx == BCUtil::GetJavaObjectNameMplIdx() || name1Idx != BCUtil::GetJavaObjectNameMplIdx()) :
+                 (name0Idx != BCUtil::GetJavaObjectNameMplIdx() || name1Idx == BCUtil::GetJavaObjectNameMplIdx());
+        }
+      } else {
+        BCRegTypeItem item0(name0Idx, isIndeterminate);
+        BCRegTypeItem item1(name1Idx, typeItemIn.isIndeterminate);
+        return item0.IsMorePreciseType(item1);
+      }
     } else {
       return dim0 > dim1;
     }
@@ -328,82 +342,94 @@ bool BCRegTypeItem::IsMorePreciseType(const BCRegTypeItem &typeItemIn) const {
 }
 
 // ========== BCRegType ==========
-BCRegType::BCRegType(MapleAllocator &allocatorIn, BCReg &reg, const GStrIdx &typeNameIdxIn,
-                     bool isPrimPtrIn, bool isIndeterminateIn)
+BCRegType::BCRegType(MapleAllocator &allocatorIn, BCReg &reg, const GStrIdx &typeNameIdxIn, bool isIndeterminateIn)
     : allocator(allocatorIn), curReg(reg),
-      regTypeItem(allocator.GetMemPool()->New<BCRegTypeItem>(typeNameIdxIn, isPrimPtrIn, isIndeterminateIn)),
-      typesUsedAs(allocator.Adapter()),
+      regTypeItem(allocator.GetMemPool()->New<BCRegTypeItem>(typeNameIdxIn, isIndeterminateIn, true)),
+      fuzzyTypesUsedAs(allocator.Adapter()),
       elemTypes(allocator.Adapter()),
-      arrayTypes(allocator.Adapter()) {
+      livesBegins(allocator.Adapter()) {
   curReg.regTypeItem = regTypeItem;
-}
-
-void BCRegType::UpdateDefTypeFromUse(BCRegTypeItem *typeItem) {
-  UpdateUsedSet(typeItem);
-}
-
-void BCRegType::UpdateDefTypeThroughPhi(BCReg &defedReg, const std::set<BCRegTypeItem*> &usedTypes) {
-  UpdateTypeSetFromPhi(defedReg, usedTypes);
-}
-
-void BCRegType::UpdateTypeSetFromPhi(BCReg &defedReg, const std::set<BCRegTypeItem*> &usedTypes) {
-  bool isIndeterminate = true;
-  for (auto &elem : usedTypes) {
-    if (!elem->isIndeterminate) {
-      isIndeterminate = false;
-    }
-    InsertUniqueTypeItem(typesUsedAs, elem);
-  }
-  if (isIndeterminate) {
-    defedReg.regType->UpdateUsedSet(regTypeItem);
+  if (isIndeterminateIn) {
+    fuzzyTypesUsedAs.emplace_back(regTypeItem);
   }
 }
 
-void BCRegType::PrecisifyTypes() {
+void BCRegType::PrecisifyTypes(bool isTry) {
   if (precisified) {
     return;
   }
-  precisified = true;
-  if (regTypeItem->isIndeterminate) {
-    BCRegTypeItem *realType = GetMostPreciseType(typesUsedAs);
-    if (realType != nullptr) {
-      regTypeItem->Copy(*realType);
-    }
-    if (regTypeItem->isIndeterminate) {
-      // Get type from array elem
-      for (auto elem : elemTypes) {
-        elem->PrecisifyTypes();
-        std::string arrTypeName = "A" + GlobalTables::GetStrTable().GetStringFromStrIdx(elem->regTypeItem->typeNameIdx);
-        GStrIdx arrayTypeIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(arrTypeName);
-        regTypeItem->typeNameIdx = arrayTypeIdx;
-        regTypeItem->isIndeterminate = false;
-      }
-    } else {
-      const std::string &arrTypeName = GlobalTables::GetStrTable().GetStringFromStrIdx(regTypeItem->typeNameIdx);
-      for (auto elem : elemTypes) {
-        if (arrTypeName.size() > 1 && arrTypeName.at(0) == 'A') {
-          elem->regTypeItem->typeNameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(arrTypeName.substr(1));
-          elem->regTypeItem->isIndeterminate = false;
-        } else {
-          INFO(kLncInfo, "Could not determine the array type thouth its USE, set by its element.");
+  if (!isTry) {
+    precisified = true;
+  }
+  if (typesUsedAs == nullptr || typesUsedAs->empty()) {
+    return;
+  }
+  // insert defed type into `used`
+  typesUsedAs->emplace_back(regTypeItem);
+  BCRegTypeItem *realType = nullptr;
+  PrecisifyRelatedTypes(realType);
+  if (fuzzyTypesUsedAs.size() != 0 || realType == nullptr) {
+    if (realType == nullptr || realType->isIndeterminate) {
+      realType = GetMostPreciseType(*typesUsedAs);
+      if (realType != nullptr) {
+        for (auto &elem : fuzzyTypesUsedAs) {
+          elem->Copy(*realType);
         }
       }
     }
   }
-  for (auto elem : arrayTypes) {
-    elem->PrecisifyTypes();
-    // Generally, array type could be determined by it USE.
-    // Otherwise, set it though its element type.
-    if (elem->IsIndeterminate() || !BCUtil::IsArrayType(elem->regTypeItem->typeNameIdx)) {
-      std::string arrayTypeName = "A" + GlobalTables::GetStrTable().GetStringFromStrIdx(regTypeItem->typeNameIdx);
-      GStrIdx arrayTypeIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(arrayTypeName);
-      elem->regTypeItem->typeNameIdx = arrayTypeIdx;
-      elem->regTypeItem->isIndeterminate = false;
+  PrecisifyElemTypes(realType);
+}
+
+void BCRegType::PrecisifyRelatedTypes(BCRegTypeItem *realType) {
+  for (auto rType : relatedBCRegTypes) {
+    // try to get type from use first.
+    // if failed, get type from def.
+    rType->PrecisifyTypes(true);
+    if (rType->IsIndeterminate()) {
+      if (realType == nullptr) {
+        realType = GetMostPreciseType(*typesUsedAs);
+        if (realType != nullptr) {
+          for (auto &fuzzyTy : fuzzyTypesUsedAs) {
+            if (fuzzyTy->isIndeterminate) {
+              fuzzyTy->Copy(*realType);
+            }
+          }
+        }
+      }
+      if (!realType->isIndeterminate) {
+        rType->PrecisifyTypes(true);
+      }
+    } else {
+      rType->precisified = true;
     }
   }
 }
 
-BCRegTypeItem *BCRegType::GetMostPreciseType(const MapleVector<BCRegTypeItem*> &types) {
+void BCRegType::PrecisifyElemTypes(BCRegTypeItem *arrayType) {
+  for (auto elem : elemTypes) {
+    if (elem->IsIndeterminate()) {
+      const std::string &arrTypeName = GlobalTables::GetStrTable().GetStringFromStrIdx(arrayType->typeNameIdx);
+      if (arrTypeName.size() > 1 && arrTypeName.at(0) == 'A') {
+        GStrIdx elemTypeIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(arrTypeName.substr(1));
+        if (elem->IsPrecisified()) {
+          for (auto &e : elem->fuzzyTypesUsedAs) {
+            if (e->isIndeterminate) {
+              e->typeNameIdx = elemTypeIdx;
+              e->isIndeterminate = false;
+            }
+          }
+        } else {
+          elem->regTypeItem->typeNameIdx = elemTypeIdx;
+        }
+      } else {
+        CHECK_FATAL(curReg.regValue != nullptr, "Not an array type or const 0");
+      }
+    }
+  }
+}
+
+BCRegTypeItem *BCRegType::GetMostPreciseType(const MapleList<BCRegTypeItem*> &types) {
   BCRegTypeItem *retType = nullptr;
   if (types.empty()) {
     return retType;
@@ -450,11 +476,7 @@ UniqueFEIRVar BCReg::GenFEIRVarRegImpl() const {
 
 UniqueFEIRType BCReg::GenFEIRTypeImpl() const {
   PrimType pty = GetBasePrimType();
-  if (regTypeItem->isPrimPtr && pty != PTY_ref) {
-    return std::make_unique<FEIRTypePointer>(std::make_unique<FEIRTypeDefault>(pty, regTypeItem->typeNameIdx));
-  } else {
-    return std::make_unique<FEIRTypeDefault>(pty, regTypeItem->typeNameIdx);
-  }
+  return std::make_unique<FEIRTypeDefault>(pty, regTypeItem->typeNameIdx);
 }
 
 std::list<UniqueFEIRStmt> BCReg::GenRetypeStmtsAfterDef() const {
@@ -469,16 +491,18 @@ std::list<UniqueFEIRStmt> BCReg::GenRetypeStmtsAfterDef() const {
   PrimType ptyDef = regTypeItem->GetPrimType();
 
   std::list<BCRegTypeItem*> unqTypeItems;
-  for (const auto &usedType : *(regType->GetUsedTypes())) {
-    bool exist = false;
-    for (const auto &elem : unqTypeItems) {
-      if ((*usedType) == (*elem)) {
-        exist = true;
-        break;
+  if (regType->GetUsedTypes() != nullptr) {
+    for (const auto &usedType : *(regType->GetUsedTypes())) {
+      bool exist = false;
+      for (const auto &elem : unqTypeItems) {
+        if ((*usedType) == (*elem)) {
+          exist = true;
+          break;
+        }
       }
-    }
-    if (exist == false) {
-      unqTypeItems.emplace_back(usedType);
+      if (exist == false) {
+        unqTypeItems.emplace_back(usedType);
+      }
     }
   }
 

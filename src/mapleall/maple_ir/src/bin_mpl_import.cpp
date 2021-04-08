@@ -163,7 +163,7 @@ MIRConst *BinaryMplImport::ImportConst(MIRFunction *func) {
       } value;
 
       value.ivalue = ReadNum();
-      return GlobalTables::GetFpConstTable().GetOrCreateFloatConst(value.fvalue, fieldID);
+      return GlobalTables::GetFpConstTable().GetOrCreateFloatConst(value.fvalue);
     }
     case kBinKindConstDouble: {
       union {
@@ -172,7 +172,7 @@ MIRConst *BinaryMplImport::ImportConst(MIRFunction *func) {
       } value;
 
       value.ivalue = ReadNum();
-      return GlobalTables::GetFpConstTable().GetOrCreateDoubleConst(value.dvalue, fieldID);
+      return GlobalTables::GetFpConstTable().GetOrCreateDoubleConst(value.dvalue);
     }
     case kBinKindConstAgg: {
       MIRAggConst *aggConst = mod.GetMemPool()->New<MIRAggConst>(mod, *type, fieldID);

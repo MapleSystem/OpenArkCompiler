@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -75,6 +75,12 @@ class FEOptions {
     return inputDexFiles;
   }
 
+#ifdef ENABLE_MPLFE_AST
+  void AddInputASTFile(const std::string &fileName);
+  const std::vector<std::string> &GetInputASTFiles() const {
+    return inputASTFiles;
+  }
+#endif // ~ENABLE_MPLFE_AST
 
   void AddInputMpltFileFromSys(const std::string &fileName) {
     inputMpltFilesFromSys.push_back(fileName);
@@ -363,6 +369,22 @@ class FEOptions {
     return typeInferKind;
   }
 
+  bool IsRC() const {
+    return isRC;
+  }
+
+  void SetRC(bool arg) {
+    isRC = arg;
+  }
+
+  bool IsNoBarrier() const {
+    return isNoBarrier;
+  }
+
+  void SetNoBarrier(bool arg) {
+    isNoBarrier = arg;
+  }
+
   bool HasJBC() const {
     return ((inputClassFiles.size() != 0) || (inputJarFiles.size() != 0));
   }
@@ -381,6 +403,9 @@ class FEOptions {
   std::list<std::string> inputClassFiles;
   std::list<std::string> inputJarFiles;
   std::vector<std::string> inputDexFiles;
+#ifdef ENABLE_MPLFE_AST
+  std::vector<std::string> inputASTFiles;
+#endif // ~/ENABLE_MPLFE_AST
   std::list<std::string> inputMpltFilesFromSys;
   std::list<std::string> inputMpltFilesFromApk;
   std::list<std::string> inputMpltFiles;
@@ -418,6 +443,10 @@ class FEOptions {
   bool isDumpJBCErrorOnly = false;
   std::set<std::string> dumpJBCFuncNames;
   bool isEmitJBCLocalVarInfo = false;
+
+  // bc compiler options
+  bool isRC = false;
+  bool isNoBarrier = false;
 
   // general stmt/bb/cfg debug options
   bool isDumpGenCFGGraph = false;

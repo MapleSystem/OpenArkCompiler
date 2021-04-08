@@ -26,6 +26,7 @@
 #include "feir_var.h"
 #include "mempool.h"
 #include "bc_pragma.h"
+
 namespace maple {
 namespace bc {
 using BCAttrKind = uint32;
@@ -139,7 +140,7 @@ class BCClassMethod : public BCClassElem {
   BCClassMethod(const BCClass &klassIn, uint32 acc, bool isVirtualIn, const std::string &nameIn,
                 const std::string &descIn)
       : BCClassElem(klassIn, acc, nameIn, descIn), isVirtual(isVirtualIn),
-        methodMp(memPoolCtrler.NewMemPool("MemPool for BCClassMethod")),
+        methodMp(FEUtils::NewMempool("MemPool for BCClassMethod", true /* isLcalPool */)),
         allocator(methodMp) {}
   ~BCClassMethod() {
     if (methodMp != nullptr) {
@@ -154,6 +155,8 @@ class BCClassMethod : public BCClassElem {
   void SetRegisterTotalSize(uint16 size);
   uint16 GetRegisterTotalSize() const;
   void SetRegisterInsSize(uint16 size);
+  void SetCodeOff(uint32 off);
+  uint32 GetCodeOff() const;
   void AddMethodDepSet(const std::string &depType);
   bool IsVirtual() const;
   bool IsNative() const;
@@ -182,6 +185,15 @@ class BCClassMethod : public BCClassElem {
 #endif
   }
 
+  const std::map<uint16, std::set<std::tuple<std::string, std::string, std::string>>> *GetSrcLocalInfoPtr() const {
+    return srcLocals.get();
+  }
+
+  void SetSrcLocalInfo(
+      std::unique_ptr<std::map<uint16, std::set<std::tuple<std::string, std::string, std::string>>>> srcLocalsIn) {
+    srcLocals = std::move(srcLocalsIn);
+  }
+
   std::vector<std::unique_ptr<FEIRVar>> GenArgVarList() const;
   void GenArgRegs();
   std::vector<std::string> GetSigTypeNames() const {
@@ -189,6 +201,14 @@ class BCClassMethod : public BCClassElem {
   }
   bool HasCode() const {
     return pcBCInstructionMap != nullptr && !pcBCInstructionMap->empty();
+  }
+
+  bool IsRcPermanent() const {
+    return isPermanent;
+  }
+
+  void SetIsRcPermanent(bool flag) {
+    isPermanent = flag;
   }
 
   const MemPool *GetMemPool() const {
@@ -215,20 +235,15 @@ class BCClassMethod : public BCClassElem {
   virtual bool IsClinitImpl() const = 0;
   void ProcessTryCatch();
   virtual std::vector<std::unique_ptr<FEIRVar>> GenArgVarListImpl() const = 0;
-  // This struct is used in TypeInfer only.
-  struct TypeInferItem {
-    BCReg *reg = nullptr;
-    std::set<BCRegTypeItem*> aliveUsedTypes;
-    TypeInferItem *prev = nullptr;
-  };
-
   void TypeInfer();
-  void InsertPhi(const std::vector<TypeInferItem*> &dest, std::vector<TypeInferItem*> &src);
-  static TypeInferItem *RegisterTypeInferItem(std::list<std::unique_ptr<TypeInferItem>> &items, BCReg* bcReg,
-                                              TypeInferItem *prev);
-  static std::vector<TypeInferItem*> ConstructNewRegTypeMap(const std::vector<TypeInferItem*> &regTypeMap,
-      std::list<std::unique_ptr<BCClassMethod::TypeInferItem>> &items);
+  void InsertPhi(const std::vector<TypeInferItem*> &dom, std::vector<TypeInferItem*> &src);
+  static TypeInferItem *ConstructTypeInferItem(MapleAllocator &alloc, uint32 pos, BCReg* bcReg, TypeInferItem *prev);
+  static std::vector<TypeInferItem*> ConstructNewRegTypeMap(MapleAllocator &alloc, uint32 pos,
+                                                            const std::vector<TypeInferItem*> &regTypeMap);
   std::list<UniqueFEIRStmt> GenReTypeStmtsThroughArgs() const;
+  void Traverse(std::list<std::pair<uint32, std::vector<TypeInferItem*>>> &pcDefedRegsList,
+                std::vector<std::vector<TypeInferItem*>> &dominances,
+                std::set<uint32> &visitedSet);
   void PrecisifyRegType();
   virtual void GenArgRegsImpl() = 0;
   static void LinkJumpTarget(const std::map<uint32, FEIRStmtPesudoLabel2*> &targetFEIRStmtMap,
@@ -241,15 +256,20 @@ class BCClassMethod : public BCClassElem {
 #ifdef DEBUG
   const std::map<uint32, uint32> *pSrcPosInfo = nullptr;
 #endif
+  // map<regNum, set<tuple<name, typeName, signature>>>
+  std::unique_ptr<std::map<uint16, std::set<std::tuple<std::string, std::string, std::string>>>> srcLocals;
   std::vector<std::unique_ptr<BCReg>> argRegs;
   std::vector<std::string> sigTypeNames;
   bool isVirtual = false;
   uint16 registerTotalSize = UINT16_MAX;
   uint16 registerInsSize = UINT16_MAX;
+  uint32 codeOff = UINT32_MAX;
   const uint16 *instPos = nullptr;  // method instructions start pos in bc file
   std::set<uint32> visitedPcSet;
   std::set<uint32> multiInDegreeSet;
   std::list<BCRegType*> regTypes;
+  // isPermanent is true means the rc annotation @Permanent is used
+  bool isPermanent = false;
 
   MemPool *methodMp;
   MapleAllocator allocator;
@@ -277,6 +297,17 @@ class BCClass {
   }
 
   void SetSrcFileInfo(const std::string &name);
+  void SetIRSrcFileSigIdx(GStrIdx strIdx) {
+    irSrcFileSigIdx = strIdx;
+  }
+
+  bool IsMultiDef() const {
+    return isMultiDef;
+  }
+
+  void SetIsMultiDef(bool flag) {
+    isMultiDef = flag;
+  }
 
   uint32 GetSrcFileIdx() const {
     return srcFileIdx;
@@ -307,7 +338,9 @@ class BCClass {
   const std::list<std::string> &GetSuperClassNames() const;
   const std::vector<std::string> &GetSuperInterfaceNames() const;
   std::string GetSourceFileName() const;
+  GStrIdx GetIRSrcFileSigIdx() const;
   uint32 GetAccessFlag() const;
+  uint32 GetFileNameHashId() const;
 
   const std::vector<std::unique_ptr<BCClassField>> &GetFields() const;
   std::vector<std::unique_ptr<BCClassMethod>> &GetMethods();
@@ -315,12 +348,14 @@ class BCClass {
 
  protected:
   bool isInterface = false;
+  bool isMultiDef = false;
   uint32 classIdx;
   uint32 srcFileIdx = 0;
   uint32 accFlag = 0;
   GStrIdx classNameOrinIdx;
   GStrIdx classNameMplIdx;
   GStrIdx srcFileNameIdx;
+  GStrIdx irSrcFileSigIdx;
   const BCParserBase &parser;
   std::list<std::string> superClassNameList;
   std::vector<std::string> interfaces;

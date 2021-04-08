@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -36,12 +36,18 @@ struct StructElemNameIdx {
     type = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(namemangler::EncodeName(typeStr));
     full = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(namemangler::EncodeName(fullName));
   }
+  StructElemNameIdx(const std::string &funcStr) {
+    klass = GStrIdx(0);
+    elem = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(funcStr);
+    type = GStrIdx(0);
+    full = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(funcStr);
+  }
   ~StructElemNameIdx() = default;
 };
 
 class FEStructElemInfo {
  public:
-  FEStructElemInfo(const StructElemNameIdx &argStructElemNameIdx,
+  FEStructElemInfo(MapleAllocator &allocatorIn, const StructElemNameIdx &argStructElemNameIdx,
                    MIRSrcLang argSrcLang, bool argIsStatic);
   virtual ~FEStructElemInfo() = default;
 
@@ -55,6 +61,10 @@ class FEStructElemInfo {
 
   const std::string &GetElemName() const {
     return GlobalTables::GetStrTable().GetStringFromStrIdx(structElemNameIdx.elem);
+  }
+
+  const GStrIdx &GetElemNameIdx() const {
+    return structElemNameIdx.elem;
   }
 
   const std::string &GetSignatureName() const {
@@ -98,30 +108,33 @@ class FEStructElemInfo {
   }
 
   UniqueFEIRType GetActualContainerType() const;
-  const std::string &GetActualContainerName() const {
-    return actualContainer;
+  const std::string GetActualContainerName() const {
+    return actualContainer.c_str();
   }
 
  LLT_PROTECTED:
   virtual void PrepareImpl(MIRBuilder &mirBuilder, bool argIsStatic) = 0;
 
-  StructElemNameIdx structElemNameIdx;
-  MIRSrcLang srcLang : 8;
   bool isStatic : 1;
   bool isMethod : 1;
   bool isDefined : 1;
   bool isFromDex : 1;
   bool isPrepared : 1;
-  std::string actualContainer; // in maple format
+  MIRSrcLang srcLang : 8;
+  MapleAllocator &allocator;
+  StructElemNameIdx structElemNameIdx;
+  MapleString actualContainer; // in maple format
 };
 
 using UniqueFEStructElemInfo = std::unique_ptr<FEStructElemInfo>;
 
 class FEStructFieldInfo : public FEStructElemInfo {
  public:
-  FEStructFieldInfo(const StructElemNameIdx &argStructElemNameIdx,
+  FEStructFieldInfo(MapleAllocator &allocatorIn, const StructElemNameIdx &argStructElemNameIdx,
                     MIRSrcLang argSrcLang, bool argIsStatic);
-  ~FEStructFieldInfo() = default;
+  ~FEStructFieldInfo() {
+    fieldType = nullptr;
+  }
   GStrIdx GetFieldNameIdx() const {
     return fieldNameIdx;
   }
@@ -134,8 +147,12 @@ class FEStructFieldInfo : public FEStructElemInfo {
     fieldID = argFieldID;
   }
 
-  const UniqueFEIRType &GetType() const {
+  const FEIRType *GetType() const {
     return fieldType;
+  }
+
+  bool IsVolatile() const {
+    return isVolatile;
   }
 
  LLT_PROTECTED:
@@ -151,14 +168,15 @@ class FEStructFieldInfo : public FEStructElemInfo {
   bool SearchStructFieldJava(const TyIdx &tyIdx, MIRBuilder &mirBuilder, bool argIsStatic, bool allowPrivate = true);
   bool CompareFieldType(const FieldPair &fieldPair) const;
 
-  UniqueFEIRType fieldType;
+  FEIRType *fieldType;
   GStrIdx fieldNameIdx;
   FieldID fieldID;
+  bool isVolatile;
 };
 
 class FEStructMethodInfo : public FEStructElemInfo {
  public:
-  FEStructMethodInfo(const StructElemNameIdx &argStructElemNameIdx,
+  FEStructMethodInfo(MapleAllocator &allocatorIn, const StructElemNameIdx &argStructElemNameIdx,
                      MIRSrcLang argSrcLang, bool argIsStatic);
   ~FEStructMethodInfo();
   PUIdx GetPuIdx() const;
@@ -186,19 +204,17 @@ class FEStructMethodInfo : public FEStructElemInfo {
     isJavaDynamicCall = false;
   }
 
-  const UniqueFEIRType &GetReturnType() const {
+  const FEIRType *GetReturnType() const {
     return retType;
   }
 
-  const UniqueFEIRType &GetOwnerType() const {
+  const FEIRType *GetOwnerType() const {
     return ownerType;
   }
 
-  const std::vector<UniqueFEIRType> &GetArgTypes() const {
+  const MapleVector<FEIRType*> &GetArgTypes() const {
     return argTypes;
   }
-
-  static void InitJavaPolymorphicWhiteList();
 
  LLT_PROTECTED:
   void PrepareImpl(MIRBuilder &mirBuilder, bool argIsStatic) override;
@@ -212,17 +228,16 @@ class FEStructMethodInfo : public FEStructElemInfo {
                               bool allowPrivate = true);
   bool SearchStructMethodJavaInParent(MIRStructType &structType, MIRBuilder &mirBuilder, bool argIsStatic);
   bool SearchStructMethodJava(const TyIdx &tyIdx, MIRBuilder &mirBuilder, bool argIsStatic, bool allowPrivate = true);
-  bool CheckJavaPolymorphicCall() const;
-  std::vector<UniqueFEIRType> argTypes;
-  UniqueFEIRType retType;
-  UniqueFEIRType ownerType;
-  GStrIdx methodNameIdx;
-  MIRFunction *mirFunc;
+
   bool isReturnVoid;
   bool isConstructor;
   bool isJavaPolymorphicCall;
   bool isJavaDynamicCall;
-  static std::map<GStrIdx, std::set<GStrIdx>> javaPolymorphicWhiteList;
+  GStrIdx methodNameIdx;
+  FEIRType *retType;
+  FEIRType *ownerType;
+  MIRFunction *mirFunc;
+  MapleVector<FEIRType*> argTypes;
 };
 }  // namespace maple
 #endif  // MPLFE_INCLUDE_COMMON_FE_STRUCT_ELEM_INFO_H

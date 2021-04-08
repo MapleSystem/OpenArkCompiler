@@ -58,5 +58,9 @@ std::string BCReader::GetSignature(uint32 idx) const {
 uint32 BCReader::GetFileIndex() const {
   return GetFileIndexImpl();
 }
+
+std::string BCReader::GetIRSrcFileSignature() const {
+  return irSrcFileSignature;
+}
 }  // namespace bc
 }  // namespace maple

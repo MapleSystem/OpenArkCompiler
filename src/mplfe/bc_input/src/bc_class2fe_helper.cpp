@@ -43,6 +43,26 @@ std::string BCClass2FEHelper::GetSourceFileNameImpl() const {
   return klass.GetSourceFileName();
 }
 
+void BCClass2FEHelper::TryMarkMultiDefClass(MIRStructType &typeImported) const {
+  MIRTypeKind kind = typeImported.GetKind();
+  uint32 typeSrcSigIdx = 0;
+  static const GStrIdx keySignatureStrIdx =
+      GlobalTables::GetStrTable().GetStrIdxFromName("INFO_ir_srcfile_signature");
+  if (kind == kTypeClass || kind == kTypeClassIncomplete) {
+    auto &classType = static_cast<MIRClassType&>(typeImported);
+    typeSrcSigIdx = classType.GetInfo(keySignatureStrIdx);
+  } else if (kind == kTypeInterface || kind == kTypeInterfaceIncomplete) {
+    auto &interfaceType = static_cast<MIRInterfaceType&>(typeImported);
+    typeSrcSigIdx = interfaceType.GetInfo(keySignatureStrIdx);
+  }
+  // Find type definition in both dependent libraries and current compilation unit, mark the type multidef,
+  // and we will mark all it's methods multidef later.
+  // MiddleEnd will NOT inline the caller and callee with multidef attr.
+  if (typeSrcSigIdx != 0 && klass.GetIRSrcFileSigIdx() != typeSrcSigIdx) {
+    klass.SetIsMultiDef(true);
+  }
+}
+
 MIRStructType *BCClass2FEHelper::CreateMIRStructTypeImpl(bool &error) const {
   std::string classNameMpl = GetStructNameMplImpl();
   if (classNameMpl.empty()) {
@@ -51,8 +71,14 @@ MIRStructType *BCClass2FEHelper::CreateMIRStructTypeImpl(bool &error) const {
     return nullptr;
   }
   FE_INFO_LEVEL(FEOptions::kDumpLevelInfoDetail, "CreateMIRStrucType for %s", classNameMpl.c_str());
+  GStrIdx nameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(classNameMpl);
+  MIRStructType *typeImported = FEManager::GetTypeManager().GetImportedType(nameIdx);
+  if (typeImported != nullptr) {
+    TryMarkMultiDefClass(*typeImported);
+  }
+
   bool isCreate = false;
-  MIRStructType *type = FEManager::GetTypeManager().GetOrCreateClassOrInterfaceType(classNameMpl, klass.IsInterface(),
+  MIRStructType *type = FEManager::GetTypeManager().GetOrCreateClassOrInterfaceType(nameIdx, klass.IsInterface(),
                                                                                     FETypeFlag::kSrcInput, isCreate);
   error = false;
   // fill global type name table
@@ -75,6 +101,14 @@ MIRStructType *BCClass2FEHelper::CreateMIRStructTypeImpl(bool &error) const {
 
 uint64 BCClass2FEHelper::GetRawAccessFlagsImpl() const {
   return static_cast<uint64>(klass.GetAccessFlag());
+}
+
+GStrIdx BCClass2FEHelper::GetIRSrcFileSigIdxImpl() const {
+  return klass.GetIRSrcFileSigIdx();
+}
+
+bool BCClass2FEHelper::IsMultiDefImpl() const {
+  return klass.IsMultiDef();
 }
 
 std::string BCClass2FEHelper::GetSrcFileNameImpl() const {
@@ -200,7 +234,11 @@ bool BCClassMethod2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
   elemInfo->SetFromDex();
   mirFunc = FEManager::GetTypeManager().CreateFunction(methodNameIdx, mirReturnType->GetTypeIndex(),
                                                        argsTypeIdx, isVarg, isStatic);
+#ifndef USE_OPS
+  mirMethodPair.first = mirFunc;
+#else
   mirMethodPair.first = mirFunc->GetStIdx();
+#endif
   mirMethodPair.second.first = mirFunc->GetMIRFuncType()->GetTypeIndex();
   mirMethodPair.second.second = attrs;
   mirFunc->SetFuncAttrs(attrs);

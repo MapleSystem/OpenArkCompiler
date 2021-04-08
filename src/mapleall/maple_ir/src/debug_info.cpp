@@ -42,18 +42,18 @@ constexpr uint32 kStructDBGSize = 8888;
 
 // DBGDie methods
 DBGDie::DBGDie(MIRModule *m, DwTag tag)
-  : module(m),
-    tag(tag),
-    id(m->GetDbgInfo()->GetMaxId()),
-    withChildren(false),
-    sibling(nullptr),
-    firstChild(nullptr),
-    abbrevId(0),
-    tyIdx(0),
-    offset(0),
-    size(0),
-    attrVec(m->GetMPAllocator().Adapter()),
-    subDieVec(m->GetMPAllocator().Adapter()) {
+    : module(m),
+      tag(tag),
+      id(m->GetDbgInfo()->GetMaxId()),
+      withChildren(false),
+      sibling(nullptr),
+      firstChild(nullptr),
+      abbrevId(0),
+      tyIdx(0),
+      offset(0),
+      size(0),
+      attrVec(m->GetMPAllocator().Adapter()),
+      subDieVec(m->GetMPAllocator().Adapter()) {
   if (module->GetDbgInfo()->GetParentDieSize()) {
     parent = module->GetDbgInfo()->GetParentDie();
   } else {
@@ -322,7 +322,8 @@ void DebugInfo::BuildDebugInfo() {
         break;
       }
       default:
-        std::cout << "named type " << GlobalTables::GetStrTable().GetStringFromStrIdx(strIdx).c_str() << "\n";
+        LogInfo::MapleLogger() << "named type " << GlobalTables::GetStrTable().GetStringFromStrIdx(strIdx).c_str()
+            << "\n";
         break;
     }
   }
@@ -635,7 +636,7 @@ DBGDie *DebugInfo::CreatePointedFuncTypeDie(MIRFuncType *ftype) {
 }
 
 DBGDie *DebugInfo::GetOrCreateTypeDie(MIRType *type) {
-  if (!type) {
+  if (type == nullptr) {
     return nullptr;
   }
 
@@ -652,7 +653,7 @@ DBGDie *DebugInfo::GetOrCreateTypeDie(MIRType *type) {
       return idDieMap[id];
     }
 
-  if (type && type->GetTypeIndex() == static_cast<uint32>(type->GetPrimType())) {
+  if (type->GetTypeIndex() == static_cast<uint32>(type->GetPrimType())) {
     return GetOrCreatePrimTypeDie(type->GetPrimType());
   }
 
@@ -704,7 +705,7 @@ DBGDie *DebugInfo::GetOrCreatePointTypeDie(const MIRPtrType *ptrtype) {
 
   MIRType *type = ptrtype->GetPointedType();
   // for <* void>
-  if (type &&
+  if ((type != nullptr) &&
       (type->GetPrimType() == PTY_void || type->GetKind() == kTypeFunction)) {
     DBGDie *die = module->GetMemPool()->New<DBGDie>(module, DW_TAG_pointer_type);
     die->AddAttr(DW_AT_byte_size, DW_FORM_data4, k8BitSize);
@@ -733,7 +734,7 @@ DBGDie *DebugInfo::GetOrCreatePointTypeDie(const MIRPtrType *ptrtype) {
 
   // update incomplete type from stridxDieIdMap to tyIdxDieIdMap
   MIRStructType *stype = static_cast<MIRStructType*>(type);
-  if (stype && stype->IsIncomplete()) {
+  if ((stype != nullptr) && stype->IsIncomplete()) {
     uint32 sid = stype->GetNameStrIdx().GetIdx();
     if (stridxDieIdMap.find(sid) != stridxDieIdMap.end()) {
       uint32 dieid = stridxDieIdMap[sid];
@@ -860,7 +861,8 @@ DBGDie *DebugInfo::GetOrCreateStructTypeDie(const MIRType *type) {
         break;
       }
     default:
-      std::cout << "named type " << GlobalTables::GetStrTable().GetStringFromStrIdx(strIdx).c_str() << "\n";
+      LogInfo::MapleLogger() << "named type " << GlobalTables::GetStrTable().GetStringFromStrIdx(strIdx).c_str()
+          << "\n";
       break;
   }
 
@@ -918,7 +920,7 @@ DBGDie *DebugInfo::CreateStructTypeDie(GStrIdx strIdx, const MIRStructType *stru
   // member functions decl
   for (auto fp : structtype->GetMethods()) {
     MIRSymbol *symbol = GlobalTables::GetGsymTable().GetSymbolFromStidx(fp.first.Idx());
-    ASSERT(symbol && symbol->GetSKind() == kStFunc, "member function symbol not exist");
+    ASSERT((symbol != nullptr) && symbol->GetSKind() == kStFunc, "member function symbol not exist");
     MIRFunction *func = symbol->GetValue().mirFunc;
     ASSERT(func, "member function not exist");
     DBGDie *fdie = GetOrCreateFuncDeclDie(func);
@@ -1042,7 +1044,7 @@ void DebugInfo::BuildAbbrev() {
   for (uint32 i = 1; i < maxId; i++) {
     DBGDie *die = idDieMap[i];
     if (die->GetAbbrevId() == 0) {
-      std::cout << "0 abbrevId i = " << i << " die->id = " << die->GetId() << std::endl;
+      LogInfo::MapleLogger() << "0 abbrevId i = " << i << " die->id = " << die->GetId() << std::endl;
     }
   }
 }
@@ -1346,7 +1348,6 @@ void DBGCompileMsgInfo::SetErrPos(uint32 lnum, uint32 cnum) {
 }
 
 void DBGCompileMsgInfo::UpdateMsg(uint32 lnum, const char *line) {
-  // LogInfo::MapleLogger() << "get #" << lnum << " "<< line << std::endl;
   size_t size = strlen(line);
   if (size > MAXLINELEN - 1) {
     size = MAXLINELEN - 1;

@@ -36,7 +36,7 @@ class DexOp : public BCInstruction {
   static std::string GetArrayElementTypeFromArrayType(const std::string &typeName);
 
  protected:
-  void ParseImpl(const BCClassMethod &method) override {}
+  void ParseImpl(BCClassMethod &method) override {}
   // Should be removed after all instruction impled
   std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() override {
     return std::list<UniqueFEIRStmt>();
@@ -113,7 +113,7 @@ class DexOpReturn : public DexOp {
 
  protected:
   void SetVAImpl(uint32 num) override;
-  void ParseImpl(const BCClassMethod &method) override;
+  void ParseImpl(BCClassMethod &method) override;
   std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() override;
   DexReg vA;
   bool isReturnVoid = false;
@@ -130,8 +130,9 @@ class DexOpConst : public DexOp {
   void SetVBImpl(uint32 num) override;
   void SetWideVBImpl(uint64 num) override;
   std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() override;
+
+ private:
   DexReg vA;
-  DexReg vAtmp;
 };
 
 // 0x1a ~ 0x1b
@@ -143,9 +144,11 @@ class DexOpConstString : public DexOp {
  protected:
   void SetVAImpl(uint32 num) override;
   void SetVBImpl(uint32 num) override;
-  void ParseImpl(const BCClassMethod &method) override;
+  void ParseImpl(BCClassMethod &method) override;
   std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() override;
+  uint32 fileIdx;
   DexReg vA;
+  MapleString strValue;
 };
 
 // 0x1c
@@ -157,11 +160,11 @@ class DexOpConstClass : public DexOp {
  protected:
   void SetVAImpl(uint32 num) override;
   void SetVBImpl(uint32 num) override;
-  void ParseImpl(const BCClassMethod &method) override;
+  void ParseImpl(BCClassMethod &method) override;
   std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() override;
   DexReg vA;
   uint32 dexTypeIdx;
-  std::string typeName;
+  GStrIdx mplTypeNameIdx;
 };
 
 // 0x1d ~ 0x1e
@@ -185,7 +188,7 @@ class DexOpCheckCast : public DexOp {
  protected:
   void SetVAImpl(uint32 num) override;
   void SetVBImpl(uint32 num) override;
-  void ParseImpl(const BCClassMethod &method) override;
+  void ParseImpl(BCClassMethod &method) override;
   std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() override;
   DexReg vA;
   DexReg vDef;
@@ -203,7 +206,7 @@ class DexOpInstanceOf : public DexOp {
   void SetVAImpl(uint32 num) override;
   void SetVBImpl(uint32 num) override;
   void SetVCImpl(uint32 num) override;
-  void ParseImpl(const BCClassMethod &method) override;
+  void ParseImpl(BCClassMethod &method) override;
   std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() override;
   DexReg vA;
   DexReg vB;
@@ -234,10 +237,12 @@ class DexOpNewInstance : public DexOp {
  private:
   void SetVAImpl(uint32 num) override;
   void SetVBImpl(uint32 num) override;
-  void ParseImpl(const BCClassMethod &method) override;
+  void ParseImpl(BCClassMethod &method) override;
   std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() override;
   DexReg vA;
   bool isSkipNewString = false;
+  // isRcPermanent is true means the rc annotation @Permanent is used
+  bool isRcPermanent = false;
 };
 
 // 0x23
@@ -250,10 +255,12 @@ class DexOpNewArray : public DexOp {
   void SetVAImpl(uint32 num) override;
   void SetVBImpl(uint32 num) override;
   void SetVCImpl(uint32 num) override;
-  void ParseImpl(const BCClassMethod &method) override;
+  void ParseImpl(BCClassMethod &method) override;
   std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() override;
   DexReg vA;
   DexReg vB;
+  // isRcPermanent is true means the rc annotation @Permanent is used
+  bool isRcPermanent = false;
 };
 
 // 0x24 ~ 0x25
@@ -270,13 +277,12 @@ class DexOpFilledNewArray : public DexOp {
   void SetVAImpl(uint32 num) override;
   void SetVBImpl(uint32 num) override;
   void SetArgsImpl(const MapleList<uint32> &args) override;
-  void ParseImpl(const BCClassMethod &method) override;
+  void ParseImpl(BCClassMethod &method) override;
   bool isRange = false;
   uint32 argsSize = 0;
   uint32 dexArrayTypeIdx = UINT32_MAX;
   GStrIdx arrayTypeNameIdx;
   GStrIdx elemTypeNameIdx;
-  std::string typeName;
   MapleList<uint32> argRegs;
   MapleVector<DexReg> vRegs;
 };
@@ -290,7 +296,7 @@ class DexOpFillArrayData : public DexOp {
  private:
   void SetVAImpl(uint32 num) override;
   void SetVBImpl(uint32 num) override;
-  void ParseImpl(const BCClassMethod &method) override;
+  void ParseImpl(BCClassMethod &method) override;
   std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() override;
   DexReg vA;
   const int8 *arrayData = nullptr;
@@ -319,7 +325,7 @@ class DexOpGoto : public DexOp {
  private:
   std::vector<uint32> GetTargetsImpl() const override;
   void SetVAImpl(uint32 num) override;
-  void ParseImpl(const BCClassMethod &method) override;
+  void ParseImpl(BCClassMethod &method) override;
   std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() override;
   int32 offset;
   uint32 target;
@@ -334,13 +340,13 @@ class DexOpSwitch : public DexOp {
  private:
   void SetVAImpl(uint32 num) override;
   void SetVBImpl(uint32 num) override;
-  void ParseImpl(const BCClassMethod &method) override;
+  void ParseImpl(BCClassMethod &method) override;
   std::vector<uint32> GetTargetsImpl() const override;
   std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() override;
   bool isPacked = false;
   int32 offset;
   DexReg vA;
-  std::map<int32, std::pair<uint32, uint32>> keyTargetOPpcMap;
+  MapleMap<int32, std::pair<uint32, uint32>> keyTargetOPpcMap;
 };
 
 // 0x2d ~ 0x31
@@ -371,7 +377,7 @@ class DexOpIfTest : public DexOp {
   void SetVAImpl(uint32 num) override;
   void SetVBImpl(uint32 num) override;
   void SetVCImpl(uint32 num) override;
-  void ParseImpl(const BCClassMethod &method) override;
+  void ParseImpl(BCClassMethod &method) override;
   std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() override;
   DexReg vA;
   DexReg vB;
@@ -389,7 +395,7 @@ class DexOpIfTestZ : public DexOp {
   std::vector<uint32> GetTargetsImpl() const override;
   void SetVAImpl(uint32 num) override;
   void SetVBImpl(uint32 num) override;
-  void ParseImpl(const BCClassMethod &method) override;
+  void ParseImpl(BCClassMethod &method) override;
   std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() override;
   DexReg vA;
   int32 offset = 0;
@@ -413,7 +419,7 @@ class DexOpAget : public DexOp {
   void SetVAImpl(uint32 num) override;
   void SetVBImpl(uint32 num) override;
   void SetVCImpl(uint32 num) override;
-  void ParseImpl(const BCClassMethod &method) override;
+  void ParseImpl(BCClassMethod &method) override;
   void SetRegTypeInTypeInferImpl() override;
   std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() override;
   DexReg vA;
@@ -431,7 +437,7 @@ class DexOpAput : public DexOp {
   void SetVAImpl(uint32 num) override;
   void SetVBImpl(uint32 num) override;
   void SetVCImpl(uint32 num) override;
-  void ParseImpl(const BCClassMethod &method) override;
+  void ParseImpl(BCClassMethod &method) override;
   void SetRegTypeInTypeInferImpl() override;
   std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() override;
   DexReg vA;
@@ -449,7 +455,7 @@ class DexOpIget : public DexOp {
   void SetVAImpl(uint32 num) override;
   void SetVBImpl(uint32 num) override;
   void SetVCImpl(uint32 num) override;
-  void ParseImpl(const BCClassMethod &method) override;
+  void ParseImpl(BCClassMethod &method) override;
   std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() override;
   DexReg vA;
   DexReg vB;
@@ -466,7 +472,7 @@ class DexOpIput : public DexOp {
   void SetVAImpl(uint32 num) override;
   void SetVBImpl(uint32 num) override;
   void SetVCImpl(uint32 num) override;
-  void ParseImpl(const BCClassMethod &method) override;
+  void ParseImpl(BCClassMethod &method) override;
   std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() override;
   DexReg vA;
   DexReg vB;
@@ -482,11 +488,12 @@ class DexOpSget : public DexOp {
  private:
   void SetVAImpl(uint32 num) override;
   void SetVBImpl(uint32 num) override;
-  void ParseImpl(const BCClassMethod &method) override;
+  void ParseImpl(BCClassMethod &method) override;
   std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() override;
   uint32 index = UINT32_MAX;
   GStrIdx containerNameIdx;
   DexReg vA;
+  int32 dexFileHashCode = -1;
 };
 
 // 0x67 ~ 0x6d
@@ -498,10 +505,11 @@ class DexOpSput : public DexOp {
  private:
   void SetVAImpl(uint32 num) override;
   void SetVBImpl(uint32 num) override;
-  void ParseImpl(const BCClassMethod &method) override;
+  void ParseImpl(BCClassMethod &method) override;
   std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() override;
   DexReg vA;
   uint32 index = UINT32_MAX;
+  int32 dexFileHashCode = -1;
 };
 
 class DexOpInvoke : public DexOp {
@@ -515,7 +523,7 @@ class DexOpInvoke : public DexOp {
   void SetVBImpl(uint32 num) override;
   void SetVCImpl(uint32 num) override;
   void SetArgsImpl(const MapleList<uint32> &args) override;
-  void ParseImpl(const BCClassMethod &method) override;
+  void ParseImpl(BCClassMethod &method) override;
   void PrepareInvokeParametersAndReturn(const FEStructMethodInfo &feMethodInfo, FEIRStmtCallAssign &stmt) const;
   std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() override;
   bool IsStatic() const;
@@ -648,7 +656,7 @@ class DexOpInvokePolymorphic: public DexOpInvoke {
 
  protected:
   void SetVHImpl(uint32 num) override;
-  void ParseImpl(const BCClassMethod &method) override;
+  void ParseImpl(BCClassMethod &method) override;
   std::list<UniqueFEIRStmt> EmitToFEIRStmtsImpl() override;
   bool isStatic = false;
   uint32 protoIdx;

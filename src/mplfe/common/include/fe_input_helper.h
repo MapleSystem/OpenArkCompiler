@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -22,6 +22,13 @@
 #include "fe_function.h"
 
 namespace maple {
+typedef struct {
+  std::string klass;
+  std::string field;
+  std::string type;
+  std::string attr;
+} ExtraField;
+
 class FEInputContainer {
  public:
   FEInputContainer() = default;
@@ -47,6 +54,25 @@ class FEInputPragmaHelper {
 };
 
 class FEInputStructHelper;
+
+class FEInputGlobalVarHelper {
+ public:
+  FEInputGlobalVarHelper(MapleAllocator &allocatorIn) : allocator(allocatorIn) {}
+  virtual ~FEInputGlobalVarHelper() = default;
+
+  bool ProcessDecl() {
+    return ProcessDecl(allocator);
+  }
+
+  bool ProcessDecl(MapleAllocator &allocator) {
+    return ProcessDeclImpl(allocator);
+  }
+
+ protected:
+  MapleAllocator &allocator;
+  virtual bool ProcessDeclImpl(MapleAllocator &allocator) = 0;
+};
+
 class FEInputFieldHelper {
  public:
   FEInputFieldHelper(MapleAllocator &allocator) {}
@@ -67,6 +93,18 @@ class FEInputFieldHelper {
     return ProcessDeclWithContainerImpl(allocator);
   }
 
+  static void SetFieldAttribute(const std::string &name, FieldAttrs &attr) {
+#define FIELD_ATTR
+#define ATTR(A)                     \
+    if (!strcmp(name.c_str(), #A)) {  \
+      attr.SetAttr(FLDATTR_##A);      \
+      return;                         \
+    }
+#include "all_attributes.def"
+#undef ATTR
+#undef FIELD_ATTR
+  }
+
  protected:
   virtual bool ProcessDeclImpl(MapleAllocator &allocator) = 0;
   virtual bool ProcessDeclWithContainerImpl(MapleAllocator &allocator) = 0;
@@ -75,18 +113,22 @@ class FEInputFieldHelper {
 
 class FEInputMethodHelper {
  public:
-  FEInputMethodHelper(MapleAllocator &allocator)
-      : srcLang(kSrcLangUnknown),
+  FEInputMethodHelper(MapleAllocator &allocatorIn)
+      : allocator(allocatorIn),
+        srcLang(kSrcLangUnknown),
         feFunc(nullptr),
         mirFunc(nullptr),
         retType(nullptr),
         argTypes(allocator.Adapter()),
+        retMIRType(nullptr),
+        argMIRTypes(allocator.Adapter()),
         methodNameIdx(GStrIdx(0)) {}
 
   virtual ~FEInputMethodHelper() {
     feFunc = nullptr;
     mirFunc = nullptr;
     retType = nullptr;
+    retMIRType = nullptr;
   }
 
   const MethodPair &GetMIRMethodPair() const {
@@ -99,6 +141,10 @@ class FEInputMethodHelper {
 
   const MapleVector<FEIRType*> &GetArgTypes() const {
     return argTypes;
+  }
+
+  bool ProcessDecl() {
+    return ProcessDecl(allocator);
   }
 
   bool ProcessDecl(MapleAllocator &allocator) {
@@ -167,12 +213,16 @@ class FEInputMethodHelper {
   virtual MIRType *GetTypeForThisImpl() const = 0;
   virtual bool HasCodeImpl() const = 0;
 
+  MapleAllocator &allocator;
   MIRSrcLang srcLang;
   FEFunction *feFunc;
   MIRFunction *mirFunc;
   MethodPair mirMethodPair;
   FEIRType *retType;
   MapleVector<FEIRType*> argTypes;
+  // Added MIRType to support C and extended to Java later.
+  MIRType *retMIRType;
+  MapleVector<MIRType*> argMIRTypes;
   GStrIdx methodNameIdx;
 };
 
@@ -185,8 +235,9 @@ class FEInputStructHelper : public FEInputContainer {
         fieldHelpers(allocator.Adapter()),
         methodHelpers(allocator.Adapter()),
         pragmaHelper(nullptr),
+        staticFieldsConstVal(allocator.Adapter()),
         isSkipped(false),
-        srcLang(kSrcLangUnknown) {}
+        srcLang(kSrcLangJava) {}
 
   virtual ~FEInputStructHelper() {
     mirStructType = nullptr;
@@ -257,6 +308,14 @@ class FEInputStructHelper : public FEInputContainer {
     return GetRawAccessFlagsImpl();
   }
 
+  GStrIdx GetIRSrcFileSigIdx() const {
+    return GetIRSrcFileSigIdxImpl();
+  }
+
+  bool IsMultiDef() const {
+    return IsMultiDefImpl();
+  }
+
   void InitFieldHelpers() {
     InitFieldHelpersImpl();
   }
@@ -270,7 +329,10 @@ class FEInputStructHelper : public FEInputContainer {
   }
 
   void SetStaticFieldsConstVal(const std::vector<MIRConst*> &val) {
-    staticFieldsConstVal = val;
+    staticFieldsConstVal.resize(val.size());
+    for (uint32 i = 0; i < val.size(); ++i) {
+      staticFieldsConstVal[i] = val[i];
+    }
   }
 
   void SetFinalStaticStringIDVec(const std::vector<uint32> &stringIDVec) {
@@ -296,6 +358,8 @@ class FEInputStructHelper : public FEInputContainer {
   virtual MIRStructType *CreateMIRStructTypeImpl(bool &error) const = 0;
   virtual TypeAttrs GetStructAttributeFromInputImpl() const = 0;
   virtual uint64 GetRawAccessFlagsImpl() const = 0;
+  virtual GStrIdx GetIRSrcFileSigIdxImpl() const = 0;
+  virtual bool IsMultiDefImpl() const = 0;
   virtual void InitFieldHelpersImpl() = 0;
   virtual void InitMethodHelpersImpl() = 0;
   void CreateSymbol();
@@ -306,6 +370,7 @@ class FEInputStructHelper : public FEInputContainer {
   void ProcessDeclDefInfoSuperNameForJava();
   void ProcessDeclDefInfoImplementNameForJava();
   void ProcessFieldDef();
+  void ProcessExtraFields();
   void ProcessMethodDef();
   void ProcessStaticFields();
 
@@ -315,7 +380,7 @@ class FEInputStructHelper : public FEInputContainer {
   MapleList<FEInputFieldHelper*> fieldHelpers;
   MapleList<FEInputMethodHelper*> methodHelpers;
   FEInputPragmaHelper *pragmaHelper;
-  std::vector<MIRConst*> staticFieldsConstVal;
+  MapleVector<MIRConst*> staticFieldsConstVal;
   std::vector<uint32> finalStaticStringID;
   bool isSkipped;
   MIRSrcLang srcLang;

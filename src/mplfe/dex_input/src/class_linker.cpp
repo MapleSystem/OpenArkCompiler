@@ -100,6 +100,9 @@ void ClassLinker::FindClass(const std::string &className, ClassLoaderInfo *class
   GStrIdx nameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(className);
   auto it = processedClassName.find(nameIdx);
   if (it != processedClassName.end()) {
+    if (isDefClass) {
+      FE_INFO_LEVEL(FEOptions::kDumpLevelInfo, "Same class is existed: %s", className.c_str());
+    }
     return;
   }
   // Find in bootclasspath

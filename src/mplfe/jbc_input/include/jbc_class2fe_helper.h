@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -41,6 +41,8 @@ class JBCClass2FEHelper : public FEInputStructHelper {
   MIRStructType *CreateMIRStructTypeImpl(bool &error) const override;
   TypeAttrs GetStructAttributeFromInputImpl() const override;
   uint64 GetRawAccessFlagsImpl() const override;
+  GStrIdx GetIRSrcFileSigIdxImpl() const override;
+  bool IsMultiDefImpl() const override;
   void InitFieldHelpersImpl() override;
   void InitMethodHelpersImpl() override;
   std::string GetSrcFileNameImpl() const override;

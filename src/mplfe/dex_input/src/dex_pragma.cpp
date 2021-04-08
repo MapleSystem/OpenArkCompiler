@@ -19,6 +19,8 @@
 #include "bc_util.h"
 #include "fe_manager.h"
 #include "ark_annotation_processor.h"
+#include "rc_setter.h"
+
 namespace maple {
 namespace bc {
 // ---------- DexBCAnnotationElement ----------
@@ -360,7 +362,12 @@ std::vector<MIRPragma*> &DexBCFieldAnnotations::EmitPragmas() {
   uint64 mapIdx = (static_cast<uint64>(iDexFile.GetFileIdx()) << 32) | iDexFieldAnnotations->GetFieldIdx();
   StructElemNameIdx *structElemNameIdx = FEManager::GetManager().GetFieldStructElemNameIdx(mapIdx);
   ASSERT(structElemNameIdx != nullptr, "structElemNameIdx is nullptr.");
-  return annotationSet->EmitPragmas(kPragmaVar, structElemNameIdx->elem, -1, fieldType->GetTypeIndex());
+  std::vector<MIRPragma*> &pragmas =
+      annotationSet->EmitPragmas(kPragmaVar, structElemNameIdx->elem, -1, fieldType->GetTypeIndex());
+  if (FEOptions::GetInstance().IsRC()) {
+    RCSetter::GetRCSetter().ProcessFieldRCAnnotation(*structElemNameIdx, *fieldType, pragmas);
+  }
+  return pragmas;
 }
 
 // ---------- DexBCMethodAnnotations ----------
@@ -392,25 +399,41 @@ void DexBCMethodAnnotations::SetupFuncAttrs() {
 
 void DexBCMethodAnnotations::SetupFuncAttrWithPragma(MIRFunction &mirFunc, MIRPragma &pragma) {
   FuncAttrKind attr;
+  bool isAttrSet = true;
   if (ArkAnnotation::GetInstance().IsFastNative(pragma.GetTyIdx())) {
     attr = FUNCATTR_fast_native;
   } else if (ArkAnnotation::GetInstance().IsCriticalNative(pragma.GetTyIdx())) {
     attr = FUNCATTR_critical_native;
   } else if (ArkAnnotation::GetInstance().IsCallerSensitive(pragma.GetTyIdx())) {
     attr = FUNCATTR_callersensitive;
+  } else if (FEOptions::GetInstance().IsRC() &&
+             (ArkAnnotation::GetInstance().IsRCUnownedLocal(pragma.GetTyIdx()) ||
+              (ArkAnnotation::GetInstance().IsRCUnownedLocalOld(pragma.GetTyIdx()) &&
+               pragma.GetElementVector().empty()))) {
+    attr = FUNCATTR_rclocalunowned;
+    RCSetter::GetRCSetter().CollectUnownedLocalFuncs(&mirFunc);
   } else {
-    return;
+    isAttrSet = false;  // empty, for codedex cleanup
   }
-  mirFunc.SetAttr(attr);
-  // update method attribute in structure type as well
   const char *definingClassName = methodID->GetDefiningClassName(iDexFile);
   std::string mplClassName = namemangler::EncodeName(definingClassName);
   MIRStructType *currStructType = FEManager::GetTypeManager().GetStructTypeFromName(mplClassName);
-  for (auto &mit : currStructType->GetMethods()) {
-    if (mit.first == mirFunc.GetStIdx()) {
-      mit.second.second.SetAttr(attr);
-      break;
+  if (isAttrSet) {
+    mirFunc.SetAttr(attr);
+    // update method attribute in structure type as well
+    for (auto &mit : currStructType->GetMethods()) {
+#ifndef USE_OPS
+      if (mit.first->GetStIdx() == mirFunc.GetStIdx()) {
+#else
+      if (mit.first == mirFunc.GetStIdx()) {
+#endif
+        mit.second.second.SetAttr(attr);
+        break;
+      }
     }
+  }
+  if (FEOptions::GetInstance().IsRC()) {
+    RCSetter::GetRCSetter().ProcessMethodRCAnnotation(mirFunc, mplClassName, *currStructType, pragma);
   }
 }
 
@@ -496,6 +519,9 @@ std::vector<MIRPragma*> &DexBCAnnotationsDirectory::EmitPragmasImpl() {
   if (classAnnotationSet != nullptr) {
     const GStrIdx &strIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(namemangler::EncodeName(className));
     pragmasInner = classAnnotationSet->EmitPragmas(kPragmaClass, strIdx);
+    if (FEOptions::GetInstance().IsRC()) {
+      RCSetter::GetRCSetter().ProcessClassRCAnnotation(strIdx, pragmasInner);
+    }
     pragmas.insert(pragmas.end(), pragmasInner.begin(), pragmasInner.end());
   }
   for (const std::unique_ptr<DexBCFieldAnnotations> &fieldAnnotations : fieldAnnotationsItems) {

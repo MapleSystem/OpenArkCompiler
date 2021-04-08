@@ -299,11 +299,7 @@ IntConstTable::~IntConstTable() {
   }
 }
 
-MIRFloatConst *FPConstTable::GetOrCreateFloatConst(float floatVal, uint32 fieldID) {
-  if (fieldID != 0) {
-    MIRFloatConst *fconst = new MIRFloatConst(floatVal, *GlobalTables::GetTypeTable().GetTypeFromTyIdx((TyIdx)PTY_f32), fieldID);
-    return fconst;
-  }
+MIRFloatConst *FPConstTable::GetOrCreateFloatConst(float floatVal) {
   if (std::isnan(floatVal)) {
     return nanFloatConst;
   }
@@ -345,11 +341,7 @@ MIRFloatConst *FPConstTable::DoGetOrCreateFloatConstThreadSafe(float floatVal) {
   return floatConst;
 }
 
-MIRDoubleConst *FPConstTable::GetOrCreateDoubleConst(double doubleVal, uint32 fieldID) {
-  if (fieldID != 0) {
-    MIRDoubleConst *dconst = new MIRDoubleConst(doubleVal, *GlobalTables::GetTypeTable().GetTypeFromTyIdx((TyIdx)PTY_f64), fieldID);
-    return dconst;
-  }
+MIRDoubleConst *FPConstTable::GetOrCreateDoubleConst(double doubleVal) {
   if (std::isnan(doubleVal)) {
     return nanDoubleConst;
   }

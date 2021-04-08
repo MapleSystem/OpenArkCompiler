@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -26,7 +26,7 @@
 namespace maple {
 class FEFunctionProcessTask : public MplTask {
  public:
-  FEFunctionProcessTask(std::unique_ptr<FEFunction> &argFunction);
+  FEFunctionProcessTask(std::unique_ptr<FEFunction> argFunction);
   virtual ~FEFunctionProcessTask() = default;
 
  protected:
@@ -34,7 +34,7 @@ class FEFunctionProcessTask : public MplTask {
   int FinishImpl(MplTaskParam *param) override;
 
  private:
-  std::unique_ptr<FEFunction> &function;
+  std::unique_ptr<FEFunction> function;
 };
 
 class FEFunctionProcessSchedular : public MplScheduler {
@@ -42,7 +42,7 @@ class FEFunctionProcessSchedular : public MplScheduler {
   FEFunctionProcessSchedular(const std::string &name)
       : MplScheduler(name) {}
   virtual ~FEFunctionProcessSchedular() = default;
-  void AddFunctionProcessTask(std::unique_ptr<FEFunction> &function);
+  void AddFunctionProcessTask(std::unique_ptr<FEFunction> function);
   void SetDumpTime(bool arg) {
     dumpTime = arg;
   }
@@ -78,12 +78,8 @@ class MPLFECompilerComponent {
     ProcessPragmaImpl();
   }
 
-  bool PreProcessWithoutFunction() {
-    return PreProcessWithoutFunctionImpl();
-  }
-
-  bool PreProcessWithFunction() {
-    return PreProcessWithFunctionImpl();
+  std::unique_ptr<FEFunction> CreatFEFunction(FEInputMethodHelper *methodHelper) {
+    return CreatFEFunctionImpl(methodHelper);
   }
 
   bool ProcessFunctionSerial() {
@@ -107,7 +103,7 @@ class MPLFECompilerComponent {
   }
 
   uint32 GetFunctionsSize() const {
-    return static_cast<uint32>(functions.size());
+    return funcSize;
   }
 
   const std::set<FEFunction*> &GetCompileFailedFEFunctions() const {
@@ -120,12 +116,11 @@ class MPLFECompilerComponent {
 
  protected:
   virtual bool ParseInputImpl() = 0;
-  virtual bool LoadOnDemandTypeImpl() = 0;
-  virtual bool PreProcessDeclImpl() = 0;
-  virtual bool ProcessDeclImpl() = 0;
+  virtual bool LoadOnDemandTypeImpl();
+  virtual bool PreProcessDeclImpl();
+  virtual bool ProcessDeclImpl();
   virtual void ProcessPragmaImpl() = 0;
-  virtual bool PreProcessWithoutFunctionImpl() = 0;
-  virtual bool PreProcessWithFunctionImpl() = 0;
+  virtual std::unique_ptr<FEFunction> CreatFEFunctionImpl(FEInputMethodHelper *methodHelper) = 0;
   virtual bool ProcessFunctionSerialImpl();
   virtual bool ProcessFunctionParallelImpl(uint32 nthreads);
   virtual std::string GetComponentNameImpl() const;
@@ -133,12 +128,14 @@ class MPLFECompilerComponent {
   virtual void DumpPhaseTimeTotalImpl() const;
   virtual void ReleaseMemPoolImpl() = 0;
 
+  uint32 funcSize;
   MIRModule &module;
   MIRSrcLang srcLang;
   std::list<std::unique_ptr<FEInputFieldHelper>> fieldHelpers;
   std::list<std::unique_ptr<FEInputMethodHelper>> methodHelpers;
   std::list<FEInputStructHelper*> structHelpers;
-  std::list<std::unique_ptr<FEFunction>> functions;
+  std::list<FEInputMethodHelper*> globalFuncHelpers;
+  std::list<FEInputGlobalVarHelper*> globalVarHelpers;
   std::unique_ptr<FEFunctionPhaseResult> phaseResultTotal;
   std::set<FEFunction*> compileFailedFEFunctions;
 };

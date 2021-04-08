@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -423,6 +423,21 @@ class FEIRExprRegRead : public FEIRExpr {
   int32 regNum;
 };
 
+// ---------- FEIRExprAddrof ----------
+class FEIRExprAddrof : public FEIRExpr {
+ public:
+  explicit FEIRExprAddrof(const std::vector<uint32> &arrayIn)
+      : FEIRExpr(FEIRNodeKind::kExprAddrof), array(arrayIn) {}
+  ~FEIRExprAddrof() = default;
+
+ protected:
+  std::unique_ptr<FEIRExpr> CloneImpl() const override;
+  BaseNode *GenMIRNodeImpl(MIRBuilder &mirBuilder) const override;
+
+ private:
+  std::vector<uint32> array;
+};
+
 // ---------- FEIRExprUnary ----------
 class FEIRExprUnary : public FEIRExpr {
  public:
@@ -642,8 +657,6 @@ class FEIRExprIntrinsicop : public FEIRExprNary {
   FEIRExprIntrinsicop(std::unique_ptr<FEIRType> exprType, MIRIntrinsicID argIntrinsicID,
                       std::unique_ptr<FEIRType> argParamType, uint32 argTypeID);
   FEIRExprIntrinsicop(std::unique_ptr<FEIRType> exprType, MIRIntrinsicID argIntrinsicID,
-                      std::unique_ptr<FEIRType> argParamType, uint32 argTypeID, uint32 argArraySize);
-  FEIRExprIntrinsicop(std::unique_ptr<FEIRType> exprType, MIRIntrinsicID argIntrinsicID,
                       std::unique_ptr<FEIRType> argParamType,
                       const std::vector<std::unique_ptr<FEIRExpr>> &argOpnds);
   ~FEIRExprIntrinsicop() = default;
@@ -660,7 +673,6 @@ class FEIRExprIntrinsicop : public FEIRExprNary {
   MIRIntrinsicID intrinsicID;
   std::unique_ptr<FEIRType> paramType;
   uint32 typeID = UINT32_MAX;
-  uint32 arraySize = UINT32_MAX;
 };  // class FEIRExprIntrinsicop
 
 class FEIRExprJavaMerge : public FEIRExprNary {
@@ -679,12 +691,16 @@ class FEIRExprJavaNewInstance : public FEIRExpr {
  public:
   explicit FEIRExprJavaNewInstance(UniqueFEIRType argType);
   FEIRExprJavaNewInstance(UniqueFEIRType argType, uint32 argTypeID);
+  FEIRExprJavaNewInstance(UniqueFEIRType argType, uint32 argTypeID, bool argIsRcPermanent);
   ~FEIRExprJavaNewInstance() = default;
 
  protected:
   std::unique_ptr<FEIRExpr> CloneImpl() const override;
   BaseNode *GenMIRNodeImpl(MIRBuilder &mirBuilder) const override;
+
   uint32 typeID = UINT32_MAX;
+  // isRcPermanent is true means the rc annotation @Permanent is used
+  bool isRcPermanent = false;
 };
 
 // ---------- FEIRExprJavaNewArray ----------
@@ -692,6 +708,8 @@ class FEIRExprJavaNewArray : public FEIRExpr {
  public:
   FEIRExprJavaNewArray(UniqueFEIRType argArrayType, UniqueFEIRExpr argExprSize);
   FEIRExprJavaNewArray(UniqueFEIRType argArrayType, UniqueFEIRExpr argExprSize, uint32 argTypeID);
+  FEIRExprJavaNewArray(UniqueFEIRType argArrayType, UniqueFEIRExpr argExprSize, uint32 argTypeID,
+                       bool argIsRcPermanent);
   ~FEIRExprJavaNewArray() = default;
   void SetArrayType(UniqueFEIRType argArrayType) {
     CHECK_NULL_FATAL(argArrayType);
@@ -714,6 +732,8 @@ class FEIRExprJavaNewArray : public FEIRExpr {
   UniqueFEIRType arrayType;
   UniqueFEIRExpr exprSize;
   uint32 typeID = UINT32_MAX;
+  // isRcPermanent is true means the rc annotation @Permanent is used
+  bool isRcPermanent = false;
 };
 
 // ---------- FEIRExprJavaArrayLength ----------
@@ -871,9 +891,9 @@ class FEIRStmtJavaTypeCheck : public FEIRStmtAssign {
   bool CalculateDefs4AllUsesImpl(FEIRStmtCheckPoint &checkPoint, FEIRUseDefChain &udChain) override;
   std::list<StmtNode*> GenMIRStmtsImpl(MIRBuilder &mirBuilder) const override;
   CheckKind checkKind;
-  uint32 typeID = UINT32_MAX;
   std::unique_ptr<FEIRExpr> expr;
   std::unique_ptr<FEIRType> type;
+  uint32 typeID = UINT32_MAX;
 };
 
 // ---------- FEIRStmtJavaConstClass ----------
@@ -891,8 +911,8 @@ class FEIRStmtJavaConstClass : public FEIRStmtAssign {
 // ---------- FEIRStmtJavaConstString ----------
 class FEIRStmtJavaConstString : public FEIRStmtAssign {
  public:
-  FEIRStmtJavaConstString(std::unique_ptr<FEIRVar> argVar, const GStrIdx &argStrIdx);
-  FEIRStmtJavaConstString(std::unique_ptr<FEIRVar> argVar, const GStrIdx &argStrIdx, uint32 argStringID);
+  FEIRStmtJavaConstString(std::unique_ptr<FEIRVar> argVar, const std::string &argStrVal,
+                          uint32 argFileIdx, uint32 argStringID);
   ~FEIRStmtJavaConstString() = default;
 
  protected:
@@ -900,7 +920,8 @@ class FEIRStmtJavaConstString : public FEIRStmtAssign {
   std::list<StmtNode*> GenMIRStmtsImpl(MIRBuilder &mirBuilder) const override;
 
  private:
-  GStrIdx strIdx;
+  std::string strVal;
+  uint32 fileIdx;
   uint32 stringID = UINT32_MAX;
 };
 
@@ -931,10 +952,14 @@ class FEIRStmtJavaFillArrayData : public FEIRStmtAssign {
 // ---------- FEIRStmtJavaMultiANewArray ----------
 class FEIRStmtJavaMultiANewArray : public FEIRStmtAssign {
  public:
-  FEIRStmtJavaMultiANewArray(std::unique_ptr<FEIRVar> argVar, std::unique_ptr<FEIRType> argType);
+  FEIRStmtJavaMultiANewArray(std::unique_ptr<FEIRVar> argVar, std::unique_ptr<FEIRType> argElemType,
+                             std::unique_ptr<FEIRType> argArrayType);
   ~FEIRStmtJavaMultiANewArray() = default;
   void AddVarSize(std::unique_ptr<FEIRVar> argVarSize);
   void AddVarSizeRev(std::unique_ptr<FEIRVar> argVarSize);
+  void SetArrayType(std::unique_ptr<FEIRType> argArrayType) {
+    arrayType = std::move(argArrayType);
+  }
 
  protected:
   std::string DumpDotStringImpl() const override;
@@ -948,7 +973,8 @@ class FEIRStmtJavaMultiANewArray : public FEIRStmtAssign {
   static const UniqueFEIRType &GetTypeAnnotation();
   static FEStructMethodInfo &GetMethodInfoNewInstance();
 
-  std::unique_ptr<FEIRType> type;
+  std::unique_ptr<FEIRType> elemType;
+  std::unique_ptr<FEIRType> arrayType;
   std::list<std::unique_ptr<FEIRExpr>> exprSizes;
   static UniqueFEIRVar varSize;
   static UniqueFEIRVar varClass;
@@ -1321,6 +1347,8 @@ class FEIRStmtFieldStore : public FEIRStmt {
  public:
   FEIRStmtFieldStore(UniqueFEIRVar argVarObj, UniqueFEIRVar argVarField, FEStructFieldInfo &argFieldInfo,
                      bool argIsStatic);
+  FEIRStmtFieldStore(UniqueFEIRVar argVarObj, UniqueFEIRVar argVarField, FEStructFieldInfo &argFieldInfo,
+                     bool argIsStatic, int32 argDexFileHashCode);
   ~FEIRStmtFieldStore() = default;
 
  protected:
@@ -1334,7 +1362,8 @@ class FEIRStmtFieldStore : public FEIRStmt {
   void RegisterDFGNodes2CheckPointForNonStatic(FEIRStmtCheckPoint &checkPoint);
   bool CalculateDefs4AllUsesForStatic(FEIRStmtCheckPoint &checkPoint, FEIRUseDefChain &udChain);
   bool CalculateDefs4AllUsesForNonStatic(FEIRStmtCheckPoint &checkPoint, FEIRUseDefChain &udChain);
-  uint32 GetTypeIDForStatic() const;
+  bool NeedMCCForStatic(uint32 &typeID) const;
+  void InitPrimTypeFuncNameIdxMap (std::map<PrimType, GStrIdx> &primTypeFuncNameIdxMap) const;
   std::list<StmtNode*> GenMIRStmtsImplForStatic(MIRBuilder &mirBuilder) const;
   std::list<StmtNode*> GenMIRStmtsImplForNonStatic(MIRBuilder &mirBuilder) const;
 
@@ -1342,6 +1371,7 @@ class FEIRStmtFieldStore : public FEIRStmt {
   UniqueFEIRVar varField;
   FEStructFieldInfo &fieldInfo;
   bool isStatic;
+  int32 dexFileHashCode = -1;
 };
 
 // ---------- FEIRStmtFieldLoad ----------
@@ -1349,6 +1379,8 @@ class FEIRStmtFieldLoad : public FEIRStmtAssign {
  public:
   FEIRStmtFieldLoad(UniqueFEIRVar argVarObj, UniqueFEIRVar argVarField, FEStructFieldInfo &argFieldInfo,
                     bool argIsStatic);
+  FEIRStmtFieldLoad(UniqueFEIRVar argVarObj, UniqueFEIRVar argVarField, FEStructFieldInfo &argFieldInfo,
+                    bool argIsStatic, int32 argDexFileHashCode);
   ~FEIRStmtFieldLoad() = default;
 
  protected:
@@ -1362,13 +1394,14 @@ class FEIRStmtFieldLoad : public FEIRStmtAssign {
   void RegisterDFGNodes2CheckPointForNonStatic(FEIRStmtCheckPoint &checkPoint);
   bool CalculateDefs4AllUsesForStatic(FEIRStmtCheckPoint &checkPoint, FEIRUseDefChain &udChain);
   bool CalculateDefs4AllUsesForNonStatic(FEIRStmtCheckPoint &checkPoint, FEIRUseDefChain &udChain);
-  uint32 GetTypeIDForStatic() const;
+  bool NeedMCCForStatic(uint32 &typeID) const;
   std::list<StmtNode*> GenMIRStmtsImplForStatic(MIRBuilder &mirBuilder) const;
   std::list<StmtNode*> GenMIRStmtsImplForNonStatic(MIRBuilder &mirBuilder) const;
 
   UniqueFEIRVar varObj;
   FEStructFieldInfo &fieldInfo;
   bool isStatic;
+  int32 dexFileHashCode = -1;
 };
 
 // ---------- FEIRStmtCallAssign ----------

@@ -73,6 +73,10 @@ class FEFunctionDemo : public FEFunction {
     return true;
   }
 
+  bool GenerateAliasVars(const std::string &phaseName) override {
+    return true;
+  }
+
   void LoadGenStmtDemo1();
   void LoadGenStmtDemo2();
   void LoadGenStmtDemo3();
@@ -117,7 +121,7 @@ class FEFunctionTest : public testing::Test, public RedirectBuffer {
   ~FEFunctionTest() = default;
 
   static void SetUpTestCase() {
-    mp = memPoolCtrler.NewMemPool("MemPool for FEFunctionTest", false /* isLocalPool */);
+    mp = FEUtils::NewMempool("MemPool for FEFunctionTest", false /* isLocalPool */);
   }
 
   static void TearDownTestCase() {

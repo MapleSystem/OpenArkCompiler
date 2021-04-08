@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -112,6 +112,7 @@ class DriverRunner final {
   bool timePhases = false;
   bool genVtableImpl = false;
   bool genMeMpl = false;
+  bool hasDebugFlag = false;
   std::string printOutExe = "";
   std::string baseName;
   std::string outputFile;

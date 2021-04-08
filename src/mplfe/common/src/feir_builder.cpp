@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -87,6 +87,12 @@ UniqueFEIRVar FEIRBuilder::CreateVarName(const std::string &name, PrimType primT
 
 UniqueFEIRExpr FEIRBuilder::CreateExprDRead(UniqueFEIRVar srcVar) {
   UniqueFEIRExpr expr = std::make_unique<FEIRExprDRead>(std::move(srcVar));
+  CHECK_NULL_FATAL(expr);
+  return expr;
+}
+
+UniqueFEIRExpr FEIRBuilder::CreateExprAddrof(const std::vector<uint32> &array) {
+  UniqueFEIRExpr expr = std::make_unique<FEIRExprAddrof>(array);
   CHECK_NULL_FATAL(expr);
   return expr;
 }
@@ -180,6 +186,12 @@ UniqueFEIRExpr FEIRBuilder::CreateExprJavaNewInstance(UniqueFEIRType type, uint3
   return expr;
 }
 
+UniqueFEIRExpr FEIRBuilder::CreateExprJavaNewInstance(UniqueFEIRType type, uint32 argTypeID, bool isRcPermanent) {
+  UniqueFEIRExpr expr = std::make_unique<FEIRExprJavaNewInstance>(std::move(type), argTypeID, isRcPermanent);
+  CHECK_NULL_FATAL(expr);
+  return expr;
+}
+
 UniqueFEIRExpr FEIRBuilder::CreateExprJavaNewArray(UniqueFEIRType type, UniqueFEIRExpr exprSize) {
   UniqueFEIRExpr expr = std::make_unique<FEIRExprJavaNewArray>(std::move(type), std::move(exprSize));
   CHECK_NULL_FATAL(expr);
@@ -188,6 +200,14 @@ UniqueFEIRExpr FEIRBuilder::CreateExprJavaNewArray(UniqueFEIRType type, UniqueFE
 
 UniqueFEIRExpr FEIRBuilder::CreateExprJavaNewArray(UniqueFEIRType type, UniqueFEIRExpr exprSize, uint32 typeID) {
   UniqueFEIRExpr expr = std::make_unique<FEIRExprJavaNewArray>(std::move(type), std::move(exprSize), typeID);
+  CHECK_NULL_FATAL(expr);
+  return expr;
+}
+
+UniqueFEIRExpr FEIRBuilder::CreateExprJavaNewArray(UniqueFEIRType type, UniqueFEIRExpr exprSize, uint32 typeID,
+                                                   bool isRcPermanent) {
+  UniqueFEIRExpr expr = std::make_unique<FEIRExprJavaNewArray>(
+      std::move(type), std::move(exprSize), typeID, isRcPermanent);
   CHECK_NULL_FATAL(expr);
   return expr;
 }
@@ -230,10 +250,11 @@ UniqueFEIRStmt FEIRBuilder::CreateStmtJavaConstClass(UniqueFEIRVar dstVar, Uniqu
   return stmt;
 }
 
-UniqueFEIRStmt FEIRBuilder::CreateStmtJavaConstString(UniqueFEIRVar dstVar, const GStrIdx &strIdx) {
+UniqueFEIRStmt FEIRBuilder::CreateStmtJavaConstString(UniqueFEIRVar dstVar, const std::string &strVal) {
   UniqueFEIRType dstType = FETypeManager::kFEIRTypeJavaString->Clone();
   dstVar->SetType(std::move(dstType));
-  UniqueFEIRStmt stmt = std::make_unique<FEIRStmtJavaConstString>(std::move(dstVar), strIdx);
+  UniqueFEIRStmt stmt = std::make_unique<FEIRStmtJavaConstString>(std::move(dstVar), strVal,
+      0, GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(strVal));
   return stmt;
 }
 

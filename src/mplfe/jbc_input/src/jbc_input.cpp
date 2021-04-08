@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -18,6 +18,7 @@
 #include "fe_macros.h"
 #include "fe_options.h"
 #include "mplfe_env.h"
+#include "fe_manager.h"
 
 namespace maple {
 namespace jbc {
@@ -29,7 +30,7 @@ const uint32 kJarMetaInfLength = 8;
 }
 JBCInput::JBCInput(MIRModule &moduleIn)
     : module(moduleIn),
-      mp(memPoolCtrler.NewMemPool("mempool for JBC Input Helper")),
+      mp(FEUtils::NewMempool("mempool for JBC Input Helper", false /* isLocalPool */)),
       allocator(mp),
       klassList(allocator.Adapter()) {
   itKlass = klassList.end();

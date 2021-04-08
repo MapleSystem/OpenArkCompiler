@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -27,6 +27,9 @@ class FEFileType {
     kClass,
     kJar,
     kDex,
+#ifdef ENABLE_MPLFE_AST
+    kAST
+#endif // ~/ENABLE_MPLFE_AST
   };
 
   inline static FEFileType &GetInstance() {
@@ -51,6 +54,9 @@ class FEFileType {
   static const uint32 kMagicClass = 0xBEBAFECA;
   static const uint32 kMagicZip = 0x04034B50;
   static const uint32 kMagicDex = 0x0A786564;
+#ifdef ENABLE_MPLFE_AST
+  static const uint32 kMagicAST = 0x48435043;
+#endif // ~/ENABLE_MPLFE_AST
   std::map<std::string, FileType> mapExtNameType;
   std::map<FileType, uint32> mapTypeMagic;
   std::map<uint32, FileType> mapMagicType;

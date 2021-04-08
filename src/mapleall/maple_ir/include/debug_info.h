@@ -91,7 +91,7 @@ class DBGDieAttr;
 
 class DBGExpr {
  public:
-  DBGExpr(MIRModule *m) : dwOp(0), value(kDbgDefaultVal), opnds(m->GetMPAllocator().Adapter()) {}
+  explicit DBGExpr(MIRModule *m) : dwOp(0), value(kDbgDefaultVal), opnds(m->GetMPAllocator().Adapter()) {}
 
   DBGExpr(MIRModule *m, DwOp op) : dwOp(op), value(kDbgDefaultVal), opnds(m->GetMPAllocator().Adapter()) {}
 
@@ -138,7 +138,7 @@ class DBGExpr {
 
 class DBGExprLoc {
  public:
-  DBGExprLoc(MIRModule *m) : module(m), exprVec(m->GetMPAllocator().Adapter()), symLoc(nullptr) {
+  explicit DBGExprLoc(MIRModule *m) : module(m), exprVec(m->GetMPAllocator().Adapter()), symLoc(nullptr) {
     simpLoc = m->GetMemPool()->New<DBGExpr>(module);
   }
 
@@ -200,7 +200,7 @@ class DBGExprLoc {
 class DBGDieAttr {
  public:
   uint32 SizeOf(DBGDieAttr *attr);
-  DBGDieAttr(DBGDieKind k) : dieKind(k), dwAttr(DW_AT_deleted), dwForm(DW_FORM_GNU_strp_alt) {
+  explicit DBGDieAttr(DBGDieKind k) : dieKind(k), dwAttr(DW_AT_deleted), dwForm(DW_FORM_GNU_strp_alt) {
     value.u = kDbgDefaultVal;
   }
 
@@ -527,28 +527,28 @@ class DBGAbbrevEntryVec {
 class DebugInfo {
  public:
   DebugInfo(MIRModule *m)
-    : module(m),
-      compUnit(nullptr),
-      dummyTypeDie(nullptr),
-      lexer(nullptr),
-      maxId(1),
-      builder(nullptr),
-      mplSrcIdx(0),
-      debugInfoLength(0),
-      compileMsg(nullptr),
-      parentDieStack(m->GetMPAllocator().Adapter()),
-      idDieMap(std::less<uint32>(), m->GetMPAllocator().Adapter()),
-      abbrevVec(m->GetMPAllocator().Adapter()),
-      tagAbbrevMap(std::less<uint32>(), m->GetMPAllocator().Adapter()),
-      tyIdxDieIdMap(std::less<uint32>(), m->GetMPAllocator().Adapter()),
-      stridxDieIdMap(std::less<uint32>(), m->GetMPAllocator().Adapter()),
-      funcDefStrIdxDieIdMap(std::less<uint32>(), m->GetMPAllocator().Adapter()),
-      typeDefTyIdxMap(std::less<uint32>(), m->GetMPAllocator().Adapter()),
-      pointedPointerMap(std::less<uint32>(), m->GetMPAllocator().Adapter()),
-      funcLstrIdxDieIdMap(std::less<MIRFunction *>(), m->GetMPAllocator().Adapter()),
-      funcLstrIdxLabIdxMap(std::less<MIRFunction *>(), m->GetMPAllocator().Adapter()),
-      strps(std::less<uint32>(), m->GetMPAllocator().Adapter()) {
-    // valid entry starting from index 1 as abbrevid starting from 1 as well
+      : module(m),
+        compUnit(nullptr),
+        dummyTypeDie(nullptr),
+        lexer(nullptr),
+        maxId(1),
+        builder(nullptr),
+        mplSrcIdx(0),
+        debugInfoLength(0),
+        compileMsg(nullptr),
+        parentDieStack(m->GetMPAllocator().Adapter()),
+        idDieMap(std::less<uint32>(), m->GetMPAllocator().Adapter()),
+        abbrevVec(m->GetMPAllocator().Adapter()),
+        tagAbbrevMap(std::less<uint32>(), m->GetMPAllocator().Adapter()),
+        tyIdxDieIdMap(std::less<uint32>(), m->GetMPAllocator().Adapter()),
+        stridxDieIdMap(std::less<uint32>(), m->GetMPAllocator().Adapter()),
+        funcDefStrIdxDieIdMap(std::less<uint32>(), m->GetMPAllocator().Adapter()),
+        typeDefTyIdxMap(std::less<uint32>(), m->GetMPAllocator().Adapter()),
+        pointedPointerMap(std::less<uint32>(), m->GetMPAllocator().Adapter()),
+        funcLstrIdxDieIdMap(std::less<MIRFunction *>(), m->GetMPAllocator().Adapter()),
+        funcLstrIdxLabIdxMap(std::less<MIRFunction *>(), m->GetMPAllocator().Adapter()),
+        strps(std::less<uint32>(), m->GetMPAllocator().Adapter()) {
+    /* valid entry starting from index 1 as abbrevid starting from 1 as well */
     abbrevVec.push_back(nullptr);
     InitMsg();
   }

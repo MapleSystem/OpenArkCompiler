@@ -22,6 +22,7 @@
 #include "jbc_opcode.h"
 #include "jbc_opcode_helper.h"
 #include "redirect_buffer.h"
+#include "fe_utils.h"
 
 namespace maple {
 class JBCOpcodeHelperTest : public testing::Test, public RedirectBuffer {
@@ -34,7 +35,7 @@ class JBCOpcodeHelperTest : public testing::Test, public RedirectBuffer {
   ~JBCOpcodeHelperTest() = default;
 
   static void SetUpTestCase() {
-    mp = memPoolCtrler.NewMemPool("MemPool for JBCOpcodeHelperTest", false /* isLcalPool */);
+    mp = FEUtils::NewMempool("MemPool for JBCOpcodeHelperTest", false /* isLcalPool */);
   }
 
   static void TearDownTestCase() {

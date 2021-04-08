@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -121,7 +121,7 @@ MIRSymbol *FEIRVar::GenerateGlobalMIRSymbolImpl(MIRBuilder &builder) const {
           t.SetAttr(ATTR_static);
           gSymbol->AddAttrs(t);
         }
-        for (auto &field : mirContainer->GetStaticFields()) {
+        for (auto field : mirContainer->GetStaticFields()) {
           if (field.first == nameIdx) {
             gSymbol->AddAttrs(field.second.second.ConvertToTypeAttrs());
           }
@@ -136,7 +136,11 @@ MIRSymbol *FEIRVar::GenerateLocalMIRSymbolImpl(MIRBuilder &builder) const {
   MPLFE_PARALLEL_FORBIDDEN();
   MIRType *mirType = type->GenerateMIRTypeAuto();
   std::string name = GetName(*mirType);
+#ifndef USE_OPS
+  return SymbolBuilder::Instance().GetOrCreateLocalSymbol(*mirType, name, *builder.GetCurrentFunction());
+#else
   return builder.GetOrCreateLocalDecl(name, *mirType);
+#endif
 }
 
 MIRSymbol *FEIRVar::GenerateMIRSymbolImpl(MIRBuilder &builder) const {

@@ -651,6 +651,9 @@ void MIRModule::OutputAsciiMpl(const char *phaseName, const char *suffix,
   std::streambuf *backup = LogInfo::MapleLogger().rdbuf();
   LogInfo::MapleLogger().rdbuf(mplFile.rdbuf());  // change cout's buffer to that of file
   Dump(emitStructureType);
+  if (withDbgInfo) {
+    dbgInfo->Dump(0);
+  }
   LogInfo::MapleLogger().rdbuf(backup);  // restore cout's buffer
   mplFile.close();
 }

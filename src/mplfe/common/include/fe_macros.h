@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -58,4 +58,8 @@
 } while (0)                                               \
 
 #define BIT_XOR(v1, v2) (((v1) && (!(v2))) || ((!(v1)) && (v2)))
+
+#define TRY_DO(run) do {        \
+  CHECK_FATAL(run, "%s", #run); \
+} while (0)
 #endif  // ~MPLFE_INCLUDE_FE_MACROS_H

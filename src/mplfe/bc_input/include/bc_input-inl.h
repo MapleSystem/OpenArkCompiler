@@ -113,6 +113,12 @@ bool BCInput<T>::CollectAllDepTypeNamesOnAllBCFiles(std::unordered_set<std::stri
     }
     allDepSet.insert(depSet.begin(), depSet.end());
   }
+  BCUtil::AddDefaultDepSet(allDepSet);  // allDepSet is equal to "DefaultTypeSet + TypeSet - ClassSet"
+  std::unordered_set<std::string> classSet;
+  CollectClassNamesOnAllBCFiles(classSet);
+  for (const auto &elem : classSet) {
+    (void)allDepSet.erase(elem);
+  }
   return true;
 }
 
