@@ -36,7 +36,6 @@ class MeSSAUpdate {
   void Run();
 
  private:
-  void GetIterDomFrontier(const BB &bb, MapleSet<BBId> &dfSet, std::vector<bool> &visitedMap) const;
   void InsertPhis();
   void RenamePhi(const BB &bb);
   MeExpr *RenameExpr(MeExpr &meExpr, bool &changed);

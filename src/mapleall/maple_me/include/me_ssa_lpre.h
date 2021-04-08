@@ -36,7 +36,6 @@ class MeSSALPre : public SSAPre {
   void GenerateSaveRealOcc(MeRealOcc&) override;
   void GenerateReloadRealOcc(MeRealOcc&) override;
   MeExpr *PhiOpndFromRes(MeRealOcc&, size_t) const override;
-  void GetIterDomFrontier(const BB &bb, MapleSet<uint32> &dfSet, std::vector<bool> &visitedMap) const override;
   void ComputeVarAndDfPhis() override;
   bool ScreenPhiBB(BBId) const override {
     return true;
