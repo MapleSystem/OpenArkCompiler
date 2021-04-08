@@ -41,10 +41,7 @@ class ASTCompilerComponent : public MPLFECompilerComponent {
     MPLFECompilerComponent::DumpPhaseTimeTotalImpl();
   }
   void ReleaseMemPoolImpl() override {
-    if (mp != nullptr) {
-      delete mp;
-      mp = nullptr;
-    }
+    FEUtils::DeleteMempoolPtr(mp);
   }
 
  private:

@@ -77,6 +77,17 @@ class FEUtils {
 #endif
   }
 
+  static inline void DeleteMempoolPtr(MemPool *memPoolPtr) {
+#ifndef USE_OPS
+    if (memPoolPtr != nullptr) {
+      delete memPoolPtr;
+      memPoolPtr = nullptr;
+    }
+#else
+    memPoolCtrler.DeleteMemPool(memPoolPtr);
+#endif
+  }
+
   static inline GStrIdx &GetBooleanIdx() {
     static GStrIdx booleanIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(kBoolean);
     return booleanIdx;

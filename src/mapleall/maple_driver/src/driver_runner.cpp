@@ -22,7 +22,8 @@
 #include "mir_parser.h"
 #include "file_utils.h"
 #include "debug_info.h"
-
+#include "mir_lower.h"
+#include "constantfold.h"
 #include "lower.h"
 #if TARGAARCH64 || TARGRISCV64
 #include "aarch64/aarch64_cg.h"

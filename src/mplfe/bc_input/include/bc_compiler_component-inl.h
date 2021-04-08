@@ -230,10 +230,7 @@ void BCCompilerComponent<T>::DumpPhaseTimeTotalImpl() const {
 
 template <class T>
 void BCCompilerComponent<T>::ReleaseMemPoolImpl() {
-  if (mp != nullptr) {
-    delete mp;
-    mp = nullptr;
-  }
+  FEUtils::DeleteMempoolPtr(mp);
 }
 }  // namespace bc
 }  // namespace maple

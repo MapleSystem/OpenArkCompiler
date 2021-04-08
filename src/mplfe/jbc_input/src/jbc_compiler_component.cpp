@@ -30,10 +30,7 @@ JBCCompilerComponent::~JBCCompilerComponent() {
 }
 
 void JBCCompilerComponent::ReleaseMemPoolImpl() {
-  if (mp != nullptr) {
-    delete mp;
-    mp = nullptr;
-  }
+  FEUtils::DeleteMempoolPtr(mp);
 }
 
 bool JBCCompilerComponent::ParseInputImpl() {

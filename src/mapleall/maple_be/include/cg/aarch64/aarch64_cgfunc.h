@@ -279,7 +279,8 @@ class AArch64CGFunc : public CGFunc {
     return GetOrCreatePhysicalRegisterOperand(RFP, kSizeOfPtr * kBitsPerByte, kRegTyInt);
   }
 
-  RegOperand &GenStructParamIndex(RegOperand &base, const BaseNode &indexExpr, int shift);
+  RegOperand &GenStructParamIndex(RegOperand &base, const BaseNode &indexExpr, int shift, PrimType baseType,
+                                  PrimType targetType);
 
   MemOperand &GetOrCreateMemOpnd(const MIRSymbol &symbol, int32 offset, uint32 size, bool forLocalRef = false);
 
@@ -300,6 +301,9 @@ class AArch64CGFunc : public CGFunc {
 
   MemOperand &CreateMemOpnd(PrimType ptype, const BaseNode &parent, BaseNode &addrExpr, int32 offset = 0,
                             AArch64isa::MemoryOrdering memOrd = AArch64isa::kMoNone);
+
+  MemOperand *CreateMemOpndOrNull(PrimType ptype, const BaseNode &parent, BaseNode &addrExpr, int32 offset = 0,
+                                  AArch64isa::MemoryOrdering memOrd = AArch64isa::kMoNone);
 
   CondOperand &GetCondOperand(AArch64CC_t op) {
     return ccOperands[op];
@@ -597,7 +601,7 @@ class AArch64CGFunc : public CGFunc {
                                   int32 &structCopyOffset);
   uint32 SelectParmListGetStructReturnSize(StmtNode &naryNode);
   void SelectParmListPreprocessLargeStruct(BaseNode &argExpr, int32 &structCopyOffset);
-  void SelectParmListPreprocess(StmtNode &naryNode, size_t start);
+  void SelectParmListPreprocess(const StmtNode &naryNode, size_t start);
   void SelectParmList(StmtNode &naryNode, AArch64ListOperand &srcOpnds, bool isCallNative = false);
   Operand *SelectClearStackCallParam(const AddrofNode &expr, int64 &offsetValue);
   void SelectClearStackCallParmList(const StmtNode &naryNode, AArch64ListOperand &srcOpnds,
@@ -663,6 +667,7 @@ class AArch64CGFunc : public CGFunc {
                                       PrimType countPty, LabelIdx jumpLabIdx);
   MemOperand *CheckAndCreateExtendMemOpnd(PrimType ptype, BaseNode &addrExpr, int32 offset,
                                           AArch64isa::MemoryOrdering memOrd);
+  MemOperand &CreateNonExtendMemOpnd(PrimType ptype, const BaseNode &parent, BaseNode &addrExpr, int32 offset);
 };
 }  /* namespace maplebe */
 

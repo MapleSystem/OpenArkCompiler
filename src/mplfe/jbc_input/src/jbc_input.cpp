@@ -41,8 +41,7 @@ JBCInput::~JBCInput() {
 }
 
 void JBCInput::ReleaseMemPool() {
-  delete mp;
-  mp = nullptr;
+  FEUtils::DeleteMempoolPtr(mp);
 }
 
 bool JBCInput::ReadClassFile(const std::string &fileName) {

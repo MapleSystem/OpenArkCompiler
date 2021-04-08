@@ -34,6 +34,7 @@ MODTPHASE(MoPhase_JAVAEHLOWER, JavaEHLowererPhase)
 MODTPHASE(MoPhase_MUIDREPLACEMENT, DoMUIDReplacement)
 MODTPHASE(MoPhase_CHECKCASTGENERATION, DoCheckCastGeneration)
 MODTPHASE(MoPhase_CodeReLayout, DoCodeReLayout)
+MODTPHASE(MoPhase_SCALARREPLACEMENT, DoScalarReplacement)
 #endif
 MODTPHASE(MoPhase_INLINE, DoInline)
 MODTPHASE(MoPhase_OPENPROFILE, DoOpenProfile)
