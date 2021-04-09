@@ -31,6 +31,8 @@ struct ArgInfo {
   const AArch64SymbolAlloc *symLoc;
   uint8 memPairSecondRegSize;  /* struct arg requiring two regs, size of 2nd reg */
   bool doMemPairOpt;
+  bool createTwoStores;
+  bool isTwoRegParm;
 };
 
 class AArch64MoveRegArgs : public MoveRegArgs {

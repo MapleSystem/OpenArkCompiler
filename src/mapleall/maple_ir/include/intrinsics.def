@@ -15,6 +15,10 @@
 // DEF_MIR_INTRINSIC(STR, NAME, INTRN_CLASS, RETURN_TYPE, ARG0, ARG1, ARG2, ARG3, ARG4, ARG5)
 DEF_MIR_INTRINSIC(UNDEFINED,\
                   nullptr, kIntrnUndef, kArgTyUndef, kArgTyUndef, kArgTyUndef, kArgTyUndef, kArgTyUndef, kArgTyUndef, kArgTyUndef)
+DEF_MIR_INTRINSIC(DEX_ATOMIC_INC,\
+                  "__dex_ainc", kIntrnIsAtomic, kArgTyI32, kArgTyDynany, kArgTyUndef, kArgTyUndef, kArgTyUndef, kArgTyUndef, kArgTyUndef)
+DEF_MIR_INTRINSIC(DEX_ATOMIC_DEC,\
+                  "__dex_adec", kIntrnIsAtomic, kArgTyI32, kArgTyDynany, kArgTyUndef, kArgTyUndef, kArgTyUndef, kArgTyUndef, kArgTyUndef)
 DEF_MIR_INTRINSIC(MPL_ATOMIC_EXCHANGE_PTR,\
                   "__mpl_atomic_exchange_ptr", kIntrnIsAtomic, kArgTyPtr, kArgTyPtr, kArgTyUndef, kArgTyUndef, kArgTyUndef, kArgTyUndef, kArgTyUndef)
 DEF_MIR_INTRINSIC(MPL_CLINIT_CHECK,\

@@ -143,10 +143,7 @@ class BCClassMethod : public BCClassElem {
         methodMp(FEUtils::NewMempool("MemPool for BCClassMethod", true /* isLcalPool */)),
         allocator(methodMp) {}
   ~BCClassMethod() {
-    if (methodMp != nullptr) {
-      delete methodMp;
-      methodMp = nullptr;
-    }
+    methodMp = nullptr;
   }
   void SetPCBCInstructionMap(MapleMap<uint32, BCInstruction*> *mapIn) {
     pcBCInstructionMap = mapIn;
@@ -216,10 +213,7 @@ class BCClassMethod : public BCClassElem {
   }
 
   void ReleaseMempool() {
-    if (methodMp != nullptr) {
-      delete methodMp;
-      methodMp = nullptr;
-    }
+    FEUtils::DeleteMempoolPtr(methodMp);
   }
 
   MapleAllocator &GetAllocator() {

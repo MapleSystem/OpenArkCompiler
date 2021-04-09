@@ -38,6 +38,7 @@
 #include "constantfold.h"
 #include "barrierinsertion.h"
 #include "preme.h"
+#include "scalarreplacement.h"
 #include "openProfile.h"
 #endif  // ~MIR_JAVA
 

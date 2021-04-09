@@ -86,6 +86,7 @@ void MIRLexer::PrepareForFile(const std::string &filename) {
   } else {
     lineNum = 1;
   }
+  module.GetDbgInfo()->UpdateMsg(lineNum, line.c_str());
   kind = TK_invalid;
 }
 
@@ -542,6 +543,7 @@ TokenKind MIRLexer::LexToken() {
       return TK_eof;
     }
     ++lineNum;  // a new line read.
+    module.GetDbgInfo()->UpdateMsg(lineNum, line.c_str());
     // skip spaces
     c = GetCurrentCharWithUpperCheck();
     while (c == ' ' || c == '\t') {

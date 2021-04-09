@@ -13,6 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "mplfe_compiler.h"
+#include "fe_utils.h"
 using namespace maple;
 
 int main(int argc, char **argv) {
@@ -28,10 +29,7 @@ int main(int argc, char **argv) {
   compiler.Run();
   // The MIRModule destructor does not release the pragma memory, add releasing for front-end debugging.
   MemPool *pragmaMemPoolPtr = module.GetPragmaMemPool();
-  if (pragmaMemPoolPtr != nullptr) {
-    delete pragmaMemPoolPtr;
-    pragmaMemPoolPtr = nullptr;
-  }
+  FEUtils::DeleteMempoolPtr(pragmaMemPoolPtr);
   timer.Stop();
   if (FEOptions::GetInstance().IsDumpTime()) {
     INFO(kLncInfo, "mplfe time: %.2lfms", timer.ElapsedMilliseconds() / 1.0);

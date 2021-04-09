@@ -381,6 +381,96 @@ void VtableAnalysis::AddNullPointExceptionCheck(MIRFunction &func, StmtNode &stm
   }
 }
 
+// Get puIdx of the method MethodHandles::lookup
+static PUIdx GetPUIdxOfMethodHandelsLookup() {
+  const GStrIdx &nameStrIdx = GlobalTables::GetStrTable().GetStrIdxFromName(
+      "Ljava_2Flang_2Finvoke_2FMethodHandles_3B_7Clookup_7C_28_29Ljava_2Flang_2Finvoke_2FMethodHandles_24Lookup_3B");
+  if (nameStrIdx == 0) {
+    return 0;
+  }
+  const auto *funcSt = GlobalTables::GetGsymTable().GetSymbolFromStrIdx(nameStrIdx);
+  if (funcSt == nullptr || funcSt->GetFunction() == nullptr) {
+    return 0;
+  }
+  return funcSt->GetFunction()->GetPuidx();
+}
+
+static void IdentifyCallerSensitive(const StmtNode &stmt, MIRFunction &func) {
+  Opcode op = stmt.GetOpCode();
+  if (op != OP_callassigned) {
+    return;
+  }
+
+  static const PUIdx puIdx = GetPUIdxOfMethodHandelsLookup();
+  if (puIdx == static_cast<const CallNode&>(stmt).GetPUIdx()) {
+    func.SetAttr(FUNCATTR_callersensitive);
+  }
+}
+
+// Get puIdx of the method String::intern
+static PUIdx GetPUIdxOfMethodStringIntern() {
+  const GStrIdx &nameStrIdx = GlobalTables::GetStrTable().GetStrIdxFromName(
+      "Ljava_2Flang_2FString_3B_7Cintern_7C_28_29Ljava_2Flang_2FString_3B");
+  if (nameStrIdx == 0) {
+    return 0;
+  }
+  const auto *funcSt = GlobalTables::GetGsymTable().GetSymbolFromStrIdx(nameStrIdx);
+  if (funcSt == nullptr || funcSt->GetFunction() == nullptr) {
+    return 0;
+  }
+  return funcSt->GetFunction()->GetPuidx();
+}
+
+static PUIdx GetPUIdxOfMethodStringCompareTo() {
+  const GStrIdx &nameStrIdx = GlobalTables::GetStrTable().GetStrIdxFromName(
+      "Ljava_2Flang_2FString_3B_7CcompareTo_7C_28Ljava_2Flang_2FString_3B_29I");
+  if (nameStrIdx == 0) {
+    return 0;
+  }
+  const auto *funcSt = GlobalTables::GetGsymTable().GetSymbolFromStrIdx(nameStrIdx);
+  if (funcSt == nullptr || funcSt->GetFunction() == nullptr) {
+    return 0;
+  }
+  return funcSt->GetFunction()->GetPuidx();
+}
+
+static bool ReplaceStringMethodWithNativeMethod(const StmtNode &stmt, MIRFunction &func) {
+  if (stmt.GetOpCode() != OP_virtualcallassigned) {
+    return false;
+  }
+
+  constexpr uint32 funcNumToReplace = 2;
+  const static std::array<std::string, funcNumToReplace> nativeFuncsToReplace = {
+      "Native_java_lang_String_intern__",
+      "Native_java_lang_String_compareTo__Ljava_lang_String_2"
+  };
+  const static std::array<PUIdx, funcNumToReplace> puIdxsToReplaceWith =
+      { GetPUIdxOfMethodStringIntern(), GetPUIdxOfMethodStringCompareTo() };
+
+  uint32 funcId = 0;
+  for (; funcId < funcNumToReplace; ++funcId) {
+    if (static_cast<const CallNode&>(stmt).GetPUIdx() == puIdxsToReplaceWith[funcId]) {
+      break;
+    }
+  }
+  if (funcId == funcNumToReplace) {
+    return false;
+  }
+
+  auto *calleeFunc = GlobalTables::GetFunctionTable().GetFunctionFromPuidx(puIdxsToReplaceWith[funcId]);
+  PUIdx puIdxOfNativeFunc = theMIRModule->GetMIRBuilder()->GetOrCreateFunction(
+      nativeFuncsToReplace[funcId], calleeFunc->GetReturnTyIdx())->GetPuidx();
+  MIRSymbol *retSym = nullptr;
+  auto &retVec = static_cast<const CallNode&>(stmt).GetReturnVec();
+  if (!retVec.empty() && !retVec.front().second.IsReg()) {
+    retSym = theMIRModule->GetMIRBuilder()->GetSymbolFromEnclosingScope(retVec.front().first);
+  }
+  auto *newCallNode = theMIRModule->GetMIRBuilder()->CreateStmtCallAssigned(
+      puIdxOfNativeFunc, static_cast<const CallNode&>(stmt).GetNopnd(), retSym, OP_callassigned);
+  func.GetBody()->ReplaceStmt1WithStmt2(&stmt, newCallNode);
+  return true;
+}
+
 void VtableAnalysis::ProcessFunc(MIRFunction *func) {
   if (func->IsEmpty()) {
     return;
@@ -392,6 +482,10 @@ void VtableAnalysis::ProcessFunc(MIRFunction *func) {
     next = stmt->GetNext();
     switch (stmt->GetOpCode()) {
       case OP_virtualcallassigned: {
+        if (ReplaceStringMethodWithNativeMethod(*stmt, *func)) {
+          next = next->GetPrev();
+          break;
+        }
         ReplaceVirtualInvoke(*(static_cast<CallNode*>(stmt)));
         break;
       }
@@ -409,6 +503,7 @@ void VtableAnalysis::ProcessFunc(MIRFunction *func) {
       }
       case OP_call:
       case OP_callassigned: {
+        IdentifyCallerSensitive(*stmt, *func);
         AddNullPointExceptionCheck(*func, *stmt); // npe check
         break;
       }

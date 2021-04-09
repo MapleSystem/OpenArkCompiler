@@ -41,10 +41,7 @@ void MPLFECompiler::Init() {
 
 void MPLFECompiler::Release() {
   FEManager::Release();
-  if (mp != nullptr) {
-    delete mp;
-    mp = nullptr;
-  }
+  FEUtils::DeleteMempoolPtr(mp);
 }
 
 void MPLFECompiler::Run() {
@@ -208,7 +205,7 @@ void MPLFECompiler::ExportMplFile() {
 #ifndef USE_OPS
     module.OutputAsciiMpl("", emitStructureType);
 #else
-    module.OutputAsciiMpl("", ".mpl", nullptr, false, false);
+    module.OutputAsciiMpl("", ".mpl", nullptr, emitStructureType, false);
 #endif
     timer.StopAndDumpTimeMS("Output mpl");
   }

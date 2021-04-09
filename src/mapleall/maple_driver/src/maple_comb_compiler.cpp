@@ -18,6 +18,9 @@
 #include "string_utils.h"
 #include "mpl_logging.h"
 #include "driver_runner.h"
+#include "inline.h"
+#include "me_phase_manager.h"
+#include "constantfold.h"
 
 namespace maple {
 using namespace mapleOption;

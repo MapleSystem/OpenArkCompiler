@@ -89,7 +89,11 @@ ArgInfo AArch64MoveRegArgs::GetArgInfo(std::map<uint32, AArch64reg> &argsList, s
   argInfo.symSize = aarchCGFunc->GetBecommon().GetTypeSize(argInfo.mirTy->GetTypeIndex());
   argInfo.memPairSecondRegSize = 0;
   argInfo.doMemPairOpt = false;
+  argInfo.createTwoStores  = false;
+  argInfo.isTwoRegParm = false;
+
   if ((argInfo.symSize > k8ByteSize) && (argInfo.symSize <= k16ByteSize)) {
+    argInfo.isTwoRegParm = true;
     if (numFpRegs[argIndex] > kOneRegister) {
       argInfo.symSize = argInfo.stkSize = fpSize[argIndex];
     } else {
@@ -105,10 +109,11 @@ ArgInfo AArch64MoveRegArgs::GetArgInfo(std::map<uint32, AArch64reg> &argsList, s
   } else if (argInfo.symSize > k16ByteSize) {
     /* For large struct passing, a pointer to the copy is used. */
     argInfo.symSize = argInfo.stkSize = kSizeOfPtr;
-  } if ((argInfo.mirTy->GetPrimType() == PTY_agg) && (argInfo.symSize < k4ByteSize)) {
+  } else if ((argInfo.mirTy->GetPrimType() == PTY_agg) && (argInfo.symSize < k4ByteSize)) {
     /* For small aggregate parameter, set to minimum of 4 bytes. */
     argInfo.symSize = argInfo.stkSize = k4ByteSize;
   } else if (numFpRegs[argIndex] > kOneRegister) {
+    argInfo.isTwoRegParm = true;
     argInfo.symSize = argInfo.stkSize = fpSize[argIndex];
   } else {
     argInfo.stkSize = (argInfo.symSize < k4ByteSize) ? k4ByteSize : argInfo.symSize;
@@ -128,6 +133,7 @@ ArgInfo AArch64MoveRegArgs::GetArgInfo(std::map<uint32, AArch64reg> &argsList, s
      */
     argInfo.symSize = kSizeOfPtr;
     argInfo.doMemPairOpt = false;
+    argInfo.createTwoStores = true;
   }
   return argInfo;
 }
@@ -254,7 +260,7 @@ void AArch64MoveRegArgs::GenerateStrInsn(ArgInfo &argInfo, AArch64reg reg2, uint
   }
   aarchCGFunc->GetCurBB()->AppendInsn(insn);
 
-  if (argInfo.doMemPairOpt) {
+  if (argInfo.createTwoStores || argInfo.doMemPairOpt) {
     /* second half of the struct passing by registers. */
     uint32 part2BitSize = argInfo.memPairSecondRegSize * kBitsPerByte;
     GenOneInsn(argInfo, *baseOpnd, part2BitSize, reg2, (stOffset + kSizeOfPtr));
@@ -302,9 +308,13 @@ void AArch64MoveRegArgs::MoveRegisterArgs() {
           static_cast<AArch64SymbolAlloc *>(aarchCGFunc->GetMemlayout()->GetSymAllocInfo(
               secondArgInfo.sym->GetStIndex()));
       /* Make sure they are in same segment if want to use stp */
-      if (IsInSameSegment(firstArgInfo, secondArgInfo)) {
+      if (((firstArgInfo.isTwoRegParm && secondArgInfo.isTwoRegParm) ||
+          (firstArgInfo.isTwoRegParm == false && secondArgInfo.isTwoRegParm == false)) &&
+          (firstArgInfo.doMemPairOpt || IsInSameSegment(firstArgInfo, secondArgInfo))) {
         GenerateStpInsn(firstArgInfo, secondArgInfo);
-        it = next;
+        if (firstArgInfo.doMemPairOpt == false) {
+          it = next;
+        }
         continue;
       }
     }

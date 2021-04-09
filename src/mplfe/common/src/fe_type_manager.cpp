@@ -80,8 +80,7 @@ FETypeManager::~FETypeManager() {
 }
 
 void FETypeManager::ReleaseMemPool() {
-  delete mp;
-  mp = nullptr;
+  FEUtils::DeleteMempoolPtr(mp);
 }
 
 bool FETypeManager::LoadMplts(const std::list<std::string> &mpltNames, FETypeFlag flag, const std::string &phaseName) {

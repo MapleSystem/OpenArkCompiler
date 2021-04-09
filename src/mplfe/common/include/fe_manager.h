@@ -91,10 +91,7 @@ class FEManager {
   }
 
   void ReleaseStructElemMempool() {
-    if (structElemMempool != nullptr) {
-      delete structElemMempool;
-      structElemMempool = nullptr;
-    }
+    FEUtils::DeleteMempoolPtr(structElemMempool);
   }
 
   uint32 RegisterSourceFileIdx(const GStrIdx &strIdx) {
@@ -141,10 +138,7 @@ class FEManager {
         structElemMempool(FEUtils::NewMempool("MemPool for StructElemNameIdx", false /* isLcalPool */)),
         structElemAllocator(structElemMempool) {}
   ~FEManager() {
-    if (structElemMempool != nullptr) {
-      delete structElemMempool;
-      structElemMempool = nullptr;
-    }
+    structElemMempool = nullptr;
   }
   mutable std::mutex feManagerMapStructElemNameIdxMtx;
 };

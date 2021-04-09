@@ -299,7 +299,12 @@ IntConstTable::~IntConstTable() {
   }
 }
 
-MIRFloatConst *FPConstTable::GetOrCreateFloatConst(float floatVal) {
+MIRFloatConst *FPConstTable::GetOrCreateFloatConst(float floatVal, uint32 fieldID) {
+  if (fieldID != 0) {
+    MIRFloatConst *fconst =
+        new MIRFloatConst(floatVal, *GlobalTables::GetTypeTable().GetTypeFromTyIdx((TyIdx)PTY_f32), fieldID);
+    return fconst;
+  }
   if (std::isnan(floatVal)) {
     return nanFloatConst;
   }
@@ -321,7 +326,8 @@ MIRFloatConst *FPConstTable::DoGetOrCreateFloatConst(float floatVal) {
     return it->second;
   }
   // create a new one
-  auto *floatConst = new MIRFloatConst(floatVal, *GlobalTables::GetTypeTable().GetTypeFromTyIdx(TyIdx{ PTY_f32 }));
+  auto *floatConst =
+      new MIRFloatConst(floatVal, *GlobalTables::GetTypeTable().GetTypeFromTyIdx(TyIdx{ PTY_f32 }));
   floatConstTable[floatVal] = floatConst;
   return floatConst;
 }
@@ -336,12 +342,18 @@ MIRFloatConst *FPConstTable::DoGetOrCreateFloatConstThreadSafe(float floatVal) {
   }
   // create a new one
   std::unique_lock<std::shared_timed_mutex> lock(floatMtx);
-  auto *floatConst = new MIRFloatConst(floatVal, *GlobalTables::GetTypeTable().GetTypeFromTyIdx(TyIdx{ PTY_f32 }));
+  auto *floatConst =
+      new MIRFloatConst(floatVal, *GlobalTables::GetTypeTable().GetTypeFromTyIdx(TyIdx{ PTY_f32 }));
   floatConstTable[floatVal] = floatConst;
   return floatConst;
 }
 
-MIRDoubleConst *FPConstTable::GetOrCreateDoubleConst(double doubleVal) {
+MIRDoubleConst *FPConstTable::GetOrCreateDoubleConst(double doubleVal, uint32 fieldID) {
+  if (fieldID != 0) {
+    MIRDoubleConst *dconst =
+        new MIRDoubleConst(doubleVal, *GlobalTables::GetTypeTable().GetTypeFromTyIdx((TyIdx)PTY_f64), fieldID);
+    return dconst;
+  }
   if (std::isnan(doubleVal)) {
     return nanDoubleConst;
   }
