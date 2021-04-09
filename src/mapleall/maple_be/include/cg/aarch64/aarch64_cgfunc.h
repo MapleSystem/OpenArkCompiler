@@ -280,7 +280,7 @@ class AArch64CGFunc : public CGFunc {
   }
 
   RegOperand &GenStructParamIndex(RegOperand &base, const BaseNode &indexExpr, int shift, PrimType baseType,
-                                  PrimType targetType);
+                             PrimType targetType);
 
   MemOperand &GetOrCreateMemOpnd(const MIRSymbol &symbol, int32 offset, uint32 size, bool forLocalRef = false);
 
@@ -303,7 +303,7 @@ class AArch64CGFunc : public CGFunc {
                             AArch64isa::MemoryOrdering memOrd = AArch64isa::kMoNone);
 
   MemOperand *CreateMemOpndOrNull(PrimType ptype, const BaseNode &parent, BaseNode &addrExpr, int32 offset = 0,
-                                  AArch64isa::MemoryOrdering memOrd = AArch64isa::kMoNone);
+                            AArch64isa::MemoryOrdering memOrd = AArch64isa::kMoNone);
 
   CondOperand &GetCondOperand(AArch64CC_t op) {
     return ccOperands[op];

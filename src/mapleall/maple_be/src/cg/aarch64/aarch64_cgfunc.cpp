@@ -6446,8 +6446,7 @@ MemOperand &AArch64CGFunc::CreateMemOpnd(RegOperand &baseOpnd, int32 offset, uin
   return *memPool->New<AArch64MemOperand>(AArch64MemOperand::kAddrModeBOi, size, baseOpnd, nullptr, &offsetOpnd, &sym);
 }
 
-RegOperand &AArch64CGFunc::GenStructParamIndex(RegOperand &base, const BaseNode &indexExpr, int shift,
-                                               PrimType baseType, PrimType targetType) {
+RegOperand &AArch64CGFunc::GenStructParamIndex(RegOperand &base, const BaseNode &indexExpr, int shift, PrimType baseType, PrimType targetType) {
   RegOperand *index = &LoadIntoRegister(*HandleExpr(indexExpr, *(indexExpr.Opnd(0))), PTY_a64);
   RegOperand *srcOpnd = &CreateRegisterOperandOfType(PTY_a64);
   ImmOperand *imm = &CreateImmOperand(PTY_a64, shift);
@@ -6459,8 +6458,8 @@ RegOperand &AArch64CGFunc::GenStructParamIndex(RegOperand &base, const BaseNode 
   AArch64MemOperand &mo =
       GetOrCreateMemOpnd(AArch64MemOperand::kAddrModeBOi, k64BitSize, result, nullptr, offopnd, nullptr);
   RegOperand &structAddr = CreateVirtualRegisterOperand(NewVReg(kRegTyInt, k8ByteSize));
-  GetCurBB()->AppendInsn(cg->BuildInstruction<AArch64Insn>(PickLdInsn(GetPrimTypeBitSize(baseType), targetType),
-                                                           structAddr, mo));
+  GetCurBB()->AppendInsn(cg->BuildInstruction<AArch64Insn>(PickLdInsn(GetPrimTypeBitSize(baseType), targetType), structAddr, mo));
+
   return structAddr;
 }
 
@@ -6525,7 +6524,7 @@ MemOperand *AArch64CGFunc::CheckAndCreateExtendMemOpnd(PrimType ptype, BaseNode 
 }
 
 MemOperand &AArch64CGFunc::CreateNonExtendMemOpnd(PrimType ptype, const BaseNode &parent, BaseNode &addrExpr,
-                                                  int32 offset) {
+                              int32 offset) {
   Operand *addrOpnd = HandleExpr(parent, addrExpr);
   addrOpnd = static_cast<RegOperand*>(&LoadIntoRegister(*addrOpnd, PTY_a64));
   if ((addrExpr.GetOpCode() == OP_CG_array_elem_add) && (offset == 0) && GetCurBB() && GetCurBB()->GetLastInsn() &&
@@ -6559,7 +6558,7 @@ MemOperand &AArch64CGFunc::CreateMemOpnd(PrimType ptype, const BaseNode &parent,
 }
 
 MemOperand *AArch64CGFunc::CreateMemOpndOrNull(PrimType ptype, const BaseNode &parent, BaseNode &addrExpr, int32 offset,
-                                               AArch64isa::MemoryOrdering memOrd) {
+                                         AArch64isa::MemoryOrdering memOrd) {
   MemOperand *memOpnd = CheckAndCreateExtendMemOpnd(ptype, addrExpr, offset, memOrd);
   if (memOpnd != nullptr) {
     return memOpnd;
