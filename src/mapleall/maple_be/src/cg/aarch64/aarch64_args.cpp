@@ -89,7 +89,6 @@ ArgInfo AArch64MoveRegArgs::GetArgInfo(std::map<uint32, AArch64reg> &argsList, s
   argInfo.symSize = aarchCGFunc->GetBecommon().GetTypeSize(argInfo.mirTy->GetTypeIndex());
   argInfo.memPairSecondRegSize = 0;
   argInfo.doMemPairOpt = false;
-  argInfo.CreateTwoStores  = false;
   argInfo.createTwoStores  = false;
   argInfo.isTwoRegParm = false;
 
