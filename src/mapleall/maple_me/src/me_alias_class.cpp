@@ -41,6 +41,7 @@ bool MeAliasClass::HasWriteToStaticFinal() const {
 }
 
 void MeAliasClass::DoAliasAnalysis() {
+  // pass 1 through the program statements
   for (auto bIt = func.valid_begin(); bIt != func.valid_end(); ++bIt) {
     for (auto &stmt : (*bIt)->GetStmtNodes()) {
       ApplyUnionForCopies(stmt);
@@ -56,6 +57,9 @@ void MeAliasClass::DoAliasAnalysis() {
   } else {
     ApplyUnionForPointedTos();
     UnionForNotAllDefsSeen();
+    if (mirModule.IsCModule()) {
+      ApplyUnionForStorageOverlaps();
+    }
   }
   if (!mirModule.IsJavaModule()) {
     UnionForAggAndFields();
