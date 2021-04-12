@@ -91,9 +91,27 @@ UniqueFEIRExpr FEIRBuilder::CreateExprDRead(UniqueFEIRVar srcVar) {
   return expr;
 }
 
+UniqueFEIRExpr FEIRBuilder::CreateExprIRead(UniqueFEIRType returnType, UniqueFEIRType ptrType,
+                                            FieldID id, UniqueFEIRExpr expr) {
+  UniqueFEIRExpr feirExpr = std::make_unique<FEIRExprIRead>(std::move(returnType), std::move(ptrType),
+                                                            id, std::move(expr));
+  return feirExpr;
+}
+
 UniqueFEIRExpr FEIRBuilder::CreateExprAddrof(const std::vector<uint32> &array) {
   UniqueFEIRExpr expr = std::make_unique<FEIRExprAddrof>(array);
   CHECK_NULL_FATAL(expr);
+  return expr;
+}
+
+UniqueFEIRExpr FEIRBuilder::CreateExprAddrofVar(UniqueFEIRVar srcVar) {
+  UniqueFEIRExpr expr = std::make_unique<FEIRExprAddrofVar>(std::move(srcVar));
+  return expr;
+}
+
+UniqueFEIRExpr FEIRBuilder::CreateExprTernary(Opcode op, UniqueFEIRExpr cExpr,
+                                              UniqueFEIRExpr tExpr, UniqueFEIRExpr fExpr) {
+  UniqueFEIRExpr expr = std::make_unique<FEIRExprTernary>(op, std::move(cExpr), std::move(tExpr), std::move(fExpr));
   return expr;
 }
 

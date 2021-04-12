@@ -361,7 +361,7 @@ void BCRegType::PrecisifyTypes(bool isTry) {
   if (!isTry) {
     precisified = true;
   }
-  if (typesUsedAs == nullptr || typesUsedAs->empty()) {
+  if (curReg.IsConstZero() || typesUsedAs == nullptr || typesUsedAs->empty()) {
     return;
   }
   // insert defed type into `used`

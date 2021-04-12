@@ -69,6 +69,10 @@ class LibAstFile {
   MIRType *CvtRecordType(const clang::QualType srcType);
   MIRType *CvtFieldType(const clang::NamedDecl &decl);
 
+  const clang::ASTContext *GetContext() {
+    return astContext;
+  }
+
  private:
   using RecordDeclMap = std::map<TyIdx, const clang::RecordDecl*>;
   RecordDeclMap recordDeclMap;
