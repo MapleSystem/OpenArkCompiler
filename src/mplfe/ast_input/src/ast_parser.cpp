@@ -595,6 +595,32 @@ ASTExpr *ASTParser::ProcessExprUnaryOperator(MapleAllocator &allocator, const cl
   ASTUnaryOperatorExpr *astUOExpr = AllocUnaryOperatorExpr(allocator, uo);
   CHECK_FATAL(astUOExpr != nullptr, "astUOExpr is nullptr");
   const clang::Expr *subExpr = PeelParen(*uo.getSubExpr());
+  clang::UnaryOperator::Opcode clangOpCode = uo.getOpcode();
+  MIRType *subType = astFile->CvtType(subExpr->getType());
+  astUOExpr->SetSubType(subType);
+  if (clangOpCode == clang::UO_PostInc || clangOpCode == clang::UO_PostDec ||
+      clangOpCode == clang::UO_PreInc || clangOpCode == clang::UO_PreDec) {
+    const auto *declRefExpr = llvm::dyn_cast<clang::DeclRefExpr>(subExpr);
+    const auto *namedDecl = llvm::dyn_cast<clang::NamedDecl>(declRefExpr->getDecl()->getCanonicalDecl());
+    std::string refName = astFile->GetMangledName(*namedDecl);
+    astUOExpr->SetRefName(refName);
+    if (subType->GetPrimType() == PTY_ptr) {
+      int64 len;
+      const clang::QualType qualType = subExpr->getType()->getPointeeType();
+      if (astFile->CvtType(qualType)->GetPrimType() == PTY_ptr) {
+        // GetAddr32 or GetAddr64 need check
+        MIRType *pointeeType = GlobalTables::GetTypeTable().GetAddr64();
+        len = static_cast<int64>(pointeeType->GetSize());
+      } else {
+        const clang::QualType desugaredType = qualType.getDesugaredType(*(astFile->GetContext()));
+        len = astFile->GetContext()->getTypeSizeInChars(desugaredType).getQuantity();
+      }
+      astUOExpr->SetPointeeLen(len);
+    }
+  }
+
+  MIRType *uoType = astFile->CvtType(uo.getType());
+  astUOExpr->SetUOType(uoType);
   ASTExpr *astExpr = ProcessExpr(allocator, subExpr);
   if (astExpr == nullptr) {
     return nullptr;
@@ -605,7 +631,7 @@ ASTExpr *ASTParser::ProcessExprUnaryOperator(MapleAllocator &allocator, const cl
 
 ASTExpr *ASTParser::ProcessExprNoInitExpr(MapleAllocator &allocator, const clang::NoInitExpr &expr) {
   ASTNoInitExpr *astNoInitExpr = ASTExprBuilder<ASTNoInitExpr>(allocator);
-  CHECK_FATAL(astNoInitExpr != nullptr, "astPredefinedExpr is nullptr");
+  CHECK_FATAL(astNoInitExpr != nullptr, "astNoInitExpr is nullptr");
   clang::QualType qualType = expr.getType();
   MIRType *noInitType = astFile->CvtType(qualType);
   astNoInitExpr->SetNoInitType(noInitType);
@@ -987,8 +1013,14 @@ ASTExpr *ASTParser::ProcessExprFloatingLiteral(MapleAllocator &allocator, const 
   if ((&fltSem != &llvm::APFloat::IEEEsingle()) && (&fltSem != &llvm::APFloat::IEEEdouble())) {
     ASSERT(false, "unsupported floating literal");
   }
-  double val = ((&fltSem == &llvm::APFloat::IEEEdouble()) ? static_cast<double>(apf.convertToDouble())
-                                                          : static_cast<double>(apf.convertToFloat()));
+  double val;
+  if (&fltSem == &llvm::APFloat::IEEEdouble()) {
+    val = static_cast<double>(apf.convertToDouble());
+    astFloatingLiteral->SetFlag(false);
+  } else {
+    val = static_cast<double>(apf.convertToFloat());
+    astFloatingLiteral->SetFlag(true);
+  }
   astFloatingLiteral->SetVal(val);
   return astFloatingLiteral;
 }
@@ -1017,7 +1049,7 @@ ASTExpr *ASTParser::ProcessExprImplicitCastExpr(MapleAllocator &allocator, const
 }
 
 ASTExpr *ASTParser::ProcessExprDeclRefExpr(MapleAllocator &allocator, const clang::DeclRefExpr &expr) {
-  ASTRefExpr *astRefExpr = ASTExprBuilder<ASTRefExpr>(allocator);
+  ASTDeclRefExpr *astRefExpr = ASTExprBuilder<ASTDeclRefExpr>(allocator);
   CHECK_FATAL(astRefExpr != nullptr, "astRefExpr is nullptr");
   switch (expr.getStmtClass()) {
     case clang::Stmt::DeclRefExprClass: {

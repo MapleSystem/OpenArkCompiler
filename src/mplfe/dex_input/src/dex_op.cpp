@@ -882,12 +882,14 @@ std::list<UniqueFEIRStmt> DexOpIfTest::EmitToFEIRStmtsImpl() {
   // opnd of if-test should be same PTY type.
   // Or one opnd must be nullptr, such as const 0.
   if (vA.GetPrimType() == PTY_ref && vB.GetPrimType() != PTY_ref) {
-    CHECK_FATAL(vB.regValue->primValue.raw32 == 0, "Cannot compare a ref var with an integer.");
+    CHECK_FATAL(vB.regValue != nullptr && vB.regValue->primValue.raw32 == 0,
+        "Cannot compare a ref var with an integer.");
     vBTmp.regTypeItem = vATmp.regTypeItem;
     UniqueFEIRStmt retypeStmt = FEIRBuilder::CreateStmtRetype(vBTmp.GenFEIRVarReg(), vB.GenFEIRVarReg());
     stmts.emplace_back(std::move(retypeStmt));
   } else if (vA.GetPrimType() != PTY_ref && vB.GetPrimType() == PTY_ref) {
-    CHECK_FATAL(vA.regValue->primValue.raw32 == 0, "Cannot compare a ref var with an integer.");
+    CHECK_FATAL(vA.regValue != nullptr && vA.regValue->primValue.raw32 == 0,
+        "Cannot compare a ref var with an integer.");
     vATmp.regTypeItem = vBTmp.regTypeItem;
     UniqueFEIRStmt retypeStmt = FEIRBuilder::CreateStmtRetype(vATmp.GenFEIRVarReg(), vA.GenFEIRVarReg());
     stmts.emplace_back(std::move(retypeStmt));

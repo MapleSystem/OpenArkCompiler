@@ -438,6 +438,21 @@ class FEIRExprAddrof : public FEIRExpr {
   std::vector<uint32> array;
 };
 
+// ---------- FEIRExprAddrofVar ----------
+class FEIRExprAddrofVar : public FEIRExpr {
+ public:
+  explicit FEIRExprAddrofVar(std::unique_ptr<FEIRVar> argVarSrc)
+      : FEIRExpr(FEIRNodeKind::kExprAddrofVar), varSrc(std::move(argVarSrc)) {}
+  ~FEIRExprAddrofVar() = default;
+
+ protected:
+  std::unique_ptr<FEIRExpr> CloneImpl() const override;
+  BaseNode *GenMIRNodeImpl(MIRBuilder &mirBuilder) const override;
+
+ private:
+  std::unique_ptr<FEIRVar> varSrc;
+};
+
 // ---------- FEIRExprUnary ----------
 class FEIRExprUnary : public FEIRExpr {
  public:
@@ -533,19 +548,22 @@ class FEIRExprExtractBits : public FEIRExprUnary {
 };  // FEIRExprExtractBit
 
 // ---------- FEIRExprIRead ----------
-class FEIRExprIRead : public FEIRExprUnary {
+class FEIRExprIRead : public FEIRExpr {
  public:
-  FEIRExprIRead(Opcode op, std::unique_ptr<FEIRExpr> argOpnd);
+  FEIRExprIRead(UniqueFEIRType returnType, UniqueFEIRType pointeeType, FieldID id, UniqueFEIRExpr expr)
+      : FEIRExpr(FEIRNodeKind::kExprIRead), retType(std::move(returnType)), ptrType(std::move(pointeeType)),
+        fieldID(id), subExpr(std::move(expr)) {}
   ~FEIRExprIRead() = default;
 
  protected:
   std::unique_ptr<FEIRExpr> CloneImpl() const override;
-  void RegisterDFGNodes2CheckPointImpl(FEIRStmtCheckPoint &checkPoint) override;
-  bool CalculateDefs4AllUsesImpl(FEIRStmtCheckPoint &checkPoint, FEIRUseDefChain &udChain) override;
   BaseNode *GenMIRNodeImpl(MIRBuilder &mirBuilder) const override;
 
  private:
-  uint32 offset = 0;
+  UniqueFEIRType retType;
+  UniqueFEIRType ptrType;
+  FieldID fieldID;
+  UniqueFEIRExpr subExpr;
 };
 
 // ---------- FEIRExprBinary ----------

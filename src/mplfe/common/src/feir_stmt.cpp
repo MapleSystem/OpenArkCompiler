@@ -1772,6 +1772,20 @@ std::vector<FEIRVar*> FEIRExprDRead::GetVarUsesImpl() const {
   return std::vector<FEIRVar*>({ varSrc.get() });
 }
 
+// ---------- FEIRExprIRead ----------
+std::unique_ptr<FEIRExpr> FEIRExprIRead::CloneImpl() const {
+  std::unique_ptr<FEIRExpr> expr = std::make_unique<FEIRExprIRead>(retType->Clone(), ptrType->Clone(),
+                                                                   fieldID, subExpr->Clone());
+  return expr;
+}
+
+BaseNode *FEIRExprIRead::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
+  MIRType *returnType = retType->GenerateMIRTypeAuto(kSrcLangC);
+  MIRType *pointeeType = ptrType->GenerateMIRTypeAuto(kSrcLangC);
+  BaseNode *subNode = subExpr->GenMIRNode(mirBuilder);
+  return mirBuilder.CreateExprIread(*returnType, *pointeeType, fieldID, subNode);
+}
+
 // ---------- FEIRExprAddrof ----------
 std::unique_ptr<FEIRExpr> FEIRExprAddrof::CloneImpl() const {
   std::unique_ptr<FEIRExpr> expr = std::make_unique<FEIRExprAddrof>(array);
@@ -1794,6 +1808,17 @@ BaseNode *FEIRExprAddrof::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
   arrayVar->SetKonst(val);
   BaseNode *nodeAddrof = mirBuilder.CreateExprAddrof(0, *arrayVar);
   return nodeAddrof;
+}
+
+// ---------- FEIRExprAddrofVar ----------
+std::unique_ptr<FEIRExpr> FEIRExprAddrofVar::CloneImpl() const {
+  std::unique_ptr<FEIRExpr> expr = std::make_unique<FEIRExprAddrofVar>(varSrc->Clone());
+  return expr;
+}
+
+BaseNode *FEIRExprAddrofVar::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
+  MIRSymbol *varSymbol = varSrc->GenerateGlobalMIRSymbol(mirBuilder);
+  return mirBuilder.CreateExprAddrof(0, *varSymbol);
 }
 
 // ---------- FEIRExprRegRead ----------
@@ -1884,6 +1909,7 @@ void FEIRExprUnary::SetExprTypeByOp() {
   switch (op) {
     case OP_neg:
     case OP_bnot:
+    case OP_lnot:
       type->SetPrimType(opnd->GetPrimType());
       break;
     default:

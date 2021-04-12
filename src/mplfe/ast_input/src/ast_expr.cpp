@@ -18,15 +18,16 @@
 #include "feir_stmt.h"
 #include "feir_builder.h"
 #include "fe_utils_ast.h"
+#include "feir_type_helper.h"
 
 namespace maple {
 // ---------- ASTExpr ----------
-UniqueFEIRExpr ASTExpr::Emit2FEExpr() const {
-  return Emit2FEExprImpl();
+UniqueFEIRExpr ASTExpr::Emit2FEExpr(std::list<UniqueFEIRStmt> &stmts) const {
+  return Emit2FEExprImpl(stmts);
 }
 
 // ---------- ASTRefExpr ---------
-UniqueFEIRExpr ASTRefExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTDeclRefExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   PrimType primType = var->GetTypeDesc().front()->GetPrimType();
   // A method is required to determine whether the var is global, need to update
   UniqueFEIRVar feirVar = FEIRBuilder::CreateVarName(var->GetName(), primType, true, false);
@@ -35,16 +36,16 @@ UniqueFEIRExpr ASTRefExpr::Emit2FEExprImpl() const {
 }
 
 // ---------- ASTCallExpr ----------
-UniqueFEIRExpr ASTCallExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTCallExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
 // ---------- ASTImplicitCastExpr ----------
-UniqueFEIRExpr ASTImplicitCastExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTImplicitCastExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   const ASTExpr *childExpr = child;
   CHECK_FATAL(childExpr != nullptr, "childExpr is nullptr");
-  UniqueFEIRExpr feirImplicitCastExpr = childExpr->Emit2FEExpr();
+  UniqueFEIRExpr feirImplicitCastExpr = childExpr->Emit2FEExpr(stmts);
   return feirImplicitCastExpr;
 }
 
@@ -53,80 +54,226 @@ void ASTUnaryOperatorExpr::SetUOExpr(ASTExpr *astExpr) {
   expr = astExpr;
 }
 
-UniqueFEIRExpr ASTUOMinusExpr::Emit2FEExprImpl() const {
+void ASTUnaryOperatorExpr::SetSubType(MIRType *type) {
+  subType = type;
+}
+
+UniqueFEIRExpr ASTUOMinusExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
+  ASTExpr *childExpr = expr;
+  CHECK_FATAL(childExpr != nullptr, "childExpr is nullptr");
+  UniqueFEIRExpr childFEIRExpr = childExpr->Emit2FEExpr(stmts);
+  UniqueFEIRExpr minusExpr = FEIRBuilder::CreateExprMathUnary(OP_neg, std::move(childFEIRExpr));
+  return minusExpr;
+}
+
+UniqueFEIRExpr ASTUOPlusExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
+  ASTExpr *childExpr = expr;
+  CHECK_FATAL(childExpr != nullptr, "childExpr is nullptr");
+  UniqueFEIRExpr plusExpr = childExpr->Emit2FEExpr(stmts);
+  return plusExpr;
+}
+
+UniqueFEIRExpr ASTUONotExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
+  ASTExpr *childExpr = expr;
+  CHECK_FATAL(childExpr != nullptr, "childExpr is nullptr");
+  UniqueFEIRExpr childFEIRExpr = childExpr->Emit2FEExpr(stmts);
+  UniqueFEIRExpr notExpr = FEIRBuilder::CreateExprMathUnary(OP_bnot, std::move(childFEIRExpr));
+  return notExpr;
+}
+
+UniqueFEIRExpr ASTUOLNotExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
+  ASTExpr *childExpr = expr;
+  CHECK_FATAL(childExpr != nullptr, "childExpr is nullptr");
+  UniqueFEIRExpr childFEIRExpr = childExpr->Emit2FEExpr(stmts);
+  UniqueFEIRExpr lnotExpr = FEIRBuilder::CreateExprMathUnary(OP_lnot, std::move(childFEIRExpr));
+  return lnotExpr;
+}
+
+UniqueFEIRExpr ASTUOPostIncExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
+  ASTExpr *childExpr = expr;
+  CHECK_FATAL(childExpr != nullptr, "childExpr is nullptr");
+  PrimType subPrimType = subType->GetPrimType();
+
+  // postinc_1 = a, subVar attr need update
+  UniqueFEIRVar selfVar = FEIRBuilder::CreateVarName(refName, subPrimType, true, false);
+  UniqueFEIRVar selfMoveVar = selfVar->Clone();
+  UniqueFEIRVar tempVar = FEIRBuilder::CreateVarName(FEUtils::GetSequentialName("postinc_"), subPrimType);
+  UniqueFEIRVar tempMoveVar = tempVar->Clone();
+  UniqueFEIRExpr readSelfExpr = FEIRBuilder::CreateExprDRead(std::move(selfMoveVar));
+  UniqueFEIRStmt readSelfstmt = FEIRBuilder::CreateStmtDAssign(std::move(tempMoveVar), std::move(readSelfExpr));
+  stmts.emplace_back(std::move(readSelfstmt));
+
+  // a = a + 1
+  UniqueFEIRExpr childFEIRExpr = childExpr->Emit2FEExpr(stmts);
+  UniqueFEIRExpr incDecExpr;
+  if (subPrimType == PTY_f32) {
+    incDecExpr = FEIRBuilder::CreateExprConstI32(1);
+  } else if(subPrimType == PTY_ptr) {
+   incDecExpr = std::make_unique<FEIRExprConst>(static_cast<ASTUnaryOperatorExpr*>(childExpr)->GetPointeeLen(),
+                                                PTY_ptr);
+  } else {
+    incDecExpr = std::make_unique<FEIRExprConst>((subType->GetKind() == kTypeScalar) ?
+        1 : static_cast<int64>(subType->GetSize()), subType->GetPrimType());
+  }
+  CHECK_FATAL(incDecExpr != nullptr, "incDecExpr is nullptr");
+  UniqueFEIRExpr selfAddExpr = FEIRBuilder::CreateExprMathBinary(OP_add, std::move(childFEIRExpr),
+                                                                 std::move(incDecExpr));
+  UniqueFEIRStmt selfAddStmt = FEIRBuilder::CreateStmtDAssign(std::move(selfVar), std::move(selfAddExpr));
+  stmts.emplace_back(std::move(selfAddStmt));
+
+  // return postinc_1
+  UniqueFEIRExpr readTempExpr = FEIRBuilder::CreateExprDRead(std::move(tempVar));
+  return readTempExpr;
+}
+
+UniqueFEIRExpr ASTUOPostDecExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
+  ASTExpr *childExpr = expr;
+  CHECK_FATAL(childExpr != nullptr, "childExpr is nullptr");
+  PrimType subPrimType = subType->GetPrimType();
+
+  // postdec_1 = a, selfVar attr need update
+  UniqueFEIRVar selfVar = FEIRBuilder::CreateVarName(refName, subPrimType, true, false);
+  UniqueFEIRVar selfMoveVar = selfVar->Clone();
+  UniqueFEIRVar tempVar = FEIRBuilder::CreateVarName(FEUtils::GetSequentialName("postinc_"), subPrimType);
+  UniqueFEIRVar tempMoveVar = tempVar->Clone();
+  UniqueFEIRExpr readSelfExpr = FEIRBuilder::CreateExprDRead(std::move(selfMoveVar));
+  UniqueFEIRStmt readSelfstmt = FEIRBuilder::CreateStmtDAssign(std::move(tempMoveVar),
+                                                               std::move(readSelfExpr));
+  stmts.emplace_back(std::move(readSelfstmt));
+
+  // a = a - 1
+  UniqueFEIRExpr childFEIRExpr = childExpr->Emit2FEExpr(stmts);
+  UniqueFEIRExpr incDecExpr;
+  if (subPrimType == PTY_f32) {
+    incDecExpr = FEIRBuilder::CreateExprConstI32(1);
+  } else if(subPrimType == PTY_ptr) {
+   incDecExpr = std::make_unique<FEIRExprConst>(static_cast<ASTUnaryOperatorExpr*>(childExpr)->GetPointeeLen(),
+                                                PTY_ptr);
+  } else {
+    incDecExpr = std::make_unique<FEIRExprConst>((subType->GetKind() == kTypeScalar) ?
+        1 : static_cast<int64>(subType->GetSize()), subType->GetPrimType());
+  }
+  CHECK_FATAL(incDecExpr != nullptr, "incDecExpr is nullptr");
+  UniqueFEIRExpr selfAddExpr = FEIRBuilder::CreateExprMathBinary(OP_sub, std::move(childFEIRExpr),
+                                                                 std::move(incDecExpr));
+  UniqueFEIRStmt selfAddStmt = FEIRBuilder::CreateStmtDAssign(std::move(selfVar), std::move(selfAddExpr));
+  stmts.emplace_back(std::move(selfAddStmt));
+
+  // return postdec_1
+  UniqueFEIRExpr readTempExpr = FEIRBuilder::CreateExprDRead(std::move(tempVar));
+  return readTempExpr;
+}
+
+UniqueFEIRExpr ASTUOPreIncExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
+  ASTExpr *childExpr = expr;
+  CHECK_FATAL(childExpr != nullptr, "childExpr is nullptr");
+  UniqueFEIRExpr childFEIRExpr = childExpr->Emit2FEExpr(stmts);
+  UniqueFEIRExpr incDecExpr;
+  PrimType subPrimType = subType->GetPrimType();
+  if (subPrimType == PTY_f32) {
+    incDecExpr = FEIRBuilder::CreateExprConstI32(1);
+  } else if(subPrimType == PTY_ptr) {
+   incDecExpr = std::make_unique<FEIRExprConst>(static_cast<ASTUnaryOperatorExpr*>(childExpr)->GetPointeeLen(),
+                                                PTY_ptr);
+  } else {
+    incDecExpr = std::make_unique<FEIRExprConst>((subType->GetKind() == kTypeScalar) ?
+        1 : static_cast<int64>(subType->GetSize()), subType->GetPrimType());
+  }
+  // a = a + 1, selfVar attr need update
+  UniqueFEIRExpr astUOPreIncExpr = FEIRBuilder::CreateExprMathBinary(OP_add, std::move(childFEIRExpr),
+                                                                     std::move(incDecExpr));
+  UniqueFEIRVar selfVar = FEIRBuilder::CreateVarName(refName, subPrimType, true, false);
+  UniqueFEIRVar selfMoveVar = selfVar->Clone();
+  UniqueFEIRStmt stmt = FEIRBuilder::CreateStmtDAssign(std::move(selfMoveVar), std::move(astUOPreIncExpr));
+  stmts.emplace_back(std::move(stmt));
+
+  // return a
+  UniqueFEIRExpr feirRefExpr = FEIRBuilder::CreateExprDRead(std::move(selfVar));
+  return feirRefExpr;
+}
+
+UniqueFEIRExpr ASTUOPreDecExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
+  ASTExpr *childExpr = expr;
+  CHECK_FATAL(childExpr != nullptr, "childExpr is nullptr");
+  UniqueFEIRExpr childFEIRExpr = childExpr->Emit2FEExpr(stmts);
+  UniqueFEIRExpr incDecExpr;
+  PrimType subPrimType = subType->GetPrimType();
+  if (subPrimType == PTY_f32) {
+    incDecExpr = FEIRBuilder::CreateExprConstI32(1);
+  } else if(subPrimType == PTY_ptr) {
+   incDecExpr = std::make_unique<FEIRExprConst>(static_cast<ASTUnaryOperatorExpr*>(childExpr)->GetPointeeLen(),
+                                                PTY_ptr);
+  } else {
+    incDecExpr = std::make_unique<FEIRExprConst>((subType->GetKind() == kTypeScalar) ?
+                                                  1 : static_cast<int64>(subType->GetSize()),
+                                                  subType->GetPrimType());
+  }
+  // a = a - 1, selfVar attr need update
+  UniqueFEIRExpr astUOPreIncExpr = FEIRBuilder::CreateExprMathBinary(OP_sub, std::move(childFEIRExpr),
+                                                                     std::move(incDecExpr));
+  UniqueFEIRVar selfVar = FEIRBuilder::CreateVarName(refName, subPrimType, true, false);
+  UniqueFEIRVar selfMoveVar = selfVar->Clone();
+  UniqueFEIRStmt stmt = FEIRBuilder::CreateStmtDAssign(std::move(selfMoveVar), std::move(astUOPreIncExpr));
+  stmts.emplace_back(std::move(stmt));
+
+  // return a
+  UniqueFEIRExpr feirRefExpr = FEIRBuilder::CreateExprDRead(std::move(selfVar));
+  return feirRefExpr;
+}
+
+UniqueFEIRExpr ASTUOAddrOfExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
+  ASTExpr *childExpr = expr;
+  CHECK_FATAL(childExpr != nullptr, "childExpr is nullptr");
+  UniqueFEIRExpr addrOfExpr;
+  if (childExpr->GetASTOp() == kASTOpRef) {
+    ASTDecl *var = static_cast<ASTDeclRefExpr*>(childExpr)->GetASTDecl();
+    PrimType primType = var->GetTypeDesc().front()->GetPrimType();
+    // var attr should update
+    UniqueFEIRVar addrOfVar = FEIRBuilder::CreateVarName(var->GetName(), primType, true, false);
+    addrOfExpr = FEIRBuilder::CreateExprAddrofVar(std::move(addrOfVar));
+  } else { // other potential expr should concern
+    UniqueFEIRExpr childFEIRExpr;
+    childFEIRExpr = childExpr->Emit2FEExpr(stmts);
+    addrOfExpr = FEIRBuilder::CreateExprMathUnary(OP_addrof, std::move(childFEIRExpr));
+  }
+  return addrOfExpr;
+}
+
+UniqueFEIRExpr ASTUODerefExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
+  ASTExpr *childExpr = expr;
+  CHECK_FATAL(childExpr != nullptr, "childExpr is nullptr");
+  UniqueFEIRExpr childFEIRExpr = childExpr->Emit2FEExpr(stmts);
+  UniqueFEIRType retType = FEIRBuilder::CreateType(uoType->GetPrimType(), uoType->GetNameStrIdx(), 0);
+  UniqueFEIRType ptrBaseType = FEIRBuilder::CreateType(subType->GetPrimType(), subType->GetNameStrIdx(), 0);
+  UniqueFEIRType ptrType = FEIRTypeHelper::CreatePointerType(std::move(ptrBaseType));
+  UniqueFEIRExpr derefExpr = FEIRBuilder::CreateExprIRead(std::move(retType), std::move(ptrType), 0,
+                                                          std::move(childFEIRExpr));
+  return derefExpr;
+}
+
+UniqueFEIRExpr ASTUORealExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTUONotExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTUOImagExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTUOLNotExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTUOExtensionExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTUOPostIncExpr::Emit2FEExprImpl() const {
-  CHECK_FATAL(false, "NIY");
-  return nullptr;
-}
-
-UniqueFEIRExpr ASTUOPostDecExpr::Emit2FEExprImpl() const {
-  CHECK_FATAL(false, "NIY");
-  return nullptr;
-}
-
-UniqueFEIRExpr ASTUOPreIncExpr::Emit2FEExprImpl() const {
-  CHECK_FATAL(false, "NIY");
-  return nullptr;
-}
-
-UniqueFEIRExpr ASTUOPreDecExpr::Emit2FEExprImpl() const {
-  CHECK_FATAL(false, "NIY");
-  return nullptr;
-}
-
-UniqueFEIRExpr ASTUOAddrOfExpr::Emit2FEExprImpl() const {
-  CHECK_FATAL(false, "NIY");
-  return nullptr;
-}
-
-UniqueFEIRExpr ASTUODerefExpr::Emit2FEExprImpl() const {
-  CHECK_FATAL(false, "NIY");
-  return nullptr;
-}
-
-UniqueFEIRExpr ASTUOPlusExpr::Emit2FEExprImpl() const {
-  CHECK_FATAL(false, "NIY");
-  return nullptr;
-}
-
-UniqueFEIRExpr ASTUORealExpr::Emit2FEExprImpl() const {
-  CHECK_FATAL(false, "NIY");
-  return nullptr;
-}
-
-UniqueFEIRExpr ASTUOImagExpr::Emit2FEExprImpl() const {
-  CHECK_FATAL(false, "NIY");
-  return nullptr;
-}
-
-UniqueFEIRExpr ASTUOExtensionExpr::Emit2FEExprImpl() const {
-  CHECK_FATAL(false, "NIY");
-  return nullptr;
-}
-
-UniqueFEIRExpr ASTUOCoawaitExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTUOCoawaitExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
 // ---------- ASTPredefinedExpr ----------
-UniqueFEIRExpr ASTPredefinedExpr::Emit2FEExprImpl() const {
-  CHECK_FATAL(false, "NIY");
-  return nullptr;
+UniqueFEIRExpr ASTPredefinedExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
+  return child->Emit2FEExpr(stmts);
 }
 
 void ASTPredefinedExpr::SetASTExpr(ASTExpr *astExpr) {
@@ -134,9 +281,8 @@ void ASTPredefinedExpr::SetASTExpr(ASTExpr *astExpr) {
 }
 
 // ---------- ASTOpaqueValueExpr ----------
-UniqueFEIRExpr ASTOpaqueValueExpr::Emit2FEExprImpl() const {
-  CHECK_FATAL(false, "NIY");
-  return nullptr;
+UniqueFEIRExpr ASTOpaqueValueExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
+  return child->Emit2FEExpr(stmts);
 }
 
 void ASTOpaqueValueExpr::SetASTExpr(ASTExpr *astExpr) {
@@ -144,9 +290,13 @@ void ASTOpaqueValueExpr::SetASTExpr(ASTExpr *astExpr) {
 }
 
 // ---------- ASTBinaryConditionalOperator ----------
-UniqueFEIRExpr ASTBinaryConditionalOperator::Emit2FEExprImpl() const {
-  CHECK_FATAL(false, "NIY");
-  return nullptr;
+UniqueFEIRExpr ASTBinaryConditionalOperator::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
+  UniqueFEIRExpr cFEIRExpr = cExpr->Emit2FEExpr(stmts);
+  UniqueFEIRExpr cFEIRExpr0 = cFEIRExpr->Clone();
+  UniqueFEIRExpr cFEIRExpr1 = cFEIRExpr->Clone();
+  UniqueFEIRExpr fFEIRExpr = fExpr->Emit2FEExpr(stmts);
+  return FEIRBuilder::CreateExprTernary(OP_select, std::move(cFEIRExpr0),
+                                        std::move(cFEIRExpr1), std::move(fFEIRExpr));
 }
 
 void ASTBinaryConditionalOperator::SetRetType(MIRType *returnType) {
@@ -160,7 +310,7 @@ void ASTBinaryConditionalOperator::SetFalseExpr(ASTExpr *falseExpr) {
 }
 
 // ---------- ASTNoInitExpr ----------
-UniqueFEIRExpr ASTNoInitExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTNoInitExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
@@ -170,7 +320,7 @@ void ASTNoInitExpr::SetNoInitType(MIRType *type) {
 }
 
 // ---------- ASTCompoundLiteralExpr ----------
-UniqueFEIRExpr ASTCompoundLiteralExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTCompoundLiteralExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
@@ -192,13 +342,13 @@ void ASTOffsetOfExpr::SetFieldName(std::string fName){
   fieldName = fName;
 }
 
-UniqueFEIRExpr ASTOffsetOfExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTOffsetOfExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
 // ---------- ASTInitListExpr ----------
-UniqueFEIRExpr ASTInitListExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTInitListExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
@@ -218,250 +368,255 @@ std::list<UniqueFEIRStmt> ASTBinaryOperatorStmt::Emit2FEStmtImpl() const {
   return stmts;
 }
 
-UniqueFEIRExpr ASTImplicitValueInitExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTImplicitValueInitExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTStringLiteral::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTStringLiteral::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   UniqueFEIRExpr expr = std::make_unique<FEIRExprAddrof>(codeUnits);
   CHECK_NULL_FATAL(expr);
   return expr;
 }
 
-UniqueFEIRExpr ASTArraySubscriptExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTArraySubscriptExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTExprUnaryExprOrTypeTraitExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTExprUnaryExprOrTypeTraitExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTMemberExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTMemberExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTDesignatedInitUpdateExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTDesignatedInitUpdateExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBOAddExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBOAddExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBOMulExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBOMulExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBODivExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBODivExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBORemExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBORemExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBOSubExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBOSubExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBOShlExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBOShlExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBOShrExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBOShrExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBOLTExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBOLTExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBOGTExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBOGTExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBOLEExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBOLEExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBOGEExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBOGEExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBOEQExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBOEQExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBONEExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBONEExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBOAndExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBOAndExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBOXorExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBOXorExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBOOrExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBOOrExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBOLAndExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBOLAndExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBOLOrExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBOLOrExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBOEqExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBOEqExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBOAssign::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBOAssign::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBOComma::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBOComma::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBOPtrMemD::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBOPtrMemD::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
-UniqueFEIRExpr ASTBOPtrMemI::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTBOPtrMemI::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
 // ---------- ASTParenExpr ----------
-UniqueFEIRExpr ASTParenExpr::Emit2FEExprImpl() const {
-  CHECK_FATAL(false, "NIY");
-  return nullptr;
+UniqueFEIRExpr ASTParenExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
+  return child->Emit2FEExpr(stmts);
 }
 
 // ---------- ASTIntegerLiteral ----------
-UniqueFEIRExpr ASTIntegerLiteral::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTIntegerLiteral::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   UniqueFEIRExpr constExpr = std::make_unique<FEIRExprConst>(val, type);
   return constExpr;
 }
 
 // ---------- ASTFloatingLiteral ----------
-UniqueFEIRExpr ASTFloatingLiteral::Emit2FEExprImpl() const {
-  CHECK_FATAL(false, "NIY");
-  return nullptr;
+UniqueFEIRExpr ASTFloatingLiteral::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
+  UniqueFEIRExpr expr;
+  if (isFloat) {
+    expr = FEIRBuilder::CreateExprConstF32(static_cast<float>(val));
+  } else {
+    expr = FEIRBuilder::CreateExprConstF64(val);
+  }
+  CHECK_NULL_FATAL(expr);
+  return expr;
 }
 
 // ---------- ASTCharacterLiteral ----------
-UniqueFEIRExpr ASTCharacterLiteral::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTCharacterLiteral::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
 // ---------- ASTConditionalOperator ----------
-UniqueFEIRExpr ASTConditionalOperator::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTConditionalOperator::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
 // ---------- ASTConstantExpr ----------
-UniqueFEIRExpr ASTConstantExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTConstantExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
 // ---------- ASTImaginaryLiteral ----------
-UniqueFEIRExpr ASTImaginaryLiteral::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTImaginaryLiteral::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
 // ---------- ASTCompoundAssignOperatorExpr ----------
-UniqueFEIRExpr ASTCompoundAssignOperatorExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTCompoundAssignOperatorExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
 // ---------- ASTVAArgExpr ----------
-UniqueFEIRExpr ASTVAArgExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTVAArgExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
 // ---------- ASTCStyleCastExpr ----------
-UniqueFEIRExpr ASTCStyleCastExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTCStyleCastExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NYI");
   return nullptr;
 }
 
 // ---------- ASTArrayInitLoopExpr ----------
-UniqueFEIRExpr ASTArrayInitLoopExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTArrayInitLoopExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
 // ---------- ASTArrayInitIndexExpr ----------
-UniqueFEIRExpr ASTArrayInitIndexExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTArrayInitIndexExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
 // ---------- ASTExprWithCleanups ----------
-UniqueFEIRExpr ASTExprWithCleanups::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTExprWithCleanups::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
 // ---------- ASTMaterializeTemporaryExpr ----------
-UniqueFEIRExpr ASTMaterializeTemporaryExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTMaterializeTemporaryExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
 // ---------- ASTSubstNonTypeTemplateParmExpr ----------
-UniqueFEIRExpr ASTSubstNonTypeTemplateParmExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTSubstNonTypeTemplateParmExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
 // ---------- ASTDependentScopeDeclRefExpr ----------
-UniqueFEIRExpr ASTDependentScopeDeclRefExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTDependentScopeDeclRefExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }
 
 // ---------- ASTAtomicExpr ----------
-UniqueFEIRExpr ASTAtomicExpr::Emit2FEExprImpl() const {
+UniqueFEIRExpr ASTAtomicExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   CHECK_FATAL(false, "NIY");
   return nullptr;
 }

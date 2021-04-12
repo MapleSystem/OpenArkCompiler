@@ -44,13 +44,13 @@ std::list<UniqueFEIRStmt> ASTCompoundStmt::Emit2FEStmtImpl() const {
 std::list<UniqueFEIRStmt> ASTReturnStmt::Emit2FEStmtImpl() const {
   std::list<UniqueFEIRStmt> stmts;
   auto astExpr = exprs.front();
-  UniqueFEIRExpr feExpr = astExpr->Emit2FEExpr();
+  UniqueFEIRExpr feExpr = astExpr->Emit2FEExpr(stmts);
   UniqueFEIRStmt stmt = std::make_unique<FEIRStmtReturn>(std::move(feExpr));
   stmts.emplace_back(std::move(stmt));
   return stmts;
 }
 
-void ASTRefExpr::SetASTDecl(ASTDecl *astDecl) {
+void ASTDeclRefExpr::SetASTDecl(ASTDecl *astDecl) {
   var = astDecl;
 }
 
@@ -92,8 +92,9 @@ std::list<UniqueFEIRStmt> ASTContinueStmt::Emit2FEStmtImpl() const {
 
 // ---------- ASTUnaryOperatorStmt ----------
 std::list<UniqueFEIRStmt> ASTUnaryOperatorStmt::Emit2FEStmtImpl() const {
-  CHECK_FATAL(false, "NYI");
   std::list<UniqueFEIRStmt> stmts;
+  auto astExpr = exprs.front();
+  astExpr->Emit2FEExpr(stmts);
   return stmts;
 }
 
@@ -152,8 +153,8 @@ std::list<UniqueFEIRStmt> ASTCallExprStmt::Emit2FEStmtImpl() const {
       *info, OP_callassigned, nullptr, false);
   // args
   std::vector<ASTExpr*> argsExprs = callExpr->GetArgsExpr();
-  for (uint32 i = 0; i < argsExprs.size(); ++i) {
-    UniqueFEIRExpr expr = argsExprs[i]->Emit2FEExpr();
+  for (int32 i = argsExprs.size() - 1; i >= 0; --i) {
+    UniqueFEIRExpr expr = argsExprs[i]->Emit2FEExpr(stmts);
     callStmt->AddExprArgReverse(std::move(expr));
   }
   // return

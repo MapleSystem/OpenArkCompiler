@@ -23,10 +23,14 @@ class ASTExpr {
  public:
   explicit ASTExpr(ASTOp o) : op(o) {}
   virtual ~ASTExpr() = default;
-  UniqueFEIRExpr Emit2FEExpr() const;
+  UniqueFEIRExpr Emit2FEExpr(std::list<UniqueFEIRStmt> &stmts) const;
+
+  ASTOp GetASTOp() {
+    return op;
+  }
 
  protected:
-  virtual UniqueFEIRExpr Emit2FEExprImpl() const = 0;
+  virtual UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const = 0;
   ASTOp op;
 };
 
@@ -44,14 +48,14 @@ class ASTImplicitCastExpr : public ASTExpr {
   }
 
  protected:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   ASTExpr *child = nullptr;
 };
 
-class ASTRefExpr : public ASTExpr {
+class ASTDeclRefExpr : public ASTExpr {
  public:
-  ASTRefExpr() : ASTExpr(kASTOpRef) {}
-  ~ASTRefExpr() = default;
+  ASTDeclRefExpr() : ASTExpr(kASTOpRef) {}
+  ~ASTDeclRefExpr() = default;
   void SetASTDecl(ASTDecl *astDecl);
 
   ASTDecl *GetASTDecl() const {
@@ -59,7 +63,7 @@ class ASTRefExpr : public ASTExpr {
   }
 
  protected:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   ASTDecl *var = nullptr;
 };
 
@@ -68,9 +72,41 @@ class ASTUnaryOperatorExpr : public ASTExpr {
   explicit ASTUnaryOperatorExpr(ASTOp o) : ASTExpr(o) {}
   ~ASTUnaryOperatorExpr() = default;
   void SetUOExpr(ASTExpr*);
+  void SetSubType(MIRType *type);
+  void SetRefName(std::string name) {
+    refName = name;
+  }
+
+  std::string GetRefName() {
+    return refName;
+  }
+
+  MIRType *GetMIRType() {
+    return subType;
+  }
+
+  MIRType *SetUOType(MIRType *type) {
+    return uoType = type;
+  }
+
+  MIRType *GetUOType() {
+    return uoType;
+  }
+
+  void SetPointeeLen(int64 len) {
+    pointeeLen = len;
+  }
+
+  int64 GetPointeeLen() {
+    return pointeeLen;
+  }
 
  protected:
   ASTExpr *expr = nullptr;
+  MIRType *subType;
+  MIRType *uoType;
+  std::string refName;
+  int64 pointeeLen;
 };
 
 class ASTUOMinusExpr: public ASTUnaryOperatorExpr {
@@ -79,7 +115,7 @@ class ASTUOMinusExpr: public ASTUnaryOperatorExpr {
   ~ASTUOMinusExpr() = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTUONotExpr: public ASTUnaryOperatorExpr {
@@ -88,7 +124,7 @@ class ASTUONotExpr: public ASTUnaryOperatorExpr {
   ~ASTUONotExpr() = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTUOLNotExpr: public ASTUnaryOperatorExpr {
@@ -97,7 +133,7 @@ class ASTUOLNotExpr: public ASTUnaryOperatorExpr {
   ~ASTUOLNotExpr() = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTUOPostIncExpr: public ASTUnaryOperatorExpr {
@@ -106,7 +142,7 @@ class ASTUOPostIncExpr: public ASTUnaryOperatorExpr {
   ~ASTUOPostIncExpr() = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTUOPostDecExpr: public ASTUnaryOperatorExpr {
@@ -115,7 +151,7 @@ class ASTUOPostDecExpr: public ASTUnaryOperatorExpr {
   ~ASTUOPostDecExpr() = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTUOPreIncExpr: public ASTUnaryOperatorExpr {
@@ -124,7 +160,7 @@ class ASTUOPreIncExpr: public ASTUnaryOperatorExpr {
   ~ASTUOPreIncExpr() = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTUOPreDecExpr: public ASTUnaryOperatorExpr {
@@ -133,7 +169,7 @@ class ASTUOPreDecExpr: public ASTUnaryOperatorExpr {
   ~ASTUOPreDecExpr() = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTUOAddrOfExpr: public ASTUnaryOperatorExpr {
@@ -142,7 +178,7 @@ class ASTUOAddrOfExpr: public ASTUnaryOperatorExpr {
   ~ASTUOAddrOfExpr() = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTUODerefExpr: public ASTUnaryOperatorExpr {
@@ -151,7 +187,7 @@ class ASTUODerefExpr: public ASTUnaryOperatorExpr {
   ~ASTUODerefExpr() = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTUOPlusExpr: public ASTUnaryOperatorExpr {
@@ -160,7 +196,7 @@ class ASTUOPlusExpr: public ASTUnaryOperatorExpr {
   ~ASTUOPlusExpr() = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTUORealExpr: public ASTUnaryOperatorExpr {
@@ -169,7 +205,7 @@ class ASTUORealExpr: public ASTUnaryOperatorExpr {
   ~ASTUORealExpr() = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTUOImagExpr: public ASTUnaryOperatorExpr {
@@ -178,7 +214,7 @@ class ASTUOImagExpr: public ASTUnaryOperatorExpr {
   ~ASTUOImagExpr() = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTUOExtensionExpr: public ASTUnaryOperatorExpr {
@@ -187,7 +223,7 @@ class ASTUOExtensionExpr: public ASTUnaryOperatorExpr {
   ~ASTUOExtensionExpr() = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTUOCoawaitExpr: public ASTUnaryOperatorExpr {
@@ -196,7 +232,7 @@ class ASTUOCoawaitExpr: public ASTUnaryOperatorExpr {
   ~ASTUOCoawaitExpr() = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTPredefinedExpr : public ASTExpr {
@@ -206,7 +242,7 @@ class ASTPredefinedExpr : public ASTExpr {
   void SetASTExpr(ASTExpr*);
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   ASTExpr *child;
 };
 
@@ -217,7 +253,7 @@ class ASTOpaqueValueExpr : public ASTExpr {
   void SetASTExpr(ASTExpr*);
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   ASTExpr *child;
 };
 
@@ -228,7 +264,7 @@ class ASTNoInitExpr : public ASTExpr {
   void SetNoInitType(MIRType *type);
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   MIRType *noInitType;
 };
 
@@ -240,7 +276,7 @@ class ASTCompoundLiteralExpr : public ASTExpr {
   void SetASTExpr(ASTExpr*);
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   ASTExpr *child = nullptr;
   MIRType *compoundLiteralType;
 };
@@ -253,7 +289,7 @@ class ASTOffsetOfExpr : public ASTExpr {
   void SetFieldName(std::string);
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   MIRType *structType;
   std::string fieldName;
 };
@@ -266,7 +302,7 @@ class ASTInitListExpr : public ASTExpr {
   void SetInitListType(MIRType *type);
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   std::vector<ASTExpr*> fillers;
   MIRType *initListType;
 };
@@ -280,7 +316,7 @@ class ASTBinaryConditionalOperator : public ASTExpr {
   void SetFalseExpr(ASTExpr*);
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   MIRType *retType;
   ASTExpr *cExpr = nullptr;
   ASTExpr *fExpr = nullptr;
@@ -319,7 +355,7 @@ class ASTImplicitValueInitExpr : public ASTExpr {
   }
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   MIRType *type;
 };
 
@@ -349,7 +385,7 @@ class ASTStringLiteral : public ASTExpr {
   }
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   MIRType *type;
   size_t length;
   std::vector<uint32_t> codeUnits;
@@ -369,7 +405,7 @@ class ASTArraySubscriptExpr : public ASTExpr {
   }
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   ASTExpr *baseExpr;
   ASTExpr *idxExpr;
 };
@@ -392,7 +428,7 @@ class ASTExprUnaryExprOrTypeTraitExpr : public ASTExpr {
   }
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   bool isType;
   MIRType *argType;
   ASTExpr *argExpr;
@@ -416,7 +452,7 @@ class ASTMemberExpr : public ASTExpr {
   }
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   ASTExpr *baseExpr;
   std::string memberName;
   bool isArrow;
@@ -436,7 +472,7 @@ class ASTDesignatedInitUpdateExpr : public ASTExpr {
   }
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   ASTExpr *baseExpr;
   ASTExpr *updaterExpr;
 };
@@ -447,7 +483,7 @@ class ASTBOAddExpr : public ASTBinaryOperatorExpr {
   ~ASTBOAddExpr() override = default;
 
  protected:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTBOMulExpr : public ASTBinaryOperatorExpr {
@@ -456,7 +492,7 @@ class ASTBOMulExpr : public ASTBinaryOperatorExpr {
   ~ASTBOMulExpr() override = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTBODivExpr : public ASTBinaryOperatorExpr {
@@ -465,7 +501,7 @@ class ASTBODivExpr : public ASTBinaryOperatorExpr {
   ~ASTBODivExpr() override = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTBORemExpr : public ASTBinaryOperatorExpr {
@@ -474,7 +510,7 @@ class ASTBORemExpr : public ASTBinaryOperatorExpr {
   ~ASTBORemExpr() override = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTBOSubExpr : public ASTBinaryOperatorExpr {
@@ -483,7 +519,7 @@ class ASTBOSubExpr : public ASTBinaryOperatorExpr {
   ~ASTBOSubExpr() override = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTBOShlExpr : public ASTBinaryOperatorExpr {
@@ -492,7 +528,7 @@ class ASTBOShlExpr : public ASTBinaryOperatorExpr {
   ~ASTBOShlExpr() override = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTBOShrExpr : public ASTBinaryOperatorExpr {
@@ -501,7 +537,7 @@ class ASTBOShrExpr : public ASTBinaryOperatorExpr {
   ~ASTBOShrExpr() override = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTBOLTExpr : public ASTBinaryOperatorExpr {
@@ -510,7 +546,7 @@ class ASTBOLTExpr : public ASTBinaryOperatorExpr {
   ~ASTBOLTExpr() override = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTBOGTExpr : public ASTBinaryOperatorExpr {
@@ -519,7 +555,7 @@ class ASTBOGTExpr : public ASTBinaryOperatorExpr {
   ~ASTBOGTExpr() override = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTBOLEExpr : public ASTBinaryOperatorExpr {
@@ -528,7 +564,7 @@ class ASTBOLEExpr : public ASTBinaryOperatorExpr {
   ~ASTBOLEExpr() override = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTBOGEExpr : public ASTBinaryOperatorExpr {
@@ -537,7 +573,7 @@ class ASTBOGEExpr : public ASTBinaryOperatorExpr {
   ~ASTBOGEExpr() override = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTBOEQExpr : public ASTBinaryOperatorExpr {
@@ -546,7 +582,7 @@ class ASTBOEQExpr : public ASTBinaryOperatorExpr {
   ~ASTBOEQExpr() override = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTBONEExpr : public ASTBinaryOperatorExpr {
@@ -555,7 +591,7 @@ class ASTBONEExpr : public ASTBinaryOperatorExpr {
   ~ASTBONEExpr() override = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTBOAndExpr : public ASTBinaryOperatorExpr {
@@ -564,7 +600,7 @@ class ASTBOAndExpr : public ASTBinaryOperatorExpr {
   ~ASTBOAndExpr() override = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTBOXorExpr : public ASTBinaryOperatorExpr {
@@ -573,7 +609,7 @@ class ASTBOXorExpr : public ASTBinaryOperatorExpr {
   ~ASTBOXorExpr() override = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTBOOrExpr : public ASTBinaryOperatorExpr {
@@ -582,7 +618,7 @@ class ASTBOOrExpr : public ASTBinaryOperatorExpr {
   ~ASTBOOrExpr() override = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTBOLAndExpr : public ASTBinaryOperatorExpr {
@@ -591,7 +627,7 @@ class ASTBOLAndExpr : public ASTBinaryOperatorExpr {
   ~ASTBOLAndExpr() override = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTBOLOrExpr : public ASTBinaryOperatorExpr {
@@ -600,7 +636,7 @@ class ASTBOLOrExpr : public ASTBinaryOperatorExpr {
   ~ASTBOLOrExpr() override = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTBOEqExpr : public ASTBinaryOperatorExpr {
@@ -609,7 +645,7 @@ class ASTBOEqExpr : public ASTBinaryOperatorExpr {
   ~ASTBOEqExpr() override = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTBOAssign : public ASTBinaryOperatorExpr {
@@ -619,7 +655,7 @@ class ASTBOAssign : public ASTBinaryOperatorExpr {
   ~ASTBOAssign() override = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTBOComma : public ASTBinaryOperatorExpr {
@@ -628,7 +664,7 @@ class ASTBOComma : public ASTBinaryOperatorExpr {
   ~ASTBOComma() override = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTBOPtrMemD : public ASTBinaryOperatorExpr {
@@ -637,7 +673,7 @@ class ASTBOPtrMemD : public ASTBinaryOperatorExpr {
   ~ASTBOPtrMemD() override = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTBOPtrMemI : public ASTBinaryOperatorExpr {
@@ -646,7 +682,7 @@ class ASTBOPtrMemI : public ASTBinaryOperatorExpr {
   ~ASTBOPtrMemI() override = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTCallExpr : public ASTExpr {
@@ -686,7 +722,7 @@ class ASTCallExpr : public ASTExpr {
   }
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 
   std::vector<ASTExpr*> args;
   ASTExpr *calleeExpr = nullptr;
@@ -704,7 +740,7 @@ class ASTParenExpr : public ASTExpr {
   }
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   ASTExpr *child = nullptr;
 };
 
@@ -726,7 +762,7 @@ class ASTIntegerLiteral : public ASTExpr {
   }
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 
   uint64 val;
   PrimType type;
@@ -745,9 +781,18 @@ class ASTFloatingLiteral : public ASTExpr {
     val = valIn;
   }
 
+  void SetFlag(bool tf) {
+    isFloat = tf;
+  }
+
+  bool GetFlag() {
+    return isFloat;
+  }
+
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   double val;
+  bool isFloat;
 };
 
 class ASTCharacterLiteral : public ASTExpr {
@@ -756,7 +801,7 @@ class ASTCharacterLiteral : public ASTExpr {
   ~ASTCharacterLiteral() = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTVAArgExpr : public ASTExpr {
@@ -770,7 +815,7 @@ class ASTVAArgExpr : public ASTExpr {
 
  private:
   ASTExpr *child = nullptr;
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTCompoundAssignOperatorExpr : public ASTBinaryOperatorExpr {
@@ -779,7 +824,7 @@ class ASTCompoundAssignOperatorExpr : public ASTBinaryOperatorExpr {
   ~ASTCompoundAssignOperatorExpr() override = default;
 
  protected:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 
@@ -793,7 +838,7 @@ class ASTConstantExpr : public ASTExpr {
 
  private:
   ASTExpr *child = nullptr;
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTImaginaryLiteral : public ASTExpr {
@@ -806,7 +851,7 @@ class ASTImaginaryLiteral : public ASTExpr {
 
  private:
   ASTExpr *child = nullptr;
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTConditionalOperator : public ASTExpr {
@@ -827,7 +872,7 @@ class ASTConditionalOperator : public ASTExpr {
   }
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   ASTExpr *condExpr = nullptr;
   ASTExpr *trueExpr = nullptr;
   ASTExpr *falseExpr = nullptr;
@@ -859,7 +904,7 @@ class ASTCStyleCastExpr : public ASTExpr {
   }
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   ASTExpr *child = nullptr;
   MIRType *srcType;
   MIRType *destType;
@@ -879,7 +924,7 @@ class ASTArrayInitLoopExpr : public ASTExpr {
   }
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   ASTExpr* commonExpr = nullptr;
 };
 
@@ -905,7 +950,7 @@ class ASTArrayInitIndexExpr : public ASTExpr {
   }
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   MIRType *primType;
   std::string value;
 };
@@ -924,7 +969,7 @@ class ASTExprWithCleanups : public ASTExpr {
   }
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   ASTExpr *subExpr = nullptr;
 };
 
@@ -934,7 +979,7 @@ class ASTMaterializeTemporaryExpr : public ASTExpr {
   ~ASTMaterializeTemporaryExpr() = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTSubstNonTypeTemplateParmExpr : public ASTExpr {
@@ -943,7 +988,7 @@ class ASTSubstNonTypeTemplateParmExpr : public ASTExpr {
   ~ASTSubstNonTypeTemplateParmExpr() = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTDependentScopeDeclRefExpr : public ASTExpr {
@@ -952,7 +997,7 @@ class ASTDependentScopeDeclRefExpr : public ASTExpr {
   ~ASTDependentScopeDeclRefExpr() = default;
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
 
 class ASTAtomicExpr : public ASTExpr {
@@ -985,7 +1030,7 @@ class ASTAtomicExpr : public ASTExpr {
   }
 
  private:
-  UniqueFEIRExpr Emit2FEExprImpl() const override;
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   MIRType *type;
   MIRType *refType;
   ASTAtomicOp atomicOp;
