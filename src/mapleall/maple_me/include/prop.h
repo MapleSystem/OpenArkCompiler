@@ -38,6 +38,7 @@ class Prop {
   Prop(IRMap&, Dominance&, MemPool&, uint32 bbvecsize, const PropConfig &config);
   virtual ~Prop() = default;
 
+  MeExpr *CheckTruncation(MeExpr *lhs, MeExpr *rhs) const;
   MeExpr &PropVar(VarMeExpr &varmeExpr, bool atParm, bool checkPhi) const;
   MeExpr &PropReg(RegMeExpr &regmeExpr, bool atParm) const;
   MeExpr &PropIvar(IvarMeExpr &ivarMeExpr) const;
