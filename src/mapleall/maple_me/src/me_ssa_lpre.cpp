@@ -128,22 +128,6 @@ MeExpr *MeSSALPre::PhiOpndFromRes(MeRealOcc &realZ, size_t j) const {
   return (retVar != nullptr) ? retVar : meExprZ;
 }
 
-// accumulate the BBs that are in the iterated dominance frontiers of bb in
-// the set dfSet, visiting each BB only once
-void MeSSALPre::GetIterDomFrontier(const BB &bb, MapleSet<uint32> &dfSet, std::vector<bool> &visitedMap) const {
-  CHECK_FATAL(bb.GetBBId() < visitedMap.size(), "index out of range in MeSSALPre::GetIterDomFrontier");
-  if (visitedMap[bb.GetBBId()]) {
-    return;
-  }
-  visitedMap[bb.GetBBId()] = true;
-  CHECK_FATAL(bb.GetBBId() < dom->GetDomFrontierSize(), "index out of range in MeSSALPre::GetIterDomFrontier");
-  for (BBId frontierBBId : dom->GetDomFrontier(bb.GetBBId())) {
-    (void)dfSet.insert(dom->GetDtDfnItem(frontierBBId));
-    BB *frontierBB = GetBB(frontierBBId);
-    GetIterDomFrontier(*frontierBB, dfSet, visitedMap);
-  }
-}
-
 void MeSSALPre::ComputeVarAndDfPhis() {
   varPhiDfns.clear();
   dfPhiDfns.clear();
@@ -151,10 +135,9 @@ void MeSSALPre::ComputeVarAndDfPhis() {
   const MapleVector<MeRealOcc*> &realOccList = workCand->GetRealOccs();
   CHECK_FATAL(!dom->IsBBVecEmpty(), "size to be allocated is 0");
   for (auto it = realOccList.begin(); it != realOccList.end(); ++it) {
-    std::vector<bool> visitedMap(dom->GetBBVecSize(), false);
     MeRealOcc *realOcc = *it;
     BB *defBB = realOcc->GetBB();
-    GetIterDomFrontier(*defBB, dfPhiDfns, visitedMap);
+    GetIterDomFrontier(defBB, &dfPhiDfns);
     MeExpr *meExpr = realOcc->GetMeExpr();
     if (meExpr->GetMeOp() == kMeOpVar) {
       SetVarPhis(*meExpr);
