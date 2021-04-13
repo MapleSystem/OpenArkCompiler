@@ -360,31 +360,14 @@ void MeSSUPre::Rename() {
 }
 
 // ================ Step 1: insert lambdas ================
-void MeSSUPre::GetIterPdomFrontier(const BB &bb, MapleSet<uint32> &pdfSet, std::vector<bool> &visitedMap) {
-  CHECK_FATAL(bb.GetBBId() < visitedMap.size(), "index out of range in MeSSUPre::GetIterPdomFrontier");
-  if (visitedMap[bb.GetBBId()]) {
-    return;
-  }
-  CHECK_FATAL(!visitedMap.empty(), "visitedMap in MeSSUPre::GetIterPdomFrontier is empty");
-  visitedMap[bb.GetBBId()] = true;
-  for (BBId frontierBBId : dom->GetPdomFrontierItem(bb.GetBBId())) {
-    (void)pdfSet.insert(dom->GetPdtDfnItem(frontierBBId));
-  }
-  CHECK_NULL_FATAL(func);
-  for (BBId frontierBBId : dom->GetPdomFrontierItem(bb.GetBBId())) {
-    BB *frontierBB = func->GetAllBBs().at(frontierBBId);
-    GetIterPdomFrontier(*frontierBB, pdfSet, visitedMap);
-  }
-}
 
 // form lambda occ based on the real occ in workCand->realOccs; result is
 // stored in lambdaDfns
 void MeSSUPre::FormLambdas() {
   lambdaDfns.clear();
-  std::vector<bool> visitedMap(func->NumBBs(), false);
   CHECK_NULL_FATAL(workCand);
   for (SOcc *occ : workCand->GetRealOccs()) {
-    GetIterPdomFrontier(occ->GetBB(), lambdaDfns, visitedMap);
+    GetIterPdomFrontier(&occ->GetBB(), &lambdaDfns);
   }
 }
 

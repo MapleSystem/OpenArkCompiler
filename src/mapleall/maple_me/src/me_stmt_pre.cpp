@@ -41,19 +41,6 @@ static bool IsParaAndRetTypeRefOrPtr(const CallMeStmt &stmt) {
   return false;
 }
 
-void MeStmtPre::GetIterDomFrontier(const BB &bb, MapleSet<uint32> &dfSet, std::vector<bool> &visitedMap) const {
-  CHECK_FATAL(bb.GetBBId() < visitedMap.size(), "index out of range in MeStmtPre::GetIterDomFrontier");
-  if (visitedMap[bb.GetBBId()]) {
-    return;
-  }
-  visitedMap[bb.GetBBId()] = true;
-  for (BBId frontierBBId : dom->GetDomFrontier(bb.GetBBId())) {
-    (void)dfSet.insert(dom->GetDtDfnItem(frontierBBId));
-    BB *frontierBB = GetBB(frontierBBId);
-    GetIterDomFrontier(*frontierBB, dfSet, visitedMap);
-  }
-}
-
 void MeStmtPre::CodeMotion() {
   for (MeOccur *occ : allOccs) {
     switch (occ->GetOccType()) {
@@ -508,8 +495,7 @@ void MeStmtPre::ComputeVarAndDfPhis() {
       continue;
     }
     BB *defBB = realOcc->GetMeStmt()->GetBB();
-    std::vector<bool> visitedMap(dom->GetBBVecSize(), false);
-    GetIterDomFrontier(*defBB, dfPhiDfns, visitedMap);
+    GetIterDomFrontier(defBB, &dfPhiDfns);
     MeStmt *stmt = realOcc->GetMeStmt();
     switch (stmt->GetOp()) {
       case OP_assertnonnull: {

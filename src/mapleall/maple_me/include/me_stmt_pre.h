@@ -32,7 +32,6 @@ class MeStmtPre : public SSAEPre {
         useOccurMap(std::less<OStIdx>(), ssaPreAllocator.Adapter()) {}
 
   virtual ~MeStmtPre() = default;
-  void GetIterDomFrontier(const BB &bb, MapleSet<uint32> &dfSet, std::vector<bool> &visitedMap) const override;
   bool ScreenPhiBB(BBId) const override {
     return true;
   }
