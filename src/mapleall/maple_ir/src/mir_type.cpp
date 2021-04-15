@@ -57,6 +57,22 @@ PrimType GetRegPrimType(PrimType primType) {
   }
 }
 
+PrimType GetReg64PrimType(PrimType primType) {
+  switch (primType) {
+    case PTY_i8:
+    case PTY_i16:
+    case PTY_i32:
+      return PTY_i64;
+    case PTY_u1:
+    case PTY_u8:
+    case PTY_u16:
+    case PTY_u32:
+      return PTY_u64;
+    default:
+      return primType;
+  }
+}
+
 bool VerifyPrimType(PrimType primType1, PrimType primType2) {
   switch (primType1) {
     case PTY_u1:

@@ -51,6 +51,7 @@ inline uint32 GetPrimTypeBitSize(PrimType primType) {
 #endif  // MIR_FEATURE_FULL
 // return the same type with size increased to register size
 PrimType GetRegPrimType(PrimType primType);
+PrimType GetReg64PrimType(PrimType primType);
 PrimType GetDynType(PrimType primType);
 PrimType GetNonDynType(PrimType primType);
 
