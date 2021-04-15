@@ -339,6 +339,20 @@ class FEIRExpr {
 using UniqueFEIRExpr = std::unique_ptr<FEIRExpr>;
 
 // ---------- FEIRExprConst ----------
+union ConstExprValue {
+  bool b;
+  uint8 u8;
+  int8 i8;
+  uint16 u16;
+  int16 i16;
+  uint32 u32;
+  int32 i32;
+  float f32;
+  uint64 u64 = 0;
+  int64 i64;
+  double f64;
+};
+
 class FEIRExprConst : public FEIRExpr {
  public:
   FEIRExprConst();
@@ -349,12 +363,9 @@ class FEIRExprConst : public FEIRExpr {
   ~FEIRExprConst() = default;
   FEIRExprConst(const FEIRExprConst&) = delete;
   FEIRExprConst& operator=(const FEIRExprConst&) = delete;
-  uint64 GetValueRaw() const {
-    return value.raw;
-  }
 
-  void SetValueRaw(uint64 argValue) {
-    value.raw = argValue;
+  ConstExprValue GetValue() const {
+    return value;
   }
 
  protected:
@@ -363,13 +374,7 @@ class FEIRExprConst : public FEIRExpr {
 
  private:
   void CheckRawValue2SetZero();
-  union {
-    int64 valueI64;
-    uint64 valueU64;
-    float valueF32;
-    double valueF64;
-    uint64 raw;
-  } value;
+  ConstExprValue value;
 };
 
 // ---------- FEIRExprDRead ----------

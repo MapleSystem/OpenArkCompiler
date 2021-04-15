@@ -289,4 +289,36 @@ TEST_F(FEIRTypeDefaultTest, UseFEIRTypeKey) {
   EXPECT_NE(testSet.find(FEIRTypeKey(type3)), testSet.end());
   EXPECT_NE(testSet.find(FEIRTypeKey(type4)), testSet.end());
 }
+
+TEST_F(FEIRTypeDefaultTest, FEIRTypeNative_create) {
+  RedirectCout();
+  MIRType *mirType = GlobalTables::GetTypeTable().GetInt32();
+  FEIRTypeNative type(*mirType);
+  EXPECT_EQ(type.IsRef(), false);
+  EXPECT_EQ(type.IsArray(), false);
+  EXPECT_EQ(type.IsPrecise(), true);
+  EXPECT_EQ(type.IsValid(), true);
+  type.GenerateMIRType()->Dump(0);
+  EXPECT_EQ(GetBufferString(), "i32");
+
+  MIRType *mirType1 = GlobalTables::GetTypeTable().GetRef();
+  FEIRTypeNative type1(*mirType1);
+  EXPECT_EQ(type1.IsRef(), true);
+  EXPECT_EQ(type1.IsArray(), false);
+  EXPECT_EQ(type1.IsPrecise(), true);
+  EXPECT_EQ(type1.IsValid(), true);
+  type1.GenerateMIRType()->Dump(0);
+  EXPECT_EQ(GetBufferString(), "ref");
+  RestoreCout();
+}
+
+TEST_F(FEIRTypeDefaultTest, FEIRTypeNative_equal) {
+  UniqueFEIRType type1 = std::make_unique<FEIRTypeNative>(*GlobalTables::GetTypeTable().GetInt32());
+  UniqueFEIRType type2 = std::make_unique<FEIRTypeNative>(*GlobalTables::GetTypeTable().GetInt64());
+  UniqueFEIRType type3 = std::make_unique<FEIRTypeNative>(*GlobalTables::GetTypeTable().GetRef());
+  UniqueFEIRType type4 =  type1->Clone();
+  EXPECT_EQ(type1->IsEqualTo(type2), false);
+  EXPECT_EQ(type1->IsEqualTo(type3), false);
+  EXPECT_EQ(type1->IsEqualTo(type4), true);
+}
 }  // namespace maple

@@ -2006,7 +2006,7 @@ bool MIRParser::ParseInitValue(MIRConstPtr &theConst, TyIdx tyIdx, bool allowEmp
   if (tokenKind != TK_lbrack) {  // scalar
     MIRConst *mirConst = nullptr;
     if (IsConstValue(tokenKind)) {
-      if (!ParseScalarValue(mirConst, type, 0 /* fieldID */)) {
+      if (!ParseScalarValue(mirConst, type)) {
         Error("ParseInitValue expect scalar value");
         return false;
       }
@@ -2028,7 +2028,6 @@ bool MIRParser::ParseInitValue(MIRConstPtr &theConst, TyIdx tyIdx, bool allowEmp
       MIRType *elemType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(arrayType.GetElemTyIdx());
       MIRAggConst *newConst = mod.GetMemPool()->New<MIRAggConst>(mod, type);
       theConst = newConst;
-      MapleVector<MIRConst *> &constvec = newConst->GetConstVec();
       tokenKind = lexer.NextToken();
       if (tokenKind == TK_rbrack) {
         if (allowEmpty) {
@@ -2043,7 +2042,7 @@ bool MIRParser::ParseInitValue(MIRConstPtr &theConst, TyIdx tyIdx, bool allowEmp
         // parse single const or another dimension array
         MIRConst *subConst = nullptr;
         if (IsConstValue(tokenKind)) {
-          if (!ParseScalarValue(subConst, *elemType, 0 /* fieldID */)) {
+          if (!ParseScalarValue(subConst, *elemType)) {
             Error("ParseInitValue expect scalar value");
             return false;
           }
@@ -2080,7 +2079,7 @@ bool MIRParser::ParseInitValue(MIRConstPtr &theConst, TyIdx tyIdx, bool allowEmp
           Error("expect const value or group of const values but get ");
           return false;
         }
-        constvec.push_back(subConst);
+        newConst->AddItem(subConst, 0);
         // parse comma or rbrack
         tokenKind = lexer.GetTokenKind();
         if (tokenKind == TK_coma) {
@@ -2097,7 +2096,6 @@ bool MIRParser::ParseInitValue(MIRConstPtr &theConst, TyIdx tyIdx, bool allowEmp
       uint32 theFieldIdx;
       TyIdx fieldTyIdx;
       theConst = newConst;
-      MapleVector<MIRConst *> &constvec = newConst->GetConstVec();
       tokenKind = lexer.NextToken();
       if (tokenKind == TK_rbrack) {
         if (allowEmpty) {
@@ -2127,7 +2125,7 @@ bool MIRParser::ParseInitValue(MIRConstPtr &theConst, TyIdx tyIdx, bool allowEmp
         tokenKind = lexer.NextToken();
         MIRConst *subConst = nullptr;
         if (IsConstValue(tokenKind)) {
-          if (!ParseScalarValue(subConst, *GlobalTables::GetTypeTable().GetTypeFromTyIdx(fieldTyIdx), theFieldIdx)) {
+          if (!ParseScalarValue(subConst, *GlobalTables::GetTypeTable().GetTypeFromTyIdx(fieldTyIdx))) {
             Error("ParseInitValue expect scalar value");
             return false;
           }
@@ -2147,8 +2145,7 @@ bool MIRParser::ParseInitValue(MIRConstPtr &theConst, TyIdx tyIdx, bool allowEmp
           return false;
         }
         ASSERT(subConst != nullptr, "subConst is null in MIRParser::ParseInitValue");
-        subConst->SetFieldID(theFieldIdx);
-        constvec.push_back(subConst);
+        newConst->AddItem(subConst, theFieldIdx);
         tokenKind = lexer.GetTokenKind();
         // parse comma or rbrack
         if (tokenKind == TK_coma) {

@@ -19,6 +19,7 @@
 #include "mir_nodes.h"
 #include "mir_builder.h"
 #include "ast_macros.h"
+#include "fe_utils_ast.h"
 
 namespace maple {
 int ast2mplDebug = 0;
@@ -206,37 +207,6 @@ Opcode ASTUtil::CvtUnaryOpcode(uint32_t opcode) {
   }
 }
 
-const std::string ASTUtil::Type2Label(PrimType primType) {
-  switch (primType) {
-    case PTY_u1:
-      return "B";
-    case PTY_i8:
-      return "A";
-    case PTY_u8:
-      return "C";
-    case PTY_i16:
-      return "S";
-    case PTY_u16:
-      return "T";
-    case PTY_i32:
-      return "I";
-    case PTY_u32:
-      return "M";
-    case PTY_i64:
-      return "O";
-    case PTY_u64:
-      return "Q";
-    case PTY_f32:
-      return "F";
-    case PTY_f64:
-      return "D";
-    case PTY_void:
-      return "V";
-    default:
-      return "R";
-  }
-}
-
 uint32 ASTUtil::GetDim(MIRType &type) {
   MIRType *ptrType = &type;
   if (type.GetKind() == kTypePointer) {
@@ -265,7 +235,7 @@ std::string ASTUtil::GetTypeString(MIRType &type) {
   }
   switch (type.GetKind()) {
     case kTypeScalar:
-      ss << Type2Label(type.GetPrimType());
+      ss << FEUtilAST::Type2Label(type.GetPrimType());
       break;
     case kTypeStruct:
     case kTypeClass:

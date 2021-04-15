@@ -387,11 +387,12 @@ class MeSSUPre {
   // step 2 methods
   void Rename();
   // step 1 methods
-  void GetIterPdomFrontier(BB *bb, MapleSet<uint32> *pdfset) {
+  void GetIterPdomFrontier(const BB *bb, MapleSet<uint32> *pdfset) const {
     for (BBId bbid : dom->iterPdomFrontier[bb->GetBBId()]) {
-      pdfset->insert(dom->GetPdtDfnItem(bbid));
+      (void)pdfset->insert(dom->GetPdtDfnItem(bbid));
     }
   }
+
   void FormLambdas();
   void FormLambdaRes();
   void CreateSortedOccs();

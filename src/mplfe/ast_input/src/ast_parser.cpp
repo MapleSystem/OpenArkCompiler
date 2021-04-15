@@ -924,8 +924,15 @@ ASTExpr *ASTParser::ProcessExprConstantExpr(MapleAllocator &allocator, const cla
 }
 
 ASTExpr *ASTParser::ProcessExprImaginaryLiteral(MapleAllocator &allocator, const clang::ImaginaryLiteral &expr) {
+  clang::QualType complexQualType = expr.getType().getCanonicalType();
+  MIRType *complexType = astFile->CvtType(complexQualType);
+  CHECK_NULL_FATAL(complexType);
+  clang::QualType elemQualType = llvm::cast<clang::ComplexType>(complexQualType)->getElementType();
+  MIRType *elemType = astFile->CvtType(elemQualType);
+  CHECK_NULL_FATAL(elemType);
   ASTImaginaryLiteral *astImaginaryLiteral = ASTExprBuilder<ASTImaginaryLiteral>(allocator);
-  ASSERT(astImaginaryLiteral != nullptr, "astImaginaryLiteral is nullptr");
+  astImaginaryLiteral->SetComplexType(complexType);
+  astImaginaryLiteral->SetElemType(elemType);
   ASTExpr *astExpr = ProcessExpr(allocator, expr.getSubExpr());
   if (astExpr == nullptr) {
     return nullptr;
@@ -982,6 +989,13 @@ ASTExpr *ASTParser::ProcessExprParenExpr(MapleAllocator &allocator, const clang:
 ASTExpr *ASTParser::ProcessExprCharacterLiteral(MapleAllocator &allocator, const clang::CharacterLiteral &expr) {
   ASTCharacterLiteral *astCharacterLiteral = ASTExprBuilder<ASTCharacterLiteral>(allocator);
   ASSERT(astCharacterLiteral != nullptr, "astCharacterLiteral is nullptr");
+  const clang::QualType qualType = expr.getType();
+  const auto *type = llvm::cast<clang::BuiltinType>(qualType.getTypePtr());
+  clang::BuiltinType::Kind kind = type->getKind();
+  if (qualType->isPromotableIntegerType()) {
+    kind = clang::BuiltinType::Int;
+  }
+  astCharacterLiteral->SetVal(expr.getValue());
   return astCharacterLiteral;
 }
 
@@ -1033,6 +1047,7 @@ ASTExpr *ASTParser::ProcessExprImplicitCastExpr(MapleAllocator &allocator, const
     case clang::CK_ArrayToPointerDecay:
     case clang::CK_FunctionToPointerDecay:
     case clang::CK_FloatingCast:
+    case clang::CK_IntegralCast:
     case clang::CK_LValueToRValue: {
       ASTExpr *astExpr = ProcessExpr(allocator, expr.getSubExpr());
       if (astExpr == nullptr) {
@@ -1385,8 +1400,11 @@ ASTDecl *ASTParser::ProcessDeclVarDecl(MapleAllocator &allocator, const clang::V
   }
   GenericAttrs attrs;
   astFile->CollectAttrs(varDecl, attrs, kPublic);
-  VarValue val = GetVarInitVal(allocator, varDecl);
-  return ASTPrimitiveVarBuilder(allocator, fileName, varName, std::vector<MIRType*>{varType}, val, attrs);
+  ASTVar *astVar = ASTVarBuilder(allocator, fileName, varName, std::vector<MIRType*>{varType}, attrs);
+  if (varDecl.hasInit()) {
+    astVar->SetInitExpr(ProcessExpr(allocator, varDecl.getInit()));
+  }
+  return astVar;
 }
 
 bool ASTParser::RetrieveStructs(MapleAllocator &allocator, MapleList<ASTStruct*> &structs) {
@@ -1416,52 +1434,15 @@ bool ASTParser::RetrieveFuncs(MapleAllocator &allocator, MapleList<ASTFunc*> &fu
   return true;
 }
 
-VarValue ASTParser::GetVarInitVal(MapleAllocator &allocator, clang::VarDecl varDecl) {
-  VarValue value;
-  if (!varDecl.hasInit()) {
-    return value;
-  }
-  const clang::Expr *init = varDecl.getInit();
-  init = llvm::isa<clang::ExprWithCleanups>(init) ? llvm::cast<clang::ExprWithCleanups>(init)->getSubExpr() : init;
-  init = llvm::isa<clang::CXXFunctionalCastExpr>(init) ?
-      llvm::cast<clang::CXXFunctionalCastExpr>(init)->getSubExpr() : init;
-  if (init->getType().getTypePtr()->isDependentType()) {
-    return value;
-  }
-  ASTExpr *expr = ProcessExpr(allocator, init);
-  switch (init->getStmtClass()) {
-    case clang::Stmt::IntegerLiteralClass: {
-      ASTIntegerLiteral *intExpr = static_cast<ASTIntegerLiteral*>(expr);
-      value.u64 = intExpr->GetVal();
-      break;
-    }
-    case clang::Stmt::FloatingLiteralClass: {
-      ASTFloatingLiteral *floatExpr = static_cast<ASTFloatingLiteral*>(expr);
-      value.d = floatExpr->GetVal();
-      break;
-    }
-    case clang::Stmt::ImplicitCastExprClass: {
-      ASTImplicitCastExpr *implicitCastExpr = static_cast<ASTImplicitCastExpr*>(expr);
-      if (llvm::cast<clang::ImplicitCastExpr>(init)->getCastKind() == clang::CK_FloatingCast) {
-        ASTFloatingLiteral *floatExpr = static_cast<ASTFloatingLiteral*>(implicitCastExpr->GetASTExpr());
-        value.f32 = floatExpr->GetVal();
-      }
-      break;
-    }
-    default:
-      break;
-  }
-  return value;
-}
-
 // seperate MP with astparser
-bool ASTParser::RetrieveGlobalVars(MapleAllocator &allocator, MapleList<ASTPrimitiveVar*> &vars) {
+bool ASTParser::RetrieveGlobalVars(MapleAllocator &allocator, MapleList<ASTVar*> &vars) {
   for (auto &decl : globalVarDecles) {
     clang::VarDecl varDecl = llvm::cast<clang::VarDecl>(*decl);
-    ASTPrimitiveVar *val = static_cast<ASTPrimitiveVar*>(ProcessDecl(allocator, varDecl));
+    ASTVar *val = static_cast<ASTVar*>(ProcessDecl(allocator, varDecl));
     if (val == nullptr) {
       return false;
     }
+    val->SetGlobal(true);
     vars.emplace_back(val);
   }
   return true;

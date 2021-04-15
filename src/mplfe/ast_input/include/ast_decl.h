@@ -26,7 +26,7 @@ namespace maple {
 class ASTDecl {
  public:
   ASTDecl(const std::string &srcFile, const std::string &nameIn, const std::vector<MIRType*> &typeDescIn)
-      : srcFileName(srcFile), name(nameIn), typeDesc(typeDescIn) {}
+      : isGlobalDecl(false), srcFileName(srcFile), name(nameIn), typeDesc(typeDescIn) {}
   virtual ~ASTDecl() = default;
   const std::string &GetSrcFileName() const;
   const std::string &GetName() const;
@@ -35,7 +35,16 @@ class ASTDecl {
     return genAttrs;
   }
 
+  void SetGlobal(bool isGlobal) {
+    isGlobalDecl = isGlobal;
+  }
+
+  bool IsGlobal() const {
+    return isGlobalDecl;
+  }
+
  protected:
+  bool isGlobalDecl;
   const std::string srcFileName;
   std::string name;
   std::vector<MIRType*> typeDesc;
@@ -109,20 +118,6 @@ class ASTStruct : public ASTDecl {
   std::list<ASTFunc*> methods;
 };
 
-union VarValue {
-  bool b;
-  uint8 u8;
-  int8 i8;
-  uint16 u16;
-  int16 i16;
-  uint32 u32;
-  int32 i32;
-  float f32;
-  uint64 u64 = 0;
-  int64 i64;
-  double d;
-};
-
 class ASTVar : public ASTDecl {
  public:
   ASTVar(const std::string &srcFile, const std::string &nameIn, const std::vector<MIRType*> &typeDescIn,
@@ -131,23 +126,17 @@ class ASTVar : public ASTDecl {
     genAttrs = genAttrsIn;
   }
   virtual ~ASTVar() = default;
-};
 
-class ASTPrimitiveVar : public ASTVar {
- public:
-  ASTPrimitiveVar(const std::string &srcFile, const std::string &varName, const std::vector<MIRType*> &typeDescIn,
-                  VarValue value, const GenericAttrs &genAttrsIn)
-      : ASTVar(srcFile, varName, typeDescIn, genAttrsIn) {
-    val = value;
+  void SetInitExpr(ASTExpr *init) {
+    initExpr = init;
   }
-  ~ASTPrimitiveVar() = default;
 
-  VarValue GetVal() const {
-    return val;
+  ASTExpr *GetInitExpr() const {
+    return initExpr;
   }
 
  private:
-  VarValue val;
+  ASTExpr *initExpr = nullptr;
 };
 }  // namespace maple
 #endif // MPLFE_AST_INPUT_INCLUDE_AST_DECL_H

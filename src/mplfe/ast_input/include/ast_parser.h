@@ -34,7 +34,7 @@ class ASTParser {
 
   bool RetrieveStructs(MapleAllocator &allocator, MapleList<ASTStruct*> &structs);
   bool RetrieveFuncs(MapleAllocator &allocator, MapleList<ASTFunc*> &funcs);
-  bool RetrieveGlobalVars(MapleAllocator &allocator, MapleList<ASTPrimitiveVar*> &vars);
+  bool RetrieveGlobalVars(MapleAllocator &allocator, MapleList<ASTVar*> &vars);
 
   const std::string &GetSourceFileName() const;
   const uint32 GetFileIdx() const;
@@ -130,7 +130,6 @@ ASTDecl *ProcessDecl(MapleAllocator &allocator, const clang::Decl &decl);
 
  private:
   void TraverseDecl(clang::Decl *decl, std::function<void (clang::Decl*)> const &functor);
-  VarValue GetVarInitVal(MapleAllocator &allocator, clang::VarDecl varDecl);
   uint32 fileIdx;
   const std::string fileName;
   std::unique_ptr<LibAstFile> astFile;

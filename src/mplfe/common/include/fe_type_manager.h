@@ -111,6 +111,7 @@ class FETypeManager {
 
   MIRStructType *GetOrCreateStructType(const std::string &name);
   MIRStructType *CreateStructType(const std::string &name);
+  MIRType *GetOrCreateComplexStructType(const MIRType &elemType);
   MIRStructType *GetOrCreateClassOrInterfaceType(const GStrIdx &nameIdx, bool isInterface, FETypeFlag typeFlag,
                                                  bool &isCreate);
   MIRStructType *GetOrCreateClassOrInterfaceType(const std::string &name, bool isInterface, FETypeFlag typeFlag,
