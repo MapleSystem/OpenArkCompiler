@@ -165,10 +165,7 @@ void BCClassMethod::ProcessInstructions() {
       }
       if (inst->IsSwitch() && itor != pcBCInstructionMap->end()) {
         itor->second->SetInstructionKind(kTarget);
-        inst->SetDefultTarget(itor->second);
-        if (visitedPcSet.emplace(itor->first).second == false) {
-          multiInDegreeSet.emplace(itor->first);
-        }
+        inst->SetDefaultTarget(itor->second);
       }
     }
     if (itor == pcBCInstructionMap->end()) {
@@ -307,6 +304,7 @@ void BCClassMethod::Traverse(std::list<std::pair<uint32, std::vector<TypeInferIt
       } else {
         pcDefedRegsList.emplace_front(exHandlerTarget, nextRegTypeMap);
       }
+      Traverse(pcDefedRegsList, dominances, visitedSet);
     }
     for (auto defedReg : *defedRegs) {
       TypeInferItem *item = ConstructTypeInferItem(allocator, currInst->GetPC() + 1, defedReg, nullptr);
@@ -326,6 +324,11 @@ void BCClassMethod::Traverse(std::list<std::pair<uint32, std::vector<TypeInferIt
         } else {
           pcDefedRegsList.emplace_front(next, nextRegTypeMap);
         }
+        // Use stack to replace recursive call, avoid `call stack` overflow in long `fallthru` code.
+        // And `fallthu` instructions can not disrupt visit order.
+        if (currInst->IsConditionBranch() || currInst->IsSwitch()) {
+          Traverse(pcDefedRegsList, dominances, visitedSet);
+        }
       }
     }
     auto normalTargets = currInst->GetTargets();
@@ -342,6 +345,7 @@ void BCClassMethod::Traverse(std::list<std::pair<uint32, std::vector<TypeInferIt
       } else {
         pcDefedRegsList.emplace_front(normalTarget, nextRegTypeMap);
       }
+      Traverse(pcDefedRegsList, dominances, visitedSet);
     }
   }
 }

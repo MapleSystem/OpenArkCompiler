@@ -1662,14 +1662,14 @@ FEIRExprConst::FEIRExprConst()
     : FEIRExpr(FEIRNodeKind::kExprConst) {
   ASSERT(type != nullptr, "type is nullptr");
   type->SetPrimType(PTY_i32);
-  value.raw = 0;
+  value.u64 = 0;
 }
 
 FEIRExprConst::FEIRExprConst(int64 val, PrimType argType)
     : FEIRExpr(FEIRNodeKind::kExprConst) {
   ASSERT(type != nullptr, "type is nullptr");
   type->SetPrimType(argType);
-  value.valueI64 = val;
+  value.i64 = val;
   CheckRawValue2SetZero();
 }
 
@@ -1677,7 +1677,7 @@ FEIRExprConst::FEIRExprConst(uint64 val, PrimType argType)
     : FEIRExpr(FEIRNodeKind::kExprConst) {
   ASSERT(type != nullptr, "type is nullptr");
   type->SetPrimType(argType);
-  value.valueU64 = val;
+  value.u64 = val;
   CheckRawValue2SetZero();
 }
 
@@ -1685,7 +1685,7 @@ FEIRExprConst::FEIRExprConst(float val)
     : FEIRExpr(FEIRNodeKind::kExprConst) {
   ASSERT(type != nullptr, "type is nullptr");
   type->SetPrimType(PTY_f32);
-  value.valueF32 = val;
+  value.f32 = val;
   CheckRawValue2SetZero();
 }
 
@@ -1693,14 +1693,14 @@ FEIRExprConst::FEIRExprConst(double val)
     : FEIRExpr(FEIRNodeKind::kExprConst) {
   ASSERT(type != nullptr, "type is nullptr");
   type->SetPrimType(PTY_f64);
-  value.valueF64 = val;
+  value.f64 = val;
   CheckRawValue2SetZero();
 }
 
 std::unique_ptr<FEIRExpr> FEIRExprConst::CloneImpl() const {
   std::unique_ptr<FEIRExpr> expr = std::make_unique<FEIRExprConst>();
   FEIRExprConst *exprConst = static_cast<FEIRExprConst*>(expr.get());
-  exprConst->value.raw = value.raw;
+  exprConst->value.u64 = value.u64;
   ASSERT(type != nullptr, "type is nullptr");
   exprConst->type->SetPrimType(type->GetPrimType());
   exprConst->CheckRawValue2SetZero();
@@ -1721,11 +1721,11 @@ BaseNode *FEIRExprConst::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
     case PTY_i64:
     case PTY_ref:
     case PTY_ptr:
-      return mirBuilder.CreateIntConst(value.valueI64, primType);
+      return mirBuilder.CreateIntConst(value.i64, primType);
     case PTY_f32:
-      return mirBuilder.CreateFloatConst(value.valueF32);
+      return mirBuilder.CreateFloatConst(value.f32);
     case PTY_f64:
-      return mirBuilder.CreateDoubleConst(value.valueF64);
+      return mirBuilder.CreateDoubleConst(value.f64);
     default:
       ERR(kLncErr, "unsupported const kind");
       return nullptr;
@@ -1733,7 +1733,7 @@ BaseNode *FEIRExprConst::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
 }
 
 void FEIRExprConst::CheckRawValue2SetZero() {
-  if (value.raw == 0) {
+  if (value.u64 == 0) {
     type->SetZero(true);
   }
 }
@@ -2290,8 +2290,8 @@ void FEIRExprBinary::SetExprTypeByOpCompare() {
   PrimType primTypeOpnd0 = opnd0->GetPrimType();
   PrimType primTypeOpnd1 = opnd1->GetPrimType();
   CHECK_FATAL(primTypeOpnd0 == primTypeOpnd1 ||
-              (opnd0->GetKind() == kExprConst && static_cast<FEIRExprConst*>(opnd0.get())->GetValueRaw() == 0) ||
-              (opnd1->GetKind() == kExprConst && static_cast<FEIRExprConst*>(opnd1.get())->GetValueRaw() == 0),
+              (opnd0->GetKind() == kExprConst && static_cast<FEIRExprConst*>(opnd0.get())->GetValue().u64 == 0) ||
+              (opnd1->GetKind() == kExprConst && static_cast<FEIRExprConst*>(opnd1.get())->GetValue().u64 == 0),
               "primtype of opnds must be the same");
   type->SetPrimType(PTY_i32);
 }

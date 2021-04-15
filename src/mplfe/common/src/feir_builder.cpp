@@ -85,6 +85,20 @@ UniqueFEIRVar FEIRBuilder::CreateVarName(const std::string &name, PrimType primT
   }
 }
 
+UniqueFEIRVar FEIRBuilder::CreateVarNameForC(GStrIdx nameIdx, MIRType &mirType, bool isGlobal, bool withType,
+                                             TypeDim dim) {
+  UniqueFEIRType type = std::make_unique<FEIRTypeNative>(mirType, dim);
+  UniqueFEIRVar var = std::make_unique<FEIRVarName>(nameIdx, std::move(type), withType);
+  var->SetGlobal(isGlobal);
+  return var;
+}
+
+UniqueFEIRVar FEIRBuilder::CreateVarNameForC(const std::string &name, MIRType &mirType, bool isGlobal, bool withType,
+                                             TypeDim dim) {
+  GStrIdx nameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(name);
+  return CreateVarNameForC(nameIdx, mirType, isGlobal, withType, dim);
+}
+
 UniqueFEIRExpr FEIRBuilder::CreateExprDRead(UniqueFEIRVar srcVar) {
   UniqueFEIRExpr expr = std::make_unique<FEIRExprDRead>(std::move(srcVar));
   CHECK_NULL_FATAL(expr);
@@ -141,6 +155,21 @@ UniqueFEIRExpr FEIRBuilder::CreateExprConstF32(float val) {
 
 UniqueFEIRExpr FEIRBuilder::CreateExprConstF64(double val) {
   return std::make_unique<FEIRExprConst>(val);
+}
+
+UniqueFEIRExpr FEIRBuilder::CreateExprZeroConst(PrimType primType) {
+  switch (primType) {
+    case PTY_f32:
+      return CreateExprConstF32(0.0f);
+    case PTY_f64:
+      return CreateExprConstF64(0.0);
+    case PTY_f128:
+      // Not Implemented
+      CHECK_FATAL(false, "Not Implemented");
+      return nullptr;
+    default:
+      return std::make_unique<FEIRExprConst>(int64{ 0 }, primType);
+  }
 }
 
 UniqueFEIRExpr FEIRBuilder::CreateExprMathUnary(Opcode op, UniqueFEIRVar var0) {

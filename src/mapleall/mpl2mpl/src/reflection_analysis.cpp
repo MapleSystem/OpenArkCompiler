@@ -858,7 +858,7 @@ void ReflectionAnalysis::GenMethodMeta(const Klass &klass, MIRStructType &method
   // @padding
   mirBuilder.AddIntFieldConst(methodsInfoType, newConst, fieldID, 0);
 #endif
-  aggConst.PushBack(&newConst);
+  aggConst.AddItem(&newConst, 0);
 }
 
 MIRSymbol *ReflectionAnalysis::GenMethodsMeta(const Klass &klass,
@@ -897,7 +897,7 @@ MIRSymbol *ReflectionAnalysis::GenMethodAddrData(const MIRSymbol &funcSym) {
   // skip abstract func.
   if (!func->IsAbstract()) {
     mirBuilder.AddAddroffuncFieldConst(methodAddrType, *newconst, 1, funcSym);
-    aggconst->GetConstVec().push_back(newconst);
+    aggconst->AddItem(newconst, 0);
     methodAddrSt = GetOrCreateSymbol(namemangler::kMethodAddrDataPrefixStr + func->GetName(),
                                      methodAddrArrayType.GetTypeIndex(), true);
     methodAddrSt->SetStorageClass(kScFstatic);
@@ -1027,7 +1027,7 @@ void ReflectionAnalysis::GenMethodMetaCompact(const Klass &klass, MIRStructType 
     uint8 byteValue = byte;
     mirBuilder.AddIntFieldConst(methodsInfoCompactType, newConstCompact, fieldIDCompact, byteValue);
   }
-  aggConst.PushBack(&newConstCompact);
+  aggConst.AddItem(&newConstCompact, 0);
 }
 
 MIRSymbol *ReflectionAnalysis::GenMethodsMetaCompact(const Klass &klass,
@@ -1120,7 +1120,7 @@ MIRSymbol *ReflectionAnalysis::GenFieldOffsetData(const Klass &klass, std::pair<
   MIRAggConst *newConst = module.GetMemPool()->New<MIRAggConst>(module, fieldOffsetType);
   constexpr uint32_t fieldId = 1;
   GenFieldOffsetConst(*newConst, klass, fieldOffsetType, fieldInfo, fieldId);
-  aggConst->GetConstVec().push_back(newConst);
+  aggConst->AddItem(newConst, 0);
 
   FieldPair fieldP = fieldInfo.first;
   std::string originFieldname = GlobalTables::GetStrTable().GetStringFromStrIdx(fieldP.first);
@@ -1158,7 +1158,7 @@ MIRSymbol *ReflectionAnalysis::GenSuperClassMetaData(std::list<Klass*> superClas
       MIRSymbol *dklassSt = GetOrCreateSymbol(CLASSINFO_PREFIX_STR + (*it)->GetKlassName(), classMetadataTyIdx);
       MIRAggConst *newConst = module.GetMemPool()->New<MIRAggConst>(module, superclassMetadataType);
       mirBuilder.AddAddrofFieldConst(superclassMetadataType, *newConst, 1, *dklassSt);
-      aggconst->PushBack(newConst);
+      aggconst->AddItem(newConst, 0);
     }
     superclassArraySt = GetOrCreateSymbol(superClassArrayInfo, arrayType.GetTypeIndex(), true);
     // Direct access to superclassinfo is only possible within a .so.
@@ -1248,7 +1248,7 @@ void ReflectionAnalysis::GenFieldMeta(const Klass &klass, MIRStructType &fieldsI
   } else {
     mirBuilder.AddIntFieldConst(fieldsInfoType, *newConst, fieldID, 0);
   }
-  aggConst.GetConstVec().push_back(newConst);
+  aggConst.AddItem(newConst, 0);
 }
 
 MIRSymbol *ReflectionAnalysis::GenFieldsMeta(const Klass &klass, std::vector<std::pair<FieldPair, int>> &fieldsVector,
@@ -1319,7 +1319,7 @@ void ReflectionAnalysis::GenFieldMetaCompact(const Klass &klass, MIRStructType &
     uint8 byteValue = byte;
     mirBuilder.AddIntFieldConst(fieldsInfoCompactType, *newConstCompact, fieldID, byteValue);
   }
-  aggConstCompact.GetConstVec().push_back(newConstCompact);
+  aggConstCompact.AddItem(newConstCompact, 0);
   (void)fieldIDCompact;
 }
 
@@ -2133,7 +2133,7 @@ void ReflectionAnalysis::GenClassHashMetaData() {
     MIRType *ptrType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(PTY_ptr);
     MIRConst *classConst =
         module.GetMemPool()->New<MIRAddrofConst>(classExpr->GetStIdx(), classExpr->GetFieldID(), *ptrType);
-    bucketAggconst->PushBack(classConst);
+    bucketAggconst->AddItem(classConst, 0);
   }
   bucketSt->SetKonst(bucketAggconst);
 }
@@ -2152,8 +2152,8 @@ static void ReflectionAnalysisGenStrTab(MIRModule &mirModule, const std::string 
   strTabSt->SetStorageClass(kScFstatic);
   for (char c : strTab) {
     MIRConst *newConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(
-        c, *GlobalTables::GetTypeTable().GetUInt8(), 0 /* fieldID */);
-    strTabAggconst->PushBack(newConst);
+        c, *GlobalTables::GetTypeTable().GetUInt8());
+    strTabAggconst->AddItem(newConst, 0);
   }
   strTabSt->SetKonst(strTabAggconst);
 }

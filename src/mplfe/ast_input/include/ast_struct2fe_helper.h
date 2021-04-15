@@ -45,14 +45,14 @@ class ASTStruct2FEHelper : public FEInputStructHelper {
 
 class ASTGlobalVar2FEHelper : public FEInputGlobalVarHelper {
  public:
-  ASTGlobalVar2FEHelper(MapleAllocator &allocatorIn, const ASTPrimitiveVar &varIn)
+  ASTGlobalVar2FEHelper(MapleAllocator &allocatorIn, const ASTVar &varIn)
       : FEInputGlobalVarHelper(allocatorIn),
         astVar(varIn) {}
   ~ASTGlobalVar2FEHelper() = default;
 
  protected:
   bool ProcessDeclImpl(MapleAllocator &allocator) override;
-  const ASTPrimitiveVar &astVar;
+  const ASTVar &astVar;
 };
 
 class ASTStructField2FEHelper : public FEInputFieldHelper {

@@ -170,7 +170,7 @@ std::vector<uint32> BCInstruction::GetTargets() const {
   return GetTargetsImpl();
 }
 
-void BCInstruction::SetDefultTarget(BCInstruction *inst) {
+void BCInstruction::SetDefaultTarget(BCInstruction *inst) {
   defaultTarget = inst;
 }
 
@@ -318,7 +318,7 @@ bool BCRegTypeItem::IsMorePreciseType(const BCRegTypeItem &typeItemIn) const {
         } else if (isIndeterminate && typeItemIn.isIndeterminate) {
           return name1Idx == BCUtil::GetJavaObjectNameMplIdx();
         } else {
-          return isDef ?
+          return isFromDef ?
                  (name0Idx == BCUtil::GetJavaObjectNameMplIdx() || name1Idx != BCUtil::GetJavaObjectNameMplIdx()) :
                  (name0Idx != BCUtil::GetJavaObjectNameMplIdx() || name1Idx == BCUtil::GetJavaObjectNameMplIdx());
         }
@@ -378,7 +378,9 @@ void BCRegType::PrecisifyTypes(bool isTry) {
       }
     }
   }
-  PrecisifyElemTypes(realType);
+  if (!realType->isIndeterminate) {
+    PrecisifyElemTypes(realType);
+  }
 }
 
 void BCRegType::PrecisifyRelatedTypes(BCRegTypeItem *realType) {
@@ -391,9 +393,7 @@ void BCRegType::PrecisifyRelatedTypes(BCRegTypeItem *realType) {
         realType = GetMostPreciseType(*typesUsedAs);
         if (realType != nullptr) {
           for (auto &fuzzyTy : fuzzyTypesUsedAs) {
-            if (fuzzyTy->isIndeterminate) {
-              fuzzyTy->Copy(*realType);
-            }
+            fuzzyTy->Copy(*realType);
           }
         }
       }
@@ -408,20 +408,12 @@ void BCRegType::PrecisifyRelatedTypes(BCRegTypeItem *realType) {
 
 void BCRegType::PrecisifyElemTypes(BCRegTypeItem *arrayType) {
   for (auto elem : elemTypes) {
-    if (elem->IsIndeterminate()) {
+    if (elem->isIndeterminate) {
       const std::string &arrTypeName = GlobalTables::GetStrTable().GetStringFromStrIdx(arrayType->typeNameIdx);
       if (arrTypeName.size() > 1 && arrTypeName.at(0) == 'A') {
         GStrIdx elemTypeIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(arrTypeName.substr(1));
-        if (elem->IsPrecisified()) {
-          for (auto &e : elem->fuzzyTypesUsedAs) {
-            if (e->isIndeterminate) {
-              e->typeNameIdx = elemTypeIdx;
-              e->isIndeterminate = false;
-            }
-          }
-        } else {
-          elem->regTypeItem->typeNameIdx = elemTypeIdx;
-        }
+        elem->typeNameIdx = elemTypeIdx;
+        elem->isIndeterminate = false;
       } else {
         CHECK_FATAL(curReg.regValue != nullptr, "Not an array type or const 0");
       }

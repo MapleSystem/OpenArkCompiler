@@ -47,11 +47,11 @@ class ASTInput {
     astFuncs.emplace_back(astFunc);
   }
 
-  const MapleList<ASTPrimitiveVar*> &GetASTVars() const {
+  const MapleList<ASTVar*> &GetASTVars() const {
     return astVars;
   }
 
-  void AddASTPrimitiveVar(ASTPrimitiveVar *astVar) {
+  void AddASTVar(ASTVar *astVar) {
     astVars.emplace_back(astVar);
   }
 
@@ -62,7 +62,7 @@ class ASTInput {
 
   MapleList<ASTStruct*> astStructs;
   MapleList<ASTFunc*> astFuncs;
-  MapleList<ASTPrimitiveVar*> astVars;
+  MapleList<ASTVar*> astVars;
 };
 }
 #endif  // MPLFE_AST_INPUT_INCLUDE_AST_INPUT_H

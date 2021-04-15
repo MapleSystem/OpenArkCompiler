@@ -504,9 +504,9 @@ class FPConstTable {
   ~FPConstTable();
 
   // get the const from floatConstTable or create a new one
-  MIRFloatConst *GetOrCreateFloatConst(float fval, uint32 fieldID);
+  MIRFloatConst *GetOrCreateFloatConst(float fval);
   // get the const from doubleConstTable or create a new one
-  MIRDoubleConst *GetOrCreateDoubleConst(double fval, uint32 fieldID);
+  MIRDoubleConst *GetOrCreateDoubleConst(double fval);
 
   static std::unique_ptr<FPConstTable> Create() {
     auto p = std::unique_ptr<FPConstTable>(new FPConstTable());
@@ -541,7 +541,7 @@ class IntConstTable {
   IntConstTable &operator=(const IntConstTable &p) = delete;
   ~IntConstTable();
 
-  MIRIntConst *GetOrCreateIntConst(int64 val, MIRType &type, uint32 fieldID);
+  MIRIntConst *GetOrCreateIntConst(int64 val, MIRType &type);
 
   static std::unique_ptr<IntConstTable> Create() {
     auto p = std::unique_ptr<IntConstTable>(new IntConstTable());
@@ -550,8 +550,8 @@ class IntConstTable {
 
  private:
   IntConstTable() = default;
-  MIRIntConst *DoGetOrCreateIntConst(int64 val, MIRType &type, uint32 fieldID);
-  MIRIntConst *DoGetOrCreateIntConstTreadSafe(int64 val, MIRType &type, uint32 fieldID);
+  MIRIntConst *DoGetOrCreateIntConst(int64 val, MIRType &type);
+  MIRIntConst *DoGetOrCreateIntConstTreadSafe(int64 val, MIRType &type);
   std::shared_timed_mutex mtx;
   std::unordered_map<IntConstKey, MIRIntConst*, IntConstHash, IntConstCmp> intConstTable;
 };

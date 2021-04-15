@@ -57,7 +57,7 @@ BaseNode &ConstMeExpr::EmitExpr(SSATab &ssaTab) {
   if (IsPrimitiveInteger(exprConst->GetPrimType())) {
     auto *intConst = safe_cast<MIRIntConst>(exprConst->GetConstVal());
     MIRIntConst *newIntConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(intConst->GetValueUnderType(),
-        intConst->GetType(), intConst->GetFieldId());
+        intConst->GetType());
     exprConst->SetConstVal(newIntConst);
   }
   return *exprConst;

@@ -1040,7 +1040,7 @@ void DexOpAget::ParseImpl(BCClassMethod &method) {
 
 void DexOpAget::SetRegTypeInTypeInferImpl() {
   if (vB.regType != nullptr && vC.regType != nullptr) {
-    vB.regType->AddElemType(vA.regType);
+    vB.regType->AddElemType(vA.regTypeItem);
   }
 }
 
@@ -1140,7 +1140,7 @@ void DexOpAput::ParseImpl(BCClassMethod &method) {
 
 void DexOpAput::SetRegTypeInTypeInferImpl() {
   if (vA.regType != nullptr && vB.regType != nullptr && vC.regType != nullptr) {
-    vB.regType->AddElemType(vA.regType);
+    vB.regType->AddElemType(vA.regTypeItem);
   }
 }
 

@@ -262,25 +262,25 @@ void FPConstTable::PostInit() {
   minusZeroDoubleConst = new MIRDoubleConst(-0.0, typeDouble);
 }
 
-MIRIntConst *IntConstTable::GetOrCreateIntConst(int64 val, MIRType &type, uint32 fieldID) {
+MIRIntConst *IntConstTable::GetOrCreateIntConst(int64 val, MIRType &type) {
   if (ThreadEnv::IsMeParallel()) {
-    return DoGetOrCreateIntConstTreadSafe(val, type, fieldID);
+    return DoGetOrCreateIntConstTreadSafe(val, type);
   }
-  return DoGetOrCreateIntConst(val, type, fieldID);
+  return DoGetOrCreateIntConst(val, type);
 }
 
-MIRIntConst *IntConstTable::DoGetOrCreateIntConst(int64 val, MIRType &type, uint32 fieldID) {
-  uint64 idid = static_cast<uint64>(type.GetTypeIndex()) + (static_cast<uint64>(fieldID) << 32); // shift bit is 32
+MIRIntConst *IntConstTable::DoGetOrCreateIntConst(int64 val, MIRType &type) {
+  uint64 idid = static_cast<uint64>(type.GetTypeIndex()); // shift bit is 32
   IntConstKey key(val, idid);
   if (intConstTable.find(key) != intConstTable.end()) {
     return intConstTable[key];
   }
-  intConstTable[key] = new MIRIntConst(val, type, fieldID);
+  intConstTable[key] = new MIRIntConst(val, type);
   return intConstTable[key];
 }
 
-MIRIntConst *IntConstTable::DoGetOrCreateIntConstTreadSafe(int64 val, MIRType &type, uint32 fieldID) {
-  uint64 idid = static_cast<uint64>(type.GetTypeIndex()) + (static_cast<uint64>(fieldID) << 32); // shift bit is 32
+MIRIntConst *IntConstTable::DoGetOrCreateIntConstTreadSafe(int64 val, MIRType &type) {
+  uint64 idid = static_cast<uint64>(type.GetTypeIndex()); // shift bit is 32
   IntConstKey key(val, idid);
   {
     std::shared_lock<std::shared_timed_mutex> lock(mtx);
@@ -289,7 +289,7 @@ MIRIntConst *IntConstTable::DoGetOrCreateIntConstTreadSafe(int64 val, MIRType &t
     }
   }
   std::unique_lock<std::shared_timed_mutex> lock(mtx);
-  intConstTable[key] = new MIRIntConst(val, type, fieldID);
+  intConstTable[key] = new MIRIntConst(val, type);
   return intConstTable[key];
 }
 
@@ -299,12 +299,7 @@ IntConstTable::~IntConstTable() {
   }
 }
 
-MIRFloatConst *FPConstTable::GetOrCreateFloatConst(float floatVal, uint32 fieldID) {
-  if (fieldID != 0) {
-    MIRFloatConst *fconst =
-        new MIRFloatConst(floatVal, *GlobalTables::GetTypeTable().GetTypeFromTyIdx((TyIdx)PTY_f32), fieldID);
-    return fconst;
-  }
+MIRFloatConst *FPConstTable::GetOrCreateFloatConst(float floatVal) {
   if (std::isnan(floatVal)) {
     return nanFloatConst;
   }
@@ -348,12 +343,7 @@ MIRFloatConst *FPConstTable::DoGetOrCreateFloatConstThreadSafe(float floatVal) {
   return floatConst;
 }
 
-MIRDoubleConst *FPConstTable::GetOrCreateDoubleConst(double doubleVal, uint32 fieldID) {
-  if (fieldID != 0) {
-    MIRDoubleConst *dconst =
-        new MIRDoubleConst(doubleVal, *GlobalTables::GetTypeTable().GetTypeFromTyIdx((TyIdx)PTY_f64), fieldID);
-    return dconst;
-  }
+MIRDoubleConst *FPConstTable::GetOrCreateDoubleConst(double doubleVal) {
   if (std::isnan(doubleVal)) {
     return nanDoubleConst;
   }

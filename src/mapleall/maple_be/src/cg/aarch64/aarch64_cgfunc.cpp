@@ -4116,7 +4116,7 @@ void AArch64CGFunc::SelectRangeGoto(RangeGotoNode &rangeGotoNode, Operand &srcOp
     LabelIdx labelIdx = itPair.second;
     GetCurBB()->PushBackRangeGotoLabel(labelIdx);
     MIRConst *mirConst = memPool->New<MIRLblConst>(labelIdx, GetFunction().GetPuidx(), *etype);
-    arrayConst->PushBack(mirConst);
+    arrayConst->AddItem(mirConst, 0);
   }
 
   MIRSymbol *lblSt = GetFunction().GetSymTab()->CreateSymbol(kScopeLocal);

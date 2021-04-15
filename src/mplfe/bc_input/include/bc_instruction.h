@@ -54,7 +54,7 @@ class BCInstruction {
   uint32 GetPC() const;
   uint8 GetOpcode() const;
   std::vector<uint32> GetTargets() const;
-  void SetDefultTarget(BCInstruction *inst);
+  void SetDefaultTarget(BCInstruction *inst);
   void AddHandler(BCInstruction *handler);
   void SetWidth(uint8 size);
   uint8 GetWidth() const;
@@ -118,8 +118,8 @@ struct BCReg;
 struct TypeInferItem;
 
 struct BCRegTypeItem {
-  BCRegTypeItem(const GStrIdx &idx, bool isIndeterminateIn = false, bool isDefIn = false)
-      : typeNameIdx(idx), isIndeterminate(isIndeterminateIn), isDef(isDefIn) {}
+  BCRegTypeItem(const GStrIdx &idx, bool isIndeterminateIn = false, bool isFromDefIn = false)
+      : typeNameIdx(idx), isIndeterminate(isIndeterminateIn), isFromDef(isFromDefIn) {}
   BCRegTypeItem(const BCRegTypeItem &item)
       : typeNameIdx(item.typeNameIdx), isIndeterminate(item.isIndeterminate) {}
   ~BCRegTypeItem() = default;
@@ -133,6 +133,7 @@ struct BCRegTypeItem {
   void Copy(const BCRegTypeItem &src) {
     typeNameIdx = src.typeNameIdx;
     isIndeterminate = src.isIndeterminate;
+    isFromDef = src.isFromDef;
   }
   bool operator==(const BCRegTypeItem &item) const {
     return typeNameIdx == item.typeNameIdx;
@@ -155,7 +156,8 @@ struct BCRegTypeItem {
 
   GStrIdx typeNameIdx;
   bool isIndeterminate = false;
-  bool isDef = false;
+  // means `is def ` or `come from def`
+  bool isFromDef = false;
   uint32 pos = UINT32_MAX;
 };
 
@@ -225,7 +227,7 @@ class BCRegType {
 
   static BCRegTypeItem *GetMostPreciseType(const MapleList<BCRegTypeItem*> &types);
 
-  void AddElemType(BCRegType *item) {
+  void AddElemType(BCRegTypeItem *item) {
     elemTypes.emplace(item);
   }
 
@@ -265,7 +267,7 @@ class BCRegType {
   MapleList<BCRegTypeItem*> *typesUsedAs = nullptr;
   MapleList<BCRegTypeItem*> fuzzyTypesUsedAs;
   bool precisified = false;
-  MapleSet<BCRegType*> elemTypes;
+  MapleSet<BCRegTypeItem*> elemTypes;
   uint32 pos = UINT32_MAX;
   // `0` for args, `pc + 1` for local defs
   MapleVector<uint32> livesBegins;
@@ -334,11 +336,11 @@ struct TypeInferItem {
   }
 
   void InsertUniqueAliveType(TypeInferItem *end, BCRegTypeItem *type) {
-    std::vector<TypeInferItem*> workList;
-    uint32 index = 0;
     if (end != nullptr && end->reg == this->reg && end->reg->regType->IsBefore(this->beginPos, end->beginPos)) {
       return;
     }
+    std::vector<TypeInferItem*> workList;
+    uint32 index = 0;
     workList.emplace_back(this);
     while (index < workList.size()) {
       auto currItem = workList[index++];
@@ -352,7 +354,7 @@ struct TypeInferItem {
       }
       if (!duplicate) {
         currItem->aliveUsedTypes->emplace_back(type);
-        reg->regType->UpdateFuzzyUsedSet(type);
+        currItem->reg->regType->UpdateFuzzyUsedSet(type);
       }
       // insert into its prevs cyclely
       for (auto prev : currItem->prevs) {

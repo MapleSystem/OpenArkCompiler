@@ -19,6 +19,7 @@
 #include "feir_builder.h"
 #include "fe_utils_ast.h"
 #include "feir_type_helper.h"
+#include "fe_manager.h"
 
 namespace maple {
 // ---------- ASTExpr ----------
@@ -28,16 +29,34 @@ UniqueFEIRExpr ASTExpr::Emit2FEExpr(std::list<UniqueFEIRStmt> &stmts) const {
 
 // ---------- ASTRefExpr ---------
 UniqueFEIRExpr ASTDeclRefExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
-  PrimType primType = var->GetTypeDesc().front()->GetPrimType();
-  // A method is required to determine whether the var is global, need to update
-  UniqueFEIRVar feirVar = FEIRBuilder::CreateVarName(var->GetName(), primType, true, false);
+  UniqueFEIRVar feirVar = FEIRBuilder::CreateVarNameForC(var->GetName(), *(var->GetTypeDesc().front()),
+                                                         var->IsGlobal(), false);
   UniqueFEIRExpr feirRefExpr = FEIRBuilder::CreateExprDRead(std::move(feirVar));
   return feirRefExpr;
 }
 
 // ---------- ASTCallExpr ----------
 UniqueFEIRExpr ASTCallExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
-  CHECK_FATAL(false, "NIY");
+  // callassigned &funcName
+  StructElemNameIdx *nameIdx = FEManager::GetManager().GetStructElemMempool()->New<StructElemNameIdx>(funcName);
+  FEStructMethodInfo *info = static_cast<FEStructMethodInfo*>(
+      FEManager::GetTypeManager().RegisterStructMethodInfo(*nameIdx, kSrcLangC, false));
+  std::unique_ptr<FEIRStmtCallAssign> callStmt = std::make_unique<FEIRStmtCallAssign>(
+      *info, OP_callassigned, nullptr, false);
+  // args
+  for (int32 i = args.size() - 1; i >= 0; --i) {
+    UniqueFEIRExpr expr = args[i]->Emit2FEExpr(stmts);
+    callStmt->AddExprArgReverse(std::move(expr));
+  }
+  // return
+  if (retType->GetPrimType() != PTY_void) {
+    const std::string &varName = FEUtils::GetSequentialName("retVar_");
+    UniqueFEIRVar var = FEIRBuilder::CreateVarNameForC(varName, *retType, false, false);
+    UniqueFEIRVar dreadVar = var->Clone();
+    callStmt->SetVar(std::move(var));
+    stmts.emplace_back(std::move(callStmt));
+    return FEIRBuilder::CreateExprDRead(std::move(dreadVar));
+  }
   return nullptr;
 }
 
@@ -95,9 +114,9 @@ UniqueFEIRExpr ASTUOPostIncExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmt
   PrimType subPrimType = subType->GetPrimType();
 
   // postinc_1 = a, subVar attr need update
-  UniqueFEIRVar selfVar = FEIRBuilder::CreateVarName(refName, subPrimType, true, false);
+  UniqueFEIRVar selfVar = FEIRBuilder::CreateVarNameForC(refName, *subType, false, false);
   UniqueFEIRVar selfMoveVar = selfVar->Clone();
-  UniqueFEIRVar tempVar = FEIRBuilder::CreateVarName(FEUtils::GetSequentialName("postinc_"), subPrimType);
+  UniqueFEIRVar tempVar = FEIRBuilder::CreateVarNameForC(FEUtils::GetSequentialName("postinc_"), *subType);
   UniqueFEIRVar tempMoveVar = tempVar->Clone();
   UniqueFEIRExpr readSelfExpr = FEIRBuilder::CreateExprDRead(std::move(selfMoveVar));
   UniqueFEIRStmt readSelfstmt = FEIRBuilder::CreateStmtDAssign(std::move(tempMoveVar), std::move(readSelfExpr));
@@ -132,9 +151,9 @@ UniqueFEIRExpr ASTUOPostDecExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmt
   PrimType subPrimType = subType->GetPrimType();
 
   // postdec_1 = a, selfVar attr need update
-  UniqueFEIRVar selfVar = FEIRBuilder::CreateVarName(refName, subPrimType, true, false);
+  UniqueFEIRVar selfVar = FEIRBuilder::CreateVarNameForC(refName, *subType, false, false);
   UniqueFEIRVar selfMoveVar = selfVar->Clone();
-  UniqueFEIRVar tempVar = FEIRBuilder::CreateVarName(FEUtils::GetSequentialName("postinc_"), subPrimType);
+  UniqueFEIRVar tempVar = FEIRBuilder::CreateVarNameForC(FEUtils::GetSequentialName("postinc_"), *subType);
   UniqueFEIRVar tempMoveVar = tempVar->Clone();
   UniqueFEIRExpr readSelfExpr = FEIRBuilder::CreateExprDRead(std::move(selfMoveVar));
   UniqueFEIRStmt readSelfstmt = FEIRBuilder::CreateStmtDAssign(std::move(tempMoveVar),
@@ -182,7 +201,7 @@ UniqueFEIRExpr ASTUOPreIncExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts
   // a = a + 1, selfVar attr need update
   UniqueFEIRExpr astUOPreIncExpr = FEIRBuilder::CreateExprMathBinary(OP_add, std::move(childFEIRExpr),
                                                                      std::move(incDecExpr));
-  UniqueFEIRVar selfVar = FEIRBuilder::CreateVarName(refName, subPrimType, true, false);
+  UniqueFEIRVar selfVar = FEIRBuilder::CreateVarNameForC(refName, *subType, false, false);
   UniqueFEIRVar selfMoveVar = selfVar->Clone();
   UniqueFEIRStmt stmt = FEIRBuilder::CreateStmtDAssign(std::move(selfMoveVar), std::move(astUOPreIncExpr));
   stmts.emplace_back(std::move(stmt));
@@ -211,7 +230,7 @@ UniqueFEIRExpr ASTUOPreDecExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts
   // a = a - 1, selfVar attr need update
   UniqueFEIRExpr astUOPreIncExpr = FEIRBuilder::CreateExprMathBinary(OP_sub, std::move(childFEIRExpr),
                                                                      std::move(incDecExpr));
-  UniqueFEIRVar selfVar = FEIRBuilder::CreateVarName(refName, subPrimType, true, false);
+  UniqueFEIRVar selfVar = FEIRBuilder::CreateVarNameForC(refName, *subType, false, false);
   UniqueFEIRVar selfMoveVar = selfVar->Clone();
   UniqueFEIRStmt stmt = FEIRBuilder::CreateStmtDAssign(std::move(selfMoveVar), std::move(astUOPreIncExpr));
   stmts.emplace_back(std::move(stmt));
@@ -227,9 +246,9 @@ UniqueFEIRExpr ASTUOAddrOfExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts
   UniqueFEIRExpr addrOfExpr;
   if (childExpr->GetASTOp() == kASTOpRef) {
     ASTDecl *var = static_cast<ASTDeclRefExpr*>(childExpr)->GetASTDecl();
-    PrimType primType = var->GetTypeDesc().front()->GetPrimType();
     // var attr should update
-    UniqueFEIRVar addrOfVar = FEIRBuilder::CreateVarName(var->GetName(), primType, true, false);
+    UniqueFEIRVar addrOfVar = FEIRBuilder::CreateVarNameForC(var->GetName(), *(var->GetTypeDesc().front()),
+                                                             false, false);
     addrOfExpr = FEIRBuilder::CreateExprAddrofVar(std::move(addrOfVar));
   } else { // other potential expr should concern
     UniqueFEIRExpr childFEIRExpr;
@@ -516,7 +535,10 @@ UniqueFEIRExpr ASTBOPtrMemI::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) c
 
 // ---------- ASTParenExpr ----------
 UniqueFEIRExpr ASTParenExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
-  return child->Emit2FEExpr(stmts);
+  ASTExpr *childExpr = child;
+  CHECK_FATAL(childExpr != nullptr, "childExpr is nullptr");
+  UniqueFEIRExpr childFEIRExpr = childExpr->Emit2FEExpr(stmts);
+  return childFEIRExpr;
 }
 
 // ---------- ASTIntegerLiteral ----------
@@ -539,8 +561,8 @@ UniqueFEIRExpr ASTFloatingLiteral::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &st
 
 // ---------- ASTCharacterLiteral ----------
 UniqueFEIRExpr ASTCharacterLiteral::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
-  CHECK_FATAL(false, "NIY");
-  return nullptr;
+  UniqueFEIRExpr constExpr = FEIRBuilder::CreateExprConstI8(val);
+  return constExpr;
 }
 
 // ---------- ASTConditionalOperator ----------
@@ -557,8 +579,23 @@ UniqueFEIRExpr ASTConstantExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts
 
 // ---------- ASTImaginaryLiteral ----------
 UniqueFEIRExpr ASTImaginaryLiteral::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
-  CHECK_FATAL(false, "NIY");
-  return nullptr;
+  CHECK_NULL_FATAL(complexType);
+  GStrIdx nameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(FEUtils::GetSequentialName("Complex_"));
+  UniqueFEIRVar complexVar = FEIRBuilder::CreateVarNameForC(nameIdx, *complexType);
+  UniqueFEIRVar clonedComplexVar = complexVar->Clone();
+  UniqueFEIRVar clonedComplexVar2 = complexVar->Clone();
+  // real number
+  UniqueFEIRExpr zeroConstExpr = FEIRBuilder::CreateExprZeroConst(elemType->GetPrimType());
+  UniqueFEIRStmt realStmt = std::make_unique<FEIRStmtDAssign>(std::move(complexVar), std::move(zeroConstExpr), 1);
+  stmts.emplace_back(std::move(realStmt));
+  // imaginary number
+  CHECK_FATAL(child != nullptr, "childExpr is nullptr");
+  UniqueFEIRExpr childFEIRExpr = child->Emit2FEExpr(stmts);
+  UniqueFEIRStmt imagStmt = std::make_unique<FEIRStmtDAssign>(std::move(clonedComplexVar), std::move(childFEIRExpr), 2);
+  stmts.emplace_back(std::move(imagStmt));
+  // return expr to parent operation
+  UniqueFEIRExpr expr = FEIRBuilder::CreateExprDRead(std::move(clonedComplexVar2));
+  return expr;
 }
 
 // ---------- ASTCompoundAssignOperatorExpr ----------
