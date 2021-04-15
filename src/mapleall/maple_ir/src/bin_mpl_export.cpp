@@ -106,6 +106,7 @@ void OutputConstAgg(const MIRConst &constVal, BinaryMplExport &mplExport) {
   size_t size = aggConst.GetConstVec().size();
   mplExport.WriteNum(size);
   for (size_t i = 0; i < size; ++i) {
+    mplExport.WriteNum(aggConst.GetFieldIdItem(i));
     mplExport.OutputConst(aggConst.GetConstVecItem(i));
   }
 }
@@ -396,7 +397,6 @@ void BinaryMplExport::DumpBuf(const std::string &name) {
 void BinaryMplExport::OutputConstBase(const MIRConst &constVal) {
   WriteNum(constVal.GetKind());
   OutputTypeViaTypeName(constVal.GetType().GetTypeIndex());
-  WriteNum(constVal.GetFieldId());
 }
 
 void BinaryMplExport::OutputConst(MIRConst *constVal) {

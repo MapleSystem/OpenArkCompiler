@@ -39,19 +39,13 @@ enum MIRConstKind {
 
 class MIRConst {
  public:
-  explicit MIRConst(MIRType &type, MIRConstKind constKind = kConstInvalid, uint32 fieldID = 0)
-      : type(&type), kind(constKind), fieldID(fieldID) {}
+  explicit MIRConst(MIRType &type, MIRConstKind constKind = kConstInvalid)
+      : type(&type), kind(constKind) {}
 
   virtual ~MIRConst() = default;
 
-  virtual void Dump(const MIRSymbolTable *localSymTab = nullptr) const;
-
-  uint32 GetFieldId() const {
-    return fieldID;
-  }
-
-  void SetFieldID(uint32 fieldIdx) {
-    fieldID = fieldIdx;
+  virtual void Dump(const MIRSymbolTable *localSymTab = nullptr) const {
+    (void)localSymTab;
   }
 
   virtual bool IsZero() const {
@@ -94,15 +88,12 @@ class MIRConst {
  private:
   MIRType *type;
   MIRConstKind kind;
-
- protected:
-  uint32 fieldID;
 };
 
 class MIRIntConst : public MIRConst {
  public:
   using value_type = int64;
-  MIRIntConst(int64 val, MIRType &type, uint32 fieldID = 0) : MIRConst(type, kConstInt, fieldID), value(val) {
+  MIRIntConst(int64 val, MIRType &type) : MIRConst(type, kConstInt), value(val) {
     if (!IsPrimitiveDynType(type.GetPrimType())) {
       Trunc(GetPrimTypeBitSize(type.GetPrimType()));
     }
@@ -163,11 +154,11 @@ class MIRIntConst : public MIRConst {
 
 class MIRAddrofConst : public MIRConst {
  public:
-  MIRAddrofConst(StIdx sy, FieldID fi, MIRType &ty, uint32 fieldID = 0)
-      : MIRConst(ty, kConstAddrof, fieldID), stIdx(sy), fldID(fi), offset(0) {}
+  MIRAddrofConst(StIdx sy, FieldID fi, MIRType &ty)
+      : MIRConst(ty, kConstAddrof), stIdx(sy), fldID(fi), offset(0) {}
 
-  MIRAddrofConst(StIdx sy, FieldID fi, MIRType &ty, int32 ofst, uint32 fieldID = 0)
-      : MIRConst(ty, kConstAddrof, fieldID), stIdx(sy), fldID(fi), offset(ofst) {}
+  MIRAddrofConst(StIdx sy, FieldID fi, MIRType &ty, int32 ofst)
+      : MIRConst(ty, kConstAddrof), stIdx(sy), fldID(fi), offset(ofst) {}
 
   ~MIRAddrofConst() = default;
 
@@ -199,8 +190,8 @@ class MIRAddrofConst : public MIRConst {
 
 class MIRAddroffuncConst : public MIRConst {
  public:
-  MIRAddroffuncConst(PUIdx idx, MIRType &ty, uint32 fieldID = 0)
-      : MIRConst(ty, kConstAddrofFunc, fieldID), puIdx(idx) {}
+  MIRAddroffuncConst(PUIdx idx, MIRType &ty)
+      : MIRConst(ty, kConstAddrofFunc), puIdx(idx) {}
 
   ~MIRAddroffuncConst() = default;
 
@@ -222,8 +213,8 @@ class MIRAddroffuncConst : public MIRConst {
 
 class MIRLblConst : public MIRConst {
  public:
-  MIRLblConst(LabelIdx val, PUIdx pidx, MIRType &type, uint32 fieldID = 0)
-      : MIRConst(type, kConstLblConst, fieldID), value(val), puIdx(pidx) {}
+  MIRLblConst(LabelIdx val, PUIdx pidx, MIRType &type)
+      : MIRConst(type, kConstLblConst), value(val), puIdx(pidx) {}
 
   ~MIRLblConst() = default;
 
@@ -249,9 +240,9 @@ class MIRLblConst : public MIRConst {
 
 class MIRStrConst : public MIRConst {
  public:
-  MIRStrConst(UStrIdx val, MIRType &type, uint32 fieldID = 0) : MIRConst(type, kConstStrConst, fieldID), value(val) {}
+  MIRStrConst(UStrIdx val, MIRType &type) : MIRConst(type, kConstStrConst), value(val) {}
 
-  MIRStrConst(const std::string &str, MIRType &type, uint32 fieldID = 0);
+  MIRStrConst(const std::string &str, MIRType &type);
 
   ~MIRStrConst() = default;
 
@@ -277,10 +268,9 @@ class MIRStrConst : public MIRConst {
 
 class MIRStr16Const : public MIRConst {
  public:
-  MIRStr16Const(const U16StrIdx &val, MIRType &type, uint32 fieldID = 0)
-      : MIRConst(type, kConstStr16Const, fieldID), value(val) {}
+  MIRStr16Const(const U16StrIdx &val, MIRType &type) : MIRConst(type, kConstStr16Const), value(val) {}
 
-  MIRStr16Const(const std::u16string &str, MIRType &type, uint32 fieldID = 0);
+  MIRStr16Const(const std::u16string &str, MIRType &type);
   ~MIRStr16Const() = default;
 
   static PrimType GetPrimType() {
@@ -306,7 +296,7 @@ class MIRStr16Const : public MIRConst {
 class MIRFloatConst : public MIRConst {
  public:
   using value_type = float;
-  MIRFloatConst(float val, MIRType &type, uint32 fieldID = 0) : MIRConst(type, kConstFloatConst, fieldID) {
+  MIRFloatConst(float val, MIRType &type) : MIRConst(type, kConstFloatConst) {
     value.floatValue = val;
   }
 
@@ -372,7 +362,7 @@ class MIRFloatConst : public MIRConst {
 class MIRDoubleConst : public MIRConst {
  public:
   using value_type = double;
-  MIRDoubleConst(double val, MIRType &type, uint32 fieldID = 0) : MIRConst(type, kConstDoubleConst, fieldID) {
+  MIRDoubleConst(double val, MIRType &type) : MIRConst(type, kConstDoubleConst) {
     value.dValue = val;
   }
 
@@ -439,8 +429,7 @@ class MIRDoubleConst : public MIRConst {
 
 class MIRFloat128Const : public MIRConst {
  public:
-  MIRFloat128Const(const uint64 &val, MIRType &type, uint32 fieldID = 0)
-      : MIRConst(type, kConstFloat128Const, fieldID) {
+  MIRFloat128Const(const uint64 &val, MIRType &type) : MIRConst(type, kConstFloat128Const) {
     value = &val;
   }
 
@@ -484,21 +473,25 @@ class MIRFloat128Const : public MIRConst {
 
 class MIRAggConst : public MIRConst {
  public:
-  MIRAggConst(MIRModule &mod, MIRType &type, uint32 fieldID = 0)
-      : MIRConst(type, kConstAggConst, fieldID), constVec(mod.GetMPAllocator().Adapter()) {}
+  MIRAggConst(MIRModule &mod, MIRType &type)
+      : MIRConst(type, kConstAggConst),
+        constVec(mod.GetMPAllocator().Adapter()),
+        fieldIdVec(mod.GetMPAllocator().Adapter()) {}
 
   ~MIRAggConst() = default;
 
   MIRConst *GetAggConstElement(unsigned int fieldidx) {
-    for (size_t i = 0; i < constVec.size(); ++i) {
-      if (constVec[i] == nullptr) {
-        CHECK_FATAL(false, "exist nullptr in constVec");
-      }
-      if (fieldidx == constVec[i]->GetFieldId()) {
+    for (size_t i = 0; i < fieldIdVec.size(); ++i) {
+      if (fieldidx == fieldIdVec[i]) {
         return constVec[i];
       }
     }
     return nullptr;
+  }
+
+  void SetFieldIdOfElement(uint32 index, uint32 fieldId) {
+    ASSERT(index < fieldIdVec.size(), "index out of range");
+    fieldIdVec[index] = fieldId;
   }
 
   const MapleVector<MIRConst*> &GetConstVec() const {
@@ -519,12 +512,24 @@ class MIRAggConst : public MIRConst {
     return constVec[index];
   }
 
-  void SetConstVecItem(uint32 index, MIRConst &mirConst) {
-    CHECK_FATAL(index < constVec.size(), "index out of range");
-    constVec[index] = &mirConst;
+  uint32 GetFieldIdItem(size_t index) const {
+    ASSERT(index < fieldIdVec.size(), "index out of range");
+    return fieldIdVec[index];
   }
+
+  void SetItem(uint32 index, MIRConst *mirConst, uint32 fieldId) {
+    CHECK_FATAL(index < constVec.size(), "index out of range");
+    constVec[index] = mirConst;
+    fieldIdVec[index] = fieldId;
+  }
+
+  void AddItem(MIRConst *mirConst, uint32 fieldId) {
+    constVec.push_back(mirConst);
+    fieldIdVec.push_back(fieldId);
+  }
+
   void PushBack(MIRConst *elem) {
-    constVec.push_back(elem);
+    AddItem(elem, 0);
   }
 
   void Dump(const MIRSymbolTable *localSymTab) const override;
@@ -536,13 +541,14 @@ class MIRAggConst : public MIRConst {
 
  private:
   MapleVector<MIRConst*> constVec;
+  MapleVector<uint32> fieldIdVec;
 };
 
 // the const has one or more symbols
 class MIRStConst : public MIRConst {
  public:
-  MIRStConst(MIRModule &mod, MIRType &type, uint32 fieldID = 0)
-      : MIRConst(type, kConstStConst, fieldID),
+  MIRStConst(MIRModule &mod, MIRType &type)
+      : MIRConst(type, kConstStConst),
         stVec(mod.GetMPAllocator().Adapter()),
         stOffsetVec(mod.GetMPAllocator().Adapter()) {}
 

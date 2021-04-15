@@ -28,7 +28,6 @@ const std::set<std::string> propWhiteList {
 // accumulate the BBs that are in the iterated dominance frontiers of bb in
 // the set dfSet, visiting each BB only once
 namespace maple {
-
 void MeSSAEPre::BuildWorkList() {
   const MapleVector<BBId> &preOrderDt = dom->GetDtPreOrder();
   for (auto &bbID : preOrderDt) {

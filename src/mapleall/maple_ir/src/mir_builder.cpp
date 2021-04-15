@@ -20,8 +20,8 @@ namespace maple {
 // This is for compiler-generated metadata 1-level struct
 void MIRBuilder::AddIntFieldConst(const MIRStructType &sType, MIRAggConst &newConst, uint32 fieldID, int64 constValue) {
   auto *fieldConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(
-      constValue, *sType.GetElemType(fieldID - 1), fieldID);
-  newConst.PushBack(fieldConst);
+      constValue, *sType.GetElemType(fieldID - 1));
+  newConst.AddItem(fieldConst, fieldID);
 }
 
 // This is for compiler-generated metadata 1-level struct
@@ -30,8 +30,7 @@ void MIRBuilder::AddAddrofFieldConst(const MIRStructType &structType, MIRAggCons
   AddrofNode *fieldExpr = CreateExprAddrof(0, fieldSymbol, mirModule->GetMemPool());
   auto *fieldConst = mirModule->GetMemPool()->New<MIRAddrofConst>(fieldExpr->GetStIdx(), fieldExpr->GetFieldID(),
                                                                   *structType.GetElemType(fieldID - 1));
-  fieldConst->SetFieldID(fieldID);
-  newConst.PushBack(fieldConst);
+  newConst.AddItem(fieldConst, fieldID);
 }
 
 // This is for compiler-generated metadata 1-level struct
@@ -40,14 +39,14 @@ void MIRBuilder::AddAddroffuncFieldConst(const MIRStructType &structType, MIRAgg
   MIRConst *fieldConst = nullptr;
   MIRFunction *vMethod = funcSymbol.GetFunction();
   if (vMethod->IsAbstract()) {
-    fieldConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(0, *structType.GetElemType(fieldID - 1), fieldID);
+    fieldConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(0, *structType.GetElemType(fieldID - 1));
   } else {
     AddroffuncNode *addrofFuncExpr =
         CreateExprAddroffunc(funcSymbol.GetFunction()->GetPuidx(), mirModule->GetMemPool());
     fieldConst = mirModule->GetMemPool()->New<MIRAddroffuncConst>(addrofFuncExpr->GetPUIdx(),
-                                                                  *structType.GetElemType(fieldID - 1), fieldID);
+                                                                  *structType.GetElemType(fieldID - 1));
   }
-  newConst.PushBack(fieldConst);
+  newConst.AddItem(fieldConst, fieldID);
 }
 
 // fieldID is continuously being updated during traversal;
@@ -478,8 +477,7 @@ ConstvalNode *MIRBuilder::CreateConstval(MIRConst *mirConst) {
 
 ConstvalNode *MIRBuilder::CreateIntConst(int64 val, PrimType pty) {
   auto *mirConst =
-      GlobalTables::GetIntConstTable().GetOrCreateIntConst(val, *GlobalTables::GetTypeTable().GetPrimType(pty),
-                                                           0 /* fieldID */);
+      GlobalTables::GetIntConstTable().GetOrCreateIntConst(val, *GlobalTables::GetTypeTable().GetPrimType(pty));
   return GetCurrentFuncCodeMp()->New<ConstvalNode>(pty, mirConst);
 }
 
@@ -502,8 +500,7 @@ ConstvalNode *MIRBuilder::CreateFloat128Const(const uint64 *val) {
 }
 
 ConstvalNode *MIRBuilder::GetConstInt(MemPool &memPool, int val) {
-  auto *mirConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(val, *GlobalTables::GetTypeTable().GetInt64(),
-                                                                        0 /* fieldID */);
+  auto *mirConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(val, *GlobalTables::GetTypeTable().GetInt64());
   return memPool.New<ConstvalNode>(PTY_i32, mirConst);
 }
 

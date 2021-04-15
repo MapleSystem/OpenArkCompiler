@@ -136,10 +136,10 @@ TEST_F(FEIRStmtTest, FEIRExprTypeCvtMode2) {
 }
 
 TEST_F(FEIRStmtTest, FEIRExprTypeCvtMode3) {
-  std::unique_ptr<FEIRType> typeVar = FEIRTypeHelper::CreateTypeByJavaName("Ljava/lang/Object;", false, true);
+  std::unique_ptr<FEIRType> typeVar = FEIRTypeHelper::CreateTypeByJavaName("Ltest/lang/Object;", false, true);
   std::unique_ptr<FEIRVarReg> varReg = std::make_unique<FEIRVarReg>(0, std::move(typeVar));
   std::unique_ptr<FEIRExprDRead> exprDRead = std::make_unique<FEIRExprDRead>(std::move(varReg));
-  std::unique_ptr<FEIRType> typeDst = FEIRTypeHelper::CreateTypeByJavaName("Ljava/lang/String;", false, true);
+  std::unique_ptr<FEIRType> typeDst = FEIRTypeHelper::CreateTypeByJavaName("Ltest/lang/String;", false, true);
   std::unique_ptr<FEIRExprTypeCvt> expr = std::make_unique<FEIRExprTypeCvt>(std::move(typeDst), OP_retype,
                                                                             std::move(exprDRead));
   std::unique_ptr<FEIRExpr> expr2 = expr->Clone();
@@ -147,7 +147,7 @@ TEST_F(FEIRStmtTest, FEIRExprTypeCvtMode3) {
   RedirectCout();
   baseNode->Dump();
   std::string dumpStr = GetBufferString();
-  std::string pattern = std::string("retype ref <\\* <\\$Ljava_2Flang_2FString_3B>> \\(dread ref %Reg0_") +
+  std::string pattern = std::string("retype ref <\\* <\\$Ltest_2Flang_2FString_3B>> \\(dread ref %Reg0_") +
                         MPLFEUTRegx::RefIndex(MPLFEUTRegx::kAnyNumber) + "\\)" + MPLFEUTRegx::Any();
   EXPECT_EQ(MPLFEUTRegx::Match(dumpStr, pattern), true);
   RestoreCout();

@@ -135,8 +135,17 @@ std::list<UniqueFEIRStmt> ASTNullStmt::Emit2FEStmtImpl() const {
 
 // ---------- ASTDeclStmt ----------
 std::list<UniqueFEIRStmt> ASTDeclStmt::Emit2FEStmtImpl() const {
-  CHECK_FATAL(false, "NYI");
   std::list<UniqueFEIRStmt> stmts;
+  for (auto decl : subDecls) {
+    auto localVar = static_cast<ASTVar*>(decl);
+    if (localVar->GetInitExpr() != nullptr) {
+      UniqueFEIRVar feirVar = FEIRBuilder::CreateVarNameForC(localVar->GetName(), *(localVar->GetTypeDesc().front()),
+                                                             false, false);
+      UniqueFEIRExpr expr = localVar->GetInitExpr()->Emit2FEExpr(stmts);
+      UniqueFEIRStmt stmt = FEIRBuilder::CreateStmtDAssign(std::move(feirVar), std::move(expr));
+      stmts.emplace_back(std::move(stmt));
+    }
+  }
   return stmts;
 }
 
@@ -161,7 +170,7 @@ std::list<UniqueFEIRStmt> ASTCallExprStmt::Emit2FEStmtImpl() const {
   PrimType primType = callExpr->GetRetType()->GetPrimType();
   if (primType != PTY_void) {
     const std::string &varName = FEUtils::GetSequentialName("retVar_");
-    UniqueFEIRVar var = FEIRBuilder::CreateVarName(varName, primType, false, false);
+    UniqueFEIRVar var = FEIRBuilder::CreateVarNameForC(varName, *(callExpr->GetRetType()), false, false);
     callStmt->SetVar(std::move(var));
   }
   stmts.emplace_back(std::move(callStmt));

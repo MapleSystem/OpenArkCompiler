@@ -176,19 +176,6 @@ const int kDefaultIndent = 1;
                 << '\n';                                                                                           \
     }                                                                                                              \
   } while (0);
-
-// timing stmt
-#define TIMEIT(message, stmt)                                                                                      \
-  if (maple::ast2mplDebug == CHECKTIME) {                                                                          \
-    struct timeval start, end;                                                                                     \
-    gettimeofday(&start, nullptr);                                                                                 \
-    stmt;                                                                                                          \
-    gettimeofday(&end, nullptr);                                                                                   \
-    float t = ((end.tv_sec * 1000000 + end.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec)) * 1.0 / 1000000.0; \
-    printf("%s: %f sec\n", message, t);                                                                            \
-  } else {                                                                                                         \
-    stmt;                                                                                                          \
-  }
 #else
 
 #define DUMPINFO(stmtClass, s)
@@ -205,7 +192,6 @@ const int kDefaultIndent = 1;
 #define DEBUGPRINT_NN_LEVEL(var0, var1, level)
 #define DEBUGPRINT_VV_LEVEL(var0, var1, level)
 #define DEBUGPRINT_SV_LEVEL(val0, var, level)
-#define TIMEIT(message, stmt) stmt
 #endif
 
 #define DEBUGPRINT00 DEBUGPRINT_N(0)

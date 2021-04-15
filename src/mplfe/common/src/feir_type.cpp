@@ -437,4 +437,39 @@ PrimType FEIRTypePointer::GetPrimTypeImpl() const {
 void FEIRTypePointer::SetPrimTypeImpl(PrimType pt) {
   CHECK_FATAL(false, "PrimType %d should not run here", pt);
 }
+
+// ---------- FEIRTypeNative ----------
+FEIRTypeNative::FEIRTypeNative(MIRType &argMIRtype, TypeDim argDim)
+    : FEIRTypeDefault(argMIRtype.GetPrimType(), argMIRtype.GetNameStrIdx(), argDim),
+      mirType(argMIRtype) {
+  kind = kFEIRTypenNative;
+  // Right now, FEIRTypeNative is only used for c-language.
+  srcLang = kSrcLangC;
+}
+
+std::unique_ptr<FEIRType> FEIRTypeNative::CloneImpl() const {
+  std::unique_ptr<FEIRType> newType = std::make_unique<FEIRTypeNative>(mirType, dim);
+  return newType;
+}
+
+MIRType *FEIRTypeNative::GenerateMIRTypeImpl(bool usePtr, PrimType ptyPtr) const {
+  // To optimize for array type
+  return &mirType;
+}
+
+bool FEIRTypeNative::IsEqualToImpl(const FEIRType &argType) const {
+  if (!FEIRTypeDefault::IsEqualToImpl(argType)) {
+    return false;
+  }
+  const FEIRTypeNative &argTypeNative = static_cast<const FEIRTypeNative&>(argType);
+  return &argTypeNative.mirType == &mirType;
+}
+
+size_t FEIRTypeNative::HashImpl() const {
+  return mirType.GetHashIndex();
+}
+
+bool FEIRTypeNative::IsScalarImpl() const {
+  return mirType.IsScalarType();
+}
 }  // namespace maple

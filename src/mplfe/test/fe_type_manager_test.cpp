@@ -177,4 +177,19 @@ TEST_F(FETypeManagerTest, GetOrCreateTypeFromName) {
   EXPECT_EQ(GetBufferString(), "<* <[] <* <[] <* <$Ljava_2Flang_2FObject_3B>>>>>>");
   RestoreCout();
 }
+
+TEST_F(FETypeManagerTest, GetOrCreateComplexStructType) {
+  MIRType *elemType = GlobalTables::GetTypeTable().GetInt32();
+  MIRType *type = FEManager::GetTypeManager().GetOrCreateComplexStructType(*elemType);
+  ASSERT_NE(type, nullptr);
+  EXPECT_EQ(type->IsStructType(), true);
+  std::string mplName = type->GetCompactMplTypeName();
+  EXPECT_EQ(mplName, "Complex|I");
+  MIRStructType *structType = static_cast<MIRStructType*>(type);
+  ASSERT_EQ(structType->GetFields().size(), 2);
+  EXPECT_EQ(GlobalTables::GetStrTable().GetStringFromStrIdx(structType->GetFields()[0].first), "real");
+  EXPECT_EQ(structType->GetFields()[0].second.first == PTY_i32, true);
+  EXPECT_EQ(GlobalTables::GetStrTable().GetStringFromStrIdx(structType->GetFields()[1].first), "imag");
+  EXPECT_EQ(structType->GetFields()[1].second.first == PTY_i32, true);
+}
 }  // namespace maple

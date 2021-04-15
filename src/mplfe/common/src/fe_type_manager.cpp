@@ -23,6 +23,7 @@
 #include "feir_type_helper.h"
 #include "fe_macros.h"
 #include "types_def.h"
+#include "fe_utils_ast.h"
 
 namespace maple {
 const UniqueFEIRType FETypeManager::kPrimFEIRTypeUnknown = std::make_unique<FEIRTypeDefault>(PTY_unknown);
@@ -214,6 +215,28 @@ MIRStructType *FETypeManager::GetOrCreateStructType(const std::string &name) {
   MIRStructType *structType = CreateStructType(name);
   module.PushbackTypeDefOrder(nameIdx);
   CHECK_NULL_FATAL(structType);
+  return structType;
+}
+
+/*
+ * create MIRStructType for complex number, e.g.
+ * type $Complex|F <struct {
+ *   @real f32,
+ *   @imag f32}>
+ */
+MIRType *FETypeManager::GetOrCreateComplexStructType(const MIRType &elemType) {
+  const std::string typeName = "Complex|" + FEUtilAST::Type2Label(elemType.GetPrimType());
+  MIRStructType *structType = GetOrCreateStructType(typeName);
+  if (structType->GetFields().size() == 0) {
+    GStrIdx realStrIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName("real");
+    GStrIdx imagStrIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName("imag");
+    FieldAttrs fieldAttrs;
+    TyIdxFieldAttrPair pair(elemType.GetTypeIndex(), fieldAttrs);
+    FieldPair realPair(realStrIdx, pair);
+    FieldPair imagePair(imagStrIdx, pair);
+    structType->GetFields().push_back(realPair);
+    structType->GetFields().push_back(imagePair);
+  }
   return structType;
 }
 

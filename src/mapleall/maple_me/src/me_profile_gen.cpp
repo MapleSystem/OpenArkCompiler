@@ -103,7 +103,7 @@ void MeProfGen::InstrumentFunc() {
   for (auto *bb : instrumentBBs) {
     MIRIntConst *indexConst =
         func->GetMIRModule().GetMemPool()->New<MIRIntConst>(0, *GlobalTables::GetTypeTable().GetUInt32());
-    bbProfileTab->PushBack(indexConst);
+    bbProfileTab->AddItem(indexConst, 0);
     InstrumentBB(*bb);
   }
 
