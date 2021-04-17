@@ -180,7 +180,7 @@ BaseNode *CGLowerer::LowerIaddrof(const IreadNode &iaddrof) {
   uint32 loweredPtrType = static_cast<uint32>(LOWERED_PTR_TYPE);
   MIRIntConst *offsetConst =
       GlobalTables::GetIntConstTable().GetOrCreateIntConst(
-          offset, *GlobalTables::GetTypeTable().GetTypeTable().at(loweredPtrType), 0 /* fieldID */);
+          offset, *GlobalTables::GetTypeTable().GetTypeTable().at(loweredPtrType));
   BaseNode *offsetNode = mirModule.CurFuncCodeMemPool()->New<ConstvalNode>(offsetConst);
   offsetNode->SetPrimType(LOWERED_PTR_TYPE);
 
@@ -348,7 +348,7 @@ BaseNode *CGLowerer::LowerFarray(ArrayNode &array) {
       }
 
       MIRIntConst *eleConst =
-          GlobalTables::GetIntConstTable().GetOrCreateIntConst(eleOffset, arrayType, 0 /* fieldID */);
+          GlobalTables::GetIntConstTable().GetOrCreateIntConst(eleOffset, arrayType);
       BaseNode *offsetNode = mirModule.CurFuncCodeMemPool()->New<ConstvalNode>(eleConst);
       offsetNode->SetPrimType(array.GetPrimType());
 
@@ -366,11 +366,11 @@ BaseNode *CGLowerer::LowerFarray(ArrayNode &array) {
   if ((farrayType->GetKind() == kTypeJArray) && (resNode->GetOpCode() == OP_constval)) {
     ConstvalNode *idxNode = static_cast<ConstvalNode*>(resNode);
     int64 idx = safe_cast<MIRIntConst>(idxNode->GetConstVal())->GetValue();
-    MIRIntConst *eConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(idx * eSize, arrayType, 0 /* fieldID */);
+    MIRIntConst *eConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(idx * eSize, arrayType);
     rMul = mirModule.CurFuncCodeMemPool()->New<ConstvalNode>(eConst);
     rMul->SetPrimType(array.GetPrimType());
   } else {
-    MIRIntConst *eConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(eSize, arrayType, 0 /* fieldID */);
+    MIRIntConst *eConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(eSize, arrayType);
     BaseNode *eSizeNode = mirModule.CurFuncCodeMemPool()->New<ConstvalNode>(eConst);
     eSizeNode->SetPrimType(array.GetPrimType());
     rMul = mirModule.CurFuncCodeMemPool()->New<BinaryNode>(OP_mul);
@@ -384,7 +384,7 @@ BaseNode *CGLowerer::LowerFarray(ArrayNode &array) {
   if (farrayType->GetKind() == kTypeJArray) {
     BaseNode *jarrayBaseNode = mirModule.CurFuncCodeMemPool()->New<BinaryNode>(OP_add);
     MIRIntConst *arrayHeaderNode = GlobalTables::GetIntConstTable().GetOrCreateIntConst(
-        static_cast<int64>(AArch64RTSupport::kArrayContentOffset), arrayType, 0 /* fieldID */);
+        static_cast<int64>(AArch64RTSupport::kArrayContentOffset), arrayType);
     BaseNode *arrayHeaderCstNode = mirModule.CurFuncCodeMemPool()->New<ConstvalNode>(arrayHeaderNode);
     arrayHeaderCstNode->SetPrimType(array.GetPrimType());
     jarrayBaseNode->SetPrimType(array.GetPrimType());
@@ -484,7 +484,7 @@ BaseNode *CGLowerer::LowerArray(ArrayNode &array, const BaseNode &parent) {
     ConstvalNode *idxNode = static_cast<ConstvalNode*>(resNode);
     int64 idx = safe_cast<MIRIntConst>(idxNode->GetConstVal())->GetValue();
     MIRIntConst *eConst =
-        GlobalTables::GetIntConstTable().GetOrCreateIntConst(idx * eSize, arrayTypes, 0 /* fieldID */);
+        GlobalTables::GetIntConstTable().GetOrCreateIntConst(idx * eSize, arrayTypes);
     rMul = mirModule.CurFuncCodeMemPool()->New<ConstvalNode>(eConst);
     rMul->SetPrimType(array.GetPrimType());
     if (dim == 1) {
@@ -492,7 +492,7 @@ BaseNode *CGLowerer::LowerArray(ArrayNode &array, const BaseNode &parent) {
     }
   } else {
     MIRIntConst *eConst =
-        GlobalTables::GetIntConstTable().GetOrCreateIntConst(eSize, arrayTypes, 0 /* fieldID */);
+        GlobalTables::GetIntConstTable().GetOrCreateIntConst(eSize, arrayTypes);
     BaseNode *tmpNode = mirModule.CurFuncCodeMemPool()->New<ConstvalNode>(eConst);
     tmpNode->SetPrimType(array.GetPrimType());
     rMul = mirModule.CurFuncCodeMemPool()->New<BinaryNode>(OP_mul);
@@ -692,7 +692,7 @@ BaseNode *CGLowerer::LowerDreadBitfield(DreadNode &dread) {
               "LowerIassignBitField: subscript out of range");
   MIRType &type = *GlobalTables::GetTypeTable().GetTypeFromTyIdx(loweredPtrType);
   constNode->SetConstVal(
-      GlobalTables::GetIntConstTable().GetOrCreateIntConst(byteBitOffsets.first, type, 0 /* fieldID */));
+      GlobalTables::GetIntConstTable().GetOrCreateIntConst(byteBitOffsets.first, type));
 
   BinaryNode *addNode = mirModule.CurFuncCodeMemPool()->New<BinaryNode>(OP_add);
   addNode->SetPrimType(LOWERED_PTR_TYPE);
@@ -749,7 +749,7 @@ BaseNode *CGLowerer::LowerIreadBitfield(IreadNode &iread) {
   uint32 loweredPtrType = static_cast<uint32>(LOWERED_PTR_TYPE);
   MIRType &mirType = *GlobalTables::GetTypeTable().GetTypeFromTyIdx(loweredPtrType);
   constNode->SetConstVal(
-      GlobalTables::GetIntConstTable().GetOrCreateIntConst(byteBitOffsets.first, mirType, 0 /* fieldID */));
+      GlobalTables::GetIntConstTable().GetOrCreateIntConst(byteBitOffsets.first, mirType));
 
   BinaryNode *addNode = mirModule.CurFuncCodeMemPool()->New<BinaryNode>(OP_add);
   addNode->SetPrimType(LOWERED_PTR_TYPE);
@@ -885,7 +885,7 @@ StmtNode *CGLowerer::LowerDassignBitfield(DassignNode &dassign, BlockNode &newBl
               "LowerIassignBitField: subscript out of range");
   MIRType &mirType = *GlobalTables::GetTypeTable().GetTypeFromTyIdx(loweredPtrType);
   constNode->SetConstVal(
-      GlobalTables::GetIntConstTable().GetOrCreateIntConst(byteBitOffsets.first, mirType, 0 /* fieldID */));
+      GlobalTables::GetIntConstTable().GetOrCreateIntConst(byteBitOffsets.first, mirType));
 
   BinaryNode *addNode = mirModule.CurFuncCodeMemPool()->New<BinaryNode>(OP_add);
   addNode->SetPrimType(LOWERED_PTR_TYPE);
@@ -956,7 +956,7 @@ StmtNode *CGLowerer::LowerIassignBitfield(IassignNode &iassign, BlockNode &newBl
   uint32 loweredPtrType = static_cast<uint32>(LOWERED_PTR_TYPE);
   MIRType &mirType = *GlobalTables::GetTypeTable().GetTypeFromTyIdx(loweredPtrType);
   constNode->SetConstVal(
-      GlobalTables::GetIntConstTable().GetOrCreateIntConst(byteBitOffsets.first, mirType, 0 /* fieldID */));
+      GlobalTables::GetIntConstTable().GetOrCreateIntConst(byteBitOffsets.first, mirType));
 
   BinaryNode *addNode = mirModule.CurFuncCodeMemPool()->New<BinaryNode>(OP_add);
   addNode->SetPrimType(LOWERED_PTR_TYPE);
@@ -1927,7 +1927,7 @@ BaseNode *CGLowerer::MergeToCvtType(PrimType dType, PrimType sType, BaseNode &sr
 IreadNode &CGLowerer::GetLenNode(BaseNode &opnd0) {
   MIRIntConst *arrayHeaderNode = GlobalTables::GetIntConstTable().GetOrCreateIntConst(
       static_cast<int64>(AArch64RTSupport::kArrayLengthOffset),
-      *GlobalTables::GetTypeTable().GetTypeFromTyIdx(opnd0.GetPrimType()), 0 /* fieldID */);
+      *GlobalTables::GetTypeTable().GetTypeFromTyIdx(opnd0.GetPrimType()));
   BaseNode *arrayHeaderCstNode = mirModule.CurFuncCodeMemPool()->New<ConstvalNode>(arrayHeaderNode);
   arrayHeaderCstNode->SetPrimType(opnd0.GetPrimType());
   MIRType *addrType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(opnd0.GetPrimType());
@@ -2162,7 +2162,7 @@ void CGLowerer::LowerResetStmt(StmtNode &stmt, BlockNode &block) {
   UnaryStmtNode &unaryStmtNode = static_cast<UnaryStmtNode&>(stmt);
   AddrofNode *addrofNode = static_cast<AddrofNode*>(unaryStmtNode.GetRHS());
   MIRType &type = *GlobalTables::GetTypeTable().GetPrimType(PTY_ref);
-  MIRConst *constVal = GlobalTables::GetIntConstTable().GetOrCreateIntConst(0, type, 0 /* fieldID */);
+  MIRConst *constVal = GlobalTables::GetIntConstTable().GetOrCreateIntConst(0, type);
   ConstvalNode *exprConst = mirModule.CurFuncCodeMemPool()->New<ConstvalNode>();
   exprConst->SetPrimType(type.GetPrimType());
   exprConst->SetConstVal(constVal);
@@ -2403,7 +2403,7 @@ BaseNode *CGLowerer::LowerIntrinJavaArrayLength(const BaseNode &parent, Intrinsi
       ((parent.GetOpCode() == OP_regassign) || (parent.GetOpCode() == OP_dassign) || (parent.GetOpCode() == OP_ge))) {
     MIRType *addrType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(TyIdx(arrAddr->GetPrimType()));
     MIRIntConst *arrayHeaderNode = GlobalTables::GetIntConstTable().GetOrCreateIntConst(
-        static_cast<int64>(AArch64RTSupport::kArrayLengthOffset), *addrType, 0 /* fieldID */);
+        static_cast<int64>(AArch64RTSupport::kArrayLengthOffset), *addrType);
     BaseNode *arrayHeaderCstNode = mirModule.CurFuncCodeMemPool()->New<ConstvalNode>(arrayHeaderNode);
     arrayHeaderCstNode->SetPrimType(arrAddr->GetPrimType());
 
@@ -2922,7 +2922,7 @@ StmtNode *CGLowerer::LowerSyncEnterSyncExit(StmtNode &stmt) {
       /* Just as ParseNaryStmt do for syncenter */
       MIRType &intType = *GlobalTables::GetTypeTable().GetTypeFromTyIdx((TyIdx)PTY_i32);
       /* default 2 for __sync_enter_fast() */
-      MIRIntConst *intConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(2, intType, 0 /* fieldID */);
+      MIRIntConst *intConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(2, intType);
       ConstvalNode *exprConst = mirModule.GetMemPool()->New<ConstvalNode>();
       exprConst->SetPrimType(PTY_i32);
       exprConst->SetConstVal(intConst);

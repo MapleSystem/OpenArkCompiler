@@ -35,8 +35,8 @@ VtableAnalysis::VtableAnalysis(MIRModule &mod, KlassHierarchy *kh, bool dump) : 
   voidPtrType = GlobalTables::GetTypeTable().GetVoidPtr();
   // zeroConst and oneConst are shared amony itab entries. It is safe to share them because
   // they are never removed by anybody.
-  zeroConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(0, *voidPtrType, 0 /* fieldID */);
-  oneConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(1, *voidPtrType, 0 /* fieldID */);
+  zeroConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(0, *voidPtrType);
+  oneConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(1, *voidPtrType);
   for (Klass *klass : klassHierarchy->GetTopoSortedKlasses()) {
     ASSERT(klass != nullptr, "null ptr check!");
     GenVtableList(*klass);
@@ -188,7 +188,7 @@ void VtableAnalysis::GenVtableDefinition(const Klass &klass) {
                                                                    GetMIRModule().GetMemPool());
     auto *constNode = GetMIRModule().GetMemPool()->New<MIRAddroffuncConst>(addrofFuncNode->GetPUIdx(),
                                                                            *voidPtrType);
-    newConst->PushBack(constNode);
+    newConst->AddItem(constNode, 0);
   }
   // We also need to generate vtable and itable even if the class does not
   // have any virtual method, or does not implement any interface.  Such a
@@ -199,7 +199,7 @@ void VtableAnalysis::GenVtableDefinition(const Klass &klass) {
   // postpone this step to mplcg, where mplcg discovers all classes that does
   // not have any vtable or itable.
   if (newConst->GetConstVec().empty()) {
-    newConst->PushBack(zeroConst);
+    newConst->AddItem(zeroConst, 0);
   }
   GenTableSymbol(VTAB_PREFIX_STR, klass.GetKlassName(), *newConst);
 }
@@ -299,10 +299,10 @@ void VtableAnalysis::GenItableDefinition(const Klass &klass) {
   ASSERT_NOT_NULL(firstItabEmitArray);
   for (MIRFunction *func : firstItabVec) {
     if (func != nullptr) {
-      firstItabEmitArray->PushBack(
-        GetMIRModule().GetMemPool()->New<MIRAddroffuncConst>(func->GetPuidx(), *voidPtrType));
+      firstItabEmitArray->AddItem(
+        GetMIRModule().GetMemPool()->New<MIRAddroffuncConst>(func->GetPuidx(), *voidPtrType), 0);
     } else {
-      firstItabEmitArray->PushBack(zeroConst);
+      firstItabEmitArray->AddItem(zeroConst, 0);
     }
   }
   // initialize conflict solution array
@@ -310,22 +310,22 @@ void VtableAnalysis::GenItableDefinition(const Klass &klass) {
     auto *secondItabEmitArray = GetMIRModule().GetMemPool()->New<MIRAggConst>(GetMIRModule(), *voidPtrType);
     // remember count in secondItabVec
     count = ((secondConflictList.size() | (1ULL << (kShiftCountBit - 1))) << kShiftCountBit) + count;
-    secondItabEmitArray->PushBack(
-        GlobalTables::GetIntConstTable().GetOrCreateIntConst(static_cast<int64>(count),
-                                                                    *voidPtrType, 0 /* fieldID */));
-    secondItabEmitArray->PushBack(oneConst);  // padding
+    secondItabEmitArray->AddItem(
+        GlobalTables::GetIntConstTable().GetOrCreateIntConst(static_cast<int64>(count), *voidPtrType),
+        0);
+    secondItabEmitArray->AddItem(oneConst, 0);  // padding
     for (uint32 i = 0; i < kItabSecondHashSize; ++i) {
       if (!secondItab[i] && !secondConflictFlag[i]) {
         continue;
       } else {
-        secondItabEmitArray->PushBack(
-            GlobalTables::GetIntConstTable().GetOrCreateIntConst(i, *voidPtrType, 0 /* fieldID */));
+        secondItabEmitArray->AddItem(
+            GlobalTables::GetIntConstTable().GetOrCreateIntConst(i, *voidPtrType), 0);
         if (secondItab[i]) {
-          secondItabEmitArray->PushBack(
-            GetMIRModule().GetMemPool()->New<MIRAddroffuncConst>(secondItab[i]->GetPuidx(), *voidPtrType));
+          secondItabEmitArray->AddItem(
+            GetMIRModule().GetMemPool()->New<MIRAddroffuncConst>(secondItab[i]->GetPuidx(), *voidPtrType), 0);
         } else {
           // it measn it was conflict again in the second hash
-          secondItabEmitArray->PushBack(oneConst);
+          secondItabEmitArray->AddItem(oneConst, 0);
         }
       }
     }
@@ -333,17 +333,17 @@ void VtableAnalysis::GenItableDefinition(const Klass &klass) {
       ASSERT_NOT_NULL(func);
       const std::string &signatureName = DecodeBaseNameWithType(*func);
       uint32 nameIdx = ReflectionAnalysis::FindOrInsertRepeatString(signatureName);
-      secondItabEmitArray->PushBack(
-          GlobalTables::GetIntConstTable().GetOrCreateIntConst(nameIdx, *voidPtrType, 0 /* fieldID */));
-      secondItabEmitArray->PushBack(
-          GetMIRModule().GetMemPool()->New<MIRAddroffuncConst>(func->GetPuidx(), *voidPtrType));
+      secondItabEmitArray->AddItem(
+          GlobalTables::GetIntConstTable().GetOrCreateIntConst(nameIdx, *voidPtrType), 0);
+      secondItabEmitArray->AddItem(
+          GetMIRModule().GetMemPool()->New<MIRAddroffuncConst>(func->GetPuidx(), *voidPtrType), 0);
     }
     // Create the second-level itable, in which hashcode is looked up by binary searching
     GenTableSymbol(ITAB_CONFLICT_PREFIX_STR, klass.GetKlassName(), *secondItabEmitArray);
     // push the conflict symbol to the first-level itable
     StIdx symIdx = GlobalTables::GetGsymTable().GetStIdxFromStrIdx(
         GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(ITAB_CONFLICT_PREFIX_STR + klass.GetKlassName()));
-    firstItabEmitArray->PushBack(GetMIRModule().GetMemPool()->New<MIRAddrofConst>(symIdx, 0, *voidPtrType));
+    firstItabEmitArray->AddItem(GetMIRModule().GetMemPool()->New<MIRAddrofConst>(symIdx, 0, *voidPtrType), 0);
   }
   GenTableSymbol(ITAB_PREFIX_STR, klass.GetKlassName(), *firstItabEmitArray);
 }

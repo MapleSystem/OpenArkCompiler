@@ -1311,7 +1311,7 @@ bool MIRParser::ParseNaryStmt(StmtNodePtr &stmt, Opcode op) {
     } else {
       MIRType *intType = GlobalTables::GetTypeTable().GetTypeFromTyIdx((TyIdx)PTY_i32);
       // default 2 for __sync_enter_fast()
-      MIRIntConst *intConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(2, *intType, 0);
+      MIRIntConst *intConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(2, *intType);
       ConstvalNode *exprConst = mod.GetMemPool()->New<ConstvalNode>();
       exprConst->SetPrimType(PTY_i32);
       exprConst->SetConstVal(intConst);
@@ -1871,8 +1871,7 @@ bool MIRParser::ParseExprConstval(BaseNodePtr &expr) {
   exprConst->SetPrimType(GetPrimitiveType(typeTk));
   lexer.NextToken();
   MIRConst *constVal = nullptr;
-  if (!ParseScalarValue(constVal, *GlobalTables::GetTypeTable().GetPrimType(exprConst->GetPrimType()),
-                        0 /* fieldID */)) {
+  if (!ParseScalarValue(constVal, *GlobalTables::GetTypeTable().GetPrimType(exprConst->GetPrimType()))) {
     Error("expect scalar type but get ");
     return false;
   }
@@ -2600,27 +2599,27 @@ bool MIRParser::ParseExprIntrinsicop(BaseNodePtr &expr) {
   return true;
 }
 
-bool MIRParser::ParseScalarValue(MIRConstPtr &stype, MIRType &type, uint32 fieldID) {
+bool MIRParser::ParseScalarValue(MIRConstPtr &stype, MIRType &type) {
   PrimType ptp = type.GetPrimType();
   if (IsPrimitiveInteger(ptp) || IsPrimitiveDynType(ptp) || ptp == PTY_gen) {
     if (lexer.GetTokenKind() != TK_intconst) {
       Error("constant value incompatible with integer type at ");
       return false;
     }
-    stype = GlobalTables::GetIntConstTable().GetOrCreateIntConst(lexer.GetTheIntVal(), type, fieldID);
+    stype = GlobalTables::GetIntConstTable().GetOrCreateIntConst(lexer.GetTheIntVal(), type);
   } else if (ptp == PTY_f32) {
     if (lexer.GetTokenKind() != TK_floatconst) {
       Error("constant value incompatible with single-precision float type at ");
       return false;
     }
-    MIRFloatConst *fConst = GlobalTables::GetFpConstTable().GetOrCreateFloatConst(lexer.GetTheFloatVal(), fieldID);
+    MIRFloatConst *fConst = GlobalTables::GetFpConstTable().GetOrCreateFloatConst(lexer.GetTheFloatVal());
     stype = fConst;
   } else if (ptp == PTY_f64) {
     if (lexer.GetTokenKind() != TK_doubleconst && lexer.GetTokenKind() != TK_intconst) {
       Error("constant value incompatible with double-precision float type at ");
       return false;
     }
-    MIRDoubleConst *dconst = GlobalTables::GetFpConstTable().GetOrCreateDoubleConst(lexer.GetTheDoubleVal(), fieldID);
+    MIRDoubleConst *dconst = GlobalTables::GetFpConstTable().GetOrCreateDoubleConst(lexer.GetTheDoubleVal());
     stype = dconst;
   } else {
     return false;

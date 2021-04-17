@@ -800,8 +800,17 @@ class ASTCharacterLiteral : public ASTExpr {
   ASTCharacterLiteral() : ASTExpr(kASTCharacterLiteral) {}
   ~ASTCharacterLiteral() = default;
 
+  int8 GetVal() const {
+    return val;
+  }
+
+  void SetVal(int8 valIn) {
+    val = valIn;
+  }
+
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
+  int8 val;
 };
 
 class ASTVAArgExpr : public ASTExpr {
@@ -849,7 +858,17 @@ class ASTImaginaryLiteral : public ASTExpr {
     child = astExpr;
   }
 
+  void SetComplexType(MIRType *structType) {
+    complexType = structType;
+  }
+
+  void SetElemType(MIRType *type) {
+    elemType = type;
+  }
+
  private:
+  MIRType *complexType = nullptr;
+  MIRType *elemType = nullptr;
   ASTExpr *child = nullptr;
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };

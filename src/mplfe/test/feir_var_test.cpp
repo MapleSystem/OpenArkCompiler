@@ -31,7 +31,7 @@ class FEIRVarTest : public FEIRTestBase {
 };
 
 TEST_F(FEIRVarTest, FEIRVarReg) {
-  std::unique_ptr<FEIRType> type = FEIRTypeHelper::CreateTypeByJavaName("Ljava/lang/Object;", false, true);
+  std::unique_ptr<FEIRType> type = FEIRTypeHelper::CreateTypeByJavaName("Ltest/lang/Object;", false, true);
   FEIRVarReg varReg(1, std::move(type));
   varReg.SetGlobal(false);
   MIRSymbol *symbol = varReg.GenerateMIRSymbol(mirBuilder);
@@ -48,17 +48,17 @@ TEST_F(FEIRVarTest, FEIRVarReg) {
 }
 
 TEST_F(FEIRVarTest, FEIRVarName) {
-  std::unique_ptr<FEIRType> type = FEIRTypeHelper::CreateTypeByJavaName("Ljava/lang/Object;", false, true);
-  GStrIdx nameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName("Ljava_2Flang_2FObject_3B_7Cklass");
+  std::unique_ptr<FEIRType> type = FEIRTypeHelper::CreateTypeByJavaName("Ltest/lang/Object;", false, true);
+  GStrIdx nameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName("Ltest_2Flang_2FObject_3B_7Cklass");
   FEIRVarName varName(nameIdx, std::move(type));
   varName.SetGlobal(true);
   MIRSymbol *symbol = varName.GenerateMIRSymbol(mirBuilder);
   RedirectCout();
   std::string symbolName = symbol->GetName();
-  EXPECT_EQ(symbolName, "Ljava_2Flang_2FObject_3B_7Cklass");
+  EXPECT_EQ(symbolName, "Ltest_2Flang_2FObject_3B_7Cklass");
   symbol->Dump(false, 0);
   std::string symbolDump = GetBufferString();
-  std::string strPattern2 = std::string("var \\$") + "Ljava_2Flang_2FObject_3B_7Cklass" + MPLFEUTRegx::Any();
+  std::string strPattern2 = std::string("var \\$") + "Ltest_2Flang_2FObject_3B_7Cklass" + MPLFEUTRegx::Any();
   EXPECT_EQ(MPLFEUTRegx::Match(symbolDump, strPattern2), true);
   RestoreCout();
 }
@@ -73,10 +73,10 @@ TEST_F(FEIRVarTest, FEIRVarTransDirect) {
   EXPECT_EQ(GetBufferString(), "<$Ljava_2Flang_2FObject_3B>");
   ClearBufferString();
 
-  UniqueFEIRType type2 = FEIRTypeHelper::CreateTypeByJavaName("Ljava/lang/Object;", false, true);
+  UniqueFEIRType type2 = FEIRTypeHelper::CreateTypeByJavaName("Ltest/lang/Object;", false, true);
   UniqueFEIRType type2T = trans.GetType(type2);
   type2T->GenerateMIRType()->Dump(0);
-  EXPECT_EQ(GetBufferString(), "<* <$Ljava_2Flang_2FObject_3B>>");
+  EXPECT_EQ(GetBufferString(), "<* <$Ltest_2Flang_2FObject_3B>>");
   ClearBufferString();
 
   UniqueFEIRType type3 = FEIRTypeHelper::CreateTypeByJavaName("I", false, false);

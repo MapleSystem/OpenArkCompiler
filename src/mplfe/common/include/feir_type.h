@@ -29,6 +29,7 @@ enum FEIRTypeKind {
   kFEIRTypeDefault,
   kFEIRTypeByName,
   kFEIRTypePointer,
+  kFEIRTypenNative
 };
 
 class FEIRType {
@@ -276,6 +277,36 @@ class FEIRTypeByName : public FEIRTypeDefault {
 
  private:
   std::string typeName;
+};
+
+
+// ---------- FEIRTypeNative ----------
+// MIRType is enclosed directly in FEIRTypeNative.
+// Right now, FEIRTypeNative is only used for c-language.
+// Because var type is translated as MIRType directly in stage of ast parse.
+class FEIRTypeNative : public FEIRTypeDefault {
+ public:
+  FEIRTypeNative(MIRType &argMIRType, TypeDim argDim = 0);
+  ~FEIRTypeNative() = default;
+  FEIRTypeNative(const FEIRTypeNative&) = delete;
+  FEIRTypeNative &operator=(const FEIRTypeNative&) = delete;
+
+ protected:
+  std::unique_ptr<FEIRType> CloneImpl() const override;
+  MIRType *GenerateMIRTypeImpl(bool usePtr, PrimType ptyPtr) const override;
+  bool IsEqualToImpl(const FEIRType &argType) const override;
+  size_t HashImpl() const override;
+  bool IsScalarImpl() const override;
+  bool IsPreciseImpl() const override {
+    return true;
+  }
+
+  bool IsValidImpl() const override {
+    return true;
+  }
+
+ private:
+  MIRType &mirType;
 };
 
 // ---------- FEIRTypePointer ----------

@@ -220,8 +220,8 @@ MIRSymbol *CodeReLayout::GenStrSym(const std::string &str) {
   staticSym->SetStorageClass(kScFstatic);
   for (const char &c : newStr) {
     MIRConst *newConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(
-        c, *GlobalTables::GetTypeTable().GetUInt8(), 0 /* fieldID */);
-    strTabAggConst->PushBack(newConst);
+        c, *GlobalTables::GetTypeTable().GetUInt8());
+    strTabAggConst->AddItem(newConst, 0);
   }
   staticSym->SetKonst(strTabAggConst);
   return staticSym;
@@ -273,7 +273,7 @@ void CodeReLayout::GenLayoutSym() {
     fieldConst =
         GetMIRModule().GetMemPool()->New<MIRAddroffuncConst>(addroffuncExpr->GetPUIdx(),
                                                              *GlobalTables::GetTypeTable().GetVoidPtr());
-    funcLayoutConst->PushBack(fieldConst);
+    funcLayoutConst->AddItem(fieldConst, 0);
     funcIdx += layoutCount[i];
   }
   std::string funcLayoutSymName = namemangler::kFunctionLayoutStr + GetMIRModule().GetFileNameAsPostfix();

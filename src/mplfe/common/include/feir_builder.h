@@ -37,6 +37,10 @@ class FEIRBuilder {
                                      bool withType = false);
   static UniqueFEIRVar CreateVarName(const std::string &name, PrimType primType, bool isGlobal = false,
                                      bool withType = false);
+  static UniqueFEIRVar CreateVarNameForC(GStrIdx nameIdx, MIRType &mirType, bool isGlobal = false,
+                                         bool withType = false, TypeDim dim = 0);
+  static UniqueFEIRVar CreateVarNameForC(const std::string &name, MIRType &mirType, bool isGlobal = false,
+                                         bool withType = false, TypeDim dim = 0);
   // Expr
   static UniqueFEIRExpr CreateExprDRead(UniqueFEIRVar srcVar);
   static UniqueFEIRExpr CreateExprAddrof(const std::vector<uint32> &array);
@@ -52,6 +56,7 @@ class FEIRBuilder {
   static UniqueFEIRExpr CreateExprConstI64(int64 val);
   static UniqueFEIRExpr CreateExprConstF32(float val);
   static UniqueFEIRExpr CreateExprConstF64(double val);
+  static UniqueFEIRExpr CreateExprZeroConst(PrimType primType);
   static UniqueFEIRExpr CreateExprMathUnary(Opcode op, UniqueFEIRVar var0);
   static UniqueFEIRExpr CreateExprMathUnary(Opcode op, UniqueFEIRExpr expr);
   static UniqueFEIRExpr CreateExprMathBinary(Opcode op, UniqueFEIRVar var0, UniqueFEIRVar var1);

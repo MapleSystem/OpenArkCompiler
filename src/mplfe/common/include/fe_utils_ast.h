@@ -22,6 +22,7 @@ namespace maple {
 class FEUtilAST {
  public:
   static PrimType GetTypeFromASTTypeName(const std::string &typeName);
+  static const std::string Type2Label(PrimType primType);
 
  private:
   FEUtilAST() = default;

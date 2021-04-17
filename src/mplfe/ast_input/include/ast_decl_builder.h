@@ -23,10 +23,9 @@ ASTDecl *ASTDeclBuilder(MapleAllocator &allocator, const std::string &srcFile,
   return allocator.GetMemPool()->New<ASTDecl>(srcFile, nameIn, typeDescIn);
 }
 
-ASTPrimitiveVar *ASTPrimitiveVarBuilder(MapleAllocator &allocator, const std::string &srcFile,
-                                        const std::string &varName, const std::vector<MIRType*> &desc,
-                                        VarValue val, const GenericAttrs &genAttrsIn) {
-  return allocator.GetMemPool()->New<ASTPrimitiveVar>(srcFile, varName, desc, val, genAttrsIn);
+ASTVar *ASTVarBuilder(MapleAllocator &allocator, const std::string &srcFile,
+                      const std::string &varName, const std::vector<MIRType*> &desc, const GenericAttrs &genAttrsIn) {
+  return allocator.GetMemPool()->New<ASTVar>(srcFile, varName, desc, genAttrsIn);
 }
 
 ASTFunc *ASTFuncBuilder(MapleAllocator &allocator, const std::string &srcFile, const std::string &nameIn,

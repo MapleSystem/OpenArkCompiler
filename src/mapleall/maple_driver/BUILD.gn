@@ -34,7 +34,7 @@ include_directories = [
   "${MAPLEALL_ROOT}/maple_phase/include",
   "${MAPLEALL_ROOT}/maple_ir/include",
   "${MAPLEALL_ROOT}/mempool/include",
-  "${MAPLE_ROOT}/third_party/bounds_checking_function/include",
+  "//../ThirdParty/bounds_checking_function/include",
   "${MAPLE_ROOT}/third_party/dwarf_h/include",
 ]
 
@@ -57,7 +57,7 @@ executable("maple") {
   deps = [
     ":libdriver_option",
     ":liboption_parser",
-    "${MAPLE_ROOT}/third_party/bounds_checking_function:libHWSecureC",
+    "//../ThirdParty/bounds_checking_function:libHWSecureC",
     "${MAPLEALL_ROOT}/maple_be:libcg",
     "${MAPLEALL_ROOT}/maple_be:libmplad",
     "${MAPLEALL_ROOT}/maple_be:libmplbe",
@@ -92,7 +92,7 @@ static_library("liboption_parser") {
     "${MAPLEALL_ROOT}/maple_driver/include",
     "${MAPLEALL_ROOT}/maple_ir/include",
     "${MAPLEALL_ROOT}/mempool/include",
-    "${MAPLE_ROOT}/third_party/bounds_checking_function/include",
+    "//../ThirdParty/bounds_checking_function/include",
   ]
   output_dir = "${root_out_dir}/lib/${HOST_ARCH}"
 }

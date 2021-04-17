@@ -82,7 +82,7 @@ include_common = [
   "include",
   "public-headers",
   "${AOSP_ROOT}/libnativehelper/include_jni",
-  "${MAPLE_ROOT}/third_party/bounds_checking_function/include/",
+  "//../ThirdParty/bounds_checking_function/include/",
   "${MAPLE_MRT_ROOT}/maplert/include",
   "${MAPLE_MRT_ROOT}/maplert/public-headers/",
   "${MAPLE_MRT_ROOT}/libmrtbase/include/",
