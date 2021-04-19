@@ -135,6 +135,8 @@ class ASTVar : public ASTDecl {
     return initExpr;
   }
 
+  std::unique_ptr<FEIRVar> Translate2FEIRVar();
+
  private:
   ASTExpr *initExpr = nullptr;
 };

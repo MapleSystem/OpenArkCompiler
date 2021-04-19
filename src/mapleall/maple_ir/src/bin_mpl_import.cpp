@@ -173,7 +173,7 @@ MIRConst *BinaryMplImport::ImportConst(MIRFunction *func) {
       MIRAggConst *aggConst = mod.GetMemPool()->New<MIRAggConst>(mod, *type);
       int64 size = ReadNum();
       for (int64 i = 0; i < size; ++i) {
-        auto fieldId = static_cast<uint32>(ReadInt64());
+        auto fieldId = static_cast<uint32>(ReadNum());
         auto fieldConst = ImportConst(func);
         aggConst->AddItem(fieldConst, fieldId);
       }

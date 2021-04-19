@@ -486,8 +486,11 @@ std::list<UniqueFEIRStmt> BCReg::GenRetypeStmtsAfterDef() const {
   if (regType->GetUsedTypes() != nullptr) {
     for (const auto &usedType : *(regType->GetUsedTypes())) {
       bool exist = false;
-      for (const auto &elem : unqTypeItems) {
+      for (auto &elem : unqTypeItems) {
         if ((*usedType) == (*elem)) {
+          if (usedType->IsDom()) {
+            elem->SetDom(true);
+          }
           exist = true;
           break;
         }
@@ -510,6 +513,9 @@ std::list<UniqueFEIRStmt> BCReg::GenRetypeStmtsAfterDef() const {
     UniqueFEIRStmt retypeStmt =
         FEIRBuilder::CreateStmtRetype(dstReg->GenFEIRVarReg(), this->GenFEIRVarReg());
     if (retypeStmt != nullptr) {
+      if (FEOptions::GetInstance().IsAOT() && usedType->IsDom()) {
+        retypeStmt->SetHexPC(regType->GetPos());
+      }
       retypeStmts.emplace_back(std::move(retypeStmt));
     }
   }

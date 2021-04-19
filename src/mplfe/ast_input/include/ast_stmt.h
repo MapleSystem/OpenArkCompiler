@@ -232,11 +232,20 @@ class ASTSwitchStmt : public ASTStmt {
     return bodyStmt;
   }
 
+  void SetHasDefault(bool argHasDefault) {
+    hasDefualt = argHasDefault;
+  }
+
+  bool HasDefault() const {
+    return hasDefualt;
+  }
+
  private:
   std::list<UniqueFEIRStmt> Emit2FEStmtImpl() const override;
   ASTStmt *condStmt;
   ASTExpr *condExpr;
   ASTStmt *bodyStmt;
+  bool hasDefualt = false;
 };
 
 class ASTCaseStmt : public ASTStmt {
@@ -268,11 +277,29 @@ class ASTCaseStmt : public ASTStmt {
     return subStmt;
   }
 
+  int64 GetLCaseTag() const {
+    return lCaseTag;
+  }
+
+  int64 GetRCaseTag() const {
+    return rCaseTag;
+  }
+
+  void SetLCaseTag(int64 l) {
+    lCaseTag = l;
+  }
+
+  void SetRCaseTag(int64 r) {
+    rCaseTag = r;
+  }
+
  private:
   std::list<UniqueFEIRStmt> Emit2FEStmtImpl() const override;
-  ASTExpr* lhs;
-  ASTExpr* rhs;
-  ASTStmt* subStmt;
+  ASTExpr* lhs = nullptr;
+  ASTExpr* rhs = nullptr;
+  ASTStmt* subStmt = nullptr;
+  int64 lCaseTag;
+  int64 rCaseTag;
 };
 
 class ASTDefaultStmt : public ASTStmt {

@@ -67,6 +67,7 @@ class InterleavedManager {
  private:
   void InitSupportPhaseManagers();
   void OptimizeFuncs(MeFuncPhaseManager &fpm, MapleVector<MIRFunction*> &compList);
+  void OptimizeFuncsParallel(const MeFuncPhaseManager &fpm, MapleVector<MIRFunction*> &compList, uint32 nThreads);
 
   MapleAllocator allocator;
   MIRModule &mirModule;

@@ -154,11 +154,21 @@ struct BCRegTypeItem {
     pos = pc;
   }
 
+  void SetDom(bool flag) {
+    isDom = flag;
+  }
+
+  bool IsDom() const {
+    return isDom;
+  }
+
   GStrIdx typeNameIdx;
   bool isIndeterminate = false;
   // means `is def ` or `come from def`
   bool isFromDef = false;
   uint32 pos = UINT32_MAX;
+
+  bool isDom = false;
 };
 
 class BCRegType {
@@ -237,6 +247,10 @@ class BCRegType {
 
   void SetPos(uint32 pc) {
     pos = pc;
+  }
+
+  uint32 GetPos() const {
+    return pos;
   }
 
   void RegisterRelatedBCRegType(BCRegType *ty) {

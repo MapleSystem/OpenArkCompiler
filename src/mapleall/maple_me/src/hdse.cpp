@@ -174,7 +174,7 @@ void HDSE::MarkRegDefByStmt(RegMeExpr &regMeExpr) {
       MarkPhiRequired(regMeExpr.GetDefPhi());
       break;
     case kDefByChi: {
-      ASSERT(regMeExpr.GetOst()->GetIndirectLev() > 0, 
+      ASSERT(regMeExpr.GetOst()->GetIndirectLev() > 0,
              "MarkRegDefByStmt: preg cannot be defined by chi");
       auto *defChi = &regMeExpr.GetDefChi();
       if (defChi != nullptr) {
@@ -439,7 +439,7 @@ void HDSE::MarkSingleUseLive(MeExpr &meExpr) {
         MapleMap<OStIdx, ChiMeNode *> *chiList = GenericGetChiListFromVarMeExpr(*mu);
         if (chiList != nullptr) {
           MapleMap<OStIdx, ChiMeNode *>::iterator it = chiList->begin();
-          for (; it != chiList->end(); it++) {
+          for (; it != chiList->end(); ++it) {
             MarkChiNodeRequired(*it->second);
           }
         }

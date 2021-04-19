@@ -65,6 +65,10 @@ std::map<MIRSrcLang, std::tuple<bool, PrimType>> FEIRType::InitLangConfig() {
 }
 
 MIRType *FEIRType::GenerateMIRTypeAuto(MIRSrcLang argSrcLang) const {
+  return GenerateMIRTypeAutoImpl(argSrcLang);
+}
+
+MIRType *FEIRType::GenerateMIRTypeAutoImpl(MIRSrcLang argSrcLang) const {
   MPLFE_PARALLEL_FORBIDDEN();
   auto it = langConfig.find(argSrcLang);
   if (it == langConfig.end()) {
@@ -439,26 +443,45 @@ void FEIRTypePointer::SetPrimTypeImpl(PrimType pt) {
 }
 
 // ---------- FEIRTypeNative ----------
-FEIRTypeNative::FEIRTypeNative(MIRType &argMIRtype, TypeDim argDim)
-    : FEIRTypeDefault(argMIRtype.GetPrimType(), argMIRtype.GetNameStrIdx(), argDim),
+FEIRTypeNative::FEIRTypeNative(MIRType &argMIRtype)
+    : FEIRType(kFEIRTypeNative),
       mirType(argMIRtype) {
-  kind = kFEIRTypenNative;
+  kind = kFEIRTypeNative;
   // Right now, FEIRTypeNative is only used for c-language.
   srcLang = kSrcLangC;
 }
 
+PrimType FEIRTypeNative::GetPrimTypeImpl() const {
+  return mirType.GetPrimType();
+}
+
+void FEIRTypeNative::SetPrimTypeImpl(PrimType pt) {
+  CHECK_FATAL(false, "Should not get here");
+}
+
+void FEIRTypeNative::CopyFromImpl(const FEIRType &type) {
+  CHECK_FATAL(type.GetKind() == kFEIRTypeNative, "invalid opration");
+  mirType = *(type.GenerateMIRTypeAuto());
+}
+
+MIRType *FEIRTypeNative::GenerateMIRTypeAutoImpl() const {
+  return &mirType;
+}
+
 std::unique_ptr<FEIRType> FEIRTypeNative::CloneImpl() const {
-  std::unique_ptr<FEIRType> newType = std::make_unique<FEIRTypeNative>(mirType, dim);
+  std::unique_ptr<FEIRType> newType = std::make_unique<FEIRTypeNative>(mirType);
   return newType;
 }
 
 MIRType *FEIRTypeNative::GenerateMIRTypeImpl(bool usePtr, PrimType ptyPtr) const {
   // To optimize for array type
+  WARN(kLncWarn,
+      "FEIRTypeNative::GenerateMIRType is not recommended, use FEIRTypeNative::GenerateMIRTypeAuto instead.");
   return &mirType;
 }
 
 bool FEIRTypeNative::IsEqualToImpl(const FEIRType &argType) const {
-  if (!FEIRTypeDefault::IsEqualToImpl(argType)) {
+  if (argType.GetKind() != kFEIRTypeNative) {
     return false;
   }
   const FEIRTypeNative &argTypeNative = static_cast<const FEIRTypeNative&>(argType);
@@ -469,7 +492,29 @@ size_t FEIRTypeNative::HashImpl() const {
   return mirType.GetHashIndex();
 }
 
+std::string FEIRTypeNative::GetTypeNameImpl() const {
+  return mirType.GetName();
+}
+
 bool FEIRTypeNative::IsScalarImpl() const {
   return mirType.IsScalarType();
+}
+
+bool FEIRTypeNative::IsRefImpl() const {
+  return mirType.GetPrimType() == PTY_ref;
+}
+
+bool FEIRTypeNative::IsArrayImpl() const {
+  return mirType.GetKind() == kTypeArray;
+}
+
+TypeDim FEIRTypeNative::ArrayIncrDimImpl(TypeDim delta) {
+  CHECK_FATAL(false, "Should not get here");
+  return delta;
+}
+
+TypeDim FEIRTypeNative::ArrayDecrDimImpl(TypeDim delta) {
+  CHECK_FATAL(false, "Should not get here");
+  return delta;
 }
 }  // namespace maple

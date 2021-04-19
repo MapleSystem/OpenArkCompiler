@@ -16,6 +16,7 @@
 #include "ast_parser.h"
 #include "global_tables.h"
 #include "ast_stmt.h"
+#include "feir_var_name.h"
 
 namespace maple {
 // ---------- ASTDecl ---------
@@ -29,6 +30,12 @@ const std::string &ASTDecl::GetName() const {
 
 const std::vector<MIRType*> &ASTDecl::GetTypeDesc() const {
   return typeDesc;
+}
+
+// ---------- ASTVar ----------
+std::unique_ptr<FEIRVar> ASTVar::Translate2FEIRVar() {
+  CHECK_FATAL(typeDesc.size() == 1, "Invalid ASTVar");
+  return std::make_unique<FEIRVarName>(name, std::make_unique<FEIRTypeNative>(*(typeDesc[0])));
 }
 
 // ---------- ASTFunc ---------

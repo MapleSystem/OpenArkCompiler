@@ -48,48 +48,10 @@ bool FEIRVarName::EqualsToImpl(const std::unique_ptr<FEIRVar> &var) const {
   }
   FEIRVarName *ptrVarName = static_cast<FEIRVarName*>(var.get());
   ASSERT(ptrVarName != nullptr, "ptr var is nullptr");
-  return ptrVarName->nameIdx == nameIdx;
+  return ptrVarName->nameIdx == nameIdx && GetType()->IsEqualTo(ptrVarName->GetType());
 }
 
 size_t FEIRVarName::HashImpl() const {
   return std::hash<uint32>{}(nameIdx);
-}
-
-// ---------- FEIRVarNameSpec ----------
-std::string FEIRVarNameSpec::GetNameImpl(const MIRType &mirType) const {
-  std::stringstream ss;
-  ss << name;
-  if (withType) {
-    ss << "_";
-    if (type->IsPreciseRefType()) {
-      ss << "R" << mirType.GetTypeIndex().GetIdx();
-    } else {
-      ss << GetPrimTypeName(type->GetPrimType());
-    }
-  }
-  return ss.str();
-}
-
-std::string FEIRVarNameSpec::GetNameRawImpl() const {
-  return name;
-}
-
-std::unique_ptr<FEIRVar> FEIRVarNameSpec::CloneImpl() const {
-  std::unique_ptr<FEIRVar> var = std::make_unique<FEIRVarNameSpec>(name, type->Clone(), withType);
-  var->SetGlobal(isGlobal);
-  return var;
-}
-
-bool FEIRVarNameSpec::EqualsToImpl(const std::unique_ptr<FEIRVar> &var) const {
-  if (var->GetKind() != kind) {
-    return false;
-  }
-  FEIRVarNameSpec *ptrVarNameSpec = static_cast<FEIRVarNameSpec*>(var.get());
-  ASSERT(ptrVarNameSpec != nullptr, "ptr var is nullptr");
-  return ptrVarNameSpec->name.compare(name) == 0;
-}
-
-size_t FEIRVarNameSpec::HashImpl() const {
-  return std::hash<std::string>{}(name);
 }
 }  // namespace maple

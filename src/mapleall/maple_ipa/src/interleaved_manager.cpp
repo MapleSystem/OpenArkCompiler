@@ -199,6 +199,28 @@ void InterleavedManager::OptimizeFuncs(MeFuncPhaseManager &fpm, MapleVector<MIRF
   }
 }
 
+void InterleavedManager::OptimizeFuncsParallel(const MeFuncPhaseManager &fpm, MapleVector<MIRFunction*> &compList,
+                                               uint32 nThreads) {
+  auto mainMpCtrler = std::make_unique<MemPoolCtrler>();
+  MemPool *mainMp = mainMpCtrler->NewMemPool("main thread mempool");
+  MeFuncPhaseManager &fpmCopy = fpm.Clone(*mainMp, *mainMpCtrler);
+  auto funcOpt = std::make_unique<MeFuncOptExecutor>(std::move(mainMpCtrler), fpmCopy);
+  MeFuncOptScheduler funcOptScheduler("me func opt", std::move(funcOpt));
+  funcOptScheduler.Init();
+  for (size_t i = 0; i < compList.size(); ++i) {
+    MIRFunction *func = compList[i];
+    ASSERT_NOT_NULL(func);
+    // skip empty func, and skip the func out of range if `useRange` is true
+    if (func->GetBody() == nullptr || (MeOption::useRange && (i < MeOption::range[0] || i > MeOption::range[1]))) {
+      continue;
+    }
+    funcOptScheduler.AddFuncOptTask(mirModule, *func, i, meInput);
+  }
+  // lower, create BB and build cfg
+  ThreadEnv::SetMeParallel(true);
+  (void)funcOptScheduler.RunTask(nThreads, false);
+  ThreadEnv::SetMeParallel(false);
+}
 
 void InterleavedManager::Run() {
   MPLTimer optTimer;
@@ -236,7 +258,16 @@ void InterleavedManager::RunMeOptimize(MeFuncPhaseManager &fpm) {
   MPLTimer optTimer;
   optTimer.Start();
   std::string logPrefix = mirModule.IsInIPA() ? "[ipa]" : "[me]";
-  OptimizeFuncs(fpm, *compList);
+  uint32 nThreads = MeOption::threads;
+  bool enableMultithreading = (nThreads > 1);
+  if (enableMultithreading && !mirModule.IsInIPA()) {  // parallel
+    MeOption::ignoreInferredRetType = true;  // parallel optimization always ignore return type inferred by ssadevirt
+    LogInfo::MapleLogger() << logPrefix << " Parallel optimization (" << nThreads << " threads)\n";
+    OptimizeFuncsParallel(fpm, *compList, nThreads);
+  } else {  // serial
+    LogInfo::MapleLogger() << logPrefix << " Serial optimization\n";
+    OptimizeFuncs(fpm, *compList);
+  }
   optTimer.Stop();
   LogInfo::MapleLogger() << logPrefix << " Function phases cost " << optTimer.ElapsedMilliseconds() << "ms\n";
   optTimer.Start();
