@@ -46,10 +46,10 @@ OriginalSt *AliasAnalysisTable::FindOrCreateAddrofSymbolOriginalSt(OriginalSt &o
                                                       ost.GetPuIdx(), 0, originalStTab.GetAlloc());
   originalStTab.GetOriginalStVector().push_back(prevLevelOst);
   prevLevelOst->SetIndirectLev(-1);
-  MIRPtrType pointType(ost.GetTyIdx(), PTY_ptr);
+  MIRPtrType pointType(ost.GetMIRSymbol()->GetTyIdx(), PTY_ptr);
   TyIdx newTyIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&pointType);
   prevLevelOst->SetTyIdx(newTyIdx);
-  prevLevelOst->SetFieldID(ost.GetFieldID());
+  prevLevelOst->SetFieldID(0);
   GetNextLevelNodes(*prevLevelOst)->push_back(&ost);
   (void)prevLevelNode.insert(std::make_pair(ost.GetIndex(), prevLevelOst));
   return prevLevelOst;

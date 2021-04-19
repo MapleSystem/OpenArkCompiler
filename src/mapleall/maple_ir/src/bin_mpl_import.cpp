@@ -103,7 +103,7 @@ MIRConst *BinaryMplImport::ImportConst(MIRFunction *func) {
 
   MIRConstKind kind;
   MIRType *type = nullptr;
-  MemPool *memPool = (func == nullptr) ? mod.GetMemPool() : func->GetCodeMempool();
+  MemPool *memPool = mod.GetMemPool();
 
   ImportConstBase(kind, type);
   switch (tag) {

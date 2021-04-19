@@ -307,7 +307,7 @@ bool MIRSymbol::IgnoreRC() const {
   return strIdx == reflectClassNameIdx;
 }
 
-void MIRSymbol::Dump(bool isLocal, int32 indent, bool suppressInit) const {
+void MIRSymbol::Dump(bool isLocal, int32 indent, bool suppressInit, const MIRSymbolTable *localsymtab) const {
   if (sKind == kStVar || sKind == kStFunc) {
     if (srcPosition.FileNum() != 0 && srcPosition.LineNum() != 0 && srcPosition.LineNum() != lastPrintedLineNum) {
       LogInfo::MapleLogger() << "LOC " << srcPosition.FileNum() << " " << srcPosition.LineNum() << std::endl;
@@ -360,7 +360,7 @@ void MIRSymbol::Dump(bool isLocal, int32 indent, bool suppressInit) const {
   }
   if (IsConst() && !suppressInit && !(IsLiteral() && GetStorageClass() == kScExtern)) {
     LogInfo::MapleLogger() << " = ";
-    GetKonst()->Dump();
+    GetKonst()->Dump(localsymtab);
   }
   LogInfo::MapleLogger() << '\n';
 }
@@ -387,7 +387,7 @@ void MIRSymbolTable::Dump(bool isLocal, int32 indent, bool printDeleted) const {
     if (!printDeleted && symbol->IsDeleted()) {
       continue;
     }
-    symbol->Dump(isLocal, indent);
+    symbol->Dump(isLocal, indent, false/*suppressinit*/, this);
   }
 }
 
