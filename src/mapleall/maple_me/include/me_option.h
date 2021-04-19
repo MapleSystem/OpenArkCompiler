@@ -112,6 +112,7 @@ class MeOption : public MapleDriverOptionBase {
   static bool propFinaliLoadRef;
   static bool propIloadRefNonParm;
   static bool propAtPhi;
+  static bool propDuringBuild;
   static bool lpreSpeculate;
   static bool spillAtCatch;
   static bool optDirectCall;

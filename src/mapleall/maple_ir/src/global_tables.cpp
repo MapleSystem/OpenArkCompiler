@@ -82,7 +82,7 @@ MIRType *TypeTable::CreateAndUpdateMirTypeNode(MIRType &pType) {
   if (pType.IsMIRPtrType()) {
     auto &pty = static_cast<MIRPtrType&>(pType);
     if (pty.GetTypeAttrs() == TypeAttrs()) {
-      if (pty.GetPrimType() == PTY_ptr) {
+      if (pty.GetPrimType() != PTY_ref) {
         ptrTypeMap[pty.GetPointedTyIdx()] = nType->GetTypeIndex();
       } else {
         refTypeMap[pty.GetPointedTyIdx()] = nType->GetTypeIndex();
@@ -100,7 +100,7 @@ MIRType* TypeTable::GetOrCreateMIRTypeNode(MIRType &pType) {
   if (pType.IsMIRPtrType()) {
     auto &type = static_cast<MIRPtrType&>(pType);
     if (type.GetTypeAttrs() == TypeAttrs()) {
-      auto *pMap = (type.GetPrimType() == PTY_ptr ? &ptrTypeMap : &refTypeMap);
+      auto *pMap = (type.GetPrimType() != PTY_ref ? &ptrTypeMap : &refTypeMap);
       auto *otherPMap = (type.GetPrimType() == PTY_ref ? &ptrTypeMap : &refTypeMap);
       {
         std::shared_lock<std::shared_timed_mutex> lock(mtx);

@@ -69,6 +69,7 @@ bool MeOption::spillAtCatch = false;
 bool MeOption::rcLowering = true;
 bool MeOption::optDirectCall = false;
 bool MeOption::propAtPhi = true;
+bool MeOption::propDuringBuild = true;
 bool MeOption::dseKeepRef = false;
 bool MeOption::decoupleStatic = false;
 bool MeOption::dumpBefore = false;
@@ -182,6 +183,7 @@ enum OptionIndex {
   kRegReadAtReturn,
   kProPatphi,
   kNoProPatphi,
+  kPropDuringBuild,
   kOptInterfaceCall,
   kNoOptInterfaceCall,
   kOptVirtualCall,
@@ -815,6 +817,16 @@ const Descriptor kUsage[] = {
     "  --no-propatphi              \tDisable propatphi\n",
     "me",
     {} },
+  { kPropDuringBuild,
+    kEnable,
+    "",
+    "propduringbuild",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --propduringbuild           \tEnable copy propagation when building HSSA\n"
+    "  --no-propduringbuild        \tDisable propduringbuild\n",
+    "me",
+    {} },
   { kMeNativeOpt,
     kEnable,
     "",
@@ -1266,6 +1278,9 @@ bool MeOption::SolveOptions(const std::vector<mapleOption::Option> &opts, bool i
         break;
       case kProPatphi:
         propAtPhi = (opt.Type() == kEnable);
+        break;
+      case kPropDuringBuild:
+        propDuringBuild = (opt.Type() == kEnable);
         break;
       case kMeNativeOpt:
         nativeOpt = (opt.Type() == kEnable);
