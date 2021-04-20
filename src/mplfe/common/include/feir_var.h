@@ -60,11 +60,9 @@ using UniqueFEIRVarTrans = std::unique_ptr<FEIRVarTrans>;
 
 enum FEIRVarKind : uint8 {
   kFEIRVarDefault = 0,
-  kFEIRVarSpecial,
   kFEIRVarReg,
   kFEIRVarAccumulator,
   kFEIRVarName,
-  kFEIRVarNameSpec,
   kFEIRVarTypeScatter,
 };
 

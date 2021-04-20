@@ -43,6 +43,8 @@ enum ASTOp {
 
   // BinaryOperators
   // [C++ 5.5] Pointer-to-member operators.
+  kASTOpBO,
+  kASTOpCompoundAssign,
   kASTOpPtrMemD,
   kASTOpPtrMemI,
   // [C99 6.5.5] Multiplicative operators.
@@ -136,6 +138,8 @@ enum ASTStmtOp {
 
   kASTStmtReturn,
   kASTStmtBO,
+  kASTStmtBOAssign,
+  kASTStmtBOCompoundAssign,
   kASTStmtUO,
   kASTStmtCompound,
   kASTStmtSwitch,
@@ -153,19 +157,6 @@ enum ASTStmtOp {
   kASTStmtStmtExpr,
   kASTStmtCStyleCastExpr,
   kASTStmtCallExpr,
-};
-
-enum ASTAtomicOp {
-  kAtomicBinaryOpAdd,
-  kAtomicBinaryOpSub,
-  kAtomicBinaryOpAnd,
-  kAtomicBinaryOpOr,
-  kAtomicBinaryOpXor,
-  kAtomicOpLoad,
-  kAtomicOpStore,
-  kAtomicOpExchange,
-  kAtomicOpCompareExchange,
-  kAtomicOpLast,
 };
 }  // namespace maple
 #endif  // MPLFE_AST_INPUT_INCLUDE_AST_OP_H

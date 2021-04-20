@@ -45,12 +45,10 @@ const std::string Profile::preClassHot[] = {
     "Ljava/lang/String;"
 };
 
-#ifndef HUAWEI_EXTERNAL_RELEASE_JBC
 const std::string Profile::preMethodHot[] = {
     "Landroid/util/ContainerHelpers;",
     "Landroid/util/SparseArray;"
 };
-#endif
 
 Profile::Profile() {}
 
@@ -255,7 +253,6 @@ void Profile::ParseReflectionStr(const char *data, int32 fileNum) {
 }
 
 void Profile::InitPreHot() {
-#ifndef HUAWEI_EXTERNAL_RELEASE_JBC
   std::string frameworkDexName = "framework";
   std::string coreDexName = "core-all";
   if (dexName.find(frameworkDexName) != std::string::npos) {
@@ -268,7 +265,6 @@ void Profile::InitPreHot() {
     }
     isCoreSo = true;
   }
-#endif
 }
 
 bool Profile::DeCompress(const std::string &path, const std::string &dexNameInner, ProfileType type) {

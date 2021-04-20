@@ -87,6 +87,8 @@ class FunctionFactory final {
   }
 
   creator_type Create(const key_type &key) const {
+    static std::mutex mtx;
+    ParallelGuard guard(mtx, ThreadEnv::IsMeParallel());
     auto it = creator.find(key);
     return it == creator.end() ? nullptr : it->second;
   }

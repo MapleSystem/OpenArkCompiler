@@ -130,6 +130,7 @@ ASTDecl *ProcessDecl(MapleAllocator &allocator, const clang::Decl &decl);
 
  private:
   void TraverseDecl(clang::Decl *decl, std::function<void (clang::Decl*)> const &functor);
+  ASTDecl *GetAstDeclOfDeclRefExpr(MapleAllocator &allocator, const clang::Expr &expr);
   uint32 fileIdx;
   const std::string fileName;
   std::unique_ptr<LibAstFile> astFile;

@@ -140,6 +140,8 @@ bool IpaOption::SolveOptions(const mapleOption::OptionParser &optionParser) cons
 }
 
 bool IpaOption::ParseCmdline(int argc, char **argv, std::vector<std::string> &fileNames) {
+  // Default value
+  MeOption::inlineFuncList = "";
   OptionParser optionParser;
   optionParser.RegisteUsages(DriverOptionCommon::GetInstance());
   optionParser.RegisteUsages(IpaOption::GetInstance());

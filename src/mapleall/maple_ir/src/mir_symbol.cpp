@@ -387,7 +387,7 @@ void MIRSymbolTable::Dump(bool isLocal, int32 indent, bool printDeleted) const {
     if (!printDeleted && symbol->IsDeleted()) {
       continue;
     }
-    symbol->Dump(isLocal, indent, false/*suppressinit*/, this);
+    symbol->Dump(isLocal, indent, false /* suppressinit */, this);
   }
 }
 

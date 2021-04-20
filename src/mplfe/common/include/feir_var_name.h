@@ -34,6 +34,9 @@ class FEIRVarName : public FEIRVar {
         nameIdx(argNameIdx),
         withType(argWithType) {}
 
+  FEIRVarName(const std::string &argName, std::unique_ptr<FEIRType> argType, bool argWithType = false)
+      : FEIRVarName(GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(argName), std::move(argType), argWithType) {}
+
   virtual ~FEIRVarName() = default;
 
  protected:
@@ -44,35 +47,8 @@ class FEIRVarName : public FEIRVar {
   size_t HashImpl() const override;
 
   GStrIdx nameIdx;
+  // means emit this symbol with type
   bool withType : 1;
-};
-
-// ---------- FEIRVarNameSpec ----------
-class FEIRVarNameSpec : public FEIRVarName {
- public:
-  FEIRVarNameSpec(const std::string &argName, bool argWithType = false)
-      : FEIRVarName(GStrIdx(0), argWithType),
-        name(argName) {
-    kind = FEIRVarKind::kFEIRVarNameSpec;
-  }
-
-  FEIRVarNameSpec(const std::string &argName, std::unique_ptr<FEIRType> argType, bool argWithType = false)
-      : FEIRVarName(GStrIdx(0), std::move(argType), argWithType),
-        name(argName) {
-    kind = FEIRVarKind::kFEIRVarNameSpec;
-  }
-
-  ~FEIRVarNameSpec() = default;
-
- protected:
-  std::string GetNameImpl(const MIRType &mirType) const override;
-  std::string GetNameRawImpl() const override;
-  std::unique_ptr<FEIRVar> CloneImpl() const override;
-  bool EqualsToImpl(const std::unique_ptr<FEIRVar> &var) const override;
-  size_t HashImpl() const override;
-
- private:
-  std::string name;
 };
 }  // namespace maple
 #endif  // MPLFE_INCLUDE_FEIR_VAR_REG_H

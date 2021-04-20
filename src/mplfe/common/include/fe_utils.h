@@ -21,6 +21,7 @@
 #include "prim_types.h"
 #include "global_tables.h"
 #include "mempool.h"
+#include "mir_nodes.h"
 
 namespace maple {
 class FEUtils {
@@ -290,5 +291,41 @@ class FELinkListNode {
   FELinkListNode *prev;
   FELinkListNode *next;
 };
+
+class AstSwitchUtil {
+ public:
+  static AstSwitchUtil &Instance() {
+    static AstSwitchUtil local;
+    return local;
+  }
+  using BlockLabel = std::pair<LabelIdx, LabelIdx>;
+
+  BlockLabel AllocateLoopOrSwitchLabels(MIRBuilder &mirBuilder);
+  void MarkLabelUsed(LabelIdx label);
+  void MarkLabelUnUsed(LabelIdx label);
+  void PushNestedBreakLabels(LabelIdx label);
+  void PopNestedBreakLabels();
+  void PushNestedCaseVectors(std::pair<CaseVector*, LabelIdx>);
+  void PopNestedCaseVectors();
+  bool CheckLabelUsed(LabelIdx label);
+  const std::pair<CaseVector*, LabelIdx> &GetTopOfNestedCaseVectors() const;
+  std::map<LabelIdx, bool> &GetLabelUseMap() {
+    return labelUsed;
+  }
+  static uint32_t tempVarNo;
+  static const char *cleanLabel;
+  static const char *exitLabel;
+  static const char *blockLabel;
+  static const char *caseLabel;
+  static const char *catchLabel;
+  static const char *endehLabel;
+
+ private:
+  AstSwitchUtil() = default;
+  std::map<LabelIdx, bool> labelUsed = std::map<LabelIdx, bool>();
+  std::stack<LabelIdx> nestedBreakLabels = std::stack<LabelIdx>(); // loop and switch blocks
+  std::stack<LabelIdx> nestedContinueLabels = std::stack<LabelIdx>(); // loop blocks only
+  std::stack<std::pair<CaseVector*, LabelIdx>> nestedCaseVectors = std::stack<std::pair<CaseVector*, LabelIdx>>();
+}; // end of AstSwitchUtil
 }  // namespace maple
 #endif  // MPLFE_INCLUDE_FE_UTILS_H

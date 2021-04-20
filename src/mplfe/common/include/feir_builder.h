@@ -61,6 +61,7 @@ class FEIRBuilder {
   static UniqueFEIRExpr CreateExprMathUnary(Opcode op, UniqueFEIRExpr expr);
   static UniqueFEIRExpr CreateExprMathBinary(Opcode op, UniqueFEIRVar var0, UniqueFEIRVar var1);
   static UniqueFEIRExpr CreateExprMathBinary(Opcode op, UniqueFEIRExpr expr0, UniqueFEIRExpr expr1);
+  static UniqueFEIRExpr CreateExprBinary(Opcode op, UniqueFEIRExpr expr0, UniqueFEIRExpr expr1);
   static UniqueFEIRExpr CreateExprSExt(UniqueFEIRVar srcVar);
   static UniqueFEIRExpr CreateExprSExt(UniqueFEIRExpr srcExpr, PrimType dstType);
   static UniqueFEIRExpr CreateExprZExt(UniqueFEIRVar srcVar);
@@ -78,6 +79,7 @@ class FEIRBuilder {
   // Stmt
   static UniqueFEIRStmt CreateStmtDAssign(UniqueFEIRVar dstVar, UniqueFEIRExpr srcExpr, bool hasException = false);
   static UniqueFEIRStmt CreateStmtGoto(uint32 targetLabelIdx);
+  static UniqueFEIRStmt CreateStmtGoto(std::string labelName);
   static UniqueFEIRStmt CreateStmtCondGoto(uint32 targetLabelIdx, Opcode op, UniqueFEIRExpr expr);
   static UniqueFEIRStmt CreateStmtSwitch(UniqueFEIRExpr expr);
   static UniqueFEIRStmt CreateStmtJavaConstClass(UniqueFEIRVar dstVar, UniqueFEIRType type);

@@ -29,7 +29,7 @@ enum FEIRTypeKind {
   kFEIRTypeDefault,
   kFEIRTypeByName,
   kFEIRTypePointer,
-  kFEIRTypenNative
+  kFEIRTypeNative
 };
 
 class FEIRType {
@@ -40,7 +40,7 @@ class FEIRType {
   static std::map<MIRSrcLang, std::tuple<bool, PrimType>> InitLangConfig();
   MIRType *GenerateMIRTypeAuto(MIRSrcLang argSrcLang) const;
   MIRType *GenerateMIRTypeAuto() const {
-    return GenerateMIRTypeAuto(srcLang);
+    return GenerateMIRTypeAutoImpl();
   }
 
   bool IsSameKind(const FEIRType &type) const {
@@ -142,6 +142,10 @@ class FEIRType {
   static std::map<MIRSrcLang, std::tuple<bool, PrimType>> langConfig;
 
  protected:
+  virtual MIRType *GenerateMIRTypeAutoImpl() const {
+    return GenerateMIRTypeAuto(srcLang);
+  }
+  virtual MIRType *GenerateMIRTypeAutoImpl(MIRSrcLang argSrcLang) const;
   virtual void CopyFromImpl(const FEIRType &type);
   virtual std::unique_ptr<FEIRType> CloneImpl() const = 0;
   virtual MIRType *GenerateMIRTypeImpl(bool usePtr, PrimType ptyPtr) const = 0;
@@ -284,19 +288,27 @@ class FEIRTypeByName : public FEIRTypeDefault {
 // MIRType is enclosed directly in FEIRTypeNative.
 // Right now, FEIRTypeNative is only used for c-language.
 // Because var type is translated as MIRType directly in stage of ast parse.
-class FEIRTypeNative : public FEIRTypeDefault {
+class FEIRTypeNative : public FEIRType {
  public:
-  FEIRTypeNative(MIRType &argMIRType, TypeDim argDim = 0);
+  explicit FEIRTypeNative(MIRType &argMIRType);
   ~FEIRTypeNative() = default;
   FEIRTypeNative(const FEIRTypeNative&) = delete;
   FEIRTypeNative &operator=(const FEIRTypeNative&) = delete;
 
  protected:
+  MIRType *GenerateMIRTypeAutoImpl() const override;
+  PrimType GetPrimTypeImpl() const override;
+  void SetPrimTypeImpl(PrimType pt) override;
+  void CopyFromImpl(const FEIRType &type) override;
   std::unique_ptr<FEIRType> CloneImpl() const override;
   MIRType *GenerateMIRTypeImpl(bool usePtr, PrimType ptyPtr) const override;
   bool IsEqualToImpl(const FEIRType &argType) const override;
   size_t HashImpl() const override;
+  std::string GetTypeNameImpl() const override;
   bool IsScalarImpl() const override;
+  bool IsRefImpl() const override;
+  bool IsArrayImpl() const override;
+
   bool IsPreciseImpl() const override {
     return true;
   }
@@ -304,6 +316,9 @@ class FEIRTypeNative : public FEIRTypeDefault {
   bool IsValidImpl() const override {
     return true;
   }
+
+  TypeDim ArrayIncrDimImpl(TypeDim delta) override;
+  TypeDim ArrayDecrDimImpl(TypeDim delta) override;
 
  private:
   MIRType &mirType;

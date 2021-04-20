@@ -121,7 +121,7 @@ class OriginalSt {
     return ostType == kPregOst && symOrPreg.pregIdx < 0;
   }
 
-  bool IsSameSymOrPreg(OriginalSt *ost) const {
+  bool IsSameSymOrPreg(const OriginalSt *ost) const {
     if (ostType != ost->ostType) {
       return false;
     }

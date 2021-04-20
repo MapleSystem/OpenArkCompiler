@@ -16,6 +16,7 @@
 #include <sstream>
 #include "mpl_logging.h"
 #include "mir_type.h"
+#include "mir_builder.h"
 namespace maple {
 // ---------- FEUtils ----------
 const std::string FEUtils::kBoolean = "Z";
@@ -232,5 +233,54 @@ void FELinkListNode::InsertAfter(FELinkListNode *ins, FELinkListNode *pos) {
   posNext->prev = ins;
   ins->prev = pos;
   ins->next = posNext;
+}
+
+uint32_t AstSwitchUtil::tempVarNo = 0;
+const char *AstSwitchUtil::cleanLabel = "clean";
+const char *AstSwitchUtil::exitLabel = "exit";
+const char *AstSwitchUtil::blockLabel = "blklbl";
+const char *AstSwitchUtil::caseLabel = "case";
+const char *AstSwitchUtil::catchLabel = "catch";
+const char *AstSwitchUtil::endehLabel = "endeh";
+
+AstSwitchUtil::BlockLabel AstSwitchUtil::AllocateLoopOrSwitchLabels(MIRBuilder &mirBuilder) {
+  std::string tempName = FEUtils::GetSequentialName0(blockLabel, tempVarNo);
+  LabelIdx endLab = mirBuilder.GetOrCreateMIRLabel(tempName);
+  tempName = FEUtils::GetSequentialName0(blockLabel, tempVarNo);
+  LabelIdx exitLab = mirBuilder.GetOrCreateMIRLabel(tempName);
+  ++tempVarNo;
+  return BlockLabel(endLab, exitLab);
+}
+
+void AstSwitchUtil::MarkLabelUsed(LabelIdx label) {
+  labelUsed[label] = true;
+}
+
+void AstSwitchUtil::MarkLabelUnUsed(LabelIdx label) {
+  labelUsed[label] = false;
+}
+
+void AstSwitchUtil::PushNestedBreakLabels(LabelIdx label) {
+  nestedBreakLabels.push(label);
+}
+
+void AstSwitchUtil::PopNestedBreakLabels() {
+  nestedBreakLabels.pop();
+}
+
+void AstSwitchUtil::PushNestedCaseVectors(std::pair<CaseVector*, LabelIdx> caseVec) {
+  nestedCaseVectors.push(caseVec);
+}
+
+void AstSwitchUtil::PopNestedCaseVectors() {
+  nestedCaseVectors.pop();
+}
+
+bool AstSwitchUtil::CheckLabelUsed(LabelIdx label) {
+  return labelUsed[label];
+}
+
+const std::pair<CaseVector*, LabelIdx> &AstSwitchUtil::GetTopOfNestedCaseVectors() const {
+  return nestedCaseVectors.top();
 }
 }  // namespace maple

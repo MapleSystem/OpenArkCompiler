@@ -18,40 +18,43 @@
 #include "mempool_allocator.h"
 
 namespace maple {
-ASTDecl *ASTDeclBuilder(MapleAllocator &allocator, const std::string &srcFile,
-    const std::string &nameIn, const std::vector<MIRType*> &typeDescIn) {
-  return allocator.GetMemPool()->New<ASTDecl>(srcFile, nameIn, typeDescIn);
-}
+class ASTDeclsBuilder {
+ public:
+  static ASTDecl *ASTDeclBuilder(MapleAllocator &allocator, const std::string &srcFile,
+      const std::string &nameIn, const std::vector<MIRType*> &typeDescIn) {
+    return allocator.GetMemPool()->New<ASTDecl>(srcFile, nameIn, typeDescIn);
+  }
 
-ASTVar *ASTVarBuilder(MapleAllocator &allocator, const std::string &srcFile,
-                      const std::string &varName, const std::vector<MIRType*> &desc, const GenericAttrs &genAttrsIn) {
-  return allocator.GetMemPool()->New<ASTVar>(srcFile, varName, desc, genAttrsIn);
-}
+  static ASTVar *ASTVarBuilder(MapleAllocator &allocator, const std::string &srcFile, const std::string &varName,
+      const std::vector<MIRType*> &desc, const GenericAttrs &genAttrsIn) {
+    return allocator.GetMemPool()->New<ASTVar>(srcFile, varName, desc, genAttrsIn);
+  }
 
-ASTFunc *ASTFuncBuilder(MapleAllocator &allocator, const std::string &srcFile, const std::string &nameIn,
-                        const std::vector<MIRType*> &typeDescIn, const GenericAttrs &genAttrsIn,
-                        const std::vector<std::string> &parmNamesIn) {
-  return allocator.GetMemPool()->New<ASTFunc>(srcFile, nameIn, typeDescIn, genAttrsIn, parmNamesIn);
-}
+  static ASTFunc *ASTFuncBuilder(MapleAllocator &allocator, const std::string &srcFile, const std::string &nameIn,
+                                 const std::vector<MIRType*> &typeDescIn, const GenericAttrs &genAttrsIn,
+                                 const std::vector<std::string> &parmNamesIn) {
+    return allocator.GetMemPool()->New<ASTFunc>(srcFile, nameIn, typeDescIn, genAttrsIn, parmNamesIn);
+  }
 
-template<typename T>
-T *ASTStmtBuilder(MapleAllocator &allocator) {
-  return allocator.GetMemPool()->New<T>();
-}
+  template<typename T>
+  static T *ASTStmtBuilder(MapleAllocator &allocator) {
+    return allocator.GetMemPool()->New<T>();
+  }
 
-template<typename T>
-T *ASTExprBuilder(MapleAllocator &allocator) {
-  return allocator.GetMemPool()->New<T>();
-}
+  template<typename T>
+  static T *ASTExprBuilder(MapleAllocator &allocator) {
+    return allocator.GetMemPool()->New<T>();
+  }
 
-ASTStruct *ASTStructBuilder(MapleAllocator &allocator, const std::string &srcFile, const std::string &nameIn,
-    const std::vector<MIRType*> &typeDescIn, const GenericAttrs &genAttrsIn) {
-  return allocator.GetMemPool()->New<ASTStruct>(srcFile, nameIn, typeDescIn, genAttrsIn);
-}
+  static ASTStruct *ASTStructBuilder(MapleAllocator &allocator, const std::string &srcFile, const std::string &nameIn,
+      const std::vector<MIRType*> &typeDescIn, const GenericAttrs &genAttrsIn) {
+    return allocator.GetMemPool()->New<ASTStruct>(srcFile, nameIn, typeDescIn, genAttrsIn);
+  }
 
-ASTField *ASTFieldBuilder(MapleAllocator &allocator, const std::string &srcFile, const std::string &varName,
-    const std::vector<MIRType*> &desc, const GenericAttrs &genAttrsIn) {
-  return allocator.GetMemPool()->New<ASTField>(srcFile, varName, desc, genAttrsIn);
-}
+  static ASTField *ASTFieldBuilder(MapleAllocator &allocator, const std::string &srcFile, const std::string &varName,
+      const std::vector<MIRType*> &desc, const GenericAttrs &genAttrsIn) {
+    return allocator.GetMemPool()->New<ASTField>(srcFile, varName, desc, genAttrsIn);
+  }
+};
 }  // namespace maple
 #endif  // MPLFE_AST_INPUT_INCLUDE_AST_DECL_BUILDER_H

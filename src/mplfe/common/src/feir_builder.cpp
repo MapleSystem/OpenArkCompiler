@@ -74,20 +74,13 @@ UniqueFEIRVar FEIRBuilder::CreateVarName(GStrIdx nameIdx, PrimType primType, boo
 
 UniqueFEIRVar FEIRBuilder::CreateVarName(const std::string &name, PrimType primType, bool isGlobal,
                                          bool withType) {
-  GStrIdx nameIdx = GlobalTables::GetStrTable().GetStrIdxFromName(name);
-  if (nameIdx == 0) {
-    UniqueFEIRVar var = std::make_unique<FEIRVarNameSpec>(name, withType);
-    var->GetType()->SetPrimType(primType);
-    var->SetGlobal(isGlobal);
-    return var;
-  } else {
-    return CreateVarName(nameIdx, primType, isGlobal, withType);
-  }
+  GStrIdx nameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(name);
+  return CreateVarName(nameIdx, primType, isGlobal, withType);
 }
 
 UniqueFEIRVar FEIRBuilder::CreateVarNameForC(GStrIdx nameIdx, MIRType &mirType, bool isGlobal, bool withType,
                                              TypeDim dim) {
-  UniqueFEIRType type = std::make_unique<FEIRTypeNative>(mirType, dim);
+  UniqueFEIRType type = std::make_unique<FEIRTypeNative>(mirType);
   UniqueFEIRVar var = std::make_unique<FEIRVarName>(nameIdx, std::move(type), withType);
   var->SetGlobal(isGlobal);
   return var;
@@ -191,6 +184,10 @@ UniqueFEIRExpr FEIRBuilder::CreateExprMathBinary(Opcode op, UniqueFEIRExpr expr0
   return std::make_unique<FEIRExprBinary>(op, std::move(expr0), std::move(expr1));
 }
 
+UniqueFEIRExpr FEIRBuilder::CreateExprBinary(Opcode op, UniqueFEIRExpr expr0, UniqueFEIRExpr expr1) {
+  return std::make_unique<FEIRExprBinary>(op, std::move(expr0), std::move(expr1));
+}
+
 UniqueFEIRExpr FEIRBuilder::CreateExprSExt(UniqueFEIRVar srcVar) {
   return std::make_unique<FEIRExprExtractBits>(OP_sext, PTY_i32,
       std::make_unique<FEIRExprDRead>(std::move(srcVar)));
@@ -274,6 +271,12 @@ UniqueFEIRStmt FEIRBuilder::CreateStmtDAssign(UniqueFEIRVar dstVar, UniqueFEIREx
 
 UniqueFEIRStmt FEIRBuilder::CreateStmtGoto(uint32 targetLabelIdx) {
   UniqueFEIRStmt stmt = std::make_unique<FEIRStmtGoto>(targetLabelIdx);
+  CHECK_NULL_FATAL(stmt);
+  return stmt;
+}
+
+UniqueFEIRStmt FEIRBuilder::CreateStmtGoto(std::string labelName) {
+  UniqueFEIRStmt stmt = std::make_unique<FEIRStmtGotoForC>(std::move(labelName));
   CHECK_NULL_FATAL(stmt);
   return stmt;
 }
