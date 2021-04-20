@@ -1606,13 +1606,10 @@ Operand *AArch64CGFunc::SelectDread(const BaseNode &parent, DreadNode &expr) {
   }
   if ((memOpnd->GetMemVaryType() == kNotVary) &&
       IsImmediateOffsetOutOfRange(*static_cast<AArch64MemOperand*>(memOpnd), dataSize)) {
-    return &SplitOffsetWithAddInstruction(*static_cast<AArch64MemOperand*>(memOpnd), dataSize);
+    memOpnd = &SplitOffsetWithAddInstruction(*static_cast<AArch64MemOperand*>(memOpnd), dataSize);
   }
-  if (symType != expr.GetPrimType()) {
-    RegOperand *opnd = &LoadIntoRegister(*memOpnd, expr.GetPrimType(), symType);
-    return opnd;
-  }
-  return memOpnd;
+  RegOperand *opnd = &LoadIntoRegister(*memOpnd, expr.GetPrimType(), symType);
+  return opnd;
 }
 
 RegOperand *AArch64CGFunc::SelectRegread(RegreadNode &expr) {
