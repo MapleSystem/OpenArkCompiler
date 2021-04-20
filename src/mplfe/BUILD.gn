@@ -37,11 +37,11 @@ include_directories = [
   "${MAPLEALL_ROOT}/mpl2mpl/include",
   "${MAPLEALL_ROOT}/maple_me/include",
   "${MAPLEALL_ROOT}/mempool/include",
-  "//../ThirdParty/bounds_checking_function/include",
+  "${THIRD_PARTY_ROOT}/bounds_checking_function/include",
   "${MPLFE_ROOT}/ast_input/include",
   "${MPLFE_ROOT}/ast_input/lib",
   "${LLVMINC}",
-  "//../ThirdParty/cfe-8.0.0.src/tools",
+  "${THIRD_PARTY_ROOT}/cfe-8.0.0.src/tools",
 ]
 
 static_library("lib_mplfe_util") {
@@ -108,7 +108,7 @@ executable("mplfe") {
     ":lib_mplfe_bc_input",
     ":lib_mplfe_dex_input",
     ":lib_mplfe_util",
-    "//../ThirdParty/bounds_checking_function:libHWSecureC",
+    "${THIRD_PARTY_ROOT}/bounds_checking_function:libHWSecureC",
     "${MAPLEALL_ROOT}/maple_driver:libdriver_option",
     "${MAPLEALL_ROOT}/maple_ir:libmplir",
     "${MAPLEALL_ROOT}/mpl2mpl:libmpl2mpl",
@@ -130,7 +130,7 @@ include_jbc_input_directories = [
   "${MAPLEALL_ROOT}/maple_util/include",
   "${MAPLEALL_ROOT}/maple_driver/include",
   "${MAPLEALL_ROOT}/mempool/include",
-  "//../ThirdParty/bounds_checking_function/include",
+  "${THIRD_PARTY_ROOT}/bounds_checking_function/include",
 ]
 
 static_library("lib_mplfe_jbc_input") {
@@ -165,7 +165,7 @@ include_bc_input_directories = [
   "${MAPLEALL_ROOT}/maple_util/include",
   "${MAPLEALL_ROOT}/maple_driver/include",
   "${MAPLEALL_ROOT}/mempool/include",
-  "//../ThirdParty/bounds_checking_function/include",
+  "${THIRD_PARTY_ROOT}/bounds_checking_function/include",
 ]
 
 static_library("lib_mplfe_bc_input") {
@@ -194,7 +194,7 @@ include_dex_input_directories = [
   "${MAPLEALL_ROOT}/maple_util/include",
   "${MAPLEALL_ROOT}/maple_driver/include",
   "${MAPLEALL_ROOT}/mempool/include",
-  "//../ThirdParty/bounds_checking_function/include",
+  "${THIRD_PARTY_ROOT}/bounds_checking_function/include",
 ]
 
 static_library("lib_mplfe_dex_input") {

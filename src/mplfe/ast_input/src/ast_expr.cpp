@@ -392,8 +392,10 @@ UniqueFEIRExpr ASTStringLiteral::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmt
 }
 
 UniqueFEIRExpr ASTArraySubscriptExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
-  CHECK_FATAL(false, "NIY");
-  return nullptr;
+  UniqueFEIRExpr baseFEExpr = baseExpr->Emit2FEExpr(stmts); // ImplicitCastExpr
+  UniqueFEIRExpr idxFEExpr = idxExpr->Emit2FEExpr(stmts); // DeclRefExpr
+  UniqueFEIRType typeNative = FEIRTypeHelper::CreateTypeNative(*baseExpr->GetType());
+  return FEIRBuilder::CreateExprArrayStoreForC(std::move(baseFEExpr), std::move(idxFEExpr), std::move(typeNative));
 }
 
 UniqueFEIRExpr ASTExprUnaryExprOrTypeTraitExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
@@ -462,6 +464,19 @@ UniqueFEIRExpr ASTAssignExpr::ProcessAssign(std::list<UniqueFEIRStmt> &stmts, Un
     preStmt->SetFieldName(ireadFEExpr->GetFieldName());
     stmts.emplace_back(std::move(preStmt));
     return leftFEExpr;
+  } else if (leftFEExpr->GetKind() == FEIRNodeKind::kExprArrayStoreForC) {
+    auto arrayStoreForC = static_cast<FEIRExprArrayStoreForC*>(leftFEExpr.get());
+    FEIRExpr &exprArray = arrayStoreForC->GetExprArray();
+    FEIRExpr &exprIndex = arrayStoreForC->GetExprIndex();
+    FEIRType &typeArray = arrayStoreForC->GetTypeArray();
+    UniqueFEIRExpr uExprArray = exprArray.Clone();
+    UniqueFEIRExpr uExprIndex = exprIndex.Clone();
+    UniqueFEIRType uTypeArray = typeArray.Clone();
+    UniqueFEIRStmt stmt = std::make_unique<FEIRStmtArrayStore>(std::move(rightFEExpr),
+                                                               std::move(uExprArray),
+                                                               std::move(uExprIndex),
+                                                               std::move(uTypeArray));
+    stmts.emplace_back(std::move(stmt));
   }
   return nullptr;
 }

@@ -262,6 +262,14 @@ UniqueFEIRExpr FEIRBuilder::CreateExprJavaArrayLength(UniqueFEIRExpr exprArray) 
   return expr;
 }
 
+UniqueFEIRExpr FEIRBuilder::CreateExprArrayStoreForC(UniqueFEIRExpr argExprArray, UniqueFEIRExpr argExprIndex,
+                                                     UniqueFEIRType argTypeNative) {
+  UniqueFEIRExpr expr = std::make_unique<FEIRExprArrayStoreForC>(std::move(argExprArray), std::move(argExprIndex),
+                                                                                          std::move(argTypeNative));
+  CHECK_NULL_FATAL(expr);
+  return expr;
+}
+
 UniqueFEIRStmt FEIRBuilder::CreateStmtDAssign(UniqueFEIRVar dstVar, UniqueFEIRExpr srcExpr, bool hasException) {
   UniqueFEIRStmt stmt = std::make_unique<FEIRStmtDAssign>(std::move(dstVar), std::move(srcExpr));
   FEIRStmtDAssign *ptrStmt = static_cast<FEIRStmtDAssign*>(stmt.get());

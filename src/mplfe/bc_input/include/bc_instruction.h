@@ -335,18 +335,61 @@ struct TypeInferItem {
     if (prev == nullptr) {
       reg->regType->SetUsedTypes(aliveUsedTypes);
     } else {
-      RegisterInPrevs(prev);
+      (void)RegisterInPrevs(prev);
     }
     reg->regType->RegisterLivesInfo(pos);
   }
 
-  void RegisterInPrevs(TypeInferItem *prev) {
+  bool RegisterInPrevs(TypeInferItem *prev) {
     for (auto e : prevs) {
       if (e == prev) {
-        return;
+        return false;
       }
     }
     prevs.emplace_back(prev);
+    return true;
+  }
+
+  void InsertUniqueAliveTypes(TypeInferItem *end, const MapleList<BCRegTypeItem*> *types) {
+    if (end != nullptr && end->reg == this->reg && end->reg->regType->IsBefore(this->beginPos, end->beginPos)) {
+      return;
+    }
+    std::vector<TypeInferItem*> workList;
+    uint32 index = 0;
+    workList.emplace_back(this);
+    while (index < workList.size()) {
+      auto currItem = workList[index++];
+      currItem->isAlive = true;
+      for (auto type : *types) {
+        bool duplicate = false;
+        for (auto ty : *(currItem->aliveUsedTypes)) {
+          if (ty == type) {
+            duplicate = true;
+            break;
+          }
+        }
+        if (!duplicate) {
+          currItem->aliveUsedTypes->emplace_back(type);
+          currItem->reg->regType->UpdateFuzzyUsedSet(type);
+        }
+      }
+      // insert into its prevs cyclely
+      for (auto prev : currItem->prevs) {
+        if (end != nullptr && end->reg == prev->reg && end->reg->regType->IsBefore(prev->beginPos, end->beginPos)) {
+          continue;
+        }
+        bool exist = false;
+        for (uint32 i = 0; i < workList.size(); ++i) {
+          if (workList[i] == prev) {
+            exist = true;
+            break;
+          }
+        }
+        if (!exist) {
+          workList.emplace_back(prev);
+        }
+      }
+    }
   }
 
   void InsertUniqueAliveType(TypeInferItem *end, BCRegTypeItem *type) {

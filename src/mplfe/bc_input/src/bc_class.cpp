@@ -359,7 +359,9 @@ void BCClassMethod::InsertPhi(const std::vector<TypeInferItem*> &dom, std::vecto
     if (srcItem == d) {
       continue;
     }
-    d->RegisterInPrevs(srcItem);
+    if (d->RegisterInPrevs(srcItem) == false) {
+      continue;
+    }
 
     if (d->isAlive == false) {
       continue;
@@ -367,8 +369,8 @@ void BCClassMethod::InsertPhi(const std::vector<TypeInferItem*> &dom, std::vecto
     CHECK_FATAL(srcItem != nullptr, "ByteCode RA error.");
     for (auto ty : *(d->aliveUsedTypes)) {
       ty->SetDom(true);
-      srcItem->InsertUniqueAliveType(d, ty);
     }
+    srcItem->InsertUniqueAliveTypes(d, d->aliveUsedTypes);
   }
 }
 

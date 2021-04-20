@@ -76,6 +76,8 @@ class FEIRBuilder {
   static UniqueFEIRExpr CreateExprJavaNewArray(UniqueFEIRType type, UniqueFEIRExpr exprSize, uint32 typeID,
                                                bool isRcPermanent);
   static UniqueFEIRExpr CreateExprJavaArrayLength(UniqueFEIRExpr exprArray);
+  static UniqueFEIRExpr CreateExprArrayStoreForC(UniqueFEIRExpr argExprArray, UniqueFEIRExpr argExprIndex,
+                                                 UniqueFEIRType argTypeNative);
   // Stmt
   static UniqueFEIRStmt CreateStmtDAssign(UniqueFEIRVar dstVar, UniqueFEIRExpr srcExpr, bool hasException = false);
   static UniqueFEIRStmt CreateStmtGoto(uint32 targetLabelIdx);
