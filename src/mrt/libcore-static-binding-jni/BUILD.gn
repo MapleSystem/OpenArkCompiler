@@ -38,7 +38,7 @@ include_common = [
   "${MAPLE_MRT_ROOT}/libmrtbase/include",
   "${MAPLE_MRT_ROOT}/libmrtbase/include/linux",
   "${MAPLE_MRT_ROOT}/maplert/public-headers",
-  "//../ThirdParty/bounds_checking_function/include/",
+  "${THIRD_PARTY_ROOT}/bounds_checking_function/include/",
   "${MAPLE_MRT_ROOT}/dexinterface",
   "${MAPLE_MRT_ROOT}/interpreter/zterp",
   "${MAPLE_MRT_ROOT}",

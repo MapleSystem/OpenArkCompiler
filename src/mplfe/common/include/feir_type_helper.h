@@ -31,6 +31,7 @@ class FEIRTypeHelper {
   static UniqueFEIRType CreateTypeByGetAddress(const UniqueFEIRType &srcType, PrimType primType = PTY_ptr);
   static UniqueFEIRType CreateTypeByDereferrence(const UniqueFEIRType &srcType);
   static UniqueFEIRType CreateTypeDefault(PrimType primType, const GStrIdx &typeNameIdx, TypeDim dim);
+  static UniqueFEIRType CreateTypeNative(MIRType &mirType);
 
  private:
   FEIRTypeHelper() = default;

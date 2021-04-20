@@ -829,6 +829,36 @@ class FEIRExprJavaArrayLength : public FEIRExpr {
   UniqueFEIRExpr exprArray;
 };
 
+// ---------- FEIRExprArrayStoreForC ----------
+class FEIRExprArrayStoreForC : public FEIRExpr {
+ public:
+  FEIRExprArrayStoreForC(UniqueFEIRExpr argExprArray, UniqueFEIRExpr argExprIndex, UniqueFEIRType argTypeNative);
+  ~FEIRExprArrayStoreForC() = default;
+
+  std::unique_ptr<FEIRExpr> CloneImpl() const override;
+
+  FEIRExpr &GetExprArray() const {
+    ASSERT(exprArray != nullptr, "exprArray is nullptr");
+    return *exprArray.get();
+  }
+
+  FEIRExpr &GetExprIndex() const {
+    ASSERT(exprIndex != nullptr, "exprIndex is nullptr");
+    return *exprIndex.get();
+  }
+
+  FEIRType &GetTypeArray() const {
+    ASSERT(typeNative != nullptr, "typeNative is nullptr");
+    return *typeNative.get();
+  }
+
+ private:
+  BaseNode *GenMIRNodeImpl(MIRBuilder &mirBuilder) const override;
+  UniqueFEIRExpr exprArray;
+  UniqueFEIRExpr exprIndex;
+  UniqueFEIRType typeNative;
+};
+
 // ---------- FEIRExprArrayLoad ----------
 class FEIRExprArrayLoad : public FEIRExpr {
  public:

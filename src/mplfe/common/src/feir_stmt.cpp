@@ -1059,16 +1059,27 @@ std::list<StmtNode*> FEIRStmtArrayStore::GenMIRStmtsImpl(MIRBuilder &mirBuilder)
   CHECK_FATAL(exprArray->GetKind() == kExprDRead, "only support dread expr for exprArray");
   CHECK_FATAL((exprIndex->GetKind() == kExprDRead) || (exprIndex->GetKind() == kExprConst), "only support dread/const"\
                                                                                             "expr for exprIndex");
-  CHECK_FATAL(exprElem->GetKind() == kExprDRead, "only support dread expr for exprElem");
+  CHECK_FATAL(exprElem->GetKind() == kExprDRead || (exprIndex->GetKind() == kExprConst),
+      "only support dread/const expr for exprElem");
   BaseNode *addrBase = exprArray->GenMIRNode(mirBuilder);
   BaseNode *indexBn = exprIndex->GenMIRNode(mirBuilder);
   MIRType *ptrMIRArrayType = typeArray->GenerateMIRType(false);
   BaseNode *arrayExpr = mirBuilder.CreateExprArray(*ptrMIRArrayType, addrBase, indexBn);
-  UniqueFEIRType typeElem = typeArray->Clone();
-  if ((exprIndex->GetKind() != kExprConst) || (!FEOptions::GetInstance().IsAOT())) {
-    (void)typeElem->ArrayDecrDim();
+  MIRType *mIRElemType = nullptr;
+  if (exprArray->GetType()->GetSrcLang() == kSrcLangC) {
+    UniqueFEIRType typeElem =
+        std::make_unique<FEIRTypeNative>(*static_cast<MIRArrayType*>(ptrMIRArrayType)->GetElemType());
+    mIRElemType = typeElem->GenerateMIRType(true);
+    MIRSymbol *mirSymbol = exprArray->GetVarUses().front()->GenerateLocalMIRSymbol(mirBuilder);
+    BaseNode * arrayAddrOfExpr = mirBuilder.CreateExprAddrof(0, *mirSymbol);
+    arrayExpr = mirBuilder.CreateExprArray(*ptrMIRArrayType, arrayAddrOfExpr, indexBn);
+  } else {
+    UniqueFEIRType typeElem = typeArray->Clone();
+    if ((exprIndex->GetKind() != kExprConst) || (!FEOptions::GetInstance().IsAOT())) {
+      (void)typeElem->ArrayDecrDim();
+    }
+    mIRElemType = typeElem->GenerateMIRType(true);
   }
-  MIRType *mIRElemType = typeElem->GenerateMIRType(true);
   BaseNode *elemBn = exprElem->GenMIRNode(mirBuilder);
   IassignNode *stmt = nullptr;
   if ((exprIndex->GetKind() != kExprConst) || (!FEOptions::GetInstance().IsAOT())) {
@@ -2834,6 +2845,35 @@ void FEIRExprJavaArrayLength::RegisterDFGNodes2CheckPointImpl(FEIRStmtCheckPoint
 
 bool FEIRExprJavaArrayLength::CalculateDefs4AllUsesImpl(FEIRStmtCheckPoint &checkPoint, FEIRUseDefChain &udChain) {
   return exprArray->CalculateDefs4AllUses(checkPoint, udChain);
+}
+
+// ---------- FEIRExprArrayStoreForC ----------
+FEIRExprArrayStoreForC::FEIRExprArrayStoreForC(UniqueFEIRExpr argExprArray, UniqueFEIRExpr argExprIndex,
+                                               UniqueFEIRType argTypeNative)
+    : FEIRExpr(FEIRNodeKind::kExprArrayStoreForC),
+      exprArray(std::move(argExprArray)),
+      exprIndex(std::move(argExprIndex)),
+      typeNative(std::move(argTypeNative)) {}
+
+// only ArraySubscriptExpr is right value, left not need
+BaseNode *FEIRExprArrayStoreForC::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
+  BaseNode *indexBn = exprIndex->GenMIRNode(mirBuilder);
+  MIRType *ptrMIRArrayType = typeNative->GenerateMIRType(false);
+  MIRSymbol *mirSymbol = exprArray->GetVarUses().front()->GenerateLocalMIRSymbol(mirBuilder);
+  BaseNode *nodeAddrof = mirBuilder.CreateExprAddrof(0, *mirSymbol);
+  BaseNode *arrayExpr = mirBuilder.CreateExprArray(*ptrMIRArrayType, nodeAddrof, indexBn);
+  UniqueFEIRType typeElem =
+      std::make_unique<FEIRTypeNative>(*static_cast<MIRArrayType*>(ptrMIRArrayType)->GetElemType());
+  MIRType *mirElemType = typeElem->GenerateMIRType(true);
+  MIRType *ptrMIRElemType = GlobalTables::GetTypeTable().GetOrCreatePointerType(*mirElemType, PTY_ptr);
+  BaseNode *elemBn = mirBuilder.CreateExprIread(*mirElemType, *ptrMIRElemType, 0, arrayExpr);
+  return elemBn;
+}
+
+std::unique_ptr<FEIRExpr> FEIRExprArrayStoreForC::CloneImpl() const {
+  CHECK_FATAL(false, "not support clone here");
+  std::unique_ptr<FEIRExpr> expr;
+  return expr;
 }
 
 // ---------- FEIRExprArrayLoad ----------

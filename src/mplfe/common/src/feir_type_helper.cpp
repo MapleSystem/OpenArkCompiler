@@ -134,4 +134,10 @@ UniqueFEIRType FEIRTypeHelper::CreateTypeDefault(PrimType primType, const GStrId
   CHECK_FATAL(type->IsValid(), "invalid type");
   return type;
 }
+
+UniqueFEIRType FEIRTypeHelper::CreateTypeNative(MIRType &mirType) {
+  UniqueFEIRType type = std::make_unique<FEIRTypeNative>(mirType);
+  CHECK_FATAL(type->IsValid(), "invalid type");
+  return type;
+}
 }  // namespace maple

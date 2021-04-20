@@ -25,9 +25,9 @@ include_directories = [
   "${MAPLEALL_ROOT}/mempool/include",
   "${MAPLEALL_ROOT}/maple_ipa/include",
   "${MAPLEALL_ROOT}/maple_phase/include",
-  "//../ThirdParty/bounds_checking_function/include",
-  "${MAPLE_ROOT}/third_party/dwarf/include",
-  "//../ThirdParty/bounds_checking_function/include"
+  "${THIRD_PARTY_ROOT}/bounds_checking_function/include",
+  "${THIRD_PARTY_ROOT}/dwarf/include",
+  "${THIRD_PARTY_ROOT}/bounds_checking_function/include"
 ]
 
 deps_libcg = []
@@ -226,7 +226,7 @@ executable("maplegen") {
     "${MAPLEALL_ROOT}/maple_be/mdgen/src/mdrecord.cpp",
   ]
   deps = [
-    "//../ThirdParty/bounds_checking_function:libHWSecureC",
+    "${THIRD_PARTY_ROOT}/bounds_checking_function:libHWSecureC",
     "${MAPLEALL_ROOT}/mempool:libmempool",
     "${MAPLEALL_ROOT}/maple_util:libmplutil",
   ]
@@ -237,6 +237,6 @@ executable("maplegen") {
     "${MAPLEALL_ROOT}/maple_ir/include",
     "${MAPLEALL_ROOT}/mpl2mpl/include",
     "${MAPLEALL_ROOT}/mempool/include",
-    "//../ThirdParty/bounds_checking_function/include",
+    "${THIRD_PARTY_ROOT}/bounds_checking_function/include",
   ]
 }
