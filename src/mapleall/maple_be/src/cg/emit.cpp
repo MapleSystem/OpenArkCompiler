@@ -1523,7 +1523,6 @@ void Emitter::EmitStructConstant(MIRConst &mirConst) {
   MIRType &mirType = mirConst.GetType();
   MIRAggConst &structCt = static_cast<MIRAggConst&>(mirConst);
   MIRStructType &structType = static_cast<MIRStructType&>(mirType);
-  ASSERT(structType.GetKind() != kTypeUnion, "NYI, not support now.");
   /* all elements of struct. */
   uint8 num;
   if (structType.GetKind() == kTypeUnion) {
