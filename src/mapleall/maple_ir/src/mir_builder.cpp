@@ -812,7 +812,7 @@ IntrinsiccallNode *MIRBuilder::CreateStmtXintrinsicCall(MIRIntrinsicID idx, cons
 CallNode *MIRBuilder::CreateStmtCallAssigned(PUIdx puIdx, const MIRSymbol *ret, Opcode op) {
   auto *stmt = GetCurrentFuncCodeMp()->New<CallNode>(*GetCurrentFuncCodeMpAllocator(), op, puIdx);
   if (ret) {
-    ASSERT(IsValidCallReturn(*ret), "Not Excepted ret");
+    ASSERT(ret->IsLocal(), "Not Excepted ret");
     stmt->GetReturnVec().push_back(CallReturnPair(ret->GetStIdx(), RegFieldPair(0, 0)));
   }
   return stmt;
@@ -824,7 +824,7 @@ CallNode *MIRBuilder::CreateStmtCallAssigned(PUIdx puIdx, const MapleVector<Base
   ASSERT(stmt != nullptr, "stmt is null");
   stmt->SetOpnds(args);
   if (ret != nullptr) {
-    ASSERT(IsValidCallReturn(*ret), "Not Excepted ret");
+    ASSERT(ret->IsLocal(), "Not Excepted ret");
     stmt->GetReturnVec().push_back(CallReturnPair(ret->GetStIdx(), RegFieldPair(0, 0)));
   }
   return stmt;
@@ -871,7 +871,7 @@ IntrinsiccallNode *MIRBuilder::CreateStmtIntrinsicCallAssigned(MIRIntrinsicID id
   stmt->SetOpnds(args);
   CallReturnVector nrets(GetCurrentFuncCodeMpAllocator()->Adapter());
   if (ret != nullptr) {
-    ASSERT(IsValidCallReturn(*ret), "Not Excepted ret");
+    ASSERT(ret->IsLocal(), "Not Excepted ret");
     nrets.push_back(CallReturnPair(ret->GetStIdx(), RegFieldPair(0, 0)));
   }
   stmt->SetReturnVec(nrets);
@@ -886,7 +886,7 @@ IntrinsiccallNode *MIRBuilder::CreateStmtXintrinsicCallAssigned(MIRIntrinsicID i
   stmt->SetOpnds(args);
   CallReturnVector nrets(GetCurrentFuncCodeMpAllocator()->Adapter());
   if (ret != nullptr) {
-    ASSERT(IsValidCallReturn(*ret), "Not Excepted ret");
+    ASSERT(ret->IsLocal(), "Not Excepted ret");
     nrets.push_back(CallReturnPair(ret->GetStIdx(), RegFieldPair(0, 0)));
   }
   stmt->SetReturnVec(nrets);
