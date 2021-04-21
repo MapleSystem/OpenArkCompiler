@@ -383,7 +383,12 @@ void HDSE::MarkLastStmtInPDomBBRequired(const BB &bb) {
   for (BBId cdBBId : postDom.GetPdomFrontierItem(bb.GetBBId())) {
     BB *cdBB = bbVec[cdBBId];
     CHECK_FATAL(cdBB != nullptr, "cdBB is null in HDSE::MarkLastStmtInPDomBBRequired");
-    if (cdBB == &bb || cdBB->IsMeStmtEmpty()) {
+    if (cdBB == &bb) {
+      continue;
+    }
+    if (cdBB->IsMeStmtEmpty()) {
+      CHECK_FATAL(cdBB->GetAttributes(kBBAttrIsTry), "empty bb in pdom frontier must have try attributes");
+      MarkLastStmtInPDomBBRequired(*cdBB);
       continue;
     }
     auto &lastStmt = cdBB->GetMeStmts().back();

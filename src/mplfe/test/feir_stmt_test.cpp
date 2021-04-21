@@ -297,6 +297,46 @@ TEST_F(FEIRStmtTest, FEIRExprTernary_add) {
   EXPECT_EQ(expr2->IsAddrof(), false);
 }
 
+// ---------- FEIRStmtIf ----------
+TEST_F(FEIRStmtTest, FEIRStmtIf) {
+  // CondExpr
+  UniqueFEIRVar varReg = FEIRBuilder::CreateVarReg(0, PTY_u1);
+  std::unique_ptr<FEIRExprDRead> exprDReadReg = std::make_unique<FEIRExprDRead>(std::move(varReg));
+  // ThenStmts
+  UniqueFEIRVar dstVar = FEIRBuilder::CreateVarReg(0, PTY_i32);
+  UniqueFEIRVar dstVar1 = dstVar->Clone();
+  UniqueFEIRVar srcVar = std::make_unique<FEIRVarReg>(1, PTY_i32);
+  UniqueFEIRExpr exprDRead = std::make_unique<FEIRExprDRead>(std::move(srcVar));
+  UniqueFEIRExpr exprDRead1 = exprDRead->Clone();
+  UniqueFEIRStmt stmtDAssign = std::make_unique<FEIRStmtDAssign>(std::move(dstVar), std::move(exprDRead));
+  std::list<UniqueFEIRStmt> thenStmts;
+  thenStmts.emplace_back(std::move(stmtDAssign));
+  // ElseStmts
+  UniqueFEIRVar dstVar2 = dstVar1->Clone();
+  UniqueFEIRExpr exprDRead2 = exprDRead1->Clone();
+  UniqueFEIRStmt stmtDAssign1 = std::make_unique<FEIRStmtDAssign>(std::move(dstVar1), std::move(exprDRead1));
+  UniqueFEIRStmt stmtDAssign2 = std::make_unique<FEIRStmtDAssign>(std::move(dstVar2), std::move(exprDRead2));
+  std::list<UniqueFEIRStmt> elseStmts;
+  elseStmts.emplace_back(std::move(stmtDAssign1));
+  elseStmts.emplace_back(std::move(stmtDAssign2));
+
+  std::unique_ptr<FEIRStmtIf> stmt =
+      std::make_unique<FEIRStmtIf>(std::move(exprDReadReg), thenStmts, elseStmts);
+  std::list<StmtNode*> baseNodes = stmt->GenMIRStmts(mirBuilder);
+  RedirectCout();
+  baseNodes.front()->Dump();
+  std::string pattern =
+      "if (dread u1 %Reg0_Z) {\n"\
+      "  dassign %Reg0_I 0 (dread i32 %Reg1_I)\n"\
+      "}\n"\
+      "else {\n"\
+      "  dassign %Reg0_I 0 (dread i32 %Reg1_I)\n"\
+      "  dassign %Reg0_I 0 (dread i32 %Reg1_I)\n"\
+      "}\n\n";
+  EXPECT_EQ(GetBufferString(), pattern);
+  RestoreCout();
+}
+
 // ---------- FEIRStmtDAssign ----------
 TEST_F(FEIRStmtTest, FEIRStmtDAssign) {
   std::unique_ptr<FEIRType> type = FEIRTypeHelper::CreateTypeByJavaName("Ljava/lang/String;", false, true);

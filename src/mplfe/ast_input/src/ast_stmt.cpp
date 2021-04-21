@@ -60,13 +60,10 @@ void ASTDeclRefExpr::SetASTDecl(ASTDecl *astDecl) {
 std::list<UniqueFEIRStmt> ASTIfStmt::Emit2FEStmtImpl() const {
   std::list<UniqueFEIRStmt> stmts;
   std::list<UniqueFEIRStmt> thenStmts = thenStmt->Emit2FEStmt();
+  std::list<UniqueFEIRStmt> elseStmts = elseStmt->Emit2FEStmt();
   UniqueFEIRExpr condFEExpr = condExpr->Emit2FEExpr(stmts);
-  std::unique_ptr<FEIRStmtIf> ifStmt = std::make_unique<FEIRStmtIf>(std::move(condFEExpr), std::move(thenStmts));
-  if (elseStmt != nullptr) {
-    std::list<UniqueFEIRStmt> elseStmts = elseStmt->Emit2FEStmt();
-    ifStmt->SetHasElse(true);
-    ifStmt->SetElseStmts(std::move(elseStmts));
-  }
+  UniqueFEIRStmt ifStmt;
+  ifStmt = FEIRBuilder::CreateStmtIf(std::move(condFEExpr), thenStmts, elseStmts);
   stmts.emplace_back(std::move(ifStmt));
   return stmts;
 }
@@ -268,8 +265,9 @@ std::list<UniqueFEIRStmt> ASTVAArgExprStmt::Emit2FEStmtImpl() const {
 
 // ---------- ASTConditionalOperatorStmt ----------
 std::list<UniqueFEIRStmt> ASTConditionalOperatorStmt::Emit2FEStmtImpl() const {
-  CHECK_FATAL(false, "NYI");
   std::list<UniqueFEIRStmt> stmts;
+  auto astExpr = exprs.front();
+  astExpr->Emit2FEExpr(stmts);
   return stmts;
 }
 
