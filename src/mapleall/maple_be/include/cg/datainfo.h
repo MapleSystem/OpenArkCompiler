@@ -75,8 +75,19 @@ class DataInfo {
   bool IsEqual(const DataInfo &secondInfo) const {
     auto infoSize = static_cast<const int32>(info.size());
     ASSERT(infoSize == secondInfo.GetInfo().size(), "two dataInfo's size different");
-    for (int32 i = 0; i != infoSize; i++) {
+    for (int32 i = 0; i != infoSize; ++i) {
       if (info[i] != secondInfo.GetElem(i)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool IsEqual(const MapleVector<uint64> &LiveInfoBak) const {
+    size_t infoSize = info.size();
+    ASSERT(infoSize == LiveInfoBak.size(), "two dataInfo's size different");
+    for (size_t i = 0; i != infoSize; ++i) {
+      if (info[i] != LiveInfoBak[i]) {
         return false;
       }
     }

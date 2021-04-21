@@ -840,6 +840,9 @@ void AArch64DepAnalysis::BuildSpecialInsnDependency(Insn &insn, DepNode &depNode
                  (target.GetName() == "MCC_CleanupLocalStackRefSkip")) {
         /* UseStackMemory. */
         BuildDepsUseStack(insn);
+      } else if (cgFunc.GetMirModule().GetSrcLang() == kSrcLangC) {
+        /* potential C aliasing. */
+        BuildDepsDirtyStack(insn);
       }
     }
     BuildDepsDirtyHeap(insn);
