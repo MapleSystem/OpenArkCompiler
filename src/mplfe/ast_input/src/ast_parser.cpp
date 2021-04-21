@@ -39,7 +39,7 @@ bool ASTParser::Verify() {
   return true;
 }
 
-ASTBinaryOperatorExpr *ASTParser::AllocBinaryOperatorExpr(MapleAllocator &allocator, const clang::BinaryOperator bo) {
+ASTBinaryOperatorExpr *ASTParser::AllocBinaryOperatorExpr(MapleAllocator &allocator, const clang::BinaryOperator &bo) {
   if (bo.isAssignmentOp() && !bo.isCompoundAssignmentOp()) {
     if (bo.isCompoundAssignmentOp()) {
       auto *expr = ASTDeclsBuilder::ASTExprBuilder<ASTCompoundAssignOperatorExpr>(allocator);
@@ -1474,8 +1474,8 @@ bool ASTParser::RetrieveStructs(MapleAllocator &allocator, MapleList<ASTStruct*>
 
 bool ASTParser::RetrieveFuncs(MapleAllocator &allocator, MapleList<ASTFunc*> &funcs) {
   for (auto &func : funcDecles) {
-    clang::FunctionDecl funcDecl = llvm::cast<clang::FunctionDecl>(*func);
-    ASTFunc *af = static_cast<ASTFunc*>(ProcessDecl(allocator, funcDecl));
+    clang::FunctionDecl *funcDecl = llvm::cast<clang::FunctionDecl>(func);
+    ASTFunc *af = static_cast<ASTFunc*>(ProcessDecl(allocator, *funcDecl));
     if (af == nullptr) {
       return false;
     }
@@ -1488,8 +1488,8 @@ bool ASTParser::RetrieveFuncs(MapleAllocator &allocator, MapleList<ASTFunc*> &fu
 // seperate MP with astparser
 bool ASTParser::RetrieveGlobalVars(MapleAllocator &allocator, MapleList<ASTVar*> &vars) {
   for (auto &decl : globalVarDecles) {
-    clang::VarDecl varDecl = llvm::cast<clang::VarDecl>(*decl);
-    ASTVar *val = static_cast<ASTVar*>(ProcessDecl(allocator, varDecl));
+    clang::VarDecl *varDecl = llvm::cast<clang::VarDecl>(decl);
+    ASTVar *val = static_cast<ASTVar*>(ProcessDecl(allocator, *varDecl));
     if (val == nullptr) {
       return false;
     }

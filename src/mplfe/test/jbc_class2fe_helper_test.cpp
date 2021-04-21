@@ -312,7 +312,6 @@ TEST_F(JBCClassField2FEHelperTest, ProcessDeclWithContainer_Instance) {
   ON_CALL(field, GetName()).WillByDefault(::testing::Return("field"));
   ON_CALL(field, GetDescription()).WillByDefault(::testing::Return("Ljava/lang/Object;"));
   JBCClassField2FEHelper fieldHelper(allocator, field);
-  std::cout << "field name : " << field.jbc::JBCClassElem::GetName() << std::endl;
   ASSERT_EQ(fieldHelper.ProcessDeclWithContainer(allocator), true);
   // check field name
   std::string fieldName = GlobalTables::GetStrTable().GetStringFromStrIdx(fieldHelper.mirFieldPair.first);
