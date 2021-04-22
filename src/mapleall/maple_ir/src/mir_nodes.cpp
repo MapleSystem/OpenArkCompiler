@@ -1431,7 +1431,11 @@ bool UnaryNode::Verify() const {
 
   // When an opcode only specifies one type, check for compatibility
   // between the operands and the result-type.
-  bool compVerf = CompatibleTypeVerify(*uOpnd, *this);
+  bool compVerf = true;
+  // op_alloca : return type is not compatible with operand, skip 
+  if (GetOpCode() != OP_alloca) {
+    compVerf = CompatibleTypeVerify(*uOpnd, *this);
+  }
   bool opndExprVerf = uOpnd->Verify();
   return resTypeVerf && compVerf && opndExprVerf;
 }

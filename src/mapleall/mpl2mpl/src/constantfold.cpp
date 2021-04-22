@@ -449,7 +449,7 @@ MIRConst *ConstantFold::FoldIntConstBinaryMIRConst(Opcode opcode, PrimType resul
       if (useResult64) {
         result64 = intValueOfConst0 + intValueOfConst1;
       } else {
-        result32 = static_cast<uint32>(static_cast<int32>(intValueOfConst0) + static_cast<int32>(intValueOfConst1));
+        result32 = static_cast<uint32>(intValueOfConst0) + static_cast<uint32>(intValueOfConst1);
       }
       break;
     }
@@ -457,7 +457,7 @@ MIRConst *ConstantFold::FoldIntConstBinaryMIRConst(Opcode opcode, PrimType resul
       if (useResult64) {
         result64 = static_cast<uint64>(intValueOfConst0 - intValueOfConst1);
       } else {
-        result32 = static_cast<uint32>(static_cast<int32>(intValueOfConst0) - static_cast<int32>(intValueOfConst1));
+        result32 = static_cast<uint32>(intValueOfConst0) - static_cast<uint32>(intValueOfConst1);
       }
       break;
     }
@@ -465,7 +465,7 @@ MIRConst *ConstantFold::FoldIntConstBinaryMIRConst(Opcode opcode, PrimType resul
       if (useResult64) {
         result64 = static_cast<uint64>(intValueOfConst0 * intValueOfConst1);
       } else {
-        result32 = static_cast<uint32>(static_cast<int32>(intValueOfConst0) * static_cast<int32>(intValueOfConst1));
+        result32 = static_cast<uint32>(intValueOfConst0) * static_cast<uint32>(intValueOfConst1);
       }
       break;
     }
