@@ -826,7 +826,19 @@ bool MIRParser::ParseStructType(TyIdx &styIdx, const GStrIdx &strIdx) {
       GlobalTables::GetTypeTable().SetTypeWithTyIdx(styIdx, *structType.CopyMIRTypeNode());
     }
   } else {
-    styIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&structType);
+    TyIdx prevTypeIdx = mod.GetTypeNameTab()->GetTyIdxFromGStrIdx(strIdx);
+    if (prevTypeIdx != 0) {
+      // if the MIRStructType has been created by name or incompletely, refresh the prev created type
+      MIRType *prevType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(prevTypeIdx);
+      if (prevType->GetKind() == kTypeByName ||
+          (prevType->GetKind() == kTypeStructIncomplete && tkind == kTypeStruct)) {
+        structType.SetTypeIndex(prevTypeIdx);
+        GlobalTables::GetTypeTable().SetTypeWithTyIdx(prevTypeIdx, *structType.CopyMIRTypeNode());
+      }
+      styIdx = prevTypeIdx;
+    } else {
+      styIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&structType);
+    }
   }
   lexer.NextToken();
   return true;

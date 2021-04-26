@@ -93,7 +93,7 @@ void MeLowerGlobals::LowerGlobalDreads(MeStmt &stmt, MeExpr &expr) {
       MIRPtrType ptrType(baseOst->GetTyIdx(), PTY_ptr);
       TyIdx addrTyIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&ptrType);
       ASSERT_NOT_NULL(irMap);
-      MeExpr *iaddrofExpr = irMap->CreateIaddrofMeExpr(addrofExpr, addrTyIdx, *newAddrofExpr);
+      MeExpr *iaddrofExpr = irMap->CreateIaddrofMeExpr(addrofExpr.GetFieldID(), addrTyIdx, newAddrofExpr);
       (void)irMap->ReplaceMeExprStmt(stmt, addrofExpr, *iaddrofExpr);
       break;
     }

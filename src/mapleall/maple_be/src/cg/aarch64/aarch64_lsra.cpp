@@ -387,7 +387,7 @@ void LSRALinearScanRegAllocator::InitFreeRegPool() {
 /* Remember calls for caller/callee allocation. */
 void LSRALinearScanRegAllocator::RecordCall(Insn &insn) {
   /* Maintain call at the beginning of active list */
-  auto *li = cgFunc->GetMemoryPool()->New<LiveInterval>(alloc);
+  auto *li = memPool->New<LiveInterval>(alloc);
   li->SetFirstDef(insn.GetId());
   li->SetIsCall(insn);
   callList.push_back(li);
@@ -414,7 +414,7 @@ void LSRALinearScanRegAllocator::RecordPhysRegs(const RegOperand &regOpnd, uint3
 
   if (isDef) {
     /* parameter register def is assumed to be live until a call. */
-    auto *li = cgFunc->GetMemoryPool()->New<LiveInterval>(alloc);
+    auto *li = memPool->New<LiveInterval>(alloc);
     li->SetRegNO(regNO);
     li->SetRegType(regType);
     li->SetStackSlot(0xFFFFFFFF);
@@ -475,7 +475,7 @@ void LSRALinearScanRegAllocator::SetupLiveInterval(Operand &opnd, Insn &insn, bo
   LiveInterval *li = nullptr;
   uint32 regNO = regOpnd.GetRegisterNumber();
   if (liveIntervalsArray[regNO] == nullptr) {
-    li = cgFunc->GetMemoryPool()->New<LiveInterval>(alloc);
+    li = memPool->New<LiveInterval>(alloc);
     li->SetRegNO(regNO);
     li->SetStackSlot(0xFFFFFFFF);
     liveIntervalsArray[regNO] = li;
@@ -615,7 +615,7 @@ void LSRALinearScanRegAllocator::SetupIntervalRangesByOperand(Operand &opnd, con
   RegType regType = regOpnd.GetRegisterType();
   if (regType != kRegTyCc && regType != kRegTyVary) {
     regno_t regNO = regOpnd.GetRegisterNumber();
-    if (regNO > kNArmRegisters) {
+    if (regNO > kAllRegNum) {
       if (isDef) {
         if (!liveIntervalsArray[regNO]->GetRanges().empty()) {
           liveIntervalsArray[regNO]->GetRanges().front().first = insn.GetId();
@@ -671,7 +671,7 @@ void LSRALinearScanRegAllocator::BuildIntervalRanges() {
     uint32 blockTo = bb->GetLastInsn()->GetId() + 1;
 
     for (auto regNO : bb->GetLiveOutRegNO()) {
-      if (regNO < kNArmRegisters) {
+      if (regNO < kAllRegNum) {
         /* Do not consider physical regs. */
         continue;
       }
@@ -707,7 +707,7 @@ void LSRALinearScanRegAllocator::BuildIntervalRanges() {
 /* Extend live interval with live-in info */
 void LSRALinearScanRegAllocator::UpdateLiveIntervalByLiveIn(const BB &bb, uint32 insnNum) {
   for (const auto &regNO : bb.GetLiveInRegNO()) {
-    if (regNO < kNArmRegisters) {
+    if (regNO < kAllRegNum) {
       /* Do not consider physical regs. */
       continue;
     }
@@ -719,7 +719,7 @@ void LSRALinearScanRegAllocator::UpdateLiveIntervalByLiveIn(const BB &bb, uint32
     * try-catch related
     *   Since it is livein but not seen before, its a use before def
     */
-    auto *li = cgFunc->GetMemoryPool()->New<LiveInterval>(alloc);
+    auto *li = memPool->New<LiveInterval>(alloc);
     li->SetRegNO(regNO);
     li->SetStackSlot(0xFFFFFFFF);
     liveIntervalsArray[regNO] = li;
@@ -749,7 +749,7 @@ void LSRALinearScanRegAllocator::UpdateParamLiveIntervalByLiveIn(const BB &bb, u
     if (!AArch64Abi::IsParamReg(static_cast<AArch64reg>(regNO))) {
       continue;
     }
-    auto *li = cgFunc->GetMemoryPool()->New<LiveInterval>(alloc);
+    auto *li = memPool->New<LiveInterval>(alloc);
     li->SetRegNO(regNO);
     li->SetStackSlot(0xFFFFFFFF);
     li->SetFirstDef(insnNum);

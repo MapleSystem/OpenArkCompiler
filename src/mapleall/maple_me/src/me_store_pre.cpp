@@ -307,7 +307,7 @@ void MeStorePre::BuildWorkListBB(BB *bb) {
     OStIdx lhsOstIdx(0);
     if (stmt->GetOp() == OP_dassign) {
       auto *dass = static_cast<DassignMeStmt*>(to_ptr(stmt));
-      if (dass->GetLHS()->GetPrimType() != PTY_ref) {
+      if (dass->GetLHS()->GetPrimType() != PTY_ref && dass->GetLHS()->GetPrimType() != PTY_agg) {
         lhsOstIdx = dass->GetVarLHS()->GetOstIdx();
       }
     } else if (kOpcodeInfo.IsCallAssigned(stmt->GetOp())) {
@@ -315,7 +315,7 @@ void MeStorePre::BuildWorkListBB(BB *bb) {
       CHECK_NULL_FATAL(mustDefList);
       if (!mustDefList->empty()) {
         MeExpr *mdLHS = mustDefList->front().GetLHS();
-        if (mdLHS->GetMeOp() == kMeOpVar && mdLHS->GetPrimType() != PTY_ref) {
+        if (mdLHS->GetMeOp() == kMeOpVar && mdLHS->GetPrimType() != PTY_ref && mdLHS->GetPrimType() != PTY_agg) {
           lhsOstIdx = static_cast<VarMeExpr*>(mdLHS)->GetOstIdx();
         }
       }

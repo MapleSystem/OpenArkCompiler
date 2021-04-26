@@ -36,7 +36,7 @@ class MapleAllocator {
 
   // Get adapter for use in STL containers. See arena_containers.h .
   MapleAllocatorAdapter<void> Adapter();
-  void *Alloc(size_t bytes) {
+  virtual void *Alloc(size_t bytes) {
     return (memPool != nullptr) ? memPool->Malloc(bytes) : nullptr;
   }
 
@@ -48,11 +48,60 @@ class MapleAllocator {
     memPool = m;
   }
 
- private:
+ protected:
   MemPool *memPool;
   template <typename U>
   friend class MapleAllocatorAdapter;
 };  // MapleAllocator
+
+// must be destroyed, otherwise there will be memory leak
+// only one allocater can be used at the same time
+class LocalMapleAllocator : public MapleAllocator {
+ public:
+  explicit LocalMapleAllocator(StackMemPool &m)
+      : MapleAllocator(&m),
+        fixedStackTopMark(m.fixedMemStackTop),
+        bigStackTopMark(m.bigMemStackTop),
+        fixedCurPtrMark(m.curPtr),
+        bigCurPtrMark(m.bigCurPtr) {
+#ifdef DEBUG
+    m.PushAllocator(this);
+#endif
+  }
+  ~LocalMapleAllocator() override {
+    static_cast<StackMemPool *>(memPool)->ResetStackTop(this, fixedCurPtrMark, fixedStackTopMark, bigCurPtrMark,
+                                                        bigStackTopMark);
+  };
+
+  StackMemPool &GetStackMemPool() const {
+    return static_cast<StackMemPool &>(*memPool);
+  }
+
+  MemPool *GetMemPool() const = delete;
+
+  template <class T, typename... Arguments>
+  T *New(Arguments &&... args) {
+    void *p = memPool->Malloc(sizeof(T));
+    ASSERT(p != nullptr, "ERROR: New error");
+    p = new (p) T(std::forward<Arguments>(args)...);
+    return static_cast<T *>(p);
+  }
+
+  void *Alloc(size_t bytes) override {
+#ifdef DEBUG
+    CHECK_FATAL(static_cast<StackMemPool *>(memPool)->TopAllocator() == this,
+                "Alloc Error, Only top allocator can Alloc");
+#endif
+    return memPool->Malloc(bytes);
+  }
+
+ private:
+  using MapleAllocator::MapleAllocator;
+  MemBlock *const fixedStackTopMark;
+  MemBlock *const bigStackTopMark;
+  uint8_t *const fixedCurPtrMark;
+  uint8_t *const bigCurPtrMark;
+};
 
 template <typename T>
 class MapleAllocatorAdapter;  // circular dependency exists, no other choice
@@ -130,6 +179,9 @@ using MapleMap = std::map<K, V, Comparator, MapleAllocatorAdapter<std::pair<cons
 
 template <typename K, typename V, typename Comparator = std::less<K>>
 using MapleMultiMap = std::multimap<K, V, Comparator, MapleAllocatorAdapter<std::pair<const K, V>>>;
+
+template <typename T, typename Comparator = std::less<T>>
+using MapleMultiSet = std::multiset<T, Comparator, MapleAllocatorAdapter<T>>;
 
 template <typename K, typename V, typename Hash = std::hash<K>, typename Equal = std::equal_to<K>>
 using MapleUnorderedMap = std::unordered_map<K, V, Hash, Equal, MapleAllocatorAdapter<std::pair<const K, V>>>;

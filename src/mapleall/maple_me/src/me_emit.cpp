@@ -31,11 +31,9 @@ AnalysisResult *MeDoEmit::Run(MeFunction *func, MeFuncResultMgr*, ModuleResultMg
     CHECK_FATAL(func->HasLaidOut(), "Check/Run bb layout phase.");
     auto layoutBBs = func->GetLaidOutBBs();
     MIRFunction *mirFunction = func->GetMirFunc();
-    if (mirFunction->GetCodeMempool() != nullptr) {
-      mirFunction->GetCodeMempool()->Release();
-    }
-    mirFunction->SetCodeMemPool(memPoolCtrler.NewMemPool("IR from IRMap::Emit()"));
-    mirFunction->GetCodeMPAllocator().SetMemPool(mirFunction->GetCodeMempool());
+    mirFunction->ReleaseCodeMemory();
+
+    mirFunction->SetMemPool(new ThreadLocalMemPool(memPoolCtrler, "IR from IRMap::Emit()"));
     mirFunction->SetBody(mirFunction->GetCodeMempool()->New<BlockNode>());
     // initialize is_deleted field to true; will reset when emitting Maple IR
     for (size_t k = 1; k < mirFunction->GetSymTab()->GetSymbolTableSize(); ++k) {

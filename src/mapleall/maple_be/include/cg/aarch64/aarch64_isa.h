@@ -116,7 +116,6 @@ enum AArch64reg : uint32 {
 #include "aarch64_fp_simd_regs.def"
 #undef FP_SIMD_REG
 #undef FP_SIMD_REG_ALIAS
-  kNArmRegisters
 };
 
 namespace AArch64isa {

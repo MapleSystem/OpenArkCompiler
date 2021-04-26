@@ -444,8 +444,8 @@ void DriverRunner::RunCGFunctions(CG &cg, CgFuncPhaseManager &cgfpm, std::vector
     lowerTime += timer.ElapsedMicroseconds();
 
     MIRSymbol *funcSt = GlobalTables::GetGsymTable().GetSymbolFromStidx(mirFunc->GetStIdx().Idx());
-    MemPool *funcMp = memPoolCtrler.NewMemPool(funcSt->GetName());
-    MapleAllocator funcScopeAllocator(funcMp);
+    auto funcMp = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, funcSt->GetName());
+    MapleAllocator funcScopeAllocator(funcMp.get());
 
     // Create CGFunc
     mirFunc->SetPuidxOrigin(++countFuncId);
@@ -464,8 +464,7 @@ void DriverRunner::RunCGFunctions(CG &cg, CgFuncPhaseManager &cgfpm, std::vector
     cgfpm.ClearPhaseNameInfo();
 
     // Delete mempool.
-    memPoolCtrler.DeleteMemPool(funcMp);
-    memPoolCtrler.DeleteMemPool(mirFunc->GetCodeMempool());
+    mirFunc->ReleaseCodeMemory();
 
     ++rangeNum;
   }
