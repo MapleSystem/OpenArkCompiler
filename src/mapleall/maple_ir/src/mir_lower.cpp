@@ -51,9 +51,6 @@ void MIRLower::CreateBrTrueStmt(BlockNode &blk, const IfStmtNode &ifStmt) {
 
 void MIRLower::CreateBrFalseAndGotoStmt(BlockNode &blk, const IfStmtNode &ifStmt) {
   LabelIdx labelIdx = CreateCondGotoStmt(OP_brfalse, blk, ifStmt);
-  ASSERT(ifStmt.GetThenPart()->GetLast()->GetOpCode() != OP_brtrue, "then or else block should not end with brtrue");
-  ASSERT(ifStmt.GetThenPart()->GetLast()->GetOpCode() != OP_brfalse,
-         "then or else block should not end with brfalse");
   bool fallThroughFromThen = !IfStmtNoFallThrough(ifStmt);
   LabelIdx gotoLableIdx = 0;
   if (fallThroughFromThen) {
