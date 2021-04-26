@@ -43,7 +43,12 @@ class ASTDecl {
     return isGlobalDecl;
   }
 
+  void GenerateInitStmt(std::list<UniqueFEIRStmt> &stmts) {
+    return GenerateInitStmtImpl(stmts);
+  }
+
  protected:
+  virtual void GenerateInitStmtImpl(std::list<UniqueFEIRStmt> &stmts) {}
   bool isGlobalDecl;
   const std::string srcFileName;
   std::string name;
@@ -138,7 +143,27 @@ class ASTVar : public ASTDecl {
   std::unique_ptr<FEIRVar> Translate2FEIRVar();
 
  private:
+  void GenerateInitStmtImpl(std::list<UniqueFEIRStmt> &stmts) override;
   ASTExpr *initExpr = nullptr;
+};
+
+// only process local `EnumDecl` here
+class ASTLocalEnumDecl : public ASTDecl {
+ public:
+  ASTLocalEnumDecl(const std::string &srcFile, const std::string &nameIn, const std::vector<MIRType*> &typeDescIn,
+          const GenericAttrs &genAttrsIn)
+      : ASTDecl(srcFile, nameIn, typeDescIn) {
+    genAttrs = genAttrsIn;
+  }
+  ~ASTLocalEnumDecl() = default;
+
+  void PushConstantVar(ASTVar *var) {
+    vars.emplace_back(var);
+  }
+
+ private:
+  void GenerateInitStmtImpl(std::list<UniqueFEIRStmt> &stmts) override;
+  std::list<ASTVar*> vars;
 };
 }  // namespace maple
 #endif // MPLFE_AST_INPUT_INCLUDE_AST_DECL_H

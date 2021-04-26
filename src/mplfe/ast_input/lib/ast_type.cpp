@@ -82,8 +82,8 @@ PrimType LibAstFile::CvtPrimType(const clang::BuiltinType::Kind kind) const {
     case clang::BuiltinType::LongDouble:
     case clang::BuiltinType::Float128:
       return PTY_f128;
-    case clang::BuiltinType::NullPtr:
-      return kPtyInvalid;
+    case clang::BuiltinType::NullPtr: // default 64-bit, need to update
+      return PTY_a64;
     case clang::BuiltinType::Void:
     default:
       return PTY_void;
@@ -120,8 +120,9 @@ MIRType *LibAstFile::CvtOtherType(const clang::QualType srcType) {
     destType = CvtArrayType(srcType);
   } else if (srcType->isRecordType()) {
     destType = CvtRecordType(srcType);
+  // isComplexType() does not include complex integers (a GCC extension)
   } else if (srcType->isAnyComplexType()) {
-    CHECK_FATAL(false, "NYI");
+    destType = CvtComplexType(srcType);
   } else if (srcType->isFunctionType()) {
     destType = CvtFunctionType(srcType);
   } else if (srcType->isEnumeralType()) {
@@ -193,6 +194,13 @@ MIRType *LibAstFile::CvtArrayType(const clang::QualType srcType) {
     retType = GlobalTables::GetTypeTable().GetOrCreatePointerType(*retType);
   }
   return retType;
+}
+
+MIRType *LibAstFile::CvtComplexType(const clang::QualType srcType) {
+  clang::QualType srcElemType = llvm::cast<clang::ComplexType>(srcType)->getElementType();
+  MIRType *destElemType = CvtPrimType(srcElemType);
+  CHECK_NULL_FATAL(destElemType);
+  return FEManager::GetTypeManager().GetOrCreateComplexStructType(*destElemType);
 }
 
 MIRType *LibAstFile::CvtFunctionType(const clang::QualType srcType) {

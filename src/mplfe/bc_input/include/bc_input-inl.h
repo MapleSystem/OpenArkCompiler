@@ -115,7 +115,7 @@ bool BCInput<T>::CollectAllDepTypeNamesOnAllBCFiles(std::unordered_set<std::stri
   }
   BCUtil::AddDefaultDepSet(allDepSet);  // allDepSet is equal to "DefaultTypeSet + TypeSet - ClassSet"
   std::unordered_set<std::string> classSet;
-  CollectClassNamesOnAllBCFiles(classSet);
+  (void)CollectClassNamesOnAllBCFiles(classSet);
   for (const auto &elem : classSet) {
     (void)allDepSet.erase(elem);
   }
@@ -137,7 +137,7 @@ bool BCInput<T>::CollectMethodDepTypeNamesOnAllBCFiles(std::unordered_set<std::s
       if (method == nullptr) {
         continue;
       }
-      klass->GetBCParser().CollectMethodDepTypeNames(depSet, *method);
+      (void)klass->GetBCParser().CollectMethodDepTypeNames(depSet, *method);
     }
   }
   std::unordered_set<std::string> classSet;

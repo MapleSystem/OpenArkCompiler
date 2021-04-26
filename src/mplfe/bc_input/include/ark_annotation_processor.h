@@ -26,19 +26,19 @@ class ArkAnnotationProcessor {
 class ArkAnnotation {
  public:
   void Init();
-  bool IsFastNative(TyIdx tyIdx);
-  bool IsCriticalNative(TyIdx tyIdx);
-  bool IsCallerSensitive(TyIdx tyIdx);
-  bool IsPermanent(TyIdx tyIdx);
+  bool IsFastNative(const TyIdx &tyIdx) const;
+  bool IsCriticalNative(const TyIdx &tyIdx) const;
+  bool IsCallerSensitive(const TyIdx &tyIdx) const;
+  bool IsPermanent(const TyIdx &tyIdx) const;
   bool IsPermanent(const std::string &str) const;
-  bool IsRCUnowned(TyIdx tyIdx);
-  bool IsRCUnownedCap(TyIdx tyIdx);
-  bool IsRCUnownedCapList(TyIdx tyIdx);
-  bool IsRCUnownedLocal(TyIdx tyIdx);
-  bool IsRCUnownedLocalOld(TyIdx tyIdx);
-  bool IsRCUnownedThis(TyIdx tyIdx);
-  bool IsRCUnownedOuter(TyIdx tyIdx);
-  bool IsRCWeak(TyIdx tyIdx);
+  bool IsRCUnowned(const TyIdx &tyIdx) const;
+  bool IsRCUnownedCap(const TyIdx &tyIdx) const;
+  bool IsRCUnownedCapList(const TyIdx &tyIdx) const;
+  bool IsRCUnownedLocal(const TyIdx &tyIdx) const;
+  bool IsRCUnownedLocalOld(const TyIdx &tyIdx) const;
+  bool IsRCUnownedThis(const TyIdx &tyIdx) const;
+  bool IsRCUnownedOuter(const TyIdx &tyIdx) const;
+  bool IsRCWeak(const TyIdx &tyIdx) const;
   static ArkAnnotation &GetInstance() {
     return instance;
   }
@@ -50,7 +50,7 @@ class ArkAnnotation {
  private:
   ArkAnnotation() = default;
   ~ArkAnnotation() = default;
-  MIRStructType *GetStructType(TyIdx tyIdx);
+  static MIRStructType *GetStructType(const TyIdx &tyIdx);
 
   static ArkAnnotation instance;
   std::set<GStrIdx> typeNameSetForFastNative;

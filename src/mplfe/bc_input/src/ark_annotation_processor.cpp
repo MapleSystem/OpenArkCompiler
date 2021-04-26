@@ -72,25 +72,25 @@ void ArkAnnotation::Init() {
   typeNameSetForRCWeak.insert(GetStrIdxFromDexName("Lark/annotation/Weak;"));
 }
 
-bool ArkAnnotation::IsFastNative(TyIdx tyIdx) {
+bool ArkAnnotation::IsFastNative(const TyIdx &tyIdx) const {
   MIRStructType *sType = GetStructType(tyIdx);
   return sType == nullptr ?
       false : typeNameSetForFastNative.find(sType->GetNameStrIdx()) != typeNameSetForFastNative.end();
 }
 
-bool ArkAnnotation::IsCriticalNative(TyIdx tyIdx) {
+bool ArkAnnotation::IsCriticalNative(const TyIdx &tyIdx) const {
   MIRStructType *sType = GetStructType(tyIdx);
   return sType == nullptr ?
       false : typeNameSetForCriticalNative.find(sType->GetNameStrIdx()) != typeNameSetForCriticalNative.end();
 }
 
-bool ArkAnnotation::IsCallerSensitive(TyIdx tyIdx) {
+bool ArkAnnotation::IsCallerSensitive(const TyIdx &tyIdx) const {
   MIRStructType *sType = GetStructType(tyIdx);
   return sType == nullptr ?
       false : typeNameSetForCallerSensitive.find(sType->GetNameStrIdx()) != typeNameSetForCallerSensitive.end();
 }
 
-bool ArkAnnotation::IsPermanent(TyIdx tyIdx) {
+bool ArkAnnotation::IsPermanent(const TyIdx &tyIdx) const {
   MIRStructType *sType = GetStructType(tyIdx);
   return sType == nullptr ?
       false : typeNameSetForPermanent.find(sType->GetNameStrIdx()) != typeNameSetForPermanent.end();
@@ -107,55 +107,55 @@ bool ArkAnnotation::IsPermanent(const std::string &str) const {
   return false;
 }
 
-bool ArkAnnotation::IsRCUnowned(TyIdx tyIdx) {
+bool ArkAnnotation::IsRCUnowned(const TyIdx &tyIdx) const {
   MIRStructType *sType = GetStructType(tyIdx);
   return sType == nullptr ?
       false : typeNameSetForRCUnowned.find(sType->GetNameStrIdx()) != typeNameSetForRCUnowned.end();
 }
 
-bool ArkAnnotation::IsRCUnownedCap(TyIdx tyIdx) {
+bool ArkAnnotation::IsRCUnownedCap(const TyIdx &tyIdx) const {
   MIRStructType *sType = GetStructType(tyIdx);
   return sType == nullptr ?
       false : typeNameSetForRCUnownedCap.find(sType->GetNameStrIdx()) != typeNameSetForRCUnownedCap.end();
 }
 
-bool ArkAnnotation::IsRCUnownedCapList(TyIdx tyIdx) {
+bool ArkAnnotation::IsRCUnownedCapList(const TyIdx &tyIdx) const {
   MIRStructType *sType = GetStructType(tyIdx);
   return sType == nullptr ?
       false : typeNameSetForRCUnownedCapList.find(sType->GetNameStrIdx()) != typeNameSetForRCUnownedCapList.end();
 }
 
-bool ArkAnnotation::IsRCUnownedLocal(TyIdx tyIdx) {
+bool ArkAnnotation::IsRCUnownedLocal(const TyIdx &tyIdx) const {
   MIRStructType *sType = GetStructType(tyIdx);
   return sType == nullptr ?
       false : typeNameSetForRCUnownedLocal.find(sType->GetNameStrIdx()) != typeNameSetForRCUnownedLocal.end();
 }
 
-bool ArkAnnotation::IsRCUnownedLocalOld(TyIdx tyIdx) {
+bool ArkAnnotation::IsRCUnownedLocalOld(const TyIdx &tyIdx) const {
   MIRStructType *sType = GetStructType(tyIdx);
   return sType == nullptr ?
       false : typeNameIdxForRCUnownedLocalOld == sType->GetNameStrIdx();
 }
 
-bool ArkAnnotation::IsRCUnownedThis(TyIdx tyIdx) {
+bool ArkAnnotation::IsRCUnownedThis(const TyIdx &tyIdx) const {
   MIRStructType *sType = GetStructType(tyIdx);
   return sType == nullptr ?
       false : typeNameSetForRCUnownedThis.find(sType->GetNameStrIdx()) != typeNameSetForRCUnownedThis.end();
 }
 
-bool ArkAnnotation::IsRCUnownedOuter(TyIdx tyIdx) {
+bool ArkAnnotation::IsRCUnownedOuter(const TyIdx &tyIdx) const {
   MIRStructType *sType = GetStructType(tyIdx);
   return sType == nullptr ?
       false : typeNameSetForRCUnownedOuter.find(sType->GetNameStrIdx()) != typeNameSetForRCUnownedOuter.end();
 }
 
-bool ArkAnnotation::IsRCWeak(TyIdx tyIdx) {
+bool ArkAnnotation::IsRCWeak(const TyIdx &tyIdx) const {
   MIRStructType *sType = GetStructType(tyIdx);
   return sType == nullptr ?
       false : typeNameSetForRCWeak.find(sType->GetNameStrIdx()) != typeNameSetForRCWeak.end();
 }
 
-MIRStructType *ArkAnnotation::GetStructType(TyIdx tyIdx) {
+MIRStructType *ArkAnnotation::GetStructType(const TyIdx &tyIdx) {
   MIRType *type = GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx);
   if (!type->IsMIRClassType() && !type->IsMIRInterfaceType()) {
     return nullptr;
