@@ -50,9 +50,7 @@ ScalarMeExpr *SSAPre::CreateNewCurTemp(const MeExpr &meExpr) {
     SetCurFunction(workCand->GetPUIdx());
     RegMeExpr *regVar = nullptr;
     if (meExpr.GetMeOp() == kMeOpVar) {
-      auto *varMeExpr = static_cast<const VarMeExpr*>(&meExpr);
-      const MIRSymbol *sym = varMeExpr->GetOst()->GetMIRSymbol();
-      MIRType *ty = GlobalTables::GetTypeTable().GetTypeFromTyIdx(sym->GetTyIdx());
+      auto *ty = static_cast<const VarMeExpr&>(meExpr).GetType();
       regVar = ty->GetPrimType() == PTY_ref ? irMap->CreateRegMeExpr(*ty)
                                             : irMap->CreateRegMeExpr(ty->GetPrimType());
     } else if (meExpr.GetMeOp() == kMeOpIvar) {

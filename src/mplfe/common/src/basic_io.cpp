@@ -34,7 +34,7 @@ BasicIOMapFile::~BasicIOMapFile() {
   ptrMemMap = nullptr;
 }
 
-bool BasicIOMapFile::OpenAndMap() {
+bool BasicIOMapFile::OpenAndMapImpl() {
   fd = -1;
   fd = open(fileName.c_str(), O_RDONLY);
   if (fd < 0) {

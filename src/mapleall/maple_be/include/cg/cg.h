@@ -97,7 +97,7 @@ class CG {
 
  public:
   CG(MIRModule &mod, const CGOptions &cgOptions)
-      : memPool(memPoolCtrler.NewMemPool("maplecg mempool")),
+      : memPool(memPoolCtrler.NewMemPool("maplecg mempool", false /* isLcalPool */)),
         allocator(memPool),
         mirModule(&mod),
         emitter(nullptr),

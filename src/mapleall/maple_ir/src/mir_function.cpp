@@ -628,14 +628,14 @@ void MIRFunction::NewBody() {
 #ifdef DEBUGME
 void MIRFunction::SetUpGDBEnv() {
   if (codeMemPool != nullptr) {
-    memPoolCtrler.DeleteMemPool(codeMemPool);
+    delete codeMemPool;
   }
-  codeMemPool = memPoolCtrler.NewMemPool("tmp debug");
+  codeMemPool = new ThreadLocalMemPool(memPoolCtrler, "tmp debug");
   codeMemPoolAllocator.SetMemPool(codeMemPool);
 }
 
 void MIRFunction::ResetGDBEnv() {
-  memPoolCtrler.DeleteMemPool(codeMemPool);
+  delete codeMemPool;
   codeMemPool = nullptr;
 }
 #endif

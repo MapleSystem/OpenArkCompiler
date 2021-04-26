@@ -279,94 +279,86 @@ void PeepOptimizer::Run() {
 int32 PeepOptimizer::index = 0;
 
 void PeepHoleOptimizer::Peephole0() {
-  MemPool *memPool = memPoolCtrler.NewMemPool("peepholeOptObj");
-  PeepOptimizer peepOptimizer(*cgFunc, memPool);
+  auto memPool = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, "peepholeOptObj");
+  PeepOptimizer peepOptimizer(*cgFunc, memPool.get());
 #if TARGAARCH64 || TARGRISCV64
   peepOptimizer.Run<AArch64PeepHole0>();
 #endif
 #if TARGARM32
   peepOptimizer.Run<Arm32PeepHole0>();
 #endif
-  memPoolCtrler.DeleteMemPool(memPool);
 }
 
 void PeepHoleOptimizer::PeepholeOpt() {
-  MemPool *memPool = memPoolCtrler.NewMemPool("peepholeOptObj");
-  PeepOptimizer peepOptimizer(*cgFunc, memPool);
+  auto memPool = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, "peepholeOptObj");
+  PeepOptimizer peepOptimizer(*cgFunc, memPool.get());
 #if TARGAARCH64 || TARGRISCV64
   peepOptimizer.Run<AArch64PeepHole>();
 #endif
 #if TARGARM32
   peepOptimizer.Run<Arm32PeepHole>();
 #endif
-  memPoolCtrler.DeleteMemPool(memPool);
 }
 
 void PeepHoleOptimizer::PrePeepholeOpt() {
-  MemPool *memPool = memPoolCtrler.NewMemPool("peepholeOptObj");
-  PeepOptimizer peepOptimizer(*cgFunc, memPool);
+  auto memPool = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, "peepholeOptObj");
+  PeepOptimizer peepOptimizer(*cgFunc, memPool.get());
 #if TARGAARCH64 || TARGRISCV64
   peepOptimizer.Run<AArch64PrePeepHole>();
 #endif
 #if TARGARM32
   peepOptimizer.Run<Arm32PrePeepHole>();
 #endif
-  memPoolCtrler.DeleteMemPool(memPool);
 }
 
 void PeepHoleOptimizer::PrePeepholeOpt1() {
-  MemPool *memPool = memPoolCtrler.NewMemPool("peepholeOptObj");
-  PeepOptimizer peepOptimizer(*cgFunc, memPool);
+  auto memPool = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, "peepholeOptObj");
+  PeepOptimizer peepOptimizer(*cgFunc, memPool.get());
 #if TARGAARCH64 || TARGRISCV64
   peepOptimizer.Run<AArch64PrePeepHole1>();
 #endif
 #if TARGARM32
   peepOptimizer.Run<Arm32PrePeepHole1>();
 #endif
-  memPoolCtrler.DeleteMemPool(memPool);
 }
 
 AnalysisResult *CgDoPrePeepHole::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
   (void)cgFuncResultMgr;
   ASSERT(cgFunc != nullptr, "nullptr check");
-  MemPool *memPool = memPoolCtrler.NewMemPool("prePeepholeOpt");
+  auto memPool = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, "prePeepholeOpt");
   auto *peep = memPool->New<PeepHoleOptimizer>(cgFunc);
   CHECK_FATAL(peep != nullptr, "PeepHoleOptimizer instance create failure");
   peep->PrePeepholeOpt();
-  memPoolCtrler.DeleteMemPool(memPool);
   return nullptr;
 }
 
 AnalysisResult *CgDoPrePeepHole1::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
   (void)cgFuncResultMgr;
   ASSERT(cgFunc != nullptr, "nullptr check");
-  MemPool *memPool = memPoolCtrler.NewMemPool("prePeepholeOpt1");
+  auto memPool = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, "prePeepholeOpt1");
   auto *peep = memPool->New<PeepHoleOptimizer>(cgFunc);
   CHECK_FATAL(peep != nullptr, "PeepHoleOptimizer instance create failure");
   peep->PrePeepholeOpt1();
-  memPoolCtrler.DeleteMemPool(memPool);
   return nullptr;
 }
 
 AnalysisResult *CgDoPeepHole0::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
   (void)cgFuncResultMgr;
   ASSERT(cgFunc != nullptr, "nullptr check");
-  MemPool *memPool = memPoolCtrler.NewMemPool("peephole0");
+  auto memPool = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, "peephole0");
   auto *peep = memPool->New<PeepHoleOptimizer>(cgFunc);
   CHECK_FATAL(peep != nullptr, "PeepHoleOptimizer instance create failure");
   peep->Peephole0();
-  memPoolCtrler.DeleteMemPool(memPool);
   return nullptr;
 }
 
 AnalysisResult *CgDoPeepHole::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
   (void)cgFuncResultMgr;
   ASSERT(cgFunc != nullptr, "nullptr check");
-  MemPool *memPool = memPoolCtrler.NewMemPool("PeepHoleOptimizer");
+  auto memPool = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, "PeepHoleOptimizer");
   auto *peep = memPool->New<PeepHoleOptimizer>(cgFunc);
   CHECK_FATAL(peep != nullptr, "PeepHoleOptimizer instance create failure");
   peep->PeepholeOpt();
-  memPoolCtrler.DeleteMemPool(memPool);
   return nullptr;
 }
 }  /* namespace maplebe */

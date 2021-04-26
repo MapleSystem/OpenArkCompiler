@@ -29,7 +29,7 @@ int MeFuncOptTask::RunImpl(MplTaskParam *param) {
 std::unique_ptr<MeFuncOptExecutor> MeFuncOptExecutor::Clone() const {
   // thread local memPoolCtrler and fpm
   auto threadLocalCtrler = std::make_unique<MemPoolCtrler>();
-  auto *memPool = threadLocalCtrler->NewMemPool("thread local func opt mempool");
+  auto *memPool = threadLocalCtrler->NewMemPool("thread local func opt mempool", true /* isLcalPool */);
   MeFuncPhaseManager &fpmCopy = fpm.Clone(*memPool, *threadLocalCtrler);
   auto copy = std::make_unique<MeFuncOptExecutor>(std::move(threadLocalCtrler), fpmCopy);
   return copy;

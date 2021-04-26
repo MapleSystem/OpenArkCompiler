@@ -1694,7 +1694,7 @@ MIRFunction *CGNode::HasOneCandidate() const {
 }
 
 AnalysisResult *DoCallGraph::Run(MIRModule *module, ModuleResultMgr *mgr) {
-  MemPool *memPool = memPoolCtrler.NewMemPool("callgraph mempool");
+  MemPool *memPool = NewMemPool();
   KlassHierarchy *klassh = static_cast<KlassHierarchy*>(mgr->GetAnalysisResult(MoPhase_CHA, module));
   CHECK_FATAL(klassh != nullptr, "CHA can't be null");
   CallGraph *cg = memPool->New<CallGraph>(*module, *memPool, *klassh, module->GetFileName());
@@ -1704,23 +1704,21 @@ AnalysisResult *DoCallGraph::Run(MIRModule *module, ModuleResultMgr *mgr) {
   mgr->AddResult(GetPhaseID(), *module, *cg);
   if (!module->IsInIPA() && module->firstInline) {
     // do retype
-    MemPool *localMp = memPoolCtrler.NewMemPool(PhaseName());
+    MemPool *localMp = NewMemPool();
     maple::MIRBuilder dexMirbuilder(module);
     Retype retype(module, localMp);
     retype.DoRetype();
-    memPoolCtrler.DeleteMemPool(localMp);
   }
   return cg;
 }
 
 AnalysisResult *DoIPODevirtulize::Run(MIRModule *module, ModuleResultMgr *mgr) {
-  MemPool *memPool = memPoolCtrler.NewMemPool("ipodevirulize mempool");
+  MemPool *memPool = NewMemPool();
   KlassHierarchy *klassh = static_cast<KlassHierarchy*>(mgr->GetAnalysisResult(MoPhase_CHA, module));
   CHECK_NULL_FATAL(klassh);
   IPODevirtulize *dev = memPool->New<IPODevirtulize>(module, memPool, klassh);
   // Devirtualize vcall of final variable
   dev->DevirtualFinal();
-  memPoolCtrler.DeleteMemPool(memPool);
   return nullptr;
 }
 }  // namespace maple

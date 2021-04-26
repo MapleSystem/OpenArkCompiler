@@ -337,12 +337,11 @@ void MeDoCfgOpt::EmitMapleIr(MeFunction &func, MeFuncResultMgr &m) {
     auto layoutBBs = func.GetLaidOutBBs();
     CHECK_NULL_FATAL(func.GetIRMap());
     MIRFunction *mirFunction = func.GetMirFunc();
-    if (mirFunction->GetCodeMemPool() != nullptr) {
-      mirFunction->GetCodeMemPool()->Release();
-    }
-    mirFunction->SetCodeMemPool(memPoolCtrler.NewMemPool("IR from IRMap::Emit()"));
-    mirFunction->GetCodeMPAllocator().SetMemPool(mirFunction->GetCodeMemPool());
+
+    mirFunction->ReleaseCodeMemory();
+    mirFunction->SetMemPool(new ThreadLocalMemPool(memPoolCtrler, "IR from IRMap::Emit()"));
     mirFunction->SetBody(mirFunction->GetCodeMemPool()->New<BlockNode>());
+
     for (size_t k = 1; k < mirFunction->GetSymTab()->GetSymbolTableSize(); ++k) {
       MIRSymbol *sym = mirFunction->GetSymTab()->GetSymbolFromStIdx(k);
       if (sym->GetSKind() == kStVar) {

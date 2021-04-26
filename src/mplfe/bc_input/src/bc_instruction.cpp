@@ -383,7 +383,7 @@ void BCRegType::PrecisifyTypes(bool isTry) {
   }
 }
 
-void BCRegType::PrecisifyRelatedTypes(BCRegTypeItem *realType) {
+void BCRegType::PrecisifyRelatedTypes(const BCRegTypeItem *realType) {
   for (auto rType : relatedBCRegTypes) {
     // try to get type from use first.
     // if failed, get type from def.
@@ -406,7 +406,7 @@ void BCRegType::PrecisifyRelatedTypes(BCRegTypeItem *realType) {
   }
 }
 
-void BCRegType::PrecisifyElemTypes(BCRegTypeItem *arrayType) {
+void BCRegType::PrecisifyElemTypes(const BCRegTypeItem *arrayType) {
   for (auto elem : elemTypes) {
     if (elem->isIndeterminate) {
       const std::string &arrTypeName = GlobalTables::GetStrTable().GetStringFromStrIdx(arrayType->typeNameIdx);

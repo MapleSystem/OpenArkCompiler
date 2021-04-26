@@ -17,6 +17,7 @@
 #include "global_tables.h"
 #include "ast_stmt.h"
 #include "feir_var_name.h"
+#include "feir_builder.h"
 
 namespace maple {
 // ---------- ASTDecl ---------
@@ -36,6 +37,24 @@ const std::vector<MIRType*> &ASTDecl::GetTypeDesc() const {
 std::unique_ptr<FEIRVar> ASTVar::Translate2FEIRVar() {
   CHECK_FATAL(typeDesc.size() == 1, "Invalid ASTVar");
   return std::make_unique<FEIRVarName>(name, std::make_unique<FEIRTypeNative>(*(typeDesc[0])));
+}
+
+void ASTVar::GenerateInitStmtImpl(std::list<UniqueFEIRStmt> &stmts) {
+  if (GetInitExpr() != nullptr) {
+    UniqueFEIRVar feirVar = Translate2FEIRVar();
+    UniqueFEIRExpr expr = GetInitExpr()->Emit2FEExpr(stmts);
+    if (expr != nullptr) { // InitListExpr array not emit here
+      UniqueFEIRStmt stmt = FEIRBuilder::CreateStmtDAssign(std::move(feirVar), std::move(expr));
+      stmts.emplace_back(std::move(stmt));
+    }
+  }
+}
+
+// ---------- ASTLocalEnumDecl ----------
+void ASTLocalEnumDecl::GenerateInitStmtImpl(std::list<UniqueFEIRStmt> &stmts) {
+  for (auto var : vars) {
+    var->GenerateInitStmt(stmts);
+  }
 }
 
 // ---------- ASTFunc ---------

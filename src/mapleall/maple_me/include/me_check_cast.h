@@ -42,6 +42,13 @@ class CheckCast {
   void DoCheckCastOpt();
   void FindRedundantChecks();
   void DeleteRedundants();
+  void ReleaseMemory() {
+    if (graphTempMem != nullptr) {
+      delete graphTempMem;
+      graphTempAllocator.SetMemPool(nullptr);
+      graphTempMem = nullptr;
+    }
+  }
  private:
   void RemoveRedundantCheckCast(MeStmt &stmt, BB &bb);
   bool ProvedByAnnotationInfo(const IntrinsiccallMeStmt &callNode);
@@ -71,7 +78,7 @@ class CheckCast {
   MeFunction *func;
   KlassHierarchy *klassh;
   MeSSI *meSSI;
-  MemPool *graphTempMem { memPoolCtrler.NewMemPool("graph mempool tmp") };
+  MemPool *graphTempMem { new ThreadLocalMemPool(memPoolCtrler, "graph mempool tmp") };
   MapleAllocator graphTempAllocator { graphTempMem };
   MIRType *curCheckCastType { nullptr };
   std::vector<MeStmt*> redundantChecks;

@@ -127,11 +127,10 @@ void AArch64FixShortBranch::FixShortBranches() {
 AnalysisResult *CgFixShortBranch::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
   (void)cgFuncResultMgr;
   ASSERT(cgFunc != nullptr, "nullptr check");
-  MemPool *memPool = memPoolCtrler.NewMemPool("fixShortBranches");
+  auto memPool = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, "FixShortBranches");
   auto *fixShortBranch = memPool->New<AArch64FixShortBranch>(cgFunc);
   CHECK_FATAL(fixShortBranch != nullptr, "AArch64FixShortBranch instance create failure");
   fixShortBranch->FixShortBranches();
-  memPoolCtrler.DeleteMemPool(memPool);
   return nullptr;
 }
 }  /* namespace maplebe */

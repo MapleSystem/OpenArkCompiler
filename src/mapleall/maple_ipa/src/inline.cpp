@@ -1391,7 +1391,7 @@ void MInline::MarkUsedSymbols(const BaseNode *baseNode) const {
 
 // Unified interface to run inline module phase.
 AnalysisResult *DoInline::Run(MIRModule *module, ModuleResultMgr *mgr) {
-  MemPool *memPool = memPoolCtrler.NewMemPool("inline mempool");
+  MemPool *memPool = memPoolCtrler.NewMemPool("inline mempool", false /* isLocalPool */);
   KlassHierarchy *klassHierarchy = static_cast<KlassHierarchy*>(mgr->GetAnalysisResult(MoPhase_CHA, module));
   CHECK_FATAL(klassHierarchy != nullptr, "Expecting a valid KlassHierarchy, found nullptr");
   CallGraph *cg = static_cast<CallGraph*>(mgr->GetAnalysisResult(MoPhase_CALLGRAPH_ANALYSIS, module));

@@ -528,12 +528,12 @@ void BCClass::SetAccFlag(uint32 flag) {
 }
 
 void BCClass::SetField(std::unique_ptr<BCClassField> field) {
-  (void)fields.push_back(std::move(field));
+  fields.push_back(std::move(field));
 }
 
 void BCClass::SetMethod(std::unique_ptr<BCClassMethod> method) {
   std::lock_guard<std::mutex> lock(bcClassMtx);
-  (void)methods.push_back(std::move(method));
+  methods.push_back(std::move(method));
 }
 
 void BCClass::InsertFinalStaticStringID(uint32 stringID) {
@@ -582,7 +582,7 @@ GStrIdx BCClass::GetIRSrcFileSigIdx() const {
   return irSrcFileSigIdx;
 }
 
-uint32 BCClass::GetFileNameHashId() const {
+int32 BCClass::GetFileNameHashId() const {
   return parser.GetFileNameHashId();
 }
 
