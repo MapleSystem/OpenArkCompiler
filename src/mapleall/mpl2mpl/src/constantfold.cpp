@@ -1329,7 +1329,7 @@ MIRConst *ConstantFold::FoldTypeCvtMIRConst(const MIRConst &cst, PrimType fromTy
     uint32 toSize = GetPrimTypeBitSize(toType);
     if (toSize > fromSize) {
       Opcode op = OP_zext;
-      if (IsSignedInteger(toType) && IsSignedInteger(fromType)) {
+      if (IsSignedInteger(fromType)) {
         op = OP_sext;
       }
       toConst = FoldSignExtendMIRConst(op, toType, fromSize, cst);

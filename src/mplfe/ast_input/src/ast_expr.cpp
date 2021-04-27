@@ -511,6 +511,7 @@ UniqueFEIRExpr ASTMemberExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) 
     }
     auto dread = std::make_unique<FEIRExprDRead>(std::move(tmpVar));
     dread->SetFieldName(memberName);
+    dread->SetFieldType(memberType);
     return dread;
   }
 }

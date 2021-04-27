@@ -995,8 +995,8 @@ void AArch64CGFunc::SelectRegassign(RegassignNode &stmt, Operand &opnd0) {
   }
 }
 
-Operand &AArch64CGFunc::GenLargeAggFormalMemOpnd(const MIRSymbol &sym, uint32 align, int32 offset) {
-  Operand *memOpnd;
+AArch64MemOperand &AArch64CGFunc::GenLargeAggFormalMemOpnd(const MIRSymbol &sym, uint32 align, int32 offset) {
+  MemOperand *memOpnd;
   if (sym.GetStorageClass() == kScFormal && GetBecommon().GetTypeSize(sym.GetTyIdx()) > k16ByteSize) {
     /* formal of size of greater than 16 is copied by the caller and the pointer to it is passed. */
     /* otherwise it is passed in register and is accessed directly. */
@@ -1009,7 +1009,7 @@ Operand &AArch64CGFunc::GenLargeAggFormalMemOpnd(const MIRSymbol &sym, uint32 al
   } else {
     memOpnd = &GetOrCreateMemOpnd(sym, offset, align * kBitsPerByte);
   }
-  return *memOpnd;
+  return *(static_cast<AArch64MemOperand*>(memOpnd));
 }
 
 void AArch64CGFunc::SelectAggDassign(DassignNode &stmt) {
@@ -1055,9 +1055,13 @@ void AArch64CGFunc::SelectAggDassign(DassignNode &stmt) {
       GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(PickLdInsn(alignUsed * k8BitSize, PTY_u32),
                                                                     result, *rhsMemOpnd));
       /* generate the store */
-      Operand &lhsMemOpnd = GenLargeAggFormalMemOpnd(*lhsSymbol, alignUsed, (lhsOffset + i * alignUsed));
+      AArch64MemOperand *lhsMemOpnd = &GenLargeAggFormalMemOpnd(*lhsSymbol, alignUsed, (lhsOffset + i * alignUsed));
+      if ((lhsMemOpnd->GetMemVaryType() == kNotVary) &&
+        IsImmediateOffsetOutOfRange(*lhsMemOpnd, alignUsed * kBitsPerByte)) {
+        lhsMemOpnd = &SplitOffsetWithAddInstruction(*lhsMemOpnd, alignUsed * k8BitSize);
+      }
       GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(PickStInsn(alignUsed * k8BitSize, PTY_u32),
-                                                                    result, lhsMemOpnd));
+                                                                    result, *lhsMemOpnd));
     }
     /* take care of extra content at the end less than the unit of alignUsed */
     uint64 lhsSizeCovered = (lhsSize / alignUsed) * alignUsed;
@@ -2364,6 +2368,7 @@ void AArch64CGFunc::SelectCondGoto(CondGotoNode &stmt, Operand &opnd0, Operand &
 void AArch64CGFunc::SelectGoto(GotoNode &stmt) {
   Operand &targetOpnd = GetOrCreateLabelOperand(stmt.GetOffset());
   GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xuncond, targetOpnd));
+  GetCurBB()->SetKind(BB::kBBGoto);
 }
 
 Operand *AArch64CGFunc::SelectAdd(BinaryNode &node, Operand &opnd0, Operand &opnd1) {

@@ -650,14 +650,17 @@ bool MInline::PerformInline(MIRFunction &caller, BlockNode &enclosingBlk, CallNo
   ReplacePregs(newBody, pregOld2New);
   // Step 4: Null check 'this' and assign actuals to formals.
   if (static_cast<uint32>(callStmt.NumOpnds()) != callee.GetFormalCount()) {
-    CHECK_FATAL(false, "# formal arguments != # actual arguments");
+    LogInfo::MapleLogger() << "warning: # formal arguments != # actual arguments in the function " <<
+        callee.GetName() << "\n";
   }
   if (callee.GetFormalCount() > 0 && callee.GetFormal(0)->GetName() == kThisStr) {
     UnaryStmtNode *nullCheck = module.CurFuncCodeMemPool()->New<UnaryStmtNode>(OP_assertnonnull);
     nullCheck->SetOpnd(callStmt.Opnd(0), 0);
     newBody->InsertBefore(newBody->GetFirst(), nullCheck);
   }
-  for (size_t i = 0; i < callStmt.NumOpnds(); ++i) {
+  // The number of formals and realArg are not always equal
+  size_t realArgNum = std::min(callStmt.NumOpnds(), callee.GetFormalCount());
+  for (size_t i = 0; i < realArgNum; ++i) {
     BaseNode *currBaseNode = callStmt.Opnd(i);
     MIRSymbol *formal = callee.GetFormal(i);
     if (formal->IsPreg()) {
@@ -667,6 +670,12 @@ bool MInline::PerformInline(MIRFunction &caller, BlockNode &enclosingBlk, CallNo
       newBody->InsertBefore(newBody->GetFirst(), regAssign);
     } else {
       MIRSymbol *newFormal = caller.GetSymTab()->GetSymbolFromStIdx(formal->GetStIndex() + stIdxOff);
+      PrimType formalPrimType = newFormal->GetType()->GetPrimType();
+      PrimType realArgPrimType = currBaseNode->GetPrimType();
+      // If realArg's type is different from formal's type, use cvt
+      if (formalPrimType != realArgPrimType) {
+        currBaseNode = builder.CreateExprTypeCvt(OP_cvt, formalPrimType, realArgPrimType, *currBaseNode);
+      }
       DassignNode *stmt = builder.CreateStmtDassign(*newFormal, 0, currBaseNode);
       newBody->InsertBefore(newBody->GetFirst(), stmt);
     }
@@ -916,6 +925,8 @@ FuncCostResultType MInline::GetFuncCost(const MIRFunction &func, const BaseNode 
         cost += kPentupleInsn;
       } else if (id == INTRN_MPL_READ_OVTABLE_ENTRY) {
         cost += kDoubleInsn;
+      } else if (id == INTRN_C_ctz32 || id == INTRN_C_clz32 || id == INTRN_C_constant_p) {
+        cost += kOneInsn;
       } else {
         CHECK_FATAL(false, "[IMPOSSIBLE] %s", func.GetName().c_str());
         cost += kQuadrupleInsn;

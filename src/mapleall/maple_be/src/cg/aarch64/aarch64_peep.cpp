@@ -1908,7 +1908,6 @@ void RemoveIncRefAArch64::Run(BB &bb, Insn &insn) {
   bb.RemoveInsn(insn);
   bb.RemoveInsn(*insnMov2);
   bb.RemoveInsn(*insnMov1);
-  bb.SetKind(BB::kBBFallthru);
 }
 
 bool LongIntCompareWithZAArch64::FindLondIntCmpWithZ(std::vector<Insn*> &optInsn, Insn &insn) {

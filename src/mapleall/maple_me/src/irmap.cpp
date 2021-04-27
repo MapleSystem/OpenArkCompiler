@@ -589,7 +589,11 @@ MeExpr *IRMap::SimplifyOpMeExpr(OpMeExpr *opmeexpr) {
                maple::IsPrimitiveInteger(cvtopnd0->GetOpnd(0)->GetPrimType())) ||
               (maple::IsPrimitiveFloat(cvtopnd0->GetPrimType()) &&
                maple::IsPrimitiveFloat(cvtopnd0->GetOpnd(0)->GetPrimType()))) {
-            return CreateMeExprTypeCvt(cvtmeexpr->GetPrimType(), cvtopnd0->GetOpndType(), *cvtopnd0->GetOpnd(0));
+            if (cvtmeexpr->GetPrimType() == cvtopnd0->GetOpndType()) {
+              return cvtopnd0->GetOpnd(0);
+            } else {
+              return CreateMeExprTypeCvt(cvtmeexpr->GetPrimType(), cvtopnd0->GetOpndType(), *cvtopnd0->GetOpnd(0));
+            }
           }
         }
         if (maple::GetPrimTypeSize(cvtopnd0->GetPrimType()) >= maple::GetPrimTypeSize(cvtmeexpr->GetPrimType())) {
