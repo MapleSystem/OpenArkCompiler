@@ -193,6 +193,15 @@ void MeStorePre::CodeMotion() {
 // ================ Step 0: collect occurrences ================
 // create a new real occurrence for the store of meStmt of symbol oidx
 void MeStorePre::CreateRealOcc(const OStIdx &ostIdx, MeStmt &meStmt) {
+  // skip vars with alias until we can deal with chi
+  if (ostIdx >= aliasClass->GetAliasElemCount()) {
+    return;
+  }
+  AliasElem *ae = aliasClass->FindAliasElem(*ssaTab->GetSymbolOriginalStFromID(ostIdx));
+  if (ae->GetClassSet() != nullptr) {
+    return;
+  }
+
   SpreWorkCand *wkCand = nullptr;
   auto mapIt = workCandMap.find(ostIdx);
   if (mapIt != workCandMap.end()) {
@@ -201,9 +210,9 @@ void MeStorePre::CreateRealOcc(const OStIdx &ostIdx, MeStmt &meStmt) {
     OriginalSt *ost = ssaTab->GetSymbolOriginalStFromID(ostIdx);
     wkCand = spreMp->New<SpreWorkCand>(spreAllocator, *ost);
     workCandMap[ostIdx] = wkCand;
-    // if it is local symbol, insert artificial real occ at common_exit_bb
+    // if it is local symbol, insert artificial use occ at common_exit_bb
     if (ost->IsLocal()) {
-      SRealOcc *artOcc = spreMp->New<SRealOcc>(*func->GetCommonExitBB());
+      SUseOcc *artOcc = spreMp->New<SUseOcc>(*func->GetCommonExitBB());
       wkCand->GetRealOccs().push_back(artOcc);
     }
   }
@@ -245,17 +254,7 @@ void MeStorePre::CreateSpreUseOccsThruAliasing(const OriginalSt &muOst, BB &bb) 
   if (muOst.GetIndex() >= aliasClass->GetAliasElemCount()) {
     return;
   }
-  AliasElem *ae = aliasClass->FindAliasElem(muOst);
-  if (ae->GetClassSet() == nullptr) {
-    return;
-  }
-  for (auto setIt = ae->GetClassSet()->begin(); setIt != ae->GetClassSet()->end(); ++setIt) {
-    unsigned int elemId = *setIt;
-    AliasElem *ae0 = aliasClass->FindID2Elem(elemId);
-    if (ae0->GetOriginalSt().GetIndirectLev() == 0) {
-      CreateUseOcc(ae0->GetOriginalSt().GetIndex(), bb);
-    }
-  }
+  CreateUseOcc(muOst.GetIndex(), bb);
 }
 
 void MeStorePre::FindAndCreateSpreUseOccs(const MeExpr &meExpr, BB &bb) const {

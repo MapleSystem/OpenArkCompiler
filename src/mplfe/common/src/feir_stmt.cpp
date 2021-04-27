@@ -1991,7 +1991,7 @@ BaseNode *FEIRExprDRead::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
     if (fieldIdVar == 0) {
       fieldIdVar = mirBuilder.GetStructFieldIDFromFieldName(*type, fieldName);
     }
-    node = mirBuilder.CreateExprDread(*type, fieldIdVar, *symbol);
+    node = mirBuilder.CreateExprDread(*fieldType, fieldIdVar, *symbol);
   }
   return node;
 }

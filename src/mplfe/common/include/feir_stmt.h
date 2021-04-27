@@ -410,15 +410,23 @@ class FEIRExprDRead : public FEIRExpr {
     return varSrc;
   }
 
-  void SetFieldName(const std::string &argFieldName){
+  void SetFieldName(const std::string &argFieldName) {
     fieldName = argFieldName;
   }
 
-  std::string GetFieldName(){
+  std::string GetFieldName() const {
     return fieldName;
   }
 
-  void SetFieldID(FieldID argFieldID){
+  void SetFieldType(MIRType *type) {
+    fieldType = type;
+  }
+
+  MIRType *GetFieldType() const {
+    return fieldType;
+  }
+
+  void SetFieldID(FieldID argFieldID) {
     fieldID = argFieldID;
   }
 
@@ -433,6 +441,7 @@ class FEIRExprDRead : public FEIRExpr {
   std::unique_ptr<FEIRVar> varSrc;
   FieldID fieldID = 0;
   std::string fieldName;
+  MIRType *fieldType;
 };
 
 // ---------- FEIRExprRegRead ----------

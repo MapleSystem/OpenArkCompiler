@@ -159,7 +159,8 @@ AliasElem *AliasClass::FindOrCreateExtraLevAliasElem(BaseNode &expr, TyIdx tyIdx
       return nullptr;
     }
   } else if (ainfo.ae == nullptr ||
-             (fieldId && ainfo.ae->GetOriginalSt().GetIndirectLev() != -1 && ainfo.ae->GetOriginalSt().GetTyIdx() != tyIdx)) {
+             (fieldId && ainfo.ae->GetOriginalSt().GetIndirectLev() != -1 &&
+              ainfo.ae->GetOriginalSt().GetTyIdx() != tyIdx)) {
     return FindOrCreateDummyNADSAe();
   }
   OriginalSt *newOst = nullptr;
@@ -471,7 +472,8 @@ void AliasClass::ApplyUnionForPointedTos() {
   // first, process nextLevNotAllDefsSeen for alias elems
   for (AliasElem *aliaselem : id2Elem) {
     if (aliaselem->IsNextLevNotAllDefsSeen()) {
-      MapleVector<OriginalSt *> *nextLevelNodes = GetAliasAnalysisTable()->GetNextLevelNodes(aliaselem->GetOriginalSt());
+      MapleVector<OriginalSt *> *nextLevelNodes =
+          GetAliasAnalysisTable()->GetNextLevelNodes(aliaselem->GetOriginalSt());
       MapleVector<OriginalSt *>::iterator ostit = nextLevelNodes->begin();
       for (; ostit != nextLevelNodes->end(); ++ostit) {
         AliasElem *indae = FindAliasElem(**ostit);
@@ -485,7 +487,8 @@ void AliasClass::ApplyUnionForPointedTos() {
   // do one more time to ensure proper propagation
   for (AliasElem *aliaselem : id2Elem) {
     if (aliaselem->IsNextLevNotAllDefsSeen()) {
-      MapleVector<OriginalSt *> *nextLevelNodes = GetAliasAnalysisTable()->GetNextLevelNodes(aliaselem->GetOriginalSt());
+      MapleVector<OriginalSt *> *nextLevelNodes =
+          GetAliasAnalysisTable()->GetNextLevelNodes(aliaselem->GetOriginalSt());
       MapleVector<OriginalSt *>::iterator ostit = nextLevelNodes->begin();
       for (; ostit != nextLevelNodes->end(); ++ostit) {
         AliasElem *indae = FindAliasElem(**ostit);
@@ -1366,7 +1369,8 @@ void AliasClass::CollectMayDefForMustDefs(const StmtNode &stmt, std::set<Origina
   }
 }
 
-void AliasClass::CollectMayUseForNextLevel(OriginalSt *ost, std::set<OriginalSt*> &mayUseOsts, const StmtNode &stmt, bool isFirstOpnd) {
+void AliasClass::CollectMayUseForNextLevel(const OriginalSt *ost, std::set<OriginalSt*> &mayUseOsts,
+                                           const StmtNode &stmt, bool isFirstOpnd) {
   for (OriginalSt *nextLevelOst : *(GetAliasAnalysisTable()->GetNextLevelNodes(*ost))) {
     AliasElem *indAe = FindAliasElem(*nextLevelOst);
 
@@ -1416,7 +1420,7 @@ void AliasClass::CollectMayUseForCallOpnd(const StmtNode &stmt, std::set<Origina
     }
 
     AliasInfo aInfo = CreateAliasElemsExpr(*expr);
-    if (aInfo.ae == nullptr || 
+    if (aInfo.ae == nullptr ||
         (aInfo.ae->IsNextLevNotAllDefsSeen() && aInfo.ae->GetOriginalSt().GetIndirectLev() > 0)) {
       continue;
     }
