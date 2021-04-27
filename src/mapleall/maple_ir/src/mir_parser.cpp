@@ -2664,7 +2664,7 @@ bool MIRParser::ParseConstAddrLeafExpr(MIRConstPtr &cexpr) {
       }
       lexer.NextToken();
     }
-    cexpr = mod.CurFuncCodeMemPool()->New<MIRAddrofConst>(anode->GetStIdx(), anode->GetFieldID(), *exprTy, ofst);
+    cexpr = mod.GetMemPool()->New<MIRAddrofConst>(anode->GetStIdx(), anode->GetFieldID(), *exprTy, ofst);
   } else if (expr->GetOpCode() == OP_addroffunc) {
     auto *aof = static_cast<AddroffuncNode*>(expr);
     MIRFunction *f = GlobalTables::GetFunctionTable().GetFunctionFromPuidx(aof->GetPUIdx());
@@ -2673,11 +2673,11 @@ bool MIRParser::ParseConstAddrLeafExpr(MIRConstPtr &cexpr) {
     MIRPtrType ptrType(ptyIdx);
     ptyIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&ptrType);
     MIRType *exprTy = GlobalTables::GetTypeTable().GetTypeFromTyIdx(ptyIdx);
-    cexpr = mod.CurFuncCodeMemPool()->New<MIRAddroffuncConst>(aof->GetPUIdx(), *exprTy);
+    cexpr = mod.GetMemPool()->New<MIRAddroffuncConst>(aof->GetPUIdx(), *exprTy);
   } else if (expr->op == OP_addroflabel) {
     AddroflabelNode *aol = static_cast<AddroflabelNode *>(expr);
     MIRType *mirtype = GlobalTables::GetTypeTable().GetTypeFromTyIdx(TyIdx(PTY_ptr));
-    cexpr = mod.CurFuncCodeMemPool()->New<MIRLblConst>(aol->GetOffset(), mod.CurFunction()->GetPuidx(), *mirtype);
+    cexpr = mod.GetMemPool()->New<MIRLblConst>(aol->GetOffset(), mod.CurFunction()->GetPuidx(), *mirtype);
   } else if (expr->GetOpCode() == OP_conststr) {
     auto *cs = static_cast<ConststrNode*>(expr);
     UStrIdx stridx = cs->GetStrIdx();
@@ -2685,7 +2685,7 @@ bool MIRParser::ParseConstAddrLeafExpr(MIRConstPtr &cexpr) {
     MIRPtrType ptrtype(ptyIdx);
     ptyIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&ptrtype);
     MIRType *exprty = GlobalTables::GetTypeTable().GetTypeFromTyIdx(ptyIdx);
-    cexpr = mod.CurFuncCodeMemPool()->New<MIRStrConst>(stridx, *exprty);
+    cexpr = mod.GetMemPool()->New<MIRStrConst>(stridx, *exprty);
   } else {
     auto *cs = static_cast<Conststr16Node*>(expr);
     U16StrIdx stridx = cs->GetStrIdx();
@@ -2693,7 +2693,7 @@ bool MIRParser::ParseConstAddrLeafExpr(MIRConstPtr &cexpr) {
     MIRPtrType ptrType(ptyIdx);
     ptyIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&ptrType);
     MIRType *exprTy = GlobalTables::GetTypeTable().GetTypeFromTyIdx(ptyIdx);
-    cexpr = mod.CurFuncCodeMemPool()->New<MIRStr16Const>(stridx, *exprTy);
+    cexpr = mod.GetMemPool()->New<MIRStr16Const>(stridx, *exprTy);
   }
   return true;
 }
