@@ -41,7 +41,9 @@ class AliasAnalysisTable {
   OriginalSt *FindExtraLevOriginalSt(const MapleVector<OriginalSt*> &nextLevelOsts, FieldID fld);
   SSATab &ssaTab;
   MapleAllocator alloc;
+ public:
   MapleMap<OStIdx, OriginalSt*> prevLevelNode;                 // index is the OStIdx
+ private:
   MapleMap<OStIdx, MapleVector<OriginalSt*>*> nextLevelNodes;  // index is the OStIdx
   MemPool *memPool;
   KlassHierarchy &klassHierarchy;
