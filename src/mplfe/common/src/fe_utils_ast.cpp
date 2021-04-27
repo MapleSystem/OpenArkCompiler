@@ -13,6 +13,8 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "fe_utils_ast.h"
+#include <map>
+#include "mpl_logging.h"
 
 namespace maple {
 PrimType FEUtilAST::GetTypeFromASTTypeName(const std::string &typeName) {

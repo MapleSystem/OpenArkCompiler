@@ -168,7 +168,7 @@ class BCClassMethod : public BCClassElem {
     tryInfos = std::move(infos);
   }
 
-  uint16 GetTriesSize() const {
+  std::size_t GetTriesSize() const {
     return tryInfos->size();
   }
 
@@ -291,7 +291,7 @@ class BCClass {
   }
 
   void SetSrcFileInfo(const std::string &name);
-  void SetIRSrcFileSigIdx(GStrIdx strIdx) {
+  void SetIRSrcFileSigIdx(const GStrIdx &strIdx) {
     irSrcFileSigIdx = strIdx;
   }
 
@@ -334,7 +334,7 @@ class BCClass {
   std::string GetSourceFileName() const;
   GStrIdx GetIRSrcFileSigIdx() const;
   uint32 GetAccessFlag() const;
-  uint32 GetFileNameHashId() const;
+  int32 GetFileNameHashId() const;
 
   const std::vector<std::unique_ptr<BCClassField>> &GetFields() const;
   std::vector<std::unique_ptr<BCClassMethod>> &GetMethods();

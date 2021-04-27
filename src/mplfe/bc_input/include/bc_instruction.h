@@ -227,9 +227,9 @@ class BCRegType {
 
   void PrecisifyTypes(bool isTry = false);
 
-  void PrecisifyRelatedTypes(BCRegTypeItem *realType);
+  void PrecisifyRelatedTypes(const BCRegTypeItem *realType);
 
-  void PrecisifyElemTypes(BCRegTypeItem *realType);
+  void PrecisifyElemTypes(const BCRegTypeItem *realType);
 
   bool IsPrecisified() const {
     return precisified;
@@ -257,13 +257,13 @@ class BCRegType {
     relatedBCRegTypes.emplace_back(ty);
   }
 
-  void RegisterLivesInfo(uint32 pos) {
-    livesBegins.emplace_back(pos);
+  void RegisterLivesInfo(uint32 posStart) {
+    livesBegins.emplace_back(posStart);
   }
 
-  bool IsBefore(uint32 pos, uint32 end) const {
+  bool IsBefore(uint32 posCurr, uint32 end) const {
     for (auto p : livesBegins) {
-      if (p == pos) {
+      if (p == posCurr) {
         return true;
       }
       if (p == end) {
@@ -300,7 +300,7 @@ struct BCReg {
   BCReg() = default;
   virtual ~BCReg() = default;
   bool isDef = false;
-  uint32 regNum;
+  uint32 regNum = UINT32_MAX;
   BCRegType *regType = nullptr;
   BCRegValue *regValue = nullptr;
   BCRegTypeItem *regTypeItem = nullptr;
@@ -350,7 +350,7 @@ struct TypeInferItem {
     return true;
   }
 
-  void InsertUniqueAliveTypes(TypeInferItem *end, const MapleList<BCRegTypeItem*> *types) {
+  void InsertUniqueAliveTypes(const TypeInferItem *end, const MapleList<BCRegTypeItem*> *types) {
     if (end != nullptr && end->reg == this->reg && end->reg->regType->IsBefore(this->beginPos, end->beginPos)) {
       return;
     }
@@ -392,7 +392,7 @@ struct TypeInferItem {
     }
   }
 
-  void InsertUniqueAliveType(TypeInferItem *end, BCRegTypeItem *type) {
+  void InsertUniqueAliveType(const TypeInferItem *end, BCRegTypeItem *type) {
     if (end != nullptr && end->reg == this->reg && end->reg->regType->IsBefore(this->beginPos, end->beginPos)) {
       return;
     }

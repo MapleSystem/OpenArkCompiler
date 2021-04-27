@@ -277,23 +277,7 @@ void MeSSUPre::Rename() {
         if (!occStack.empty()) {
           SOcc *topOcc = occStack.top();
           if (topOcc->GetOccTy() == kSOccLambda) {
-            // make sure this lambda is dominated by at least one kill occurrence
-            for (SOcc *realOcc : workCand->GetRealOccs()) {
-              if (realOcc->GetOccTy() == kSOccUse || realOcc->GetOccTy() == kSOccPhi) {
-                continue;
-              }
-              CHECK_FATAL(realOcc->GetOccTy() == kSOccReal, "just check");
-              if ((preKind == kDecrefPre || preKind == kSecondDecrefPre) &&
-                  !static_cast<SRealOcc*>(realOcc)->GetRealFromDef()) {
-                continue;
-              }
-              CHECK_NULL_FATAL(dom);
-              if (!dom->Dominate(realOcc->GetBB(), topOcc->GetBB())) {
-                continue;
-              }
-              static_cast<SLambdaOcc*>(topOcc)->SetIsUpsafe(false);
-              break;
-            }
+            static_cast<SLambdaOcc*>(topOcc)->SetIsUpsafe(false);
           }
         }
         break;

@@ -31,7 +31,7 @@ class BCParserBase {
   bool OpenFile();
   bool ParseHeader();
   bool Verify();
-  uint32 GetFileNameHashId() const {
+  int32 GetFileNameHashId() const {
     return fileNameHashId;
   }
   uint32 CalculateCheckSum(const uint8 *data, uint32 size);

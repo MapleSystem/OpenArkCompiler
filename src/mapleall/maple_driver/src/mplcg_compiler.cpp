@@ -126,7 +126,7 @@ ErrorCode MplcgCompiler::Compile(MplOptions &options, std::unique_ptr<MIRModule>
     return kErrorCompileFail;
   }
   std::string fileName = GetInputFile(options, *theModule);
-  MemPool *optMp = memPoolCtrler.NewMemPool("maplecg mempool");
+  MemPool *optMp = memPoolCtrler.NewMemPool("maplecg mempool", false /* isLcalPool */);
   bool fileRead = true;
   if (theModule == nullptr) {
     MPLTimer timer;

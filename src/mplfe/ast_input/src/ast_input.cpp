@@ -26,6 +26,7 @@ bool ASTInput::ReadASTFile(MapleAllocator &allocatorIn, uint32 index, const std:
   TRY_DO(astParser->OpenFile());
   TRY_DO(astParser->Verify());
   TRY_DO(astParser->PreProcessAST());
+  TRY_DO(astParser->ProcessGlobalEnums(allocatorIn, astVars));
   TRY_DO(astParser->RetrieveStructs(allocatorIn, astStructs));
   TRY_DO(astParser->RetrieveFuncs(allocatorIn, astFuncs));
   TRY_DO(astParser->RetrieveGlobalVars(allocatorIn, astVars));

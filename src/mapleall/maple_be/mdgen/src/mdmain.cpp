@@ -54,17 +54,17 @@ void ParseCommandLine(int argc, char **argv) {
   }
 }
 
-bool GenSchedFiles(const std::string &fileName, const std::string &oFileDir, maple::MemPoolCtrler &mdMpCtrler) {
-  maple::MemPool *schedInfoMemPool = mdMpCtrler.NewMemPool("schedInfoMp");
+bool GenSchedFiles(const std::string &fileName, const std::string &oFileDir) {
+  maple::MemPool *schedInfoMemPool = memPoolCtrler.NewMemPool("schedInfoMp", false /* isLcalPool */);
   MDClassRange moduleData("Schedule");
   MDParser parser(moduleData, schedInfoMemPool);
   if (!parser.ParseFile(fileName)) {
-    mdMpCtrler.DeleteMemPool(schedInfoMemPool);
+    memPoolCtrler.DeleteMemPool(schedInfoMemPool);
     return false;
   }
   SchedInfoGen schedEmiiter(moduleData, oFileDir);
   schedEmiiter.Run();
-  mdMpCtrler.DeleteMemPool(schedInfoMemPool);
+  memPoolCtrler.DeleteMemPool(schedInfoMemPool);
   return true;
 }
 
@@ -74,9 +74,8 @@ int main(int argc, char **argv) {
     return PrintHelpAndExit();
   }
   ParseCommandLine(argc, argv);
-  maple::MemPoolCtrler mdMpCtrler;
   if (isGenSched) {
-    if (!GenSchedFiles(schedSrcPath, oFileDir, mdMpCtrler)) {
+    if (!GenSchedFiles(schedSrcPath, oFileDir)) {
       return 1;
     }
   }

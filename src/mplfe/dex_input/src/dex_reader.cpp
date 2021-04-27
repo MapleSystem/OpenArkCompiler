@@ -22,7 +22,7 @@
 
 namespace maple {
 namespace bc {
-bool DexReader::OpenAndMap() {
+bool DexReader::OpenAndMapImpl() {
   DexFileFactory dexFileFactory;
   iDexFile = dexFileFactory.NewInstance();
   bool openResult = iDexFile->Open(fileName);

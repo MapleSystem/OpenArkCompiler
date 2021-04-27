@@ -45,7 +45,7 @@ std::string JBCConstTagName::GetTagName(JBCConstTag tag) {
 }
 
 // ---------- JBCConst ----------
-SimpleXMLElem *JBCConst::GenXMLElemImpl(MapleAllocator &alloc, uint32 id) const {
+SimpleXMLElem *JBCConst::GenXMLElemImpl(MapleAllocator &allocIn, uint32 id) const {
   return nullptr;
 }
 

@@ -33,6 +33,35 @@ class FEIRBuilderTest : public FEIRTestBase {
   virtual ~FEIRBuilderTest() = default;
 };
 
+// ---------- FEIRExprConst ----------
+TEST_F(FEIRBuilderTest, CreateExprConst_Any) {
+  RedirectCout();
+  UniqueFEIRExpr expr1 = FEIRBuilder::CreateExprConstAnyScalar(PTY_i8, 127);
+  expr1->GenMIRNode(mirBuilder)->Dump();
+  EXPECT_EQ(GetBufferString(), "constval i8 127\n");
+  ClearBufferString();
+  UniqueFEIRExpr expr2 = FEIRBuilder::CreateExprConstAnyScalar(PTY_i64, 127);
+  expr2->GenMIRNode(mirBuilder)->Dump();
+  EXPECT_EQ(GetBufferString(), "constval i64 127\n");
+  ClearBufferString();
+  UniqueFEIRExpr expr3 = FEIRBuilder::CreateExprConstAnyScalar(PTY_f32, 127);
+  expr3->GenMIRNode(mirBuilder)->Dump();
+  EXPECT_EQ(GetBufferString(), "constval f32 127f\n");
+  ClearBufferString();
+  UniqueFEIRExpr expr4 = FEIRBuilder::CreateExprConstAnyScalar(PTY_f64, 127);
+  expr4->GenMIRNode(mirBuilder)->Dump();
+  EXPECT_EQ(GetBufferString(), "constval f64 127\n");
+  ClearBufferString();
+  UniqueFEIRExpr expr5 = FEIRBuilder::CreateExprConstAnyScalar(PTY_u8, -1);
+  expr5->GenMIRNode(mirBuilder)->Dump();
+  EXPECT_EQ(GetBufferString(), "constval u8 255\n");
+  ClearBufferString();
+  UniqueFEIRExpr expr6 = FEIRBuilder::CreateExprConstAnyScalar(PTY_i8, -1);
+  expr6->GenMIRNode(mirBuilder)->Dump();
+  EXPECT_EQ(GetBufferString(), "constval i8 -1\n");
+  RestoreCout();
+}
+
 // ---------- FEIRStmtDAssign ----------
 TEST_F(FEIRBuilderTest, CreateExprDRead) {
   UniqueFEIRExpr expr = FEIRBuilder::CreateExprDRead(FEIRBuilder::CreateVarReg(0, PTY_i32));

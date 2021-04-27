@@ -17,7 +17,7 @@
 namespace maple {
 constexpr maple::uint32 kInvalid = 0xffffffff;
 void EACGBaseNode::CheckAllConnectionInNodes() {
-#if DEBUG
+#ifdef DEBUG
   for (EACGBaseNode *inNode : in) {
     ASSERT_NOT_NULL(eaCG->nodes[inNode->id - 1]);
     ASSERT(eaCG->nodes[inNode->id - 1] == inNode, "must be inNode");
@@ -142,7 +142,7 @@ bool EACGBaseNode::CanIgnoreRC() const {
 }
 
 void EACGObjectNode::CheckAllConnectionInNodes() {
-#if DEBUG
+#ifdef DEBUG
   for (EACGBaseNode *inNode : in) {
     ASSERT_NOT_NULL(eaCG->nodes[inNode->id - 1]);
     ASSERT(eaCG->nodes[inNode->id - 1] == inNode, "must be inNode");

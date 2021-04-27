@@ -37,7 +37,7 @@ AnalysisResult *MeDoIRMapBuild::Run(MeFunction *func, MeFuncResultMgr *funcResMg
   MemPool *propMp = nullptr;
   if (!func->GetMIRModule().IsJavaModule() && MeOption::propDuringBuild) {
     // create propgation
-    propMp = memPoolCtrler.NewMemPool("meirbuild prop");
+    propMp = memPoolCtrler.NewMemPool("meirbuild prop", true /* isLocalPool */);
     MeProp meprop(*irMap, *dom, *propMp, Prop::PropConfig{false, false, false, false, false, false});
     IRMapBuild irmapbuild(irMap, dom, &meprop);
     std::vector<bool> bbIrmapProcessed(func->NumBBs(), false);
@@ -54,8 +54,7 @@ AnalysisResult *MeDoIRMapBuild::Run(MeFunction *func, MeFuncResultMgr *funcResMg
   // delete mempool for meirmap temporaries
   // delete input IR code for current function
   MIRFunction *mirFunc = func->GetMirFunc();
-  mirFunc->GetCodeMempool()->Release();
-  mirFunc->SetCodeMemPool(nullptr);
+  mirFunc->ReleaseCodeMemory();
 
   // delete versionst_table
   // nullify all references to the versionst_table contents
@@ -70,7 +69,7 @@ AnalysisResult *MeDoIRMapBuild::Run(MeFunction *func, MeFuncResultMgr *funcResMg
     bb->SetFirst(nullptr);
     bb->SetLast(nullptr);
   }
-  func->GetMeSSATab()->GetVersionStTable().GetVSTAlloc().GetMemPool()->Release();
+  func->ReleaseVersMemory();
   funcResMgr->InvalidAnalysisResult(MeFuncPhase_SSA, func);
   funcResMgr->InvalidAnalysisResult(MeFuncPhase_DSE, func);
   if (propMp) {

@@ -295,9 +295,9 @@ class ASTCaseStmt : public ASTStmt {
 
  private:
   std::list<UniqueFEIRStmt> Emit2FEStmtImpl() const override;
-  ASTExpr* lhs = nullptr;
-  ASTExpr* rhs = nullptr;
-  ASTStmt* subStmt = nullptr;
+  ASTExpr *lhs = nullptr;
+  ASTExpr *rhs = nullptr;
+  ASTStmt *subStmt = nullptr;
   int64 lCaseTag;
   int64 rCaseTag;
 };

@@ -240,7 +240,7 @@ void Clone::DoClone() {
 }
 
 AnalysisResult *DoClone::Run(MIRModule *module, ModuleResultMgr *mgr) {
-  MemPool *memPool = memPoolCtrler.NewMemPool(PhaseName());
+  MemPool *memPool = memPoolCtrler.NewMemPool(PhaseName(), false /* isLcalPool */);
   maple::MIRBuilder dexMirBuilder(module);
   KlassHierarchy *kh = static_cast<KlassHierarchy*>(mgr->GetAnalysisResult(MoPhase_CHA, module));
   Clone *clone = memPool->New<Clone>(module, memPool, dexMirBuilder, kh);
