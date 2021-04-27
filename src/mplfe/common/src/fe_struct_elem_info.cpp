@@ -64,6 +64,10 @@ void FEStructFieldInfo::PrepareImpl(MIRBuilder &mirBuilder, bool argIsStatic) {
   actualContainer = GetStructName();
   const std::string stdActualContainer = actualContainer.c_str();
   std::string rawName = stdActualContainer + namemangler::kNameSplitterStr + GetElemName();
+  if (isStatic &&
+      FEOptions::GetInstance().GetModeJavaStaticFieldName() != FEOptions::ModeJavaStaticFieldName::kNoType) {
+    rawName = rawName + namemangler::kNameSplitterStr + GetSignatureName();
+  }
   fieldNameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(rawName);
   MIRStructType *structType = FEManager::GetTypeManager().GetStructTypeFromName(stdActualContainer);
   if (structType == nullptr) {
@@ -75,7 +79,6 @@ void FEStructFieldInfo::PrepareImpl(MIRBuilder &mirBuilder, bool argIsStatic) {
   if (isDefined) {
     return;
   }
-  rawName = rawName + namemangler::kNameSplitterStr + GetSignatureName();
   WARN(kLncErr, "use undefined %s field %s", argIsStatic ? "static" : "", rawName.c_str());
   isPrepared = true;
   isStatic = argIsStatic;
@@ -105,6 +108,9 @@ void FEStructFieldInfo::PrepareStaticField(const MIRStructType &structType) {
   std::string ownerStructName = structType.GetName();
   const std::string &fieldName = GetElemName();
   std::string fullName = ownerStructName + namemangler::kNameSplitterStr + fieldName;
+  if (FEOptions::GetInstance().GetModeJavaStaticFieldName() != FEOptions::ModeJavaStaticFieldName::kNoType) {
+    fullName += namemangler::kNameSplitterStr + GetSignatureName();
+  }
   fieldNameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(fullName);
   isPrepared = true;
   isStatic = true;

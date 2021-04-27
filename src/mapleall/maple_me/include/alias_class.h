@@ -156,6 +156,7 @@ class AliasClass : public AnalysisResult {
   void ApplyUnionForPointedTos();
   void CollectRootIDOfNextLevelNodes(const OriginalSt &ost, std::set<unsigned int> &rootIDOfNADSs);
   void UnionForNotAllDefsSeen();
+  void UnionForNotAllDefsSeenCLang();
   void ApplyUnionForStorageOverlaps();
   void UnionForAggAndFields();
   void CollectAliasGroups(std::map<unsigned int, std::set<unsigned int>> &aliasGroups);
@@ -186,11 +187,12 @@ class AliasClass : public AnalysisResult {
   void SetPtrOpndsNextLevNADS(unsigned int start, unsigned int end, MapleVector<BaseNode*> &opnds,
                               bool hasNoPrivateDefEffect);
   void ApplyUnionForDassignCopy(const AliasElem &lhsAe, const AliasElem *rhsAe, const BaseNode &rhs);
-  void CreateMirroringAliasElems(OriginalSt *ost1, OriginalSt *ost2);
+  void CreateMirroringAliasElems(const OriginalSt *ost1, OriginalSt *ost2);
   AliasElem *FindOrCreateDummyNADSAe();
   bool IsPointedTo(OriginalSt &oSt);
   AliasElem &FindOrCreateAliasElemOfAddrofOSt(OriginalSt &oSt);
   void CollectMayDefForMustDefs(const StmtNode &stmt, std::set<OriginalSt*> &mayDefOsts);
+  void CollectMayUseForNextLevel(OriginalSt *ost, std::set<OriginalSt*> &mayUseOsts, const StmtNode &stmt, bool isFirstOpnd);
   void CollectMayUseForCallOpnd(const StmtNode &stmt, std::set<OriginalSt*> &mayUseOsts);
   void InsertMayDefNodeForCall(std::set<OriginalSt*> &mayDefOsts, TypeOfMayDefList &mayDefNodes,
                                StmtNode &stmt, BBId bbid, bool hasNoPrivateDefEffect);
@@ -217,9 +219,8 @@ class AliasClass : public AnalysisResult {
   void InsertMayDefUseClinitCheck(IntrinsiccallNode &stmt, BBId bbid);
   virtual BB *GetBB(BBId id) = 0;
   void ProcessIdsAliasWithRoot(const std::set<unsigned int> &idsAliasWithRoot, std::vector<unsigned int> &newGroups);
-  void UpdateNextLevelNodes(std::vector<OriginalSt*> &nextLevelOsts, const AliasElem &aliasElem);
-  void UnionNodes(std::vector<OriginalSt*> &nextLevelOsts);
   int GetOffset(const Klass &super, const Klass &base) const;
+  void UnionAllNodes(MapleVector<OriginalSt *> *nextLevOsts);
 
   MemPool &acMemPool;
   MapleAllocator acAlloc;

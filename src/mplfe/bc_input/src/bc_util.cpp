@@ -148,7 +148,7 @@ bool BCUtil::IsArrayType(const GStrIdx &typeNameIdx) {
 }
 
 std::string BCUtil::TrimArrayModifier(const std::string &typeName) {
-  int index = 0;
+  std::size_t index = 0;
   for (; index < typeName.size(); ++index) {
     if (typeName[index] != '[') {
       break;
@@ -185,15 +185,15 @@ void BCUtil::AddDefaultDepSet(std::unordered_set<std::string> &typeTable) {
 
 // get the serial number in register name, for example 2 in Reg2_I
 uint32 BCUtil::Name2RegNum(const std::string &name) {
-  const uint16 regPrefixLen = strlen("Reg");
-  int numLen = name.length() - regPrefixLen;
+  const std::size_t regPrefixLen = strlen("Reg");
+  std::size_t numLen = name.length() - regPrefixLen;
   // Nonreg names also reach here, e.g. "_this". Make sure they are not handle.
-  const uint16 regVarMinLen = 6;
+  const std::size_t regVarMinLen = 6;
   if (numLen < regVarMinLen - regPrefixLen || name.compare(0, regPrefixLen, "Reg") != 0) {
     return UINT32_MAX;
   }
   std::string regName = name.substr(regPrefixLen);
-  int i = 0;
+  std::size_t i = 0;
   for (; i < numLen; i++) {
     if (regName[i] < '0' || regName[i] > '9') {
       break;
@@ -204,7 +204,7 @@ uint32 BCUtil::Name2RegNum(const std::string &name) {
     return UINT32_MAX;
   }
   int regNum = std::stoi(regName.substr(0, i));
-  return regNum;
+  return static_cast<uint32>(regNum);
 }
 
 bool BCUtil::HasContainSuffix(const std::string &value, const std::string &suffix) {

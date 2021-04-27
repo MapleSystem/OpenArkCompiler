@@ -35,7 +35,7 @@ AnalysisResult *DoIpaEA::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultM
   if (mirFunc->GetModule()->IsInIPA()) {
     pcg = static_cast<CallGraph*>(mrm->GetAnalysisResult(MoPhase_CALLGRAPH_ANALYSIS, &func->GetMIRModule()));
   }
-  MemPool *eaMemPool = memPoolCtrler.NewMemPool(PhaseName());
+  MemPool *eaMemPool = memPoolCtrler.NewMemPool(PhaseName(), false /* isLcalPool */);
   mirFunc->GetModule()->SetCurFunction(mirFunc);
 
   if (IPAEscapeAnalysis::kDebug) {
@@ -86,7 +86,7 @@ AnalysisResult *DoIpaEAOpt::Run(MeFunction *func, MeFuncResultMgr *mgr, ModuleRe
   if (mirFunc->GetModule()->IsInIPA()) {
     pcg = static_cast<CallGraph*>(mrm->GetAnalysisResult(MoPhase_CALLGRAPH_ANALYSIS, &func->GetMIRModule()));
   }
-  MemPool *eaMemPool = memPoolCtrler.NewMemPool(PhaseName());
+  MemPool *eaMemPool = memPoolCtrler.NewMemPool(PhaseName(), false /* isLcalPool */);
   mirFunc->GetModule()->SetCurFunction(mirFunc);
 
   if (IPAEscapeAnalysis::kDebug) {

@@ -202,7 +202,7 @@ void InterleavedManager::OptimizeFuncs(MeFuncPhaseManager &fpm, MapleVector<MIRF
 void InterleavedManager::OptimizeFuncsParallel(const MeFuncPhaseManager &fpm, MapleVector<MIRFunction*> &compList,
                                                uint32 nThreads) {
   auto mainMpCtrler = std::make_unique<MemPoolCtrler>();
-  MemPool *mainMp = mainMpCtrler->NewMemPool("main thread mempool");
+  MemPool *mainMp = mainMpCtrler->NewMemPool("main thread mempool", false /* isLocalPool */);
   MeFuncPhaseManager &fpmCopy = fpm.Clone(*mainMp, *mainMpCtrler);
   auto funcOpt = std::make_unique<MeFuncOptExecutor>(std::move(mainMpCtrler), fpmCopy);
   MeFuncOptScheduler funcOptScheduler("me func opt", std::move(funcOpt));

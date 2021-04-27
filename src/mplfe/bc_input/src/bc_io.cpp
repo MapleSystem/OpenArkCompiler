@@ -32,6 +32,8 @@ void BCReader::SetEndianTag(bool isBigEndianIn) {
 }
 
 bool BCReader::RetrieveHeaderImpl(RawData &data) {
+  (void)data;
+  CHECK_FATAL(false, "NIY");
   return false;
 }
 

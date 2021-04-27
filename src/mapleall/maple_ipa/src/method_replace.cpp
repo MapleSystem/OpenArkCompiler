@@ -80,7 +80,7 @@ void MethodReplace::DoMethodReplace() {
 }
 
 AnalysisResult *DoMethodReplace::Run(MIRModule *module, ModuleResultMgr*) {
-  MemPool *mp = memPoolCtrler.NewMemPool(PhaseName());
+  MemPool *mp = memPoolCtrler.NewMemPool(PhaseName(), false /* isLocalPool */);
   maple::MIRBuilder builder(module);
   MethodReplace methodReplace(module, mp, builder);
   methodReplace.Init();

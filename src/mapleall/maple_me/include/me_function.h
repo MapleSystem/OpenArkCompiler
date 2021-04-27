@@ -160,9 +160,10 @@ class MeFunction : public FuncEmit {
   using reverse_iterator = BBPtrHolder::reverse_iterator;
   using const_reverse_iterator = BBPtrHolder::const_reverse_iterator;
 
-  MeFunction(MIRModule *mod, MIRFunction *func, MemPool *memPool, MemPool *versMemPool,
+  MeFunction(MIRModule *mod, MIRFunction *func, MemPool *memPool, StackMemPool &funcStackMP, MemPool *versMemPool,
              const std::string &fileName)
       : memPool(memPool),
+        stackMP(funcStackMP),
         alloc(memPool),
         versMemPool(versMemPool),
         versAlloc(versMemPool),
@@ -447,6 +448,14 @@ class MeFunction : public FuncEmit {
     return versMemPool;
   }
 
+  void ReleaseVersMemory() {
+    if (versMemPool != nullptr) {
+      delete versMemPool;
+      versMemPool = nullptr;
+      versAlloc.SetMemPool(nullptr);
+    }
+  }
+
   void SetNextBBId(uint32 currNextBBId) {
     nextBBId = currNextBBId;
   }
@@ -475,6 +484,10 @@ class MeFunction : public FuncEmit {
 
   MemPool *GetMemPool() {
     return memPool;
+  }
+
+  StackMemPool &GetStackMemPool() {
+    return stackMP;
   }
 
   void AddProfileDesc(uint64 hash, uint32 start, uint32 end) {
@@ -518,13 +531,13 @@ class MeFunction : public FuncEmit {
                    std::vector<uint32> &lowestOrder, std::vector<bool> &inStack, std::stack<uint32> &visitStack);
   void CreateBasicBlocks();
   void SetTryBlockInfo(const StmtNode *nextStmt, StmtNode *tryStmt, BB *lastTryBB, BB *curBB, BB *newBB);
-  void RemoveEhEdgesInSyncRegion();
   MIRFunction *CurFunction() const {
     return mirModule.CurFunction();
   }
   void SplitBBPhysically(BB &bb, StmtNode &splitPoint, BB &newBB);
 
   MemPool *memPool;
+  StackMemPool &stackMP;
   MapleAllocator alloc;
   MemPool *versMemPool;
   MapleAllocator versAlloc;

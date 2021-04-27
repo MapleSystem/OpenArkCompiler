@@ -56,7 +56,6 @@ class MeFuncPhaseManager : public PhaseManager {
 
   void Run(MIRFunction *mirFunc, uint64 rangeNum, const std::string &meInput,
            MemPoolCtrler &localMpCtrler = memPoolCtrler);
-  void IPACleanUp(MeFunction *mirfunc);
   void Run() override {}
 
   MeFuncPhaseManager &Clone(MemPool &mp, MemPoolCtrler &ctrler) const;

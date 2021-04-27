@@ -349,11 +349,11 @@ AnalysisResult *MeDoSSARename2Preg::Run(MeFunction *func, MeFuncResultMgr *m, Mo
   MeIRMap *irMap = static_cast<MeIRMap *>(m->GetAnalysisResult(MeFuncPhase_IRMAPBUILD, func));
   ASSERT(irMap != nullptr, "");
 
-  MemPool *renamemp = memPoolCtrler.NewMemPool(PhaseName().c_str());
+  MemPool *renamemp = memPoolCtrler.NewMemPool(PhaseName().c_str(), true /* isLocalPool */);
   if (func->GetAllBBs().size() == 0) {
     // empty function, we only promote the parameter
-    SSARename2Preg emptyrenamer(renamemp, func, nullptr, nullptr);
-    emptyrenamer.PromoteEmptyFunction();
+    auto *emptyrenamer = renamemp->New<SSARename2Preg>(renamemp, func, nullptr, nullptr);
+    emptyrenamer->PromoteEmptyFunction();
     memPoolCtrler.DeleteMemPool(renamemp);
     return nullptr;
   }
@@ -361,8 +361,8 @@ AnalysisResult *MeDoSSARename2Preg::Run(MeFunction *func, MeFuncResultMgr *m, Mo
   AliasClass *aliasclass = static_cast<AliasClass *>(m->GetAnalysisResult(MeFuncPhase_ALIASCLASS, func));
   ASSERT(aliasclass != nullptr, "");
 
-  SSARename2Preg ssarename2preg(renamemp, func, irMap, aliasclass);
-  ssarename2preg.RunSelf();
+  auto *phase = renamemp->New<SSARename2Preg>(renamemp, func, irMap, aliasclass);
+  phase->RunSelf();
   if (DEBUGFUNC(func)) {
     irMap->Dump();
   }

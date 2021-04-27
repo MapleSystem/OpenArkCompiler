@@ -68,6 +68,7 @@ class LibAstFile {
   MIRType *CvtFunctionType(const clang::QualType srcType);
   MIRType *CvtRecordType(const clang::QualType srcType);
   MIRType *CvtFieldType(const clang::NamedDecl &decl);
+  MIRType *CvtComplexType(const clang::QualType srcType);
 
   const clang::ASTContext *GetContext() {
     return astContext;

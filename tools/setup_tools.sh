@@ -31,15 +31,13 @@ ANDROID_SRCDIR=$MAPLE_ROOT/../android/$ANDROID_VERSION
 
 ANDROID_DIR=$MAPLE_ROOT/android
 
-if [ "$OLD_OS" == "1" ]; then
-  if [ ! -f $TOOLS/clang+llvm-8.0.0-x86_64-linux-gnu-ubuntu-16.04/bin/clang ]; then
-    cd $TOOLS
-    echo Start wget llvm-8.0.0 ...
-    wget https://releases.llvm.org/8.0.0/clang+llvm-8.0.0-x86_64-linux-gnu-ubuntu-16.04.tar.xz
-    echo unpacking clang+llvm ...
-    tar xf clang+llvm-8.0.0-x86_64-linux-gnu-ubuntu-16.04.tar.xz
-    echo Downloaded clang+llvm.
-  fi
+if [ ! -f $TOOLS/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04/bin/clang ]; then
+  cd $TOOLS
+  echo Start wget llvm-10.0.0 ...
+  wget https://github.com/llvm/llvm-project/releases/download/llvmorg-10.0.0/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04.tar.xz
+  echo unpacking clang+llvm ...
+  tar xf clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04.tar.xz
+  echo Downloaded clang+llvm.
 fi
 
 if [ "$android_env" == "android" ]; then
@@ -78,7 +76,7 @@ fi
 if [ ! -f $TOOLS/gn/gn ]; then
   cd $TOOLS
   echo Start clone gn ...
-  git clone https://gitee.com/xlnb/gn_binary.git gn
+  git clone --depth 1 https://gitee.com/xlnb/gn_binary.git gn
   chmod +x gn/gn
   echo Downloaded gn.
 fi
@@ -96,7 +94,7 @@ fi
 if [ ! -f $MAPLE_ROOT/third_party/d8/lib/d8.jar ]; then
   cd $TOOLS
   echo Start clone d8 ...
-  git clone https://gitee.com/xlnb/r8-d81513.git
+  git clone --depth 1 https://gitee.com/xlnb/r8-d81513.git
   mkdir -p $MAPLE_ROOT/third_party/d8/lib
   cp -f r8-d81513/d8/lib/d8.jar $MAPLE_ROOT/third_party/d8/lib
   echo Downloaded d8.jar.
@@ -105,7 +103,7 @@ fi
 if [ ! -d $MAPLE_ROOT/third_party/icu ]; then
   cd $TOOLS
   echo Start clone ICU4C ...
-  git clone https://gitee.com/xlnb/icu4c.git
+  git clone --depth 1 https://gitee.com/xlnb/icu4c.git
   mkdir -p $MAPLE_ROOT/third_party/icu
   cp -r icu4c/lib/ $MAPLE_ROOT/third_party/icu/
   echo Downloaded icu4c libs
@@ -115,7 +113,7 @@ fi
 if [ ! -d $ANDROID_DIR/out/target/product/generic_arm64 ]; then
   cd $TOOLS
   echo Start clone AOSP CORE LIB ...
-  git clone https://gitee.com/xlnb/aosp_core_bin.git
+  git clone --depth 1 https://gitee.com/xlnb/aosp_core_bin.git
   cp -r aosp_core_bin/android $MAPLE_ROOT/
   cp -r aosp_core_bin/libjava-core $MAPLE_ROOT/
   echo Downloaded AOSP CORE LIB
@@ -138,16 +136,18 @@ if [ ! -f $TOOLS/qemu/package/usr/bin/qemu-aarch64 ]; then
   cd $TOOLS
   echo Start wget qemu-user ...
   rm -rf qemu
-  git clone https://gitee.com/hu-_-wen/qemu.git
+  git clone --depth 1 https://gitee.com/hu-_-wen/qemu.git
   cd qemu
   mkdir -p package
   dpkg-deb -R qemu-user_2.5+dfsg-5ubuntu10.48_amd64.deb package
   echo Installed qemu-aarch64
 fi
 
-if [ ! -f $TOOLS/open64_prebuilt/README.md ]; then
+version=0c8b7db
+if [ ! -f $TOOLS/open64_prebuilt/V_$version ]; then
   cd $TOOLS
-  git clone https://gitee.com/open64ark/open64_prebuilt.git
+  rm -rf open64_prebuilt
+  git clone --depth 1 https://gitee.com/open64ark/open64_prebuilt.git
 fi
 if [ ! -f $TOOLS/open64_prebuilt/x86/riscv64/bin/clangfe ]; then
   cd $TOOLS/open64_prebuilt/x86
@@ -155,23 +155,24 @@ if [ ! -f $TOOLS/open64_prebuilt/x86/riscv64/bin/clangfe ]; then
   tar zxf open64ark-aarch64.tar.gz
   tar zxf open64ark-riscv.tar.gz
   mv riscv riscv64
+  touch $TOOLS/open64_prebuilt/V_$version
   echo Downloaded open64_prebuilt.
 fi
 
 if [ ! -f $MAPLE_ROOT/third_party/dwarf_h/include/Dwarf.h ]; then
   cd $TOOLS
   rm -rf dwarf $MAPLE_ROOT/third_party/dwarf*
-  git clone https://gitee.com/hu-_-wen/dwarf_h.git
+  git clone --depth 1 https://gitee.com/hu-_-wen/dwarf_h.git
   mv dwarf_h $MAPLE_ROOT/third_party/
   echo Downloaded dwarf header files.
 fi
 
 mkdir -p ${TOOL_BIN_PATH}
 if [ "$OLD_OS" == "1" ]; then
-  ln -s -f ${MAPLE_ROOT}/tools/clang+llvm-8.0.0-x86_64-linux-gnu-ubuntu-16.04/bin/clang++ ${TOOL_BIN_PATH}/clang++
-  ln -s -f ${MAPLE_ROOT}/tools/clang+llvm-8.0.0-x86_64-linux-gnu-ubuntu-16.04/bin/clang ${TOOL_BIN_PATH}/clang
-  ln -s -f ${MAPLE_ROOT}/tools/clang+llvm-8.0.0-x86_64-linux-gnu-ubuntu-16.04/bin/llvm-ar ${TOOL_BIN_PATH}/llvm-ar
-  ln -s -f ${MAPLE_ROOT}/tools/clang+llvm-8.0.0-x86_64-linux-gnu-ubuntu-16.04/bin/llvm-ranlib ${TOOL_BIN_PATH}/llvm-ranlib
+  ln -s -f ${MAPLE_ROOT}/tools/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04/bin/clang++ ${TOOL_BIN_PATH}/clang++
+  ln -s -f ${MAPLE_ROOT}/tools/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04/bin/clang ${TOOL_BIN_PATH}/clang
+  ln -s -f ${MAPLE_ROOT}/tools/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04/bin/llvm-ar ${TOOL_BIN_PATH}/llvm-ar
+  ln -s -f ${MAPLE_ROOT}/tools/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04/bin/llvm-ranlib ${TOOL_BIN_PATH}/llvm-ranlib
   ln -s -f /usr/bin/qemu-aarch64 ${TOOL_BIN_PATH}/qemu-aarch64
 else
   ln -s -f /usr/bin/clang++ ${TOOL_BIN_PATH}/clang++
@@ -184,7 +185,7 @@ ln -s -f ${MAPLE_ROOT}/tools/open64_prebuilt/x86/aarch64/bin/clangfe ${TOOL_BIN_
 
 if [ ! -d $MAPLE_ROOT/../ThirdParty ]; then
   cd $MAPLE_ROOT/../
-  git clone https://gitee.com/openarkcompiler/ThirdParty.git
+  git clone --depth 1 https://gitee.com/openarkcompiler/ThirdParty.git
   cd -
 else
   cd $MAPLE_ROOT/../ThirdParty

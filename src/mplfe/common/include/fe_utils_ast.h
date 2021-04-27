@@ -16,7 +16,8 @@
 #define MPLFE_INCLUDE_FE_UTILS_AST_H
 #include <string>
 #include <vector>
-#include "feir_type.h"
+#include "types_def.h"
+#include "cfg_primitive_types.h"
 
 namespace maple {
 class FEUtilAST {

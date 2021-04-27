@@ -470,22 +470,15 @@ void MeDoLoopCanon::SplitCondGotBB(MeFunction &func, LoopDesc &loop) {
       exitBB->RemoveStmtNode(&stmt);
     }
   }
+  auto label = exitBB->GetBBLabel();
+  if (label != 0) {
+    newFallthru->SetBBLabel(label);
+    func.SetLabelBBAt(label, newFallthru);
+    exitBB->SetBBLabel(0);
+  }
   while (exitBB->GetPred().size() > 0) {
     auto *pred = exitBB->GetPred(0);
     pred->ReplaceSucc(exitBB, newFallthru);
-    if (pred->GetStmtNodes().empty()) {
-      continue;
-    }
-    StmtNode *lastStmt = &(pred->GetStmtNodes().back());
-    if ((lastStmt->GetOpCode() == OP_brtrue || lastStmt->GetOpCode() == OP_brfalse) &&
-        static_cast<CondGotoNode*>(lastStmt)->GetOffset() == exitBB->GetBBLabel()) {
-      LabelIdx label = func.GetOrCreateBBLabel(*newFallthru);
-      static_cast<CondGotoNode*>(lastStmt)->SetOffset(label);
-    } else if (lastStmt->GetOpCode() == OP_goto &&
-               static_cast<GotoNode*>(lastStmt)->GetOffset() == exitBB->GetBBLabel()) {
-      LabelIdx label = func.GetOrCreateBBLabel(*newFallthru);
-      static_cast<GotoNode*>(lastStmt)->SetOffset(label);
-    }
   }
   exitBB->RemoveAllPred();
   newFallthru->AddSucc(*exitBB);

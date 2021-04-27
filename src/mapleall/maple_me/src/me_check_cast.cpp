@@ -668,7 +668,7 @@ void CheckCast::DoCheckCastOpt() {
       }
     }
   }
-  memPoolCtrler.DeleteMemPool(graphTempMem);
+  ReleaseMemory();
 }
 
 void CheckCast::FindRedundantChecks() {

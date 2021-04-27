@@ -50,13 +50,11 @@ MeExpr *IRMap::CreateAddroffuncMeExpr(PUIdx puIdx) {
   return HashMeExpr(addroffuncMeExpr);
 }
 
-MeExpr *IRMap::CreateIaddrofMeExpr(MeExpr &expr, TyIdx tyIdx, MeExpr &base) {
-  ASSERT(expr.GetMeOp() == kMeOpIvar, "expecting IVarMeExpr");
-  auto &ivarExpr = static_cast<IvarMeExpr&>(expr);
+MeExpr *IRMap::CreateIaddrofMeExpr(FieldID fieldId, TyIdx tyIdx, MeExpr *base) {
   OpMeExpr opMeExpr(kInvalidExprID, OP_iaddrof, PTY_ptr, 1);
-  opMeExpr.SetFieldID(ivarExpr.GetFieldID());
+  opMeExpr.SetFieldID(fieldId);
   opMeExpr.SetTyIdx(tyIdx);
-  opMeExpr.SetOpnd(0, &base);
+  opMeExpr.SetOpnd(0, base);
   return HashMeExpr(opMeExpr);
 }
 

@@ -40,7 +40,8 @@ class AnalysisResult {
   }
 
   void EraseMemPool() {
-    memPool->Release();
+    delete memPool;
+    memPool = nullptr;
   }
 
  private:
@@ -62,11 +63,15 @@ class Phase {
 
   // obtain a new mempool by invoke this function
   MemPool *NewMemPool() {
+#ifdef MP_DEBUG
     std::string phaseName = PhaseName();
     ASSERT(!phaseName.empty(), "PhaseName should not be empty");
     ++memPoolCount;
     std::string memPoolName = phaseName + " MemPool " + std::to_string(memPoolCount);
-    MemPool *memPool = mpCtrler->NewMemPool(memPoolName);
+    MemPool *memPool = new ThreadLocalMemPool(*mpCtrler, memPoolName);
+#else
+    MemPool *memPool = new ThreadLocalMemPool(*mpCtrler, "");
+#endif
     memPools.insert(memPool);
     return memPool;
   }
@@ -74,7 +79,7 @@ class Phase {
   // remove the specified memPool from memPools, then release the memPool
   void ReleaseMemPool(MemPool *memPool) {
     memPools.erase(memPool);
-    memPool->Release();
+    delete memPool;
   }
 
   // release all mempool use in this phase except exclusion
@@ -83,7 +88,7 @@ class Phase {
       if (memPool == exclusion) {
         continue;
       }
-      mpCtrler->DeleteMemPool(memPool);
+      delete memPool;
       memPool = nullptr;
     }
     memPools.clear();
@@ -94,7 +99,9 @@ class Phase {
   }
 
  private:
+#ifdef MP_DEBUG
   uint32 memPoolCount = 0;
+#endif
   std::set<MemPool*> memPools;
   MemPoolCtrler *mpCtrler = &memPoolCtrler;
 };

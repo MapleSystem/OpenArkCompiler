@@ -30,6 +30,11 @@ class ASTDeclsBuilder {
     return allocator.GetMemPool()->New<ASTVar>(srcFile, varName, desc, genAttrsIn);
   }
 
+  static ASTLocalEnumDecl *ASTLocalEnumDeclBuilder(MapleAllocator &allocator, const std::string &srcFile,
+      const std::string &varName, const std::vector<MIRType*> &desc, const GenericAttrs &genAttrsIn) {
+    return allocator.GetMemPool()->New<ASTLocalEnumDecl>(srcFile, varName, desc, genAttrsIn);
+  }
+
   static ASTFunc *ASTFuncBuilder(MapleAllocator &allocator, const std::string &srcFile, const std::string &nameIn,
                                  const std::vector<MIRType*> &typeDescIn, const GenericAttrs &genAttrsIn,
                                  const std::vector<std::string> &parmNamesIn) {

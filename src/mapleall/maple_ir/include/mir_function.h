@@ -444,20 +444,29 @@ class MIRFunction {
   void ResetGDBEnv();
 #endif
   void ReleaseMemory() {
-    memPoolCtrler.DeleteMemPool(codeMemPoolTmp);
-    codeMemPoolTmp = nullptr;
+    if (codeMemPoolTmp != nullptr) {
+      delete codeMemPoolTmp;
+      codeMemPoolTmp = nullptr;
+    }
+  }
+
+  void ReleaseCodeMemory() {
+    if (codeMemPool != nullptr) {
+      delete codeMemPool;
+      SetMemPool(nullptr);
+    }
   }
 
   MemPool *GetCodeMempool() {
     if (useTmpMemPool) {
       if (codeMemPoolTmp == nullptr) {
-        codeMemPoolTmp = memPoolCtrler.NewMemPool("func code mempool");
+        codeMemPoolTmp = new ThreadLocalMemPool(memPoolCtrler, "func code mempool");
         codeMemPoolTmpAllocator.SetMemPool(codeMemPoolTmp);
       }
       return codeMemPoolTmp;
     }
     if (codeMemPool == nullptr) {
-      codeMemPool = memPoolCtrler.NewMemPool("func code mempool");
+      codeMemPool = new ThreadLocalMemPool(memPoolCtrler, "func code mempool");
       codeMemPoolAllocator.SetMemPool(codeMemPool);
     }
     return codeMemPool;
@@ -473,7 +482,7 @@ class MIRFunction {
 
   MapleAllocator &GetCodeMempoolAllocator() {
     if (codeMemPool == nullptr) {
-      codeMemPool = memPoolCtrler.NewMemPool("func code mempool");
+      codeMemPool = new ThreadLocalMemPool(memPoolCtrler, "func code mempool");
       codeMemPoolAllocator.SetMemPool(codeMemPool);
     }
     return codeMemPoolAllocator;
@@ -900,7 +909,7 @@ class MIRFunction {
 
   MemPool *GetCodeMemPool() {
     if (codeMemPool == nullptr) {
-      codeMemPool = memPoolCtrler.NewMemPool("func code mempool");
+      codeMemPool = new ThreadLocalMemPool(memPoolCtrler, "func code mempool");
       codeMemPoolAllocator.SetMemPool(codeMemPool);
     }
     return codeMemPool;
@@ -952,7 +961,7 @@ class MIRFunction {
 
   MemPool *GetCodeMemPoolTmp() {
     if (codeMemPoolTmp == nullptr) {
-      codeMemPoolTmp = memPoolCtrler.NewMemPool("func code mempool");
+      codeMemPoolTmp = new ThreadLocalMemPool(memPoolCtrler, "func code mempool");
       codeMemPoolTmpAllocator.SetMemPool(codeMemPoolTmp);
     }
     return codeMemPoolTmp;

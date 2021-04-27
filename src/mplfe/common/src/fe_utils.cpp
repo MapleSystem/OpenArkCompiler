@@ -243,24 +243,21 @@ const char *AstSwitchUtil::caseLabel = "case";
 const char *AstSwitchUtil::catchLabel = "catch";
 const char *AstSwitchUtil::endehLabel = "endeh";
 
-AstSwitchUtil::BlockLabel AstSwitchUtil::AllocateLoopOrSwitchLabels(MIRBuilder &mirBuilder) {
-  std::string tempName = FEUtils::GetSequentialName0(blockLabel, tempVarNo);
-  LabelIdx endLab = mirBuilder.GetOrCreateMIRLabel(tempName);
-  tempName = FEUtils::GetSequentialName0(blockLabel, tempVarNo);
-  LabelIdx exitLab = mirBuilder.GetOrCreateMIRLabel(tempName);
+std::string AstSwitchUtil::CreateEndOrExitLabelName() const {
+  std::string labelName = FEUtils::GetSequentialName0(blockLabel, tempVarNo);
   ++tempVarNo;
-  return BlockLabel(endLab, exitLab);
+  return labelName;
 }
 
-void AstSwitchUtil::MarkLabelUsed(LabelIdx label) {
+void AstSwitchUtil::MarkLabelUsed(const std::string &label) {
   labelUsed[label] = true;
 }
 
-void AstSwitchUtil::MarkLabelUnUsed(LabelIdx label) {
+void AstSwitchUtil::MarkLabelUnUsed(const std::string &label) {
   labelUsed[label] = false;
 }
 
-void AstSwitchUtil::PushNestedBreakLabels(LabelIdx label) {
+void AstSwitchUtil::PushNestedBreakLabels(const std::string &label) {
   nestedBreakLabels.push(label);
 }
 
@@ -268,7 +265,7 @@ void AstSwitchUtil::PopNestedBreakLabels() {
   nestedBreakLabels.pop();
 }
 
-void AstSwitchUtil::PushNestedCaseVectors(std::pair<CaseVector*, LabelIdx> caseVec) {
+void AstSwitchUtil::PushNestedCaseVectors(const std::pair<CaseVector*, LabelIdx> &caseVec) {
   nestedCaseVectors.push(caseVec);
 }
 
@@ -276,11 +273,31 @@ void AstSwitchUtil::PopNestedCaseVectors() {
   nestedCaseVectors.pop();
 }
 
-bool AstSwitchUtil::CheckLabelUsed(LabelIdx label) {
+bool AstSwitchUtil::CheckLabelUsed(const std::string &label) {
   return labelUsed[label];
 }
 
 const std::pair<CaseVector*, LabelIdx> &AstSwitchUtil::GetTopOfNestedCaseVectors() const {
   return nestedCaseVectors.top();
+}
+
+const std::string &AstSwitchUtil::GetTopOfBreakLabels() const {
+  return nestedBreakLabels.top();
+}
+
+void AstLoopUtil::PushLoop(const std::pair<std::string, std::string> &labelPair) {
+  loopLabels.push(labelPair);
+}
+
+std::pair<std::string, std::string> AstLoopUtil::GetCurrentLoop(){
+  return loopLabels.top();
+}
+
+bool AstLoopUtil::IsLoopLabelsEmpty() const {
+  return loopLabels.empty();
+}
+
+void AstLoopUtil::PopCurrentLoop(){
+  loopLabels.pop();
 }
 }  // namespace maple

@@ -29,7 +29,6 @@ class DexReader : public BCReader {
   DexReader(uint32 fileIdxIn, const std::string &fileNameIn)
       : BCReader(fileNameIn), fileIdx(fileIdxIn) {}
   ~DexReader() = default;
-  bool OpenAndMap() override;
   void SetDexFile(std::unique_ptr<IDexFile> dexFile);
   uint32 GetClassItemsSize() const;
   const char *GetClassJavaSourceFileName(uint32 classIdx) const;
@@ -63,6 +62,9 @@ class DexReader : public BCReader {
   uint16 GetClassMethodRegisterTotalSize(const IDexMethodItem* dexMethodItem) const;
   uint16 GetClassMethodRegisterInSize(const IDexMethodItem* dexMethodItem) const;
   uint32 GetCodeOff(const IDexMethodItem* dexMethodItem) const;
+
+ protected:
+  bool OpenAndMapImpl() override;
 
  private:
   std::string GetStringFromIdxImpl(uint32 idx) const override;

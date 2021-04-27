@@ -50,9 +50,7 @@ ScalarMeExpr *SSAPre::CreateNewCurTemp(const MeExpr &meExpr) {
     SetCurFunction(workCand->GetPUIdx());
     RegMeExpr *regVar = nullptr;
     if (meExpr.GetMeOp() == kMeOpVar) {
-      auto *varMeExpr = static_cast<const VarMeExpr*>(&meExpr);
-      const MIRSymbol *sym = varMeExpr->GetOst()->GetMIRSymbol();
-      MIRType *ty = GlobalTables::GetTypeTable().GetTypeFromTyIdx(sym->GetTyIdx());
+      auto *ty = static_cast<const VarMeExpr&>(meExpr).GetType();
       regVar = ty->GetPrimType() == PTY_ref ? irMap->CreateRegMeExpr(*ty)
                                             : irMap->CreateRegMeExpr(ty->GetPrimType());
     } else if (meExpr.GetMeOp() == kMeOpIvar) {
@@ -1241,6 +1239,18 @@ bool SSAPre::DefVarDominateOcc(const MeExpr *meExpr, const MeOccur &meOcc) const
           return false;
         }
         return dom->Dominate(*defBB, *occBB);
+      }
+      case kDefByChi: {
+        MeStmt *mestmt = regMeExpr->GetDefChi().GetBase();
+        if (!mestmt) {
+          return true;  // it's a original variable dominate everything
+        }
+        BB *defBB = mestmt->GetBB();
+        if (occBB == defBB) {
+          return false;
+        } else {
+          return dom->Dominate(*defBB, *occBB);
+        }
       }
       default:
         CHECK_FATAL(false, "NYI");

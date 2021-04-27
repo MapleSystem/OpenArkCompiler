@@ -42,6 +42,7 @@ void OriginalSt::Dump() const {
     }
   } else if (IsPregOst()) {
     LogInfo::MapleLogger() << "%" << GetMIRPreg()->GetPregNo();
+    LogInfo::MapleLogger() << "<" << static_cast<int32>(indirectLev) << ">";
   }
 }
 

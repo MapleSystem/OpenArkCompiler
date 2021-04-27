@@ -220,10 +220,12 @@ void AArch64MemOperand::Emit(Emitter &emitter, const OpndProp *opndProp) const {
     emitter.Emit("[");
     auto *baseReg = static_cast<AArch64RegOperand*>(GetBaseRegister());
     ASSERT(baseReg != nullptr, "expect an AArch64RegOperand here");
-    if (CGOptions::IsPIC() && (baseReg->GetSize() != k64BitSize)) {
+    uint32 baseSize = baseReg->GetSize();
+    if (CGOptions::IsPIC() && (baseSize != k64BitSize)) {
       baseReg->SetSize(k64BitSize);
     }
     baseReg->Emit(emitter, nullptr);
+    baseReg->SetSize(baseSize);
     AArch64OfstOperand *offset = GetOffsetImmediate();
     if (offset != nullptr) {
 #ifndef USE_32BIT_REF  /* can be load a ref here */

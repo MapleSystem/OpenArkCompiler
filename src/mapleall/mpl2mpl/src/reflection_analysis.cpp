@@ -2247,11 +2247,11 @@ void ReflectionAnalysis::Run() {
 }
 
 AnalysisResult *DoReflectionAnalysis::Run(MIRModule *module, ModuleResultMgr *moduleResultMgr) {
-  MemPool *memPool = memPoolCtrler.NewMemPool("ReflectionAnalysis mempool");
+  auto memPool = std::make_unique<ThreadShareMemPool>(memPoolCtrler, "ReflectionAnalysis mempool");
   auto *kh = static_cast<KlassHierarchy*>(moduleResultMgr->GetAnalysisResult(MoPhase_CHA, module));
   ASSERT_NOT_NULL(kh);
   maple::MIRBuilder mirBuilder(module);
-  ReflectionAnalysis *rv = memPool->New<ReflectionAnalysis>(module, memPool, kh, mirBuilder);
+  ReflectionAnalysis *rv = memPool->New<ReflectionAnalysis>(module, memPool.get(), kh, mirBuilder);
   if (rv == nullptr) {
     CHECK_FATAL(false, "failed to allocate memory");
   }
@@ -2259,8 +2259,6 @@ AnalysisResult *DoReflectionAnalysis::Run(MIRModule *module, ModuleResultMgr *mo
   if (Options::genPGOReport) {
     rv->DumpPGOSummary();
   }
-  // This is a transform phase, delete mempool.
-  memPoolCtrler.DeleteMemPool(memPool);
   return nullptr;
 }
 }  // namespace maple

@@ -481,7 +481,6 @@ void MeFunction::Prepare(unsigned long rangeNum) {
     /* there's no basicblock generated */
     return;
   }
-  RemoveEhEdgesInSyncRegion();
   theCFG = memPool->New<MeCFG>(*this);
   theCFG->BuildMirCFG();
   if (MeOption::optLevel > mapleOption::kLevelZero) {
@@ -645,48 +644,6 @@ LabelIdx MeFunction::GetOrCreateBBLabel(BB &bb) {
   bb.SetBBLabel(label);
   labelBBIdMap.insert(std::make_pair(label, &bb));
   return label;
-}
-
-// Recognize the following kind of simple pattern and remove corresponding EH edges
-// @label78044   catch { <* void> }
-// dassign %Reg0_R524935 0 (regread ptr %%thrownval)
-// syncexit (dread ref %Reg8_R460958)
-// endtry
-// throw (dread ptr %Reg0_R524935)
-void MeFunction::RemoveEhEdgesInSyncRegion() {
-  if (endTryBB2TryBB.size() != 1) {
-    return;
-  }
-  for (auto &pair : endTryBB2TryBB) {
-    BB *tryBB = pair.second;
-    BB *endtryBB = pair.first;
-    CHECK_FATAL(tryBB != nullptr, "null ptr check ");
-    CHECK_FATAL(endtryBB != nullptr, "null ptr check ");
-    // Filter out complex cases
-    if (!(endtryBB->GetAttributes(kBBAttrIsCatch) || endtryBB->GetAttributes(kBBAttrIsJSCatch)) ||
-        endtryBB->GetKind() != kBBFallthru || !endtryBB->GetAttributes(kBBAttrIsTryEnd) ||
-        !endtryBB->GetAttributes(kBBAttrIsJSFinally) || endtryBB->GetStmtNodes().back().GetOpCode() != OP_syncexit ||
-        tryBB->GetStmtNodes().back().GetOpCode() != OP_try) {
-      return;
-    }
-    for (auto &bbTryPair : bbTryNodeMap) {
-      BB *bb = bbTryPair.first;
-      if (bb != tryBB && bb != endtryBB) {
-        for (auto &stmt : bb->GetStmtNodes()) {
-          if (stmt.GetOpCode() == OP_try || stmt.GetOpCode() == OP_catch || stmt.GetOpCode() == OP_throw) {
-            return;
-          }
-        }
-      }
-    }
-    // Unmark unnecessary isTry flags
-    for (auto &bbTryPair : bbTryNodeMap) {
-      BB *bb = bbTryPair.first;
-      if (bb != tryBB && bb != endtryBB) {
-        bb->ClearAttributes(kBBAttrIsTry);
-      }
-    }
-  }
 }
 
 void MeFunction::BuildSCCDFS(BB &bb, uint32 &visitIndex, std::vector<SCCOfBBs*> &sccNodes,

@@ -548,13 +548,12 @@ void AnnotationAnalysis::Run() {
 }
 
 AnalysisResult *DoAnnotationAnalysis::Run(MIRModule *module, ModuleResultMgr *moduleResultMgr) {
-  MemPool *memPool = memPoolCtrler.NewMemPool("AnnotationAnalysis mempool");
-  MemPool *pragmaMemPool = memPoolCtrler.NewMemPool("New Pragma mempool");
+  auto memPool = std::make_unique<ThreadShareMemPool>(memPoolCtrler, "AnnotationAnalysis mempool");
+  MemPool *pragmaMemPool = memPoolCtrler.NewMemPool("New Pragma mempool", false /* isLocalPool */);
   auto *kh = static_cast<KlassHierarchy*>(moduleResultMgr->GetAnalysisResult(MoPhase_CHA, module));
   ASSERT_NOT_NULL(kh);
-  AnnotationAnalysis *aa = pragmaMemPool->New<AnnotationAnalysis>(module, memPool, pragmaMemPool, kh);
+  AnnotationAnalysis *aa = pragmaMemPool->New<AnnotationAnalysis>(module, memPool.get(), pragmaMemPool, kh);
   aa->Run();
-  memPoolCtrler.DeleteMemPool(memPool);
   return aa;
 }
 }

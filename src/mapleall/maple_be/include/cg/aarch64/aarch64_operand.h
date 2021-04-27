@@ -727,6 +727,14 @@ class AArch64MemOperand : public MemOperand {
             GetSymbol() == opnd.GetSymbol() && GetSize() < opnd.GetSize());
   }
 
+  bool operator==(const AArch64MemOperand &opnd) const {
+    return  (GetSize() == opnd.GetSize()) && (addrMode == opnd.addrMode) &&
+            (GetBaseRegister() == opnd.GetBaseRegister()) &&
+            (GetIndexRegister() == opnd.GetIndexRegister()) &&
+            (GetSymbol() == opnd.GetSymbol()) &&
+            (GetOffsetOperand() == opnd.GetOffsetOperand());
+  }
+
   bool Less(const Operand &right) const override;
 
   bool NoAlias(AArch64MemOperand &rightOpnd) const;
@@ -1035,5 +1043,26 @@ class CommentOperand : public Operand {
   const MapleString comment;
 };
 }  /* namespace maplebe */
-
+namespace std {
+template<> /* function-template-specialization */
+class std::hash<maplebe::AArch64MemOperand> {
+ public:
+  size_t operator()(const maplebe::AArch64MemOperand &x) const {
+    std::size_t seed = 0;
+    hash_combine<uint8_t>(seed, x.GetAddrMode());
+    hash_combine<uint32_t>(seed, x.GetSize());
+    maplebe::RegOperand *xb = x.GetBaseRegister();
+    maplebe::RegOperand *xi = x.GetIndexRegister();
+    if (xb != nullptr) {
+      hash_combine<uint32_t>(seed, xb->GetRegisterNumber());
+      hash_combine<uint32_t>(seed, xb->GetSize());
+    }
+    if (xi != nullptr) {
+      hash_combine<uint32_t>(seed, xi->GetRegisterNumber());
+      hash_combine<uint32_t>(seed, xi->GetSize());
+    }
+    return seed;
+  }
+};
+}
 #endif  /* MAPLEBE_INCLUDE_CG_AARCH64_AARCH64_OPERAND_H */

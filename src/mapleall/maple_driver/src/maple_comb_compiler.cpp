@@ -164,7 +164,7 @@ std::string MapleCombCompiler::DecideOutExe(const MplOptions &options) {
 }
 
 ErrorCode MapleCombCompiler::Compile(MplOptions &options, std::unique_ptr<MIRModule> &theModule) {
-  MemPool *optMp = memPoolCtrler.NewMemPool("maplecomb mempool");
+  MemPool *optMp = memPoolCtrler.NewMemPool("maplecomb mempool", false /* isLocalPool */);
   std::string fileName = GetInputFileName(options);
   bool fileParsed = true;
   if (theModule == nullptr) {

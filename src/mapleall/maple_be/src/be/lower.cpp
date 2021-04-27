@@ -1268,14 +1268,13 @@ BlockNode *CGLowerer::LowerBlock(BlockNode &block) {
     switch (stmt->GetOpCode()) {
       case OP_switch: {
         LowerStmt(*stmt, *newBlk);
-        MemPool *switchMp = memPoolCtrler.NewMemPool("switchlowerer");
-        MapleAllocator switchAllocator(switchMp);
+        auto switchMp = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, "switchlowere");
+        MapleAllocator switchAllocator(switchMp.get());
         SwitchLowerer switchLowerer(mirModule, static_cast<SwitchNode&>(*stmt), switchAllocator);
         BlockNode *blk = switchLowerer.LowerSwitch();
         if (blk->GetFirst() != nullptr) {
           newBlk->AppendStatementsFromBlock(*blk);
         }
-        memPoolCtrler.DeleteMemPool(switchMp);
         needBranchCleanup = true;
         break;
       }
@@ -1728,7 +1727,7 @@ void CGLowerer::LowerTryCatchBlocks(BlockNode &body) {
 #if DEBUG
   BBT::ValidateStmtList(nullptr, nullptr);
 #endif
-  MemPool *memPool = memPoolCtrler.NewMemPool("CreateNewBB mempool");
+  auto memPool = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, "CreateNewBB mempool");
   TryCatchBlocksLower tryCatchLower(*memPool, body, mirModule);
   tryCatchLower.RecoverBasicBlock();
   bool generateEHCode = GenerateExceptionHandlingCode();
@@ -1737,7 +1736,6 @@ void CGLowerer::LowerTryCatchBlocks(BlockNode &body) {
 #if DEBUG
   tryCatchLower.CheckTryCatchPattern();
 #endif
-  memPoolCtrler.DeleteMemPool(memPool);
 }
 
 inline bool IsAccessingTheSameMemoryLocation(const DassignNode &dassign,

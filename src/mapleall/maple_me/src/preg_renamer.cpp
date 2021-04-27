@@ -111,7 +111,7 @@ void PregRenamer::RunSelf() {
 AnalysisResult *MeDoPregRename::Run(MeFunction *func, MeFuncResultMgr *frm, ModuleResultMgr *mrm) {
   MeIRMap *irmap = static_cast<MeIRMap *>(frm->GetAnalysisResult(MeFuncPhase_IRMAPBUILD, func));
   std::string renamePhaseName = PhaseName();
-  MemPool *renamemp = memPoolCtrler.NewMemPool(renamePhaseName);
+  MemPool *renamemp = memPoolCtrler.NewMemPool(renamePhaseName, true /* isLocalPool */);
   PregRenamer pregrenamer(renamemp, func, irmap);
   pregrenamer.RunSelf();
   if (DEBUGFUNC(func)) {

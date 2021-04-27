@@ -71,11 +71,7 @@ class FEUtils {
   static const std::string kMCCStaticFieldSetObject;
 
   static inline MemPool *NewMempool(const std::string &name, bool isLocalPool) {
-#ifndef USE_OPS
     return memPoolCtrler.NewMemPool(name, isLocalPool);
-#else
-    return memPoolCtrler.NewMemPool(name);
-#endif
   }
 
   static inline void DeleteMempoolPtr(MemPool *memPoolPtr) {
@@ -298,18 +294,17 @@ class AstSwitchUtil {
     static AstSwitchUtil local;
     return local;
   }
-  using BlockLabel = std::pair<LabelIdx, LabelIdx>;
-
-  BlockLabel AllocateLoopOrSwitchLabels(MIRBuilder &mirBuilder);
-  void MarkLabelUsed(LabelIdx label);
-  void MarkLabelUnUsed(LabelIdx label);
-  void PushNestedBreakLabels(LabelIdx label);
+  std::string CreateEndOrExitLabelName() const;
+  void MarkLabelUsed(const std::string &label);
+  void MarkLabelUnUsed(const std::string &label);
+  void PushNestedBreakLabels(const std::string &label);
   void PopNestedBreakLabels();
-  void PushNestedCaseVectors(std::pair<CaseVector*, LabelIdx>);
+  void PushNestedCaseVectors(const std::pair<CaseVector*, LabelIdx> &caseVec);
   void PopNestedCaseVectors();
-  bool CheckLabelUsed(LabelIdx label);
+  bool CheckLabelUsed(const std::string &label);
   const std::pair<CaseVector*, LabelIdx> &GetTopOfNestedCaseVectors() const;
-  std::map<LabelIdx, bool> &GetLabelUseMap() {
+  const std::string &GetTopOfBreakLabels() const;
+  std::map<std::string, bool> &GetLabelUseMap() {
     return labelUsed;
   }
   static uint32_t tempVarNo;
@@ -322,10 +317,28 @@ class AstSwitchUtil {
 
  private:
   AstSwitchUtil() = default;
-  std::map<LabelIdx, bool> labelUsed = std::map<LabelIdx, bool>();
-  std::stack<LabelIdx> nestedBreakLabels = std::stack<LabelIdx>(); // loop and switch blocks
+  std::map<std::string, bool> labelUsed = std::map<std::string, bool>();
+  std::stack<std::string> nestedBreakLabels = std::stack<std::string>(); // loop and switch blocks
   std::stack<LabelIdx> nestedContinueLabels = std::stack<LabelIdx>(); // loop blocks only
   std::stack<std::pair<CaseVector*, LabelIdx>> nestedCaseVectors = std::stack<std::pair<CaseVector*, LabelIdx>>();
 }; // end of AstSwitchUtil
+
+class AstLoopUtil {
+ public:
+  static AstLoopUtil &Instance() {
+    static AstLoopUtil local;
+    return local;
+  }
+
+  ~AstLoopUtil() = default;
+  void PushLoop(const std::pair<std::string, std::string> &labelPair);
+  std::pair<std::string, std::string> GetCurrentLoop();
+  void PopCurrentLoop();
+  bool IsLoopLabelsEmpty () const;
+
+ private:
+  AstLoopUtil() = default;
+  std::stack<std::pair<std::string, std::string>> loopLabels = std::stack<std::pair<std::string, std::string>>();
+};
 }  // namespace maple
 #endif  // MPLFE_INCLUDE_FE_UTILS_H

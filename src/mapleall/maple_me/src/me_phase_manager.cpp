@@ -193,12 +193,6 @@ bool MeFuncPhaseManager::FuncFilter(const std::string &filter, const std::string
   return (filter == "*") || (name.find(filter) != std::string::npos);
 }
 
-void MeFuncPhaseManager::IPACleanUp(MeFunction *func) {
-  ASSERT(func != nullptr, "null ptr check");
-  GetAnalysisResultManager()->InvalidAllResults();
-  memPoolCtrler.DeleteMemPool(func->GetMemPool());
-}
-
 void MeFuncPhaseManager::Run(MIRFunction *mirFunc, uint64 rangeNum, const std::string &meInput,
                              MemPoolCtrler &localMpCtrler) {
   if (!MeOption::quiet) {
@@ -212,9 +206,10 @@ void MeFuncPhaseManager::Run(MIRFunction *mirFunc, uint64 rangeNum, const std::s
   if (timePhases) {
     funcPrepareTimer.Start();
   }
-  MemPool *funcMP = localMpCtrler.NewMemPool("maple_me per-function mempool");
-  MemPool *versMP = localMpCtrler.NewMemPool("first verst mempool");
-  MeFunction &func = *(funcMP->New<MeFunction>(&mirModule, mirFunc, funcMP, versMP, meInput));
+  auto funcMP = std::make_unique<ThreadLocalMemPool>(localMpCtrler, "maple_me per-function mempool");
+  auto funcStackMP = std::make_unique<StackMemPool>(localMpCtrler, "");
+  MemPool *versMP = new ThreadLocalMemPool(localMpCtrler, "first verst mempool");
+  MeFunction &func = *(funcMP->New<MeFunction>(&mirModule, mirFunc, funcMP.get(), *funcStackMP, versMP, meInput));
   func.PartialInit(false);
 #if DEBUG
   globalMIRModule = &mirModule;
@@ -313,10 +308,10 @@ void MeFuncPhaseManager::Run(MIRFunction *mirFunc, uint64 rangeNum, const std::s
       funcPrepareTimer.Start();
     }
     // do all the phases start over
-    MemPool *versMemPool = localMpCtrler.NewMemPool("second verst mempool");
-    MeFunction function(&mirModule, mirFunc, funcMP, versMemPool, meInput);
-    function.PartialInit(true);
-    function.Prepare(rangeNum);
+    auto *versMemPool = new ThreadLocalMemPool(localMpCtrler, "second verst mempool");
+    auto function = funcMP->New<MeFunction>(&mirModule, mirFunc, funcMP.get(), *funcStackMP, versMemPool, meInput);
+    function->PartialInit(true);
+    function->Prepare(rangeNum);
     if (timePhases) {
       funcPrepareTimer.Stop();
       extraMeTimers["prepareFunc"] += funcPrepareTimer.ElapsedMicroseconds();
@@ -344,19 +339,19 @@ void MeFuncPhaseManager::Run(MIRFunction *mirFunc, uint64 rangeNum, const std::s
       if (MeOption::dumpBefore && dumpFunc && dumpPhase) {
         LogInfo::MapleLogger() << ">>>>>Second time Dump before " << phaseName << " <<<<<\n";
         if (phaseName != "emit") {
-          function.Dump(false);
+          function->Dump(false);
         } else {
-          function.DumpFunctionNoSSA();
+          function->DumpFunctionNoSSA();
         }
         LogInfo::MapleLogger() << ">>>>> Second time Dump before End <<<<<\n";
       }
-      RunFuncPhase(&function, p);
+      RunFuncPhase(function, p);
       if ((MeOption::dumpAfter || dumpPhase) && dumpFunc) {
         LogInfo::MapleLogger() << ">>>>>Second time Dump after " << phaseName << " <<<<<\n";
         if (phaseName != "emit") {
-          function.Dump(false);
+          function->Dump(false);
         } else {
-          function.DumpFunctionNoSSA();
+          function->DumpFunctionNoSSA();
         }
         LogInfo::MapleLogger() << ">>>>> Second time Dump after End <<<<<\n\n";
       }
@@ -390,8 +385,6 @@ void MeFuncPhaseManager::Run(MIRFunction *mirFunc, uint64 rangeNum, const std::s
     if (timePhases) {
       invalidTimer.Start();
     }
-
-    localMpCtrler.DeleteMemPool(funcMP);
 
     if (timePhases) {
       invalidTimer.Stop();
