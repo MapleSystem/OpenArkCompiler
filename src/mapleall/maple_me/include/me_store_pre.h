@@ -36,9 +36,9 @@ class MeStorePre : public MeSSUPre {
   void CodeMotion();
   // step 0 methods
   void CreateRealOcc(const OStIdx &ostIdx, MeStmt &meStmt);
-  void CreateUseOcc(const OStIdx &ostIdx, BB &bb) const;
-  void CreateSpreUseOccsThruAliasing(const OriginalSt &muOst, BB &bb) const;
-  void FindAndCreateSpreUseOccs(const MeExpr &meExpr, BB &bb) const;
+  void CreateUseOcc(const OStIdx &ostIdx, BB &bb);
+  void CreateSpreUseOccsThruAliasing(const OriginalSt &muOst, BB &bb);
+  void FindAndCreateSpreUseOccs(const MeExpr &meExpr, BB &bb);
   void CreateSpreUseOccsForAll(BB &bb) const;
   void BuildWorkListBB(BB *bb);
   void PerCandInit() {
