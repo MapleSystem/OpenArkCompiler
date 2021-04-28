@@ -1207,11 +1207,14 @@ T ConstantFold::CalIntValueFromFloatValue(T value, const MIRType &resultType) co
   return value;
 }
 
-MIRConst *ConstantFold::FoldFloorMIRConst(const MIRConst &cst, PrimType fromType, PrimType toType) const {
+MIRConst *ConstantFold::FoldFloorMIRConst(const MIRConst &cst, PrimType fromType, PrimType toType, bool isFloor) const {
   MIRType &resultType = *GlobalTables::GetTypeTable().GetPrimType(toType);
   if (fromType == PTY_f32) {
     const auto &constValue = static_cast<const MIRFloatConst&>(cst);
-    float floatValue = floor(constValue.GetValue());
+    float floatValue = constValue.GetValue();
+    if (isFloor) {
+      floatValue = floor(constValue.GetValue());
+    }
     if (FloatToIntOverflow(floatValue, toType)) {
       return nullptr;
     }
@@ -1219,7 +1222,10 @@ MIRConst *ConstantFold::FoldFloorMIRConst(const MIRConst &cst, PrimType fromType
     return GlobalTables::GetIntConstTable().GetOrCreateIntConst(static_cast<int64>(floatValue), resultType);
   } else {
     const auto &constValue = static_cast<const MIRDoubleConst&>(cst);
-    double doubleValue = floor(constValue.GetValue());
+    double doubleValue = constValue.GetValue();
+    if (isFloor) {
+      doubleValue = floor(constValue.GetValue());
+    }
     if (DoubleToIntOverflow(doubleValue, toType)) {
       return nullptr;
     }
@@ -1362,7 +1368,7 @@ MIRConst *ConstantFold::FoldTypeCvtMIRConst(const MIRConst &cst, PrimType fromTy
     return toConst;
   }
   if (IsPrimitiveFloat(fromType) && IsPrimitiveInteger(toType)) {
-    return FoldFloorMIRConst(cst, fromType, toType);
+    return FoldFloorMIRConst(cst, fromType, toType, false);
   }
   if (IsPrimitiveInteger(fromType) && IsPrimitiveFloat(toType)) {
     return FoldRoundMIRConst(cst, fromType, toType);

@@ -68,14 +68,13 @@ enum ThresholdType {
 
 class MInline {
  public:
-  MInline(MIRModule &mod, MemPool *memPool, KlassHierarchy *kh = nullptr, CallGraph *cg = nullptr)
+  MInline(MIRModule &mod, MemPool *memPool, CallGraph *cg = nullptr)
       : alloc(memPool),
         module(mod),
         builder(*mod.GetMIRBuilder()),
         inlineTimesMap(std::less<MIRFunction*>(), alloc.Adapter()),
         recursiveFuncToInlineLevel(alloc.Adapter()),
         funcToCostMap(alloc.Adapter()),
-        klassHierarchy(kh),
         cg(cg),
         excludedCaller(alloc.Adapter()),
         excludedCallee(alloc.Adapter()),
@@ -100,7 +99,6 @@ class MInline {
   // store recursive function's inlining levels, and allow inline 4 levels at most.
   MapleMap<MIRFunction*, uint32> recursiveFuncToInlineLevel;
   MapleMap<MIRFunction*, uint32> funcToCostMap; // save the cost of calculated func to reduce the amount of calculation
-  KlassHierarchy *klassHierarchy;
   CallGraph *cg;
 
  private:
