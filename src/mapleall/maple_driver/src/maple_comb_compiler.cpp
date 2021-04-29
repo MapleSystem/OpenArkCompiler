@@ -180,24 +180,24 @@ ErrorCode MapleCombCompiler::Compile(MplOptions &options, std::unique_ptr<MIRMod
   // Parse the input file
   ErrorCode ret = runner.ParseInput();
   if (ret != kErrorNoError) {
-    memPoolCtrler.DeleteMemPool(optMp);
+    delete optMp;
     return ret;
   }
   // Add running phases and default options according to the srcLang (only for auto mode)
   ret = options.AppendCombOptions(theModule->GetSrcLang());
   if (ret != kErrorNoError) {
-    memPoolCtrler.DeleteMemPool(optMp);
+    delete optMp;
     return ret;
   }
 
   ret = MakeMeOptions(options, runner);
   if (ret != kErrorNoError) {
-    memPoolCtrler.DeleteMemPool(optMp);
+    delete optMp;
     return ret;
   }
   ret = MakeMpl2MplOptions(options, runner);
   if (ret != kErrorNoError) {
-    memPoolCtrler.DeleteMemPool(optMp);
+    delete optMp;
     return ret;
   }
   runner.SetPrintOutExe(DecideOutExe(options));
@@ -206,7 +206,7 @@ ErrorCode MapleCombCompiler::Compile(MplOptions &options, std::unique_ptr<MIRMod
   }
   ErrorCode nErr = runner.Run();
 
-  memPoolCtrler.DeleteMemPool(optMp);
+  delete optMp;
   return nErr;
 }
 }  // namespace maple

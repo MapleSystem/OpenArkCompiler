@@ -58,7 +58,7 @@ AnalysisResult *DoIpaEA::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultM
     LogInfo::MapleLogger() << "=======IPAEA END========" << mirFunc->GetName() << std::endl;
   }
 
-  memPoolCtrler.DeleteMemPool(eaMemPool);
+  delete eaMemPool;
   return nullptr;
 }
 
@@ -99,7 +99,7 @@ AnalysisResult *DoIpaEAOpt::Run(MeFunction *func, MeFuncResultMgr *mgr, ModuleRe
     LogInfo::MapleLogger() << "=======IPAEAOPT END========" << mirFunc->GetName() << std::endl;
   }
 
-  memPoolCtrler.DeleteMemPool(eaMemPool);
+  delete eaMemPool;
   return nullptr;
 }
 }

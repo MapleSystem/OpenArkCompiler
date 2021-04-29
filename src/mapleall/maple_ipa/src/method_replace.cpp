@@ -85,7 +85,7 @@ AnalysisResult *DoMethodReplace::Run(MIRModule *module, ModuleResultMgr*) {
   MethodReplace methodReplace(module, mp, builder);
   methodReplace.Init();
   methodReplace.DoMethodReplace();
-  memPoolCtrler.DeleteMemPool(mp);
+  delete mp;
   return nullptr;
 }
 }  // namespace maple

@@ -148,7 +148,7 @@ ErrorCode MplcgCompiler::Compile(MplOptions &options, std::unique_ptr<MIRModule>
         if (theParser != nullptr) {
           theParser->EmitError(fileName);
         }
-        memPoolCtrler.DeleteMemPool(optMp);
+        delete optMp;
         return kErrorCompileFail;
       }
     } else {
@@ -157,7 +157,7 @@ ErrorCode MplcgCompiler::Compile(MplOptions &options, std::unique_ptr<MIRModule>
       std::string modid = theModule->GetFileName();
       bool imported = binMplt.Import(modid, true);
       if (!imported) {
-        memPoolCtrler.DeleteMemPool(optMp);
+        delete optMp;
         return kErrorCompileFail;
       }
     }
@@ -176,7 +176,7 @@ ErrorCode MplcgCompiler::Compile(MplOptions &options, std::unique_ptr<MIRModule>
   runner.SetCGInfo(&cgOption, fileName);
   runner.ProcessCGPhase(outputFile, baseName);
 
-  memPoolCtrler.DeleteMemPool(optMp);
+  delete optMp;
   return kErrorNoError;
 }
 }  // namespace maple

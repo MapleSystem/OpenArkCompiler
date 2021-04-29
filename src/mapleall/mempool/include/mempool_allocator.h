@@ -64,9 +64,7 @@ class LocalMapleAllocator : public MapleAllocator {
         bigStackTopMark(m.bigMemStackTop),
         fixedCurPtrMark(m.curPtr),
         bigCurPtrMark(m.bigCurPtr) {
-#ifdef DEBUG
     m.PushAllocator(this);
-#endif
   }
   ~LocalMapleAllocator() override {
     static_cast<StackMemPool *>(memPool)->ResetStackTop(this, fixedCurPtrMark, fixedStackTopMark, bigCurPtrMark,
@@ -88,10 +86,7 @@ class LocalMapleAllocator : public MapleAllocator {
   }
 
   void *Alloc(size_t bytes) override {
-#ifdef DEBUG
-    CHECK_FATAL(static_cast<StackMemPool *>(memPool)->TopAllocator() == this,
-                "Alloc Error, Only top allocator can Alloc");
-#endif
+    static_cast<StackMemPool *>(memPool)->CheckTopAllocator(this);
     return memPool->Malloc(bytes);
   }
 
