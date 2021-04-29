@@ -16,6 +16,7 @@
 #include "me_rename2preg.h"
 #include "mir_builder.h"
 #include "me_irmap.h"
+#include "me_option.h"
 
 // This phase mainly renames the variables to pseudo register.
 // Only non-ref-type variables (including parameters) with no alias are
@@ -74,6 +75,9 @@ RegMeExpr *SSARename2Preg::RenameVar(const VarMeExpr *varmeexpr) {
     if (ty->GetKind() != kTypeScalar && ty->GetKind() != kTypePointer) {
       return nullptr;
     }
+    if (rename2pregCount >= MeOption::rename2pregLimit) {
+      return nullptr;
+    }
     curtemp = meirmap->CreateRegMeExpr(*ty);
     OriginalSt *pregOst =
         ssaTab->GetOriginalStTable().CreatePregOriginalSt(curtemp->GetRegIdx(), func->GetMirFunc()->GetPuidx());
@@ -87,11 +91,12 @@ RegMeExpr *SSARename2Preg::RenameVar(const VarMeExpr *varmeexpr) {
         reg_formal_vec[parmindex] = curtemp;
       }
     }
+    rename2pregCount++;
     if (DEBUGFUNC(func)) {
       ost->Dump();
       LogInfo::MapleLogger() << "(ost idx " << ost->GetIndex() << ") renamed to ";
       pregOst->Dump();
-      LogInfo::MapleLogger() << std::endl;
+      LogInfo::MapleLogger() << " (count: " << rename2pregCount << ")" << std::endl;
     }
     return curtemp;
   }

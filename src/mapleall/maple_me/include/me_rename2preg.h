@@ -69,6 +69,8 @@ class SSARename2Preg {
   MapleVector<bool> parm_used_vec;                       // if parameter is not used, it's false, otherwise true
   // if the parameter got promoted, the nth of func->mirFunc->_formal is the nth of reg_formal_vec, otherwise nullptr;
   MapleVector<RegMeExpr *> reg_formal_vec;
+ public:
+  uint32 rename2pregCount = 0;
 };
 
 class MeDoSSARename2Preg : public MeFuncPhase {
