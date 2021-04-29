@@ -379,6 +379,10 @@ class TypeTable {
     return newType;
   }
 
+  void PushNull() { typeTable.push_back(nullptr); }
+  void PopBack() { typeTable.pop_back(); }
+
+  void CreateMirTypeNodeAt(MIRType &pType, TyIdx tyIdxUsed, MIRModule *module, bool isObject, bool isIncomplete);
   MIRType *CreateAndUpdateMirTypeNode(MIRType &pType);
   MIRType *GetOrCreateStructOrUnion(const std::string &name, const FieldVector &fields, const FieldVector &printFields,
                                     MIRModule &module, bool forStruct = true);

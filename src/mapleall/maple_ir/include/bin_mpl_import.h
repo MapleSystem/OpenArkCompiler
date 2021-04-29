@@ -102,6 +102,7 @@ class BinaryMplImport {
   MIRBitFieldType *CreateBitFieldType(uint8 fieldsize, PrimType pt, GStrIdx strIdx) const;
   void CompleteAggInfo(TyIdx tyIdx);
   TyIdx ImportType(bool forPointedType = false);
+  TyIdx ImportTypeNonJava();
   void ImportTypeBase(PrimType &primType, GStrIdx &strIdx, bool &nameIsLocal);
   void InSymTypeTable();
   void ImportTypePairs(std::vector<TypePair> &insVecType);
@@ -157,13 +158,12 @@ class BinaryMplImport {
   std::vector<MIRStructType*> tmpStruct;
   std::vector<MIRClassType*> tmpClass;
   std::vector<MIRInterfaceType*> tmpInterface;
-  std::vector<MIRType*> typTab;
+  std::vector<TyIdx> typTab;
   std::vector<MIRFunction*> funcTab;
   std::vector<MIRSymbol*> symTab;
   std::vector<CallInfo*> callInfoTab;
   std::vector<EACGBaseNode*> eaCgTab;
   std::vector<MIRSymbol*> methodSymbols;
-  std::map<TyIdx, TyIdx> typeDefIdxMap;  // map previous declared tyIdx
   std::vector<bool> definedLabels;
   std::string importFileName;
 };
