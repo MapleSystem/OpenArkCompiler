@@ -1986,7 +1986,8 @@ BaseNode *FEIRExprDRead::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
   MIRSymbol *symbol = varSrc->GenerateMIRSymbol(mirBuilder);
   ASSERT(type != nullptr, "type is nullptr");
   AddrofNode *node = mirBuilder.CreateExprDread(*type, *symbol);
-  if (type->IsMIRStructType() && (!fieldName.empty() || (fieldID != 0))) {
+  if ((type->IsMIRStructType() || type->GetKind() == MIRTypeKind::kTypeUnion) &&
+      (!fieldName.empty() || (fieldID != 0))) {
     FieldID fieldIdVar = fieldID;
     if (fieldIdVar == 0) {
       fieldIdVar = mirBuilder.GetStructFieldIDFromFieldName(*type, fieldName);
@@ -2021,7 +2022,7 @@ BaseNode *FEIRExprIRead::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
   MIRPtrType *mirPtrType = static_cast<MIRPtrType*>(pointerType);
   MIRType *pointedMirType = mirPtrType->GetPointedType();
   FieldID fid = fieldID;
-  if (pointedMirType->IsMIRStructType()) {
+  if (pointedMirType->IsMIRStructType() || pointedMirType->GetKind() == MIRTypeKind::kTypeUnion) {
     CHECK_FATAL(!fieldName.empty() || fid != 0, "error");
     if (fid == 0) {
       fid = mirBuilder.GetStructFieldIDFromFieldName(*pointedMirType, fieldName);
@@ -2069,6 +2070,20 @@ std::unique_ptr<FEIRExpr> FEIRExprAddrofVar::CloneImpl() const {
 BaseNode *FEIRExprAddrofVar::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
   MIRSymbol *varSymbol = varSrc->GenerateMIRSymbol(mirBuilder);
   return mirBuilder.CreateExprAddrof(0, *varSymbol);
+}
+
+// ---------- FEIRExprAddrofFunc ----------
+std::unique_ptr<FEIRExpr> FEIRExprAddrofFunc::CloneImpl() const {
+  CHECK_FATAL(false, "not support clone here");
+  return nullptr;
+}
+
+BaseNode *FEIRExprAddrofFunc::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
+  GStrIdx strIdx = GlobalTables::GetStrTable().GetStrIdxFromName(funcAddr);
+  MIRFunction *mirFunc = FEManager::GetTypeManager().GetMIRFunction(strIdx, false);
+  CHECK_FATAL(mirFunc != nullptr, "can not get MIRFunction");
+  return mirBuilder.CreateExprAddroffunc(mirFunc->GetPuidx(),
+                                         mirBuilder.GetMirModule().GetMemPool());
 }
 
 // ---------- FEIRExprRegRead ----------
@@ -2533,6 +2548,10 @@ void FEIRExprBinary::SetExprTypeByOp() {
 void FEIRExprBinary::SetExprTypeByOpNormal() {
   PrimType primTypeOpnd0 = opnd0->GetPrimType();
   PrimType primTypeOpnd1 = opnd1->GetPrimType();
+  if (primTypeOpnd0 == PTY_ptr || primTypeOpnd1 == PTY_ptr) {
+    type->SetPrimType(PTY_ptr);
+    return;
+  }
   CHECK_FATAL(primTypeOpnd0 == primTypeOpnd1, "primtype of opnds must be the same");
   type->SetPrimType(primTypeOpnd0);
 }

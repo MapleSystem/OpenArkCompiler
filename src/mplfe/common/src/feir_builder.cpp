@@ -114,6 +114,11 @@ UniqueFEIRExpr FEIRBuilder::CreateExprAddrofVar(UniqueFEIRVar srcVar) {
   return expr;
 }
 
+UniqueFEIRExpr FEIRBuilder::CreateExprAddrofFunc(const std::string &addr) {
+  UniqueFEIRExpr expr = std::make_unique<FEIRExprAddrofFunc>(addr);
+  return expr;
+}
+
 UniqueFEIRExpr FEIRBuilder::CreateExprTernary(Opcode op, UniqueFEIRType type, UniqueFEIRExpr cExpr,
                                               UniqueFEIRExpr tExpr, UniqueFEIRExpr fExpr) {
   UniqueFEIRExpr expr = std::make_unique<FEIRExprTernary>(op, std::move(type), std::move(cExpr),

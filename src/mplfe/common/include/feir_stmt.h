@@ -488,6 +488,20 @@ class FEIRExprAddrofVar : public FEIRExpr {
   std::unique_ptr<FEIRVar> varSrc;
 };
 
+class FEIRExprAddrofFunc : public FEIRExpr {
+ public:
+  explicit FEIRExprAddrofFunc(const std::string &addr)
+      : FEIRExpr(FEIRNodeKind::kExprAddrofFunc), funcAddr(addr) {}
+  ~FEIRExprAddrofFunc() = default;
+
+ protected:
+  std::unique_ptr<FEIRExpr> CloneImpl() const override;
+  BaseNode *GenMIRNodeImpl(MIRBuilder &mirBuilder) const override;
+
+ private:
+  std::string funcAddr;
+};
+
 // ---------- FEIRExprUnary ----------
 class FEIRExprUnary : public FEIRExpr {
  public:

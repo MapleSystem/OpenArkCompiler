@@ -158,6 +158,25 @@ class ASTBreakStmt : public ASTStmt {
   std::list<UniqueFEIRStmt> Emit2FEStmtImpl() const override;
 };
 
+class ASTLabelStmt : public ASTStmt {
+ public:
+  ASTLabelStmt() : ASTStmt(kASTStmtLabel) {}
+  ~ASTLabelStmt() override = default;
+
+  void SetSubStmt(ASTStmt *stmt) {
+    subStmt = stmt;
+  }
+
+  void SetLabelName(std::string &name) {
+    labelName = name;
+  }
+
+ private:
+  std::list<UniqueFEIRStmt> Emit2FEStmtImpl() const override;
+  std::string labelName;
+  ASTStmt *subStmt;
+};
+
 class ASTContinueStmt : public ASTStmt {
  public:
   ASTContinueStmt() : ASTStmt(kASTStmtContinue) {}

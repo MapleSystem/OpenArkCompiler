@@ -65,6 +65,7 @@ class ASTParser {
   ASTStmt *PROCESS_STMT(WhileStmt);
   ASTStmt *PROCESS_STMT(DoStmt);
   ASTStmt *PROCESS_STMT(BreakStmt);
+  ASTStmt *PROCESS_STMT(LabelStmt);
   ASTStmt *PROCESS_STMT(ContinueStmt);
   ASTStmt *PROCESS_STMT(CompoundStmt);
   ASTStmt *PROCESS_STMT(GotoStmt);
@@ -136,6 +137,7 @@ ASTDecl *ProcessDecl(MapleAllocator &allocator, const clang::Decl &decl);
   void TraverseDecl(const clang::Decl *decl, std::function<void (clang::Decl*)> const &functor);
   ASTDecl *GetAstDeclOfDeclRefExpr(MapleAllocator &allocator, const clang::Expr &expr);
   void SetSourceFileInfo(clang::Decl *decl);
+  uint32 GetSizeFromQualType(const clang::QualType qualType);
   uint32 fileIdx;
   const std::string fileName;
   std::unique_ptr<LibAstFile> astFile;

@@ -671,6 +671,7 @@ class AArch64CGFunc : public CGFunc {
   MemOperand *CheckAndCreateExtendMemOpnd(PrimType ptype, BaseNode &addrExpr, int32 offset,
                                           AArch64isa::MemoryOrdering memOrd);
   MemOperand &CreateNonExtendMemOpnd(PrimType ptype, const BaseNode &parent, BaseNode &addrExpr, int32 offset);
+  std::string GenerateMemOpndVerbose(const Operand &src);
 };
 }  /* namespace maplebe */
 
