@@ -26,27 +26,12 @@ namespace maple {
 MemPoolCtrler memPoolCtrler;
 bool MemPoolCtrler::freeMemInTime = false;
 
-#ifdef MP_DEBUG
-size_t MemPool::sumAlloc = 0;
-size_t MemPool::sumUsed = 0;
-#endif
-
 void MemPoolCtrler::FreeMemBlocks(const MemPool &pool, MemBlock *fixedMemHead, MemBlock *bigMemHead) {
   (void)(pool);
 
   MemBlock *fixedTail = nullptr;
 
   if (fixedMemHead != nullptr) {
-#ifdef MP_DEBUG
-    MemBlock *cur = fixedMemHead;
-    while (cur != nullptr) {
-      totalFreeMem += cur->memSize;
-      maxFreeMen = std::max(cur->memSize, maxFreeMen);
-      LogInfo::MapleLogger() << "Giveback MemBlock: " << cur << ", startPtr: " << (void *)cur->startPtr
-                             << ", memSize: " << cur->memSize << std::endl;
-      cur = cur->nextMemBlock;
-    }
-#endif
     fixedTail = fixedMemHead;
     while (fixedTail->nextMemBlock != nullptr) {
       fixedTail = fixedTail->nextMemBlock;
@@ -63,43 +48,14 @@ void MemPoolCtrler::FreeMemBlocks(const MemPool &pool, MemBlock *fixedMemHead, M
   if (bigMemHead != nullptr) {
     auto *cur = bigMemHead;
     while (cur != nullptr) {
-#ifdef MP_DEBUG
-      totalFreeMem += cur->memSize;
-      maxFreeMen = std::max(cur->memSize, maxFreeMen);
-      LogInfo::MapleLogger() << "Giveback MemBlock: " << cur << ", startPtr: " << (void *)cur->startPtr
-                             << ", memSize: " << cur->memSize << std::endl;
-#endif
       bigFreeMemBlocks.insert(cur);
       cur = cur->nextMemBlock;
     }
   }
-
-#ifdef MP_DEBUG
-  LogInfo::MapleLogger() << "MEMPOOL: Free Success, " << pool.name << " Total Free Mem: " << totalFreeMem
-                         << " Max Free Mem: " << maxFreeMen << '\n';
-#endif
 }
 
 // Destructor, free all allocated memories
 MemPoolCtrler::~MemPoolCtrler() {
-  // Delete Memory Pool
-  for (MemPool *memPool : memPools) {
-#ifdef MP_DEBUG
-    if (memPool != nullptr) {
-      LogInfo::MapleLogger() << "MEMPOOL: Left mempool " << memPool->name << "\n";
-    }
-#endif
-    delete memPool;
-  }
-
-#ifdef MP_DEBUG
-  LogInfo::MapleLogger() << "MEMPOOL: Alloc Failed Stat: Alloc Failed: " << allocFailed
-                         << " Alloc Total: " << allocTotal
-                         << " Alloc Fail Rate: " << (1.0 * allocFailed / std::max(static_cast<size_t>(1), allocTotal))
-                         << " Alloc Failed Size: " << allocFailedSize << " Alloc Total Size: " << allocTotalSize
-                         << " Alloc Failed Size Rate "
-                         << (1.0 * allocFailedSize / std::max(static_cast<size_t>(1), allocTotalSize)) << '\n';
-#endif
   FreeMem();
 }
 
@@ -113,25 +69,12 @@ MemPool *MemPoolCtrler::NewMemPool(const std::string &name, bool isLocalPool) {
     memPool = new ThreadShareMemPool(*this, name);
   }
 
-  ParallelGuard guard(ctrlerMutex, HaveRace());
-  memPools.insert(memPool);
   return memPool;
 }
 
-// Re-cycle all memories allocated on a memory pool to free list
+// This function will be removed soon, DO NOT call it, just use delete memPool
 void MemPoolCtrler::DeleteMemPool(MemPool *memPool) {
-  ASSERT_NOT_NULL(memPool);
-
-  {
-    ParallelGuard guard(ctrlerMutex, HaveRace());
-    // Delete entry of this mempool in memPools and delete the mempool node
-    memPools.erase(memPool);
-  }
   delete memPool;
-
-  if (freeMemInTime) {
-    FreeMem();
-  }
 }
 
 void MemPoolCtrler::FreeMem() {
@@ -161,43 +104,23 @@ MemBlock *MemPoolCtrler::AllocFixMemBlock(const MemPool &pool) {
   (void)(pool);
   MemBlock *ret = nullptr;
 
-  {
-    ParallelGuard guard(ctrlerMutex, HaveRace());
-    if (fixedFreeMemBlocks != nullptr) {
-      ret = fixedFreeMemBlocks;
-      fixedFreeMemBlocks = fixedFreeMemBlocks->nextMemBlock;
-#ifdef MP_DEBUG
-      totalFreeMem -= ret->memSize;
-      if (ret->memSize == maxFreeMen) {
-        if (fixedFreeMemBlocks == nullptr) {
-          maxFreeMen = 0;
-        }
-      }
-      LogInfo::MapleLogger() << "MEMPOOL: Alloc Success, " << pool.name << " Alloc size: " << kMemBlockSizeMin
-                             << " Total Free Mem: " << totalFreeMem << " Max Free Mem: " << maxFreeMen << '\n';
-      LogInfo::MapleLogger() << "Reuse MemBlock: " << ret << ", startPtr: " << (void *)ret->startPtr
-                             << ", memSize: " << ret->memSize << std::endl;
-      allocTotal += 1;
-#endif
-      return ret;
-    }
+  ParallelGuard guard(ctrlerMutex, HaveRace());
+  if (fixedFreeMemBlocks != nullptr) {
+    ret = fixedFreeMemBlocks;
+    fixedFreeMemBlocks = fixedFreeMemBlocks->nextMemBlock;
+    return ret;
   }
 
-#ifdef MP_DEBUG
-  if (maxFreeMen > kMemBlockSizeMin) {
-    allocFailed += 1;
-    allocFailedSize += kMemBlockSizeMin;
-    LogInfo::MapleLogger() << "MEMPOOL: Alloc Failed, " << pool.name << " Alloc size: " << kMemBlockSizeMin
-                           << " Total Free Mem: " << totalFreeMem << " Max Free Mem: " << maxFreeMen << '\n';
-  } else {
-    LogInfo::MapleLogger() << "MEMPOOL: Alloc Success, " << pool.name << " Alloc size: " << kMemBlockSizeMin
-                           << " Total Free Mem: " << totalFreeMem << " Max Free Mem: " << maxFreeMen << '\n';
+  uint8_t *ptr = sysMemoryMgr->RealAllocMemory(kMemBlockMalloc);
+  // leave one MemBlock to return
+  for (size_t i = 0; i < kMemBlockMalloc / kMemBlockSizeMin - 1; ++i) {
+    auto *block = new MemBlock(ptr, kMemBlockSizeMin);
+    ptr += kMemBlockSizeMin;
+    block->nextMemBlock = fixedFreeMemBlocks;
+    fixedFreeMemBlocks = block;
   }
-  allocTotal += 1;
-  allocTotalSize += kMemBlockSizeMin;
-#endif
 
-  return new MemBlock(kMemBlockSizeMin);
+  return new MemBlock(ptr, kMemBlockSizeMin);
 }
 
 MemBlock *MemPoolCtrler::AllocBigMemBlock(const MemPool &pool, size_t size) {
@@ -205,56 +128,17 @@ MemBlock *MemPoolCtrler::AllocBigMemBlock(const MemPool &pool, size_t size) {
   (void)(pool);
   MemBlock *ret = nullptr;
 
-  {
-    ParallelGuard guard(ctrlerMutex, HaveRace());
-    if (!bigFreeMemBlocks.empty() && (*bigFreeMemBlocks.begin())->memSize >= size) {
-      ret = *bigFreeMemBlocks.begin();
-      bigFreeMemBlocks.erase(bigFreeMemBlocks.begin());
-#ifdef MP_DEBUG
-      totalFreeMem -= ret->memSize;
-      if (!bigFreeMemBlocks.empty()) {
-        maxFreeMen = (*bigFreeMemBlocks.begin())->memSize;
-      } else if (fixedFreeMemBlocks != nullptr) {
-        maxFreeMen = kMemBlockSizeMin;
-      } else {
-        maxFreeMen = 0;
-      }
-      LogInfo::MapleLogger() << "MEMPOOL: Alloc Success, " << pool.name << " Alloc size: " << kMemBlockSizeMin
-                             << " Total Free Mem: " << totalFreeMem << " Max Free Mem: " << maxFreeMen << '\n';
-      LogInfo::MapleLogger() << "Reuse MemBlock: " << ret << ", startPtr: " << (void *)ret->startPtr
-                             << ", memSize: " << ret->memSize << std::endl;
-      allocTotal += 1;
-#endif
-      return ret;
-    }
+  ParallelGuard guard(ctrlerMutex, HaveRace());
+  if (!bigFreeMemBlocks.empty() && (*bigFreeMemBlocks.begin())->memSize >= size) {
+    ret = *bigFreeMemBlocks.begin();
+    bigFreeMemBlocks.erase(bigFreeMemBlocks.begin());
+    return ret;
   }
 
-#ifdef MP_DEBUG
-  if (maxFreeMen > size) {
-    allocFailed += 1;
-    allocFailedSize += size;
-    LogInfo::MapleLogger() << "MEMPOOL: Alloc Failed, " << pool.name << " Alloc size: " << size
-                           << " Total Free Mem: " << totalFreeMem << " Max Free Mem: " << maxFreeMen << '\n';
-  } else {
-    LogInfo::MapleLogger() << "MEMPOOL: Alloc Success, " << pool.name << " Alloc size: " << size
-                           << " Total Free Mem: " << totalFreeMem << " Max Free Mem: " << maxFreeMen << '\n';
-  }
-  allocTotal += 1;
-  allocTotalSize += size;
-#endif
-
-  return new MemBlock(size);
+  return new MemBlock(sysMemoryMgr->RealAllocMemory(size), size);
 }
 
 MemPool::~MemPool() {
-#ifdef MP_DEBUG
-  MemPool::sumAlloc += alloc;
-  MemPool::sumUsed += used;
-  LogInfo::MapleLogger() << "MEMPOOL: Deleted " << name << " alloc: " << alloc << " used: " << used
-                         << " Use Rate: " << (1.0 * used / std::max(static_cast<size_t>(1), alloc))
-                         << " sum alloc: " << MemPool::sumAlloc << " sum used: " << MemPool::sumUsed << " sum rate: "
-                         << (1.0 * MemPool::sumUsed / std::max(static_cast<size_t>(1), MemPool::sumAlloc)) << "\n";
-#endif
   ctrler.FreeMemBlocks(*this, fixedMemHead, bigMemHead);
 }
 
@@ -266,9 +150,6 @@ void *MemPool::Malloc(size_t size) {
   }
   uint8_t *retPtr = curPtr;
   curPtr += size;
-#ifdef MP_DEBUG
-  used += size;
-#endif
   return retPtr;
 }
 
@@ -310,9 +191,6 @@ uint8_t *MemPool::AllocNewMemBlock(size_t size) {
   } else {
     head = &bigMemHead;
   }
-#ifdef MP_DEBUG
-  alloc += newMemBlock->memSize;
-#endif
 
   newMemBlock->nextMemBlock = *head;
   *head = newMemBlock;
@@ -341,12 +219,6 @@ void *StackMemPool::Malloc(size_t size) {
   if (size > static_cast<size_t>(curEndPtr - *curPtrPtr)) {
     retPtr = AllocTailMemBlock(size);
   }
-#ifdef MP_DEBUG
-  LogInfo::MapleLogger() << "Malloc MemBlock: "
-                         << " bigMemStackTop, " << (void *)bigMemStackTop << " retPtr, " << (void *)retPtr
-                         << ", curPtr: " << (void *)(retPtr + size) << " bigCurPtr, " << (void *)bigCurPtr
-                         << " bigEndPtr, " << (void *)bigEndPtr << std::endl;
-#endif
   *curPtrPtr = retPtr + size;
   return retPtr;
 }
@@ -363,12 +235,9 @@ MemBlock *StackMemPool::AllocMemBlockBySize(size_t size) {
 void StackMemPool::ResetStackTop(const LocalMapleAllocator *alloc, uint8_t *fixedCurPtrMark,
                                  MemBlock *fixedStackTopMark, uint8_t *bigCurPtrMark,
                                  MemBlock *bigStackTopMark) noexcept {
-#ifdef DEBUG
-  CHECK_FATAL(alloc == TopAllocator(), "ResetStackTop Eror, Only Top Allocator can ResetStackTop");
+  CheckTopAllocator(alloc);
   PopAllocator();
-#else
-  (void)alloc;
-#endif
+
   if (fixedStackTopMark != nullptr) {
     fixedMemStackTop = fixedStackTopMark;
     curPtr = fixedCurPtrMark;

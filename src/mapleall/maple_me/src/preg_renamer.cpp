@@ -118,7 +118,7 @@ AnalysisResult *MeDoPregRename::Run(MeFunction *func, MeFuncResultMgr *frm, Modu
     LogInfo::MapleLogger() << "------------after pregrename:-------------------\n";
     func->Dump();
   }
-  memPoolCtrler.DeleteMemPool(renamemp);
+  delete renamemp;
   if (MeOption::meVerify) {
     frm->InvalidAnalysisResult(MeFuncPhase_DOMINANCE, func);
     CHECK_FATAL(mrm != nullptr, "Needs module result manager for ipa");

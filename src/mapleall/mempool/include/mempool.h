@@ -16,6 +16,7 @@
 #define MEMPOOL_INCLUDE_MEMPOOL_H
 #include <list>
 #include <set>
+#include <forward_list>
 #include <unordered_set>
 #include <stack>
 #include <map>
@@ -25,35 +26,16 @@
 #include "mpl_logging.h"
 #include "thread_env.h"
 
-// Local debug control
-#ifdef MP_DEBUG
-#include <iostream>
-#endif  // MP_DEBUG
-
 namespace maple {
-#ifdef _WIN32
-#define FALSE 0
-#define TRUE 1
-#endif
-
 #define BITS_ALIGN(size) (((size) + 7) & (0xFFFFFFF8))
 
 constexpr size_t kMemBlockSizeMin = 2 * 1024;
+constexpr size_t kMemBlockMalloc = 1024 * 1024;
+static_assert((kMemBlockMalloc > kMemBlockSizeMin) && ((kMemBlockMalloc % kMemBlockSizeMin) == 0), "mempool error");
 
 struct MemBlock {
-  explicit MemBlock(size_t size) : memSize(size) {
-    startPtr = reinterpret_cast<uint8_t *>(malloc(size));
-#ifdef MP_DEBUG
-    LogInfo::MapleLogger() << "New MemBlock: " << this << ", startPtr: " << (void *)startPtr << ", memSize: " << memSize
-                           << std::endl;
-#endif
-  }
-
-  ~MemBlock() {
-    if (startPtr != nullptr) {
-      free(startPtr);
-    }
-  }
+  MemBlock(uint8_t *startPtr, size_t size) : startPtr(startPtr), memSize(size) {}
+  ~MemBlock() = default;
 
   uint8_t *EndPtr() const {
     return startPtr + memSize;
@@ -70,24 +52,44 @@ class StackMemPool;
 class MemPoolCtrler;
 extern MemPoolCtrler memPoolCtrler;
 
-static inline bool IsGlobalCtrler(const MemPoolCtrler &mpCtrler) {
-  return &mpCtrler == &maple::memPoolCtrler;
-}
+// memory backend
+class SysMemoryManager {
+ public:
+  virtual ~SysMemoryManager() = default;
+  virtual uint8_t *RealAllocMemory(size_t size) = 0;
+};
 
-// Memory Pool controller class
+class MallocSysMemoryManager : public SysMemoryManager {
+ public:
+  uint8_t *RealAllocMemory(size_t size) override {
+    void *block = malloc(size);
+    CHECK_FATAL(block != nullptr, "malloc failed");
+
+    mallocMemories.push_front(block);
+    return reinterpret_cast<uint8_t *>(malloc(size));
+  }
+  ~MallocSysMemoryManager() override {
+    for (void *ptr : mallocMemories) {
+      free(ptr);
+    }
+  }
+  std::forward_list<void *> mallocMemories;
+};
+
+// memory middle end
 class MemPoolCtrler {
   friend MemPool;
 
  public:
   static bool freeMemInTime;
-  MemPoolCtrler() = default;
+  MemPoolCtrler() : sysMemoryMgr(new MallocSysMemoryManager()) {}
 
   ~MemPoolCtrler();
 
-  MemPool *NewMemPool(const std::string&, bool isLocalPool);
+  MemPool *NewMemPool(const std::string &, bool isLocalPool);
   void DeleteMemPool(MemPool *memPool);
   bool HaveRace() const {
-    return ThreadEnv::IsMeParallel() && IsGlobalCtrler(*this);
+    return ThreadEnv::IsMeParallel() && (this == &maple::memPoolCtrler);
   }
 
   MemBlock *AllocMemBlock(const MemPool &pool, size_t size);
@@ -104,30 +106,40 @@ class MemPoolCtrler {
   void FreeMem();
   void FreeMemBlocks(const MemPool &pool, MemBlock *fixedMemHead, MemBlock *bigMemHead);
 
-  std::mutex ctrlerMutex;                  // this mutex is used to protect memPools
-  std::unordered_set<MemPool *> memPools;  // set of mempools managed by it
+  std::mutex ctrlerMutex;  // this mutex is used to protect memPools
   MemBlock *fixedFreeMemBlocks = nullptr;
   std::multiset<MemBlock *, MemBlockCmp> bigFreeMemBlocks;
-#ifdef MP_DEBUG
-  size_t totalFreeMem = 0;
-  size_t maxFreeMen = 0;
-  size_t allocFailed = 0;
-  size_t allocFailedSize = 0;
-  size_t allocTotal = 0;
-  size_t allocTotalSize = 0;
-#endif
+  std::unique_ptr<SysMemoryManager> sysMemoryMgr;
 };
 
-class MemPool {
+#ifdef MP_DEUG
+class MemPoolStat {
+ public:
+  ~MemPoolStat() = default;
+
+ protected:
+  void SetName(const std::string &name) {
+    this->name = name;
+  }
+  std::string name;
+};
+#else
+class MemPoolStat {
+ public:
+  ~MemPoolStat() = default;
+
+ protected:
+  void SetName(const std::string & /* name */) {}
+};
+#endif
+
+// memory front end
+class MemPool : private MemPoolStat {
   friend MemPoolCtrler;
 
  public:
   MemPool(MemPoolCtrler &ctl, const std::string &name) : ctrler(ctl) {
-#ifdef MP_DEBUG
-    LogInfo::MapleLogger() << "MEMPOOL: New " << name << '\n';
-    this->name = name;
-#endif
-    (void)(name);
+    SetName(name);
   }
 
   virtual ~MemPool();
@@ -172,13 +184,6 @@ class MemPool {
   MemBlock *fixedMemHead = nullptr;
   MemBlock *bigMemHead = nullptr;
 
-#ifdef MP_DEBUG
-  std::string name;
-  size_t alloc = 0;
-  size_t used = 0;
-  static size_t sumAlloc;
-  static size_t sumUsed;
-#endif
   uint8_t *AllocNewMemBlock(size_t bytes);
 };
 
@@ -201,7 +206,30 @@ class ThreadShareMemPool : public MemPool {
 };
 
 class LocalMapleAllocator;
-class StackMemPool : public MemPool {
+#ifdef MP_DEBUG
+class StackMemPoolDebug {
+ protected:
+  void PushAllocator(const LocalMapleAllocator *alloc) {
+    allocators.push(alloc);
+  }
+  void CheckTopAllocator(const LocalMapleAllocator *alloc) const {
+    CHECK_FATAL(alloc == allocators.top(), "only top allocator allowed");
+  }
+  void PopAllocator() {
+    allocators.pop();
+  }
+  std::stack<const LocalMapleAllocator *> allocators;
+};
+#else
+class StackMemPoolDebug {
+ protected:
+  void PushAllocator(const LocalMapleAllocator * /* alloc */) {}
+  void PopAllocator() {}
+  void CheckTopAllocator(const LocalMapleAllocator * /* alloc */) const {}
+};
+#endif
+
+class StackMemPool : public MemPool, private StackMemPoolDebug {
  public:
   using MemPool::MemPool;
   friend LocalMapleAllocator;
@@ -220,19 +248,6 @@ class StackMemPool : public MemPool {
 
   template <class T>
   T *NewArray(size_t num) = delete;
-
-#ifdef DEBUG
-  void PushAllocator(const LocalMapleAllocator *alloc) {
-    allocators.push(alloc);
-  }
-  const LocalMapleAllocator *TopAllocator() {
-    return allocators.top();
-  }
-  void PopAllocator() {
-    allocators.pop();
-  }
-  std::stack<const LocalMapleAllocator *> allocators;
-#endif
 
   // reuse mempool fixedMemHead, bigMemHead, (curPtr, endPtr for fixed memory)
   MemBlock *fixedMemStackTop = nullptr;

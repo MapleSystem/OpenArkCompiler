@@ -2685,7 +2685,9 @@ bool MIRParser::ParseConstAddrLeafExpr(MIRConstPtr &cexpr) {
     MIRPtrType ptrtype(ptyIdx);
     ptyIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&ptrtype);
     MIRType *exprty = GlobalTables::GetTypeTable().GetTypeFromTyIdx(ptyIdx);
-    cexpr = mod.GetMemPool()->New<MIRStrConst>(stridx, *exprty);
+    // func code mempool will be released after irmap, but MIRStrConst won't be passed to me ir.
+    // So MIRStrConst can NOT be allocated in func code mempool.
+    cexpr = mod.CurFunction()->GetDataMemPool()->New<MIRStrConst>(stridx, *exprty);
   } else {
     auto *cs = static_cast<Conststr16Node*>(expr);
     U16StrIdx stridx = cs->GetStrIdx();
@@ -2693,7 +2695,9 @@ bool MIRParser::ParseConstAddrLeafExpr(MIRConstPtr &cexpr) {
     MIRPtrType ptrType(ptyIdx);
     ptyIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&ptrType);
     MIRType *exprTy = GlobalTables::GetTypeTable().GetTypeFromTyIdx(ptyIdx);
-    cexpr = mod.GetMemPool()->New<MIRStr16Const>(stridx, *exprTy);
+    // func code mempool will be released after irmap, but MIRStr16Const won't be passed to me ir.
+    // So MIRStr16Const can NOT be allocated in func code mempool.
+    cexpr = mod.CurFunction()->GetDataMemPool()->New<MIRStr16Const>(stridx, *exprTy);
   }
   return true;
 }

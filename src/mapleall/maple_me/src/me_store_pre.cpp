@@ -212,7 +212,7 @@ void MeStorePre::CreateRealOcc(const OStIdx &ostIdx, MeStmt &meStmt) {
     workCandMap[ostIdx] = wkCand;
     // if it is local symbol, insert artificial use occ at common_exit_bb
     if (ost->IsLocal()) {
-      SUseOcc *artOcc = spreMp->New<SUseOcc>(*func->GetCommonExitBB());
+      SRealOcc *artOcc = spreMp->New<SRealOcc>(*func->GetCommonExitBB());
       wkCand->GetRealOccs().push_back(artOcc);
     }
   }
@@ -233,31 +233,42 @@ void MeStorePre::CreateRealOcc(const OStIdx &ostIdx, MeStmt &meStmt) {
 }
 
 // create a new use occurrence for symbol oidx in given bb
-void MeStorePre::CreateUseOcc(const OStIdx &ostIdx, BB &bb) const {
+void MeStorePre::CreateUseOcc(const OStIdx &ostIdx, BB &bb) {
   SpreWorkCand *wkCand = nullptr;
   auto mapIt = workCandMap.find(ostIdx);
   if (mapIt == workCandMap.end()) {
-    return;
+    OriginalSt *ost = ssaTab->GetSymbolOriginalStFromID(ostIdx);
+    wkCand = spreMp->New<SpreWorkCand>(spreAllocator, *ost);
+    workCandMap[ostIdx] = wkCand;
+    // if it is local symbol, insert artificial real occ at common_exit_bb
+    if (ost->IsLocal()) {
+      SRealOcc *artOcc = spreMp->New<SRealOcc>(*func->GetCommonExitBB());
+      wkCand->GetRealOccs().push_back(artOcc);
+    }
+  } else {
+    wkCand = mapIt->second;
   }
-  wkCand = mapIt->second;
-  CHECK_FATAL(!wkCand->GetRealOccs().empty(), "empty container check");
-  SOcc *lastOcc = wkCand->GetRealOccs().back();
-  if (lastOcc->GetOccTy() == kSOccUse && &lastOcc->GetBB() == &bb) {
-    return;  // no need to push consecutive use occurrences at same BB
+
+  if (!wkCand->GetRealOccs().empty()) {
+    SOcc *lastOcc = wkCand->GetRealOccs().back();
+    if (lastOcc->GetOccTy() == kSOccUse && &lastOcc->GetBB() == &bb) {
+      return;  // no need to push consecutive use occurrences at same BB
+    }
   }
+
   SUseOcc *newOcc = spreMp->New<SUseOcc>(bb);
   wkCand->GetRealOccs().push_back(newOcc);
 }
 
 // create use occurs for all the symbols that alias with muost
-void MeStorePre::CreateSpreUseOccsThruAliasing(const OriginalSt &muOst, BB &bb) const {
+void MeStorePre::CreateSpreUseOccsThruAliasing(const OriginalSt &muOst, BB &bb) {
   if (muOst.GetIndex() >= aliasClass->GetAliasElemCount()) {
     return;
   }
   CreateUseOcc(muOst.GetIndex(), bb);
 }
 
-void MeStorePre::FindAndCreateSpreUseOccs(const MeExpr &meExpr, BB &bb) const {
+void MeStorePre::FindAndCreateSpreUseOccs(const MeExpr &meExpr, BB &bb) {
   if (meExpr.GetMeOp() == kMeOpVar) {
     auto *var = static_cast<const VarMeExpr*>(&meExpr);
     const OriginalSt *ost = var->GetOst();

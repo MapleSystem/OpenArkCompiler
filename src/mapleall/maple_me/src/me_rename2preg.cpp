@@ -354,7 +354,7 @@ AnalysisResult *MeDoSSARename2Preg::Run(MeFunction *func, MeFuncResultMgr *m, Mo
     // empty function, we only promote the parameter
     auto *emptyrenamer = renamemp->New<SSARename2Preg>(renamemp, func, nullptr, nullptr);
     emptyrenamer->PromoteEmptyFunction();
-    memPoolCtrler.DeleteMemPool(renamemp);
+    delete renamemp;
     return nullptr;
   }
 
@@ -366,7 +366,7 @@ AnalysisResult *MeDoSSARename2Preg::Run(MeFunction *func, MeFuncResultMgr *m, Mo
   if (DEBUGFUNC(func)) {
     irMap->Dump();
   }
-  memPoolCtrler.DeleteMemPool(renamemp);
+  delete renamemp;
 
   return nullptr;
 }

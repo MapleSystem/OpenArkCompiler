@@ -1031,7 +1031,7 @@ ASTExpr *ASTParser::ProcessExprIntegerLiteral(MapleAllocator &allocator, const c
   ASTIntegerLiteral *astIntegerLiteral = ASTDeclsBuilder::ASTExprBuilder<ASTIntegerLiteral>(allocator);
   ASSERT(astIntegerLiteral != nullptr, "astIntegerLiteral is nullptr");
   uint64 val = 0;
-  MIRType *type;
+  MIRType *type = nullptr;
   llvm::APInt api = expr.getValue();
   if (api.getBitWidth() > kInt32Width) {
     val = *api.getRawData();
