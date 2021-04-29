@@ -175,7 +175,7 @@ void InterleavedManager::IPARun(MeFuncPhaseManager &fpm) {
         func->GetEACG()->CountObjEAStatus();
       }
       if (func->GetMeFunc() != nullptr) {
-        memPoolCtrler.DeleteMemPool(func->GetMeFunc()->GetMemPool());
+        delete func->GetMeFunc()->GetMemPool();
       }
     }
     fpm.GetAnalysisResultManager()->InvalidAllResults();

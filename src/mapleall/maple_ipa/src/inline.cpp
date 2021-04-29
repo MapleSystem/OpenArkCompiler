@@ -1410,7 +1410,7 @@ AnalysisResult *DoInline::Run(MIRModule *module, ModuleResultMgr *mgr) {
   mInline.Inline();
   mInline.CleanupInline();
   mgr->InvalidAnalysisResult(MoPhase_CALLGRAPH_ANALYSIS, module);
-  memPoolCtrler.DeleteMemPool(memPool);
+  delete memPool;
   if (module->firstInline) {
     module->firstInline = false;
   }

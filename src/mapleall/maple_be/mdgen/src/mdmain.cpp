@@ -59,12 +59,12 @@ bool GenSchedFiles(const std::string &fileName, const std::string &oFileDir) {
   MDClassRange moduleData("Schedule");
   MDParser parser(moduleData, schedInfoMemPool);
   if (!parser.ParseFile(fileName)) {
-    memPoolCtrler.DeleteMemPool(schedInfoMemPool);
+    delete schedInfoMemPool;
     return false;
   }
   SchedInfoGen schedEmiiter(moduleData, oFileDir);
   schedEmiiter.Run();
-  memPoolCtrler.DeleteMemPool(schedInfoMemPool);
+  delete schedInfoMemPool;
   return true;
 }
 

@@ -156,8 +156,8 @@ int main() {
     LogInfo::MapleLogger() << "set value =" << *setItr << std::endl;
   }
   // Delete memory pool
-  mpc.DeleteMemPool(mp1);
-  mpc.DeleteMemPool(mp2);
+  delete mp1;
+  delete mp2;
 
   TestLocalAllocater();
   return 1;

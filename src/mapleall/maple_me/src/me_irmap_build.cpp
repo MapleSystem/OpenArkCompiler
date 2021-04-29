@@ -73,7 +73,7 @@ AnalysisResult *MeDoIRMapBuild::Run(MeFunction *func, MeFuncResultMgr *funcResMg
   funcResMgr->InvalidAnalysisResult(MeFuncPhase_SSA, func);
   funcResMgr->InvalidAnalysisResult(MeFuncPhase_DSE, func);
   if (propMp) {
-    memPoolCtrler.DeleteMemPool(propMp);
+    delete propMp;
   }
   return irMap;
 }
