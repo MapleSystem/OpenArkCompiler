@@ -154,6 +154,14 @@ std::list<UniqueFEIRStmt> ASTBreakStmt::Emit2FEStmtImpl() const {
   return stmts;
 }
 
+std::list<UniqueFEIRStmt> ASTLabelStmt::Emit2FEStmtImpl() const {
+  std::list<UniqueFEIRStmt> stmts;
+  auto feStmt = std::make_unique<FEIRStmtLabel>(labelName);
+  stmts.emplace_back(std::move(feStmt));
+  stmts.splice(stmts.end(), subStmt->Emit2FEStmt());
+  return stmts;
+}
+
 std::list<UniqueFEIRStmt> ASTContinueStmt::Emit2FEStmtImpl() const {
   std::list<UniqueFEIRStmt> stmts;
   auto stmt = std::make_unique<FEIRStmtContinue>();

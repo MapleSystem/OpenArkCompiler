@@ -239,18 +239,7 @@ void AArch64CGFunc::SelectLoadAcquire(Operand &dest, PrimType dtype, Operand &sr
 
   std::string key;
   if (isDirect && GetCG()->GenerateVerboseCG()) {
-    const MIRSymbol *sym = static_cast<AArch64MemOperand*>(&src)->GetSymbol();
-    if (sym != nullptr) {
-      MIRStorageClass sc = sym->GetStorageClass();
-      if (sc == kScFormal) {
-        key = "param: ";
-      } else if (sc == kScAuto) {
-        key = "local var: ";
-      } else {
-        key = "global: ";
-      }
-      key.append(sym->GetName());
-    }
+    key = GenerateMemOpndVerbose(src);
   }
 
   /* Check if the right load-acquire instruction is available. */
@@ -310,18 +299,7 @@ void AArch64CGFunc::SelectStoreRelease(Operand &dest, PrimType dtype, Operand &s
 
   std::string key;
   if (isDirect && GetCG()->GenerateVerboseCG()) {
-    const MIRSymbol *sym = static_cast<AArch64MemOperand*>(&dest)->GetSymbol();
-    if (sym != nullptr) {
-      MIRStorageClass sc = sym->GetStorageClass();
-      if (sc == kScFormal) {
-        key = "param: ";
-      } else if (sc == kScAuto) {
-        key = "local var: ";
-      } else {
-        key = "global: ";
-      }
-      key.append(sym->GetName());
-    }
+    key = GenerateMemOpndVerbose(dest);
   }
 
   /* Check if the right store-release instruction is available. */
@@ -451,6 +429,24 @@ void AArch64CGFunc::SelectCopyImm(Operand &dest, ImmOperand &src, PrimType dtype
   }
 }
 
+std::string AArch64CGFunc::GenerateMemOpndVerbose(const Operand &src) {
+  ASSERT(src.GetKind() == Operand::kOpdMem, "Just checking");
+  const MIRSymbol *symSecond = static_cast<const AArch64MemOperand*>(&src)->GetSymbol();
+  if (symSecond != nullptr) {
+    std::string key;
+    MIRStorageClass sc = symSecond->GetStorageClass();
+    if (sc == kScFormal) {
+      key = "param: ";
+    } else if (sc == kScAuto) {
+      key = "local var: ";
+    } else {
+      key = "global: ";
+    }
+    return key.append(symSecond->GetName());
+  }
+  return "";
+}
+
 void AArch64CGFunc::SelectCopyMemOpnd(Operand &dest, PrimType dtype, uint32 dsize,
                                       Operand &src, PrimType stype) {
   AArch64isa::MemoryOrdering memOrd = AArch64isa::kMoNone;
@@ -472,7 +468,11 @@ void AArch64CGFunc::SelectCopyMemOpnd(Operand &dest, PrimType dtype, uint32 dsiz
     CHECK_FATAL(dsize == ssize, "dsize %u expect equals ssize %u", dtype, ssize);
     insn = &GetCG()->BuildInstruction<AArch64Insn>(PickLdInsn(ssize, stype), dest, src);
   } else {
-    mop = PickExtInsn(dtype, stype);
+    if (stype == PTY_agg && dtype == PTY_agg) {
+      mop = MOP_undef;
+    } else {
+      mop = PickExtInsn(dtype, stype);
+    }
     if (ssize == (GetPrimTypeSize(dtype) * kBitsPerByte) || mop == MOP_undef) {
       insn = &GetCG()->BuildInstruction<AArch64Insn>(PickLdInsn(ssize, stype), dest, src);
     } else {
@@ -483,19 +483,7 @@ void AArch64CGFunc::SelectCopyMemOpnd(Operand &dest, PrimType dtype, uint32 dsiz
   }
 
   if (GetCG()->GenerateVerboseCG()) {
-    const MIRSymbol *symSecond = static_cast<AArch64MemOperand*>(&src)->GetSymbol();
-    if (symSecond != nullptr) {
-      std::string key;
-      MIRStorageClass sc = symSecond->GetStorageClass();
-      if (sc == kScFormal) {
-        key = "param: ";
-      } else if (sc == kScAuto) {
-        key = "local var: ";
-      } else {
-        key = "global: ";
-      }
-      insn->SetComment(key.append(symSecond->GetName()));
-    }
+    insn->SetComment(GenerateMemOpndVerbose(src));
   }
 
   GetCurBB()->AppendInsn(*insn);
@@ -947,21 +935,8 @@ void AArch64CGFunc::SelectDassign(StIdx stIdx, FieldID fieldId, PrimType rhsPTyp
     Insn &insn = GetCG()->BuildInstruction<AArch64Insn>(mOp, stOpnd, *memOpnd);
 
     if (GetCG()->GenerateVerboseCG()) {
-      const MIRSymbol *symSecond = static_cast<AArch64MemOperand*>(memOpnd)->GetSymbol();
-      if (symSecond != nullptr) {
-        std::string key;
-        MIRStorageClass sc = symSecond->GetStorageClass();
-        if (sc == kScFormal) {
-          key = "param: ";
-        } else if (sc == kScAuto) {
-          key = "local var: ";
-        } else {
-          key = "global: ";
-        }
-        insn.SetComment(key.append(symSecond->GetName()));
-      }
+      insn.SetComment(GenerateMemOpndVerbose(*memOpnd));
     }
-
     GetCurBB()->AppendInsn(insn);
   } else {
     AArch64CGFunc::SelectStoreRelease(*memOpnd, ptyp, stOpnd, ptyp, memOrd, true);
@@ -1594,19 +1569,20 @@ Operand *AArch64CGFunc::SelectDread(const BaseNode &parent, DreadNode &expr) {
     offset = GetBecommon().GetFieldOffset(*structType, expr.GetFieldID()).first;
     parmCopy = IsParamStructCopy(*symbol);
   }
-  CHECK_FATAL(symType != PTY_agg, "dread type error");
+
   uint32 dataSize = GetPrimTypeBitSize(symType);
   uint32 aggSize = 0;
   if (symType == PTY_agg) {
     if (expr.GetPrimType() == PTY_agg) {
       aggSize = GetBecommon().GetTypeSize(symbol->GetType()->GetTypeIndex().GetIdx());
-      dataSize = k64BitSize;
+      dataSize = aggSize;
     } else {
       dataSize = GetPrimTypeBitSize(expr.GetPrimType());
     }
   }
   MemOperand *memOpnd = nullptr;
   if (aggSize > k8ByteSize) {
+    CHECK_FATAL(false, "SelectDread: aggregate of wrong size  check IR");
     if (parent.op == OP_eval) {
       if (symbol->GetAttr(ATTR_volatile)) {
         /* Need to generate loads for the upper parts of the struct. */
@@ -1869,12 +1845,6 @@ Operand *AArch64CGFunc::SelectIread(const BaseNode &parent, IreadNode &expr) {
         isRefField = true;  /* read from an object array, or an high-dimentional array */
       }
     }
-    if (pointedType->GetPrimType() == PTY_agg) {
-      maple::LogInfo::MapleLogger(kLlErr) << "Error: cannot find field in " <<
-          GlobalTables::GetStrTable().GetStringFromStrIdx(pointedType->GetNameStrIdx()) << '\n';
-      CHECK_FATAL(false, "cannot find field");
-      return nullptr;
-    }
   }
 
   RegType regType = GetRegTyFromPrimTy(expr.GetPrimType());
@@ -1910,12 +1880,8 @@ Operand *AArch64CGFunc::SelectIread(const BaseNode &parent, IreadNode &expr) {
   } else {
     if (pointedType->IsStructType()) {
       MIRStructType *structType = static_cast<MIRStructType*>(pointedType);
-      if (expr.GetFieldID()) {
-        /* size << 3, that is size * 8, change bytes to bits */
-        bitSize = structType->GetSize() << 3;
-      } else {
-        destType = GetDestTypeFromAggSize(bitSize);
-      }
+      /* size << 3, that is size * 8, change bytes to bits */
+      bitSize = structType->GetSize() << 3;
     } else {
       bitSize = GetPrimTypeBitSize(destType);
     }
@@ -1937,7 +1903,7 @@ Operand *AArch64CGFunc::SelectIread(const BaseNode &parent, IreadNode &expr) {
         destType = PTY_u64;
         break;
       default:
-        CHECK_FATAL(false, "SelectIread: aggregate of wrong size");
+        CHECK_FATAL(false, "SelectIRead: aggregate of wrong size  check IR");
       }
     }
   }

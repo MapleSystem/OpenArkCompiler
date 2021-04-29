@@ -34,9 +34,15 @@ void ASTDeclRefExpr::SetASTDecl(ASTDecl *astDecl) {
 }
 
 UniqueFEIRExpr ASTDeclRefExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
-  UniqueFEIRVar feirVar = FEIRBuilder::CreateVarNameForC(var->GetName(), *(var->GetTypeDesc().front()),
-                                                         var->IsGlobal(), false);
-  UniqueFEIRExpr feirRefExpr = FEIRBuilder::CreateExprDRead(std::move(feirVar));
+  MIRType *mirType = var->GetTypeDesc().front();
+  UniqueFEIRExpr feirRefExpr;
+  if (mirType->GetKind() == kTypePointer &&
+      static_cast<MIRPtrType*>(mirType)->GetPointedType()->GetKind() == kTypeFunction) {
+    feirRefExpr = FEIRBuilder::CreateExprAddrofFunc(var->GetName());
+  } else {
+    UniqueFEIRVar feirVar = FEIRBuilder::CreateVarNameForC(var->GetName(), *mirType, var->IsGlobal(), false);
+    feirRefExpr = FEIRBuilder::CreateExprDRead(std::move(feirVar));
+  }
   return feirRefExpr;
 }
 
@@ -469,8 +475,8 @@ void ASTInitListExpr::SetInitListType(MIRType *type) {
 }
 
 UniqueFEIRExpr ASTImplicitValueInitExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
-  CHECK_FATAL(false, "NIY");
-  return nullptr;
+  // Other MIRTypeKind should enable
+  return FEIRBuilder::CreateExprConstAnyScalar(type->GetPrimType(), 0);
 }
 
 UniqueFEIRExpr ASTStringLiteral::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {

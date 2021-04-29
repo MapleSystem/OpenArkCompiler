@@ -45,6 +45,7 @@ class FEIRBuilder {
   static UniqueFEIRExpr CreateExprDRead(UniqueFEIRVar srcVar);
   static UniqueFEIRExpr CreateExprAddrof(const std::vector<uint32> &array);
   static UniqueFEIRExpr CreateExprAddrofVar(UniqueFEIRVar srcVar);
+  static UniqueFEIRExpr CreateExprAddrofFunc(const std::string &addr);
   static UniqueFEIRExpr CreateExprIRead(UniqueFEIRType returnType, UniqueFEIRType ptrType,
                                         FieldID id, UniqueFEIRExpr expr);
   static UniqueFEIRExpr CreateExprTernary(Opcode op, UniqueFEIRType type, UniqueFEIRExpr cExpr,
