@@ -129,7 +129,7 @@ bool ChainingPattern::MoveSuccBBAsCurBBNext(BB &curBB, BB &sucBB) {
    * without the judge below, there is
    * Assembler Error: CFI state restore without previous remember
    */
-  if (sucBB.GetFirstInsn() != nullptr && sucBB.GetFirstInsn()->IsCfiInsn()) {
+  if (sucBB.GetHasCfi() || (sucBB.GetFirstInsn() != nullptr && sucBB.GetFirstInsn()->IsCfiInsn())) {
     return false;
   }
   Log(curBB.GetId());
@@ -170,7 +170,7 @@ bool ChainingPattern::RemoveGotoInsn(BB &curBB, BB &sucBB) {
 }
 
 bool ChainingPattern::ClearCurBBAndResetTargetBB(BB &curBB, BB &sucBB) {
-  if (curBB.GetFirstInsn() != nullptr && curBB.GetFirstInsn()->IsCfiInsn()) {
+  if (curBB.GetHasCfi() || (curBB.GetFirstInsn() != nullptr && curBB.GetFirstInsn()->IsCfiInsn())) {
     return false;
   }
   Insn *brInsn = nullptr;
@@ -601,7 +601,7 @@ bool UnreachBBPattern::Optimize(BB &curBB) {
       return false;
     }
 
-    if (curBB.GetFirstInsn() != nullptr && curBB.GetFirstInsn()->IsCfiInsn()) {
+    if (curBB.GetHasCfi() || (curBB.GetFirstInsn() != nullptr && curBB.GetFirstInsn()->IsCfiInsn())) {
       return false;
     }
 
@@ -703,7 +703,7 @@ bool DuplicateBBPattern::Optimize(BB &curBB) {
       return false;
     }
     if (curBB.NumInsn() <= kThreshold) {
-      if (curBB.GetFirstInsn() != nullptr && curBB.GetFirstInsn()->IsCfiInsn()) {
+      if (curBB.GetHasCfi() || (curBB.GetFirstInsn() != nullptr && curBB.GetFirstInsn()->IsCfiInsn())) {
         return false;
       }
       Log(curBB.GetId());
