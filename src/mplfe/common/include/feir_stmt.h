@@ -957,15 +957,31 @@ enum ASTAtomicOp {
 
 class FEIRExprAtomic : public FEIRExpr {
  public:
-  FEIRExprAtomic(MIRType *ty, MIRType *ref, UniqueFEIRExpr obj, UniqueFEIRExpr val1,
-                 UniqueFEIRExpr val2,
-                 ASTAtomicOp atomOp);
+  FEIRExprAtomic(MIRType *ty, MIRType *ref, UniqueFEIRExpr obj, ASTAtomicOp atomOp);
   ~FEIRExprAtomic() = default;
+
   void SetVal1Type(MIRType *ty) {
     val1Type = ty;
   }
+
+  void SetVal1Expr(UniqueFEIRExpr expr) {
+    valExpr1 = std::move(expr);
+  }
+
   void SetVal2Type(MIRType *ty) {
     val2Type = ty;
+  }
+
+  void SetVal2Expr(UniqueFEIRExpr expr) {
+    valExpr2 = std::move(expr);
+  }
+
+  void SetValVar(UniqueFEIRVar value) {
+    val = std::move(value);
+  }
+
+  void SetLockVar(UniqueFEIRVar value) {
+    lock = std::move(value);
   }
 
  protected:
@@ -990,6 +1006,8 @@ class FEIRExprAtomic : public FEIRExpr {
   UniqueFEIRExpr valExpr1;
   UniqueFEIRExpr valExpr2;
   ASTAtomicOp atomicOp;
+  UniqueFEIRVar lock;
+  UniqueFEIRVar val;
 };
 
 // ---------- FEIRStmtNary ----------
@@ -1761,6 +1779,29 @@ class FEIRStmtCallAssign : public FEIRStmtAssign {
   static std::map<Opcode, Opcode> mapOpToOpAssign;
 };
 
+// ---------- FEIRStmtICallAssign ----------
+class FEIRStmtICallAssign : public FEIRStmtAssign {
+ public:
+  FEIRStmtICallAssign();
+  ~FEIRStmtICallAssign() = default;
+  void AddExprArg(UniqueFEIRExpr exprArg) {
+    exprArgs.push_back(std::move(exprArg));
+  }
+
+  void AddExprArgReverse(UniqueFEIRExpr exprArg) {
+    exprArgs.push_front(std::move(exprArg));
+  }
+
+ protected:
+  std::list<StmtNode*> GenMIRStmtsImpl(MIRBuilder &mirBuilder) const override;
+  std::string DumpDotStringImpl() const override;
+  void RegisterDFGNodes2CheckPointImpl(FEIRStmtCheckPoint &checkPoint) override;
+  bool CalculateDefs4AllUsesImpl(FEIRStmtCheckPoint &checkPoint, FEIRUseDefChain &udChain) override;
+
+ private:
+  std::list<UniqueFEIRExpr> exprArgs;
+};
+
 // ---------- FEIRStmtIntrinsicCallAssign ----------
 class FEIRStmtIntrinsicCallAssign : public FEIRStmtAssign {
  public:
@@ -2094,6 +2135,16 @@ class FEIRStmtLabel : public FEIRStmt {
 
  private:
   std::string labelName;
+};
+
+class FEIRStmtAtomic : public FEIRStmt {
+ public:
+  FEIRStmtAtomic(UniqueFEIRExpr expr);
+  ~FEIRStmtAtomic() = default;
+
+ protected:
+  std::list<StmtNode*> GenMIRStmtsImpl(MIRBuilder &mirBuilder) const override;
+  UniqueFEIRExpr atomicExpr;
 };
 }  // namespace maple
 #endif  // MPLFE_INCLUDE_COMMON_FEIR_STMT_H

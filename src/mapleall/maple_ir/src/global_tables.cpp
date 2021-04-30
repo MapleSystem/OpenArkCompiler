@@ -75,7 +75,8 @@ void TypeTable::UpdateMIRType(const MIRType &pType, const TyIdx tyIdx) {
 }
 
 // used only by bin_mpl_import
-void TypeTable::CreateMirTypeNodeAt(MIRType &pType, TyIdx tyIdxUsed, MIRModule *module, bool isObject, bool isIncomplete) {
+void TypeTable::CreateMirTypeNodeAt(MIRType &pType, TyIdx tyIdxUsed, MIRModule *module,
+                                    bool isObject, bool isIncomplete) {
   MIRType *nType = pType.CopyMIRTypeNode();
   nType->SetTypeIndex(tyIdxUsed);
   typeTable[tyIdxUsed] = nType;

@@ -1678,6 +1678,57 @@ std::string FEIRStmtCallAssign::DumpDotStringImpl() const {
   return ss.str();
 }
 
+// ---------- FEIRStmtICallAssign ----------
+FEIRStmtICallAssign::FEIRStmtICallAssign()
+    : FEIRStmtAssign(FEIRNodeKind::kStmtICallAssign, nullptr) {}
+
+void FEIRStmtICallAssign::RegisterDFGNodes2CheckPointImpl(FEIRStmtCheckPoint &checkPoint) {
+  CHECK_FATAL(false, "NYI");
+}
+
+bool FEIRStmtICallAssign::CalculateDefs4AllUsesImpl(FEIRStmtCheckPoint &checkPoint, FEIRUseDefChain &udChain) {
+  bool success = true;
+  for (const UniqueFEIRExpr &exprArg : exprArgs) {
+    success = success && exprArg->CalculateDefs4AllUses(checkPoint, udChain);
+  }
+  return success;
+}
+
+std::list<StmtNode*> FEIRStmtICallAssign::GenMIRStmtsImpl(MIRBuilder &mirBuilder) const {
+  std::list<StmtNode*> ans;
+  StmtNode *stmtICall = nullptr;
+  MapleVector<BaseNode*> args(mirBuilder.GetCurrentFuncCodeMpAllocator()->Adapter());
+  args.reserve(exprArgs.size());
+  for (const UniqueFEIRExpr &exprArg : exprArgs) {
+    BaseNode *node = exprArg->GenMIRNode(mirBuilder);
+    args.push_back(node);
+  }
+  MIRSymbol *retVarSym = nullptr;
+  if (var != nullptr) {
+    retVarSym = var->GenerateLocalMIRSymbol(mirBuilder);
+    stmtICall = mirBuilder.CreateStmtIcallAssigned(std::move(args), *retVarSym);
+  } else {
+    stmtICall = mirBuilder.CreateStmtIcall(std::move(args));
+  }
+  ans.push_back(stmtICall);
+  return ans;
+}
+
+std::string FEIRStmtICallAssign::DumpDotStringImpl() const {
+  std::stringstream ss;
+  ss << "<stmt" << id << "> " << id << ": " << GetFEIRNodeKindDescription(kind);
+  if (var != nullptr) {
+    ss << " def : " << var->GetNameRaw() << ", ";
+  }
+  if (exprArgs.size() > 0) {
+    ss << " uses : ";
+    for (const UniqueFEIRExpr &exprArg : exprArgs) {
+      ss << exprArg->DumpDotString() << ", ";
+    }
+  }
+  return ss.str();
+}
+
 // ---------- FEIRStmtIntrinsicCallAssign ----------
 FEIRStmtIntrinsicCallAssign::FEIRStmtIntrinsicCallAssign(MIRIntrinsicID id, UniqueFEIRType typeIn,
                                                          UniqueFEIRVar argVarRet)
@@ -3138,20 +3189,23 @@ BaseNode *FEIRExprCStyleCast::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
 }
 
 // ---------- FEIRExprAtomic ----------
-FEIRExprAtomic::FEIRExprAtomic(MIRType *ty, MIRType *ref, UniqueFEIRExpr obj, UniqueFEIRExpr val1,
-                               UniqueFEIRExpr val2,
-                               ASTAtomicOp atomOp)
+FEIRExprAtomic::FEIRExprAtomic(MIRType *ty, MIRType *ref, UniqueFEIRExpr obj, ASTAtomicOp atomOp)
     : FEIRExpr(FEIRNodeKind::kExprAtomic),
       mirType(ty),
       refType(ref),
       objExpr(std::move(obj)),
-      valExpr1(std::move(val1)),
-      valExpr2(std::move(val2)),
       atomicOp(atomOp) {}
 
 std::unique_ptr<FEIRExpr> FEIRExprAtomic::CloneImpl() const {
-  std::unique_ptr<FEIRExpr> expr = std::make_unique<FEIRExprAtomic>(mirType, refType, objExpr->Clone(),
-                                                                    valExpr1->Clone(), valExpr2->Clone(), atomicOp);
+  std::unique_ptr<FEIRExpr> expr = std::make_unique<FEIRExprAtomic>(mirType, refType, objExpr->Clone(), atomicOp);
+  static_cast<FEIRExprAtomic*>(expr.get())->SetVal1Type(val1Type);
+  if (valExpr1.get() != nullptr) {
+    static_cast<FEIRExprAtomic*>(expr.get())->SetVal1Expr(valExpr1->Clone());
+  }
+  static_cast<FEIRExprAtomic*>(expr.get())->SetVal1Type(val2Type);
+  if (valExpr2.get() != nullptr) {
+    static_cast<FEIRExprAtomic*>(expr.get())->SetVal1Expr(valExpr2->Clone());
+  }
   return expr;
 }
 
@@ -3207,6 +3261,7 @@ void FEIRExprAtomic::ProcessAtomicExchange(MIRBuilder &mirBuilder, BlockNode &bl
   StmtNode *setStmt = mirBuilder.CreateStmtIassign(*mirType, 0, &lockNode, constNode);
   block.AddStatement(setStmt);
 }
+
 void FEIRExprAtomic::ProcessAtomicCompareExchange(MIRBuilder &mirBuilder, BlockNode &block, BaseNode &lockNode,
                                                   const MIRSymbol *valueVar) const {
 #ifndef USE_OPS
@@ -3233,23 +3288,14 @@ void FEIRExprAtomic::ProcessAtomicCompareExchange(MIRBuilder &mirBuilder, BlockN
 }
 
 BaseNode *FEIRExprAtomic::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
-  BlockNode *block = nullptr;
+  MIRModule &module = FEManager::GetModule();
+  BlockNode *block = module.CurFuncCodeMemPool()->New<BlockNode>();
   BaseNode *objNode = objExpr.get()->GenMIRNode(mirBuilder);
-#ifndef USE_OPS
-  MIRSymbol *lockVar = SymbolBuilder::Instance().GetOrCreateLocalSymbol(*mirType, FEUtils::GetSequentialName("lockVar"),
-                                                                        *mirBuilder.GetCurrentFunction());
-  MIRSymbol *valueVar = SymbolBuilder::Instance().GetOrCreateLocalSymbol(*refType,
-                                                                         FEUtils::GetSequentialName("valueVar"),
-                                                                         *mirBuilder.GetCurrentFunction());
-#else
-  MIRSymbol *lockVar = mirBuilder.GetOrCreateLocalDecl(FEUtils::GetSequentialName("lockVar").c_str(), *mirType);
-  MIRSymbol *valueVar = mirBuilder.GetOrCreateLocalDecl(FEUtils::GetSequentialName("valueVar").c_str(), *refType);
-#endif
+  MIRSymbol *lockVar = lock->GenerateMIRSymbol(mirBuilder);
+  MIRSymbol *valueVar = val->GenerateMIRSymbol(mirBuilder);
   BaseNode *lockNode = mirBuilder.CreateExprDread(*lockVar);
   StmtNode *fetchStmt = mirBuilder.CreateStmtIassign(*mirType, 0, lockNode, objNode);
   ASSERT_NOT_NULL(fetchStmt);
-  MIRModule &module = FEManager::GetModule();
-  block = module.CurFuncCodeMemPool()->New<BlockNode>();
   block->AddStatement(fetchStmt);
   NaryStmtNode *syncenter = mirBuilder.CreateStmtNary(OP_syncenter, lockNode);
   block->AddStatement(syncenter);
@@ -3285,8 +3331,7 @@ BaseNode *FEIRExprAtomic::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
   }
   NaryStmtNode *syncExit = mirBuilder.CreateStmtNary(OP_syncexit, lockNode);
   block->AddStatement(syncExit);
-  BaseNode *valueNode = mirBuilder.CreateExprDread(*valueVar);
-  return valueNode;
+  return block;
 }
 
 // ---------- FEIRStmtPesudoLabel ----------
@@ -3575,5 +3620,19 @@ std::list<StmtNode*> FEIRStmtContinue::GenMIRStmtsImpl(MIRBuilder &mirBuilder) c
 
 std::list<StmtNode*> FEIRStmtLabel::GenMIRStmtsImpl(MIRBuilder &mirBuilder) const {
   return std::list<StmtNode*>{mirBuilder.CreateStmtLabel(mirBuilder.GetOrCreateMIRLabel(labelName))};
+}
+
+FEIRStmtAtomic::FEIRStmtAtomic(UniqueFEIRExpr expr)
+    : FEIRStmt(FEIRNodeKind::kStmtAtomic),
+      atomicExpr(std::move(expr)) {}
+
+std::list<StmtNode*> FEIRStmtAtomic::GenMIRStmtsImpl(MIRBuilder &mirBuilder) const {
+  std::list<StmtNode*> stmts;
+  FEIRExprAtomic *atom = static_cast<FEIRExprAtomic*>(atomicExpr.get());
+  auto block = static_cast<BlockNode*>(atom->GenMIRNode(mirBuilder));
+  for (auto &it : block->GetStmtNodes()) {
+    stmts.emplace_back(&it);
+  }
+  return stmts;
 }
 }  // namespace maple

@@ -73,6 +73,7 @@ void MeAliasClass::DoAliasAnalysis() {
   if (!MeOption::noTBAA && mirModule.IsJavaModule()) {
     ReconstructAliasGroups();
   }
+  UnionNextLevelOfAliasOst();
   CreateClassSets();
   if (enabledDebug) {
     DumpClassSets();

@@ -1186,7 +1186,7 @@ void BinaryMplImport::ReadTypeField() {
     }
   } else {
     for (int64 i = 0; i < size; ++i) {
-      ImportTypeNonJava();
+      (void)ImportTypeNonJava();
     }
   }
   int64 tag = 0;

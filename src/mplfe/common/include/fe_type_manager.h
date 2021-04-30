@@ -144,6 +144,8 @@ class FETypeManager {
       const StructElemNameIdx &argStructElemNameIdx, MIRSrcLang argSrcLang, bool isStatic);
   FEStructElemInfo *RegisterStructMethodInfo(
       const StructElemNameIdx &argStructElemNameIdx, MIRSrcLang argSrcLang, bool isStatic);
+  FEStructElemInfo *RegisterStructMethodInfoC(
+      const std::string &name, MIRSrcLang argSrcLang, bool isStatic);
   FEStructElemInfo *GetStructElemInfo(const GStrIdx &fullNameIdx) const;
 
   // ---------- methods for MIRFunction ----------

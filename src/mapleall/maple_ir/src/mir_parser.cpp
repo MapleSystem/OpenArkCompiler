@@ -2664,7 +2664,8 @@ bool MIRParser::ParseConstAddrLeafExpr(MIRConstPtr &cexpr) {
       }
       lexer.NextToken();
     }
-    cexpr = mod.GetMemPool()->New<MIRAddrofConst>(anode->GetStIdx(), anode->GetFieldID(), *exprTy, ofst);
+    cexpr = mod.CurFunction()->GetDataMemPool()->New<MIRAddrofConst>(
+        anode->GetStIdx(), anode->GetFieldID(), *exprTy, ofst);
   } else if (expr->GetOpCode() == OP_addroffunc) {
     auto *aof = static_cast<AddroffuncNode*>(expr);
     MIRFunction *f = GlobalTables::GetFunctionTable().GetFunctionFromPuidx(aof->GetPUIdx());
@@ -2673,11 +2674,14 @@ bool MIRParser::ParseConstAddrLeafExpr(MIRConstPtr &cexpr) {
     MIRPtrType ptrType(ptyIdx);
     ptyIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&ptrType);
     MIRType *exprTy = GlobalTables::GetTypeTable().GetTypeFromTyIdx(ptyIdx);
-    cexpr = mod.GetMemPool()->New<MIRAddroffuncConst>(aof->GetPUIdx(), *exprTy);
+    cexpr = mod.CurFunction()->GetDataMemPool()->New<MIRAddroffuncConst>(aof->GetPUIdx(), *exprTy);
   } else if (expr->op == OP_addroflabel) {
     AddroflabelNode *aol = static_cast<AddroflabelNode *>(expr);
     MIRType *mirtype = GlobalTables::GetTypeTable().GetTypeFromTyIdx(TyIdx(PTY_ptr));
-    cexpr = mod.GetMemPool()->New<MIRLblConst>(aol->GetOffset(), mod.CurFunction()->GetPuidx(), *mirtype);
+    // func code mempool will be released after irmap, but MIRLblConst won't be passed to me ir.
+    // So MIRLblConst can NOT be allocated in func code mempool.
+    cexpr = mod.CurFunction()->GetDataMemPool()->New<MIRLblConst>(
+        aol->GetOffset(), mod.CurFunction()->GetPuidx(), *mirtype);
   } else if (expr->GetOpCode() == OP_conststr) {
     auto *cs = static_cast<ConststrNode*>(expr);
     UStrIdx stridx = cs->GetStrIdx();

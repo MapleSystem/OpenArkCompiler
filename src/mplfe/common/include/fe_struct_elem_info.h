@@ -208,12 +208,20 @@ class FEStructMethodInfo : public FEStructElemInfo {
     return retType;
   }
 
+  void SetReturnType(FEIRType *type) {
+    retType = type;
+  }
+
   const FEIRType *GetOwnerType() const {
     return ownerType;
   }
 
   const MapleVector<FEIRType*> &GetArgTypes() const {
     return argTypes;
+  }
+
+  void SetArgTypes(const MapleVector<FEIRType*> &argTypesIn) {
+    argTypes = argTypesIn;
   }
 
  LLT_PROTECTED:
@@ -223,6 +231,7 @@ class FEStructMethodInfo : public FEStructElemInfo {
   void LoadMethodType();
   void LoadMethodTypeJava();
   void PrepareMethod();
+  void PrepareMethodC();
   void PrepareImplJava(MIRBuilder &mirBuilder, bool argIsStatic);
   bool SearchStructMethodJava(MIRStructType &structType, MIRBuilder &mirBuilder, bool argIsStatic,
                               bool allowPrivate = true);
