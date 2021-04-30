@@ -762,14 +762,32 @@ bool AArch64Ebo::SpecialSequence(Insn &insn, const MapleVector<OpndInfo*> &origI
             auto &res1 = static_cast<RegOperand&>(insn1->GetOperand(kInsnFirstOpnd));
             if (RegistersIdentical(res1, *op1) && RegistersIdentical(res1, res2) &&
                 (GetOpndInfo(base2, -1) != nullptr) && !GetOpndInfo(base2, -1)->redefined) {
-              immVal = imm0Val + imm1.GetValue() +
-                       static_cast<int64>(static_cast<uint64>(immOpnd2.GetValue()) << kMaxImmVal12Bits);
+              if (beforeRegAlloc) {
+                immVal = imm0Val + imm1.GetValue() +
+                         static_cast<int64>(static_cast<uint64>(immOpnd2.GetValue()) << kMaxImmVal12Bits);
+              } else if (RegistersIdentical(res2, base2)) {
+                if (RegistersIdentical(insn1->GetOperand(0), insn1->GetOperand(1))) {
+                  return false;
+                } else {
+                  immVal = imm0Val + imm1.GetValue() +
+                           static_cast<int64>(static_cast<uint64>(immOpnd2.GetValue()) << kMaxImmVal12Bits);
+                }
+              } else {
+                immVal = imm0Val + imm1.GetValue() +
+                           static_cast<int64>(static_cast<uint64>(immOpnd2.GetValue()) << kMaxImmVal12Bits);
+              }
               op1 = &base2;
             } else {
               return false;
             }
           } else {
-            immVal = imm0Val + imm1.GetValue();
+            if (beforeRegAlloc) {
+              immVal = imm0Val + imm1.GetValue();
+            } else if (RegistersIdentical(insn1->GetOperand(0), insn1->GetOperand(1))) {
+              immVal = imm0Val;
+            } else {
+              immVal = imm0Val + imm1.GetValue();
+            }
           }
 
           /* multiple of 4 and 8 */
