@@ -34,17 +34,19 @@ struct LoopDesc {
   LoopDesc *parent;  // points to its closest nesting loop
   uint32 nestDepth;  // the nesting depth
   bool hasTryBB = false;
+  bool hasIgotoBB = false; // backedge is construted by igoto
   bool isCanonicalLoop = false;
   LoopDesc(MapleAllocator &mapleAllocator, BB *headBB, BB *tailBB)
       : alloc(&mapleAllocator), head(headBB), tail(tailBB), preheader(nullptr), latch(nullptr),
-        inloopBB2exitBBs(alloc->Adapter()), loopBBs(alloc->Adapter()), parent(nullptr), nestDepth(0), hasTryBB(false) {}
+        inloopBB2exitBBs(alloc->Adapter()), loopBBs(alloc->Adapter()), parent(nullptr), nestDepth(0), hasTryBB(false),
+        hasIgotoBB(false) {}
 
   bool Has(const BB &bb) const {
     return loopBBs.find(bb.GetBBId()) != loopBBs.end();
   }
 
   bool IsNormalizationLoop() const {
-    if (!hasTryBB && preheader != nullptr && !inloopBB2exitBBs.empty()) {
+    if (!hasTryBB && !hasIgotoBB && preheader != nullptr && !inloopBB2exitBBs.empty()) {
       return true;
     }
     return false;
@@ -82,6 +84,14 @@ struct LoopDesc {
 
   bool HasTryBB() const {
     return hasTryBB;
+  }
+
+  void SetHasIGotoBB(bool has) {
+    hasIgotoBB = has;
+  }
+
+  bool HasIGotoBB() const {
+    return hasIgotoBB;
   }
 
   void SetIsCanonicalLoop(bool is) {
@@ -123,6 +133,7 @@ class IdentifyLoops : public AnalysisResult {
   void Dump() const;
   bool ProcessPreheaderAndLatch(LoopDesc &loop);
   void SetTryBB();
+  void SetIGotoBB(); // check loop is constructed by igoto
 
  private:
   MemPool *meLoopMemPool;

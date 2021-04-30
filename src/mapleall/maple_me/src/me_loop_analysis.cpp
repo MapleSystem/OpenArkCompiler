@@ -160,6 +160,18 @@ void IdentifyLoops::SetTryBB() {
   }
 }
 
+// check loop is constructed by igoto
+void IdentifyLoops::SetIGotoBB() {
+  const MapleUnorderedSet<LabelIdx> &addrTakenLabels = func.GetMirFunc()->GetLabelTab()->GetAddrTakenLabels();
+  for (auto loop : meLoops) {
+    auto bb = loop->head;
+    ASSERT(bb->GetBBLabel() != 0, "loop header should has label");
+    if (addrTakenLabels.find(bb->GetBBLabel()) != addrTakenLabels.end()) {
+      loop->SetHasIGotoBB(true);
+    }
+  }
+}
+
 bool IdentifyLoops::ProcessPreheaderAndLatch(LoopDesc &loop) {
   // If predsize of head is one, it means that one is entry bb.
   if (loop.head->GetPred().size() == 1) {
@@ -213,8 +225,9 @@ AnalysisResult *MeDoMeLoop::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResu
   IdentifyLoops *identLoops = meLoopMp->New<IdentifyLoops>(meLoopMp, *func, dom);
   identLoops->ProcessBB(func->GetCommonEntryBB());
   identLoops->SetTryBB();
+  identLoops->SetIGotoBB();
   for (auto loop : identLoops->GetMeLoops()) {
-    if (loop->HasTryBB()) {
+    if (loop->HasTryBB() || loop->HasIGotoBB()) {
       continue;
     }
     if (!identLoops->ProcessPreheaderAndLatch(*loop)) {
