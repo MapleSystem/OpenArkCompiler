@@ -91,7 +91,7 @@ RegMeExpr *SSARename2Preg::RenameVar(const VarMeExpr *varmeexpr) {
         reg_formal_vec[parmindex] = curtemp;
       }
     }
-    rename2pregCount++;
+    ++rename2pregCount;
     if (DEBUGFUNC(func)) {
       ost->Dump();
       LogInfo::MapleLogger() << "(ost idx " << ost->GetIndex() << ") renamed to ";

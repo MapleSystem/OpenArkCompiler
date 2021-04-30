@@ -370,6 +370,9 @@ AnalysisResult *MeDoStorePre::Run(MeFunction *func, MeFuncResultMgr *m, ModuleRe
   ASSERT(aliasClass != nullptr, "aliasClass phase has problem");
   auto *meIrMap = static_cast<MeIRMap*>(m->GetAnalysisResult(MeFuncPhase_IRMAPBUILD, func));
   CHECK_FATAL(meIrMap != nullptr, "irmap phase has problem");
+  if (!meIrMap->GetMIRModule().IsCModule()) {
+    return nullptr;
+  }
   MeStorePre storePre(*func, *dom, *aliasClass, *NewMemPool(), DEBUGFUNC(func));
   storePre.ApplySSUPre();
   if (DEBUGFUNC(func)) {

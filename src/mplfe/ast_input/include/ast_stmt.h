@@ -454,6 +454,17 @@ class ASTCallExprStmt : public ASTStmt {
 
  private:
   std::list<UniqueFEIRStmt> Emit2FEStmtImpl() const override;
+  std::list<UniqueFEIRStmt> Emit2FEStmtCall() const;
+  std::list<UniqueFEIRStmt> Emit2FEStmtICall() const;
+};
+
+class ASTAtomicExprStmt : public ASTStmt {
+ public:
+  ASTAtomicExprStmt() : ASTStmt(kASTStmtAtomicExpr) {}
+  ~ASTAtomicExprStmt() override = default;
+
+ private:
+  std::list<UniqueFEIRStmt> Emit2FEStmtImpl() const override;
 };
 }  // namespace maple
 #endif // MPLFE_AST_INPUT_INCLUDE_AST_STMT_H

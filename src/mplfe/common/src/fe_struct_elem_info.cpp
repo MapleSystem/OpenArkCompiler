@@ -248,7 +248,8 @@ void FEStructMethodInfo::PrepareImpl(MIRBuilder &mirBuilder, bool argIsStatic) {
       PrepareImplJava(mirBuilder, argIsStatic);
       break;
     case kSrcLangC:
-      break;
+      PrepareMethodC();
+      return;
     default:
       CHECK_FATAL(false, "unsupported src lang");
   }
@@ -318,6 +319,23 @@ void FEStructMethodInfo::LoadMethodTypeJava() {
   // owner type
   ownerType = allocator.GetMemPool()->New<FEIRTypeDefault>(PTY_unknown);
   static_cast<FEIRTypeDefault*>(ownerType)->LoadFromJavaTypeName(GetStructName(), true);
+}
+
+void FEStructMethodInfo::PrepareMethodC() {
+  mirFunc = FEManager::GetTypeManager().GetMIRFunction(methodNameIdx, isStatic);
+  if (mirFunc == nullptr) {
+    // This branch should not be used for C languages, and mirFunc must not be nullptr.
+    MIRType *mirRetType = retType->GenerateMIRTypeAuto(srcLang);
+    bool isVarg = false; // need to update
+    std::vector<TyIdx> argsTypeIdx;
+    for (const FEIRType *argType : argTypes) {
+      MIRType *mirArgType = argType->GenerateMIRTypeAuto(srcLang);
+      argsTypeIdx.push_back(mirArgType->GetTypeIndex());
+    }
+    mirFunc = FEManager::GetTypeManager().CreateFunction(methodNameIdx, mirRetType->GetTypeIndex(),
+                                                         argsTypeIdx, isVarg, isStatic);
+  }
+  isPrepared = true;
 }
 
 void FEStructMethodInfo::PrepareMethod() {

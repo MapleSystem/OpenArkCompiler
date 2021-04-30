@@ -47,7 +47,7 @@ UniqueFEIRExpr ASTDeclRefExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts)
 }
 
 // ---------- ASTCallExpr ----------
-UniqueFEIRExpr ASTCallExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
+UniqueFEIRExpr ASTCallExpr::Emit2FEExprCall(std::list<UniqueFEIRStmt> &stmts) const {
   // callassigned &funcName
   StructElemNameIdx *nameIdx = FEManager::GetManager().GetStructElemMempool()->New<StructElemNameIdx>(funcName);
   FEStructMethodInfo *info = static_cast<FEStructMethodInfo*>(
@@ -60,6 +60,8 @@ UniqueFEIRExpr ASTCallExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) co
     callStmt->AddExprArgReverse(std::move(expr));
   }
   // return
+  FEIRTypeNative *retTypeInfo = FEManager::GetManager().GetModule().GetMemPool()->New<FEIRTypeNative>(*retType);
+  info->SetReturnType(retTypeInfo);
   if (retType->GetPrimType() != PTY_void) {
     const std::string &varName = FEUtils::GetSequentialName("retVar_");
     UniqueFEIRVar var = FEIRBuilder::CreateVarNameForC(varName, *retType, false, false);
@@ -68,7 +70,35 @@ UniqueFEIRExpr ASTCallExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) co
     stmts.emplace_back(std::move(callStmt));
     return FEIRBuilder::CreateExprDRead(std::move(dreadVar));
   }
+  stmts.emplace_back(std::move(callStmt));
   return nullptr;
+}
+
+UniqueFEIRExpr ASTCallExpr::Emit2FEExprICall(std::list<UniqueFEIRStmt> &stmts) const {
+  std::unique_ptr<FEIRStmtICallAssign> icallStmt = std::make_unique<FEIRStmtICallAssign>();
+  CHECK_NULL_FATAL(calleeExpr);
+  // args
+  UniqueFEIRExpr expr = calleeExpr->Emit2FEExpr(stmts);
+  icallStmt->AddExprArgReverse(std::move(expr));
+  // return
+  if (retType->GetPrimType() != PTY_void) {
+    const std::string &varName = FEUtils::GetSequentialName("retVar_");
+    UniqueFEIRVar var = FEIRBuilder::CreateVarNameForC(varName, *retType, false, false);
+    UniqueFEIRVar dreadVar = var->Clone();
+    icallStmt->SetVar(std::move(var));
+    stmts.emplace_back(std::move(icallStmt));
+    return FEIRBuilder::CreateExprDRead(std::move(dreadVar));
+  }
+  stmts.emplace_back(std::move(icallStmt));
+  return nullptr;
+}
+
+UniqueFEIRExpr ASTCallExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
+  if (isIcall) {
+    return Emit2FEExprICall(stmts);
+  } else {
+    return Emit2FEExprCall(stmts);
+  }
 }
 
 // ---------- ASTImplicitCastExpr ----------
@@ -756,12 +786,25 @@ UniqueFEIRExpr ASTDependentScopeDeclRefExpr::Emit2FEExprImpl(std::list<UniqueFEI
 
 // ---------- ASTAtomicExpr ----------
 UniqueFEIRExpr ASTAtomicExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
-  UniqueFEIRExpr atomicExpr = std::make_unique<FEIRExprAtomic>(type, refType, objExpr->Emit2FEExpr(stmts),
-                                                               valExpr1->Emit2FEExpr(stmts),
-                                                               valExpr2->Emit2FEExpr(stmts),
-                                                               atomicOp);
-  static_cast<FEIRExprAtomic*>(atomicExpr.get())->SetVal1Type(val1Type);
-  static_cast<FEIRExprAtomic*>(atomicExpr.get())->SetVal2Type(val2Type);
+  auto atomicExpr = std::make_unique<FEIRExprAtomic>(type, refType, objExpr->Emit2FEExpr(stmts), atomicOp);
+  if (atomicOp != kAtomicOpLoad) {
+    static_cast<FEIRExprAtomic*>(atomicExpr.get())->SetVal1Expr(valExpr1->Emit2FEExpr(stmts));
+    static_cast<FEIRExprAtomic*>(atomicExpr.get())->SetVal1Type(val1Type);
+  }
+
+  if (atomicOp == kAtomicOpCompareExchange) {
+    static_cast<FEIRExprAtomic*>(atomicExpr.get())->SetVal2Expr(valExpr2->Emit2FEExpr(stmts));
+    static_cast<FEIRExprAtomic*>(atomicExpr.get())->SetVal2Type(val2Type);
+  }
+  auto lock = FEIRBuilder::CreateVarNameForC(FEUtils::GetSequentialName("lockVar"), *type, false, false);
+  auto var = FEIRBuilder::CreateVarNameForC(FEUtils::GetSequentialName("valueVar"), *refType, false, false);
+  atomicExpr->SetLockVar(lock->Clone());
+  atomicExpr->SetValVar(var->Clone());
+  if (!isFromStmt) {
+    auto stmt = std::make_unique<FEIRStmtAtomic>(std::move(atomicExpr));
+    stmts.emplace_back(std::move(stmt));
+    return FEIRBuilder::CreateExprDRead(var->Clone());
+  }
   return atomicExpr;
 }
 }

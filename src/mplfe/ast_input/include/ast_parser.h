@@ -75,6 +75,7 @@ class ASTParser {
   ASTStmt *PROCESS_STMT(NullStmt);
   ASTStmt *PROCESS_STMT(CStyleCastExpr);
   ASTStmt *PROCESS_STMT(DeclStmt);
+  ASTStmt *PROCESS_STMT(AtomicExpr);
   bool HasDefault(const clang::Stmt &stmt);
 
   // ProcessExpr

@@ -165,6 +165,7 @@ class AliasClass : public AnalysisResult {
   bool AliasAccordingToFieldID(const OriginalSt &ostA, const OriginalSt &ostB);
   void ReconstructAliasGroups();
   void CollectNotAllDefsSeenAes();
+  void UnionNextLevelOfAliasOst();
   void CreateClassSets();
   void DumpClassSets();
   void InsertMayDefUseCall(StmtNode &stmt, BBId bbid, bool hasSideEffect, bool hasNoPrivateDefEffect);

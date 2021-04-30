@@ -619,13 +619,24 @@ class ASTCallExpr : public ASTExpr {
     return funcName;
   }
 
+  void SetIcall(bool icall) {
+    isIcall = icall;
+  }
+
+  bool IsIcall() const {
+    return isIcall;
+  }
+
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
+  UniqueFEIRExpr Emit2FEExprCall(std::list<UniqueFEIRStmt> &stmts) const;
+  UniqueFEIRExpr Emit2FEExprICall(std::list<UniqueFEIRStmt> &stmts) const;
 
   std::vector<ASTExpr*> args;
   ASTExpr *calleeExpr = nullptr;
   MIRType *retType = nullptr;
   std::string funcName;
+  bool isIcall = false;
 };
 
 class ASTParenExpr : public ASTExpr {
@@ -996,6 +1007,13 @@ class ASTAtomicExpr : public ASTExpr {
     val2Type = ty;
   }
 
+  void SetFromStmt(bool fromStmt) {
+    isFromStmt = fromStmt;
+  }
+
+  bool IsFromStmt() const {
+    return isFromStmt;
+  }
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   MIRType *type = nullptr;
@@ -1006,6 +1024,7 @@ class ASTAtomicExpr : public ASTExpr {
   ASTExpr *valExpr1 = nullptr;
   ASTExpr *valExpr2 = nullptr;
   ASTAtomicOp atomicOp;
+  bool isFromStmt = false;
 };
 }
 #endif //MPLFE_AST_INPUT_INCLUDE_AST_EXPR_H

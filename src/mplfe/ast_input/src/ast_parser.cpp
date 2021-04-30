@@ -121,6 +121,7 @@ ASTStmt *ASTParser::ProcessStmt(MapleAllocator &allocator, const clang::Stmt &st
     STMT_CASE(CStyleCastExpr);
     STMT_CASE(DeclStmt);
     STMT_CASE(NullStmt);
+    STMT_CASE(AtomicExpr);
     default:
       return nullptr;
   }
@@ -263,6 +264,18 @@ ASTStmt *ASTParser::ProcessStmtCompoundAssignOperator(MapleAllocator &allocator,
   }
   astCAOStmt->SetASTExpr(astExpr);
   return astCAOStmt;
+}
+
+ASTStmt *ASTParser::ProcessStmtAtomicExpr(MapleAllocator &allocator, const clang::AtomicExpr &atomicExpr) {
+  ASTAtomicExprStmt *astAtomicExprStmt = ASTDeclsBuilder::ASTStmtBuilder<ASTAtomicExprStmt>(allocator);
+  CHECK_FATAL(astAtomicExprStmt != nullptr, "astAtomicExprStmt is nullptr");
+  ASTExpr *astExpr = ProcessExpr(allocator, &atomicExpr);
+  if (astExpr == nullptr) {
+    return nullptr;
+  }
+  static_cast<ASTAtomicExpr*>(astExpr)->SetFromStmt(true);
+  astAtomicExprStmt->SetASTExpr(astExpr);
+  return astAtomicExprStmt;
 }
 
 ASTStmt *ASTParser::ProcessStmtReturnStmt(MapleAllocator &allocator, const clang::ReturnStmt &retStmt) {
@@ -1034,7 +1047,7 @@ ASTExpr *ASTParser::ProcessExprCallExpr(MapleAllocator &allocator, const clang::
     }
     astCallExpr->SetFuncName(funcName);
   } else {
-    CHECK_FATAL(false, "funcDecl is nullptr NYI.");
+    astCallExpr->SetIcall(true);
   }
   return astCallExpr;
 }
@@ -1275,10 +1288,11 @@ ASTExpr *ASTParser::ProcessExprAtomicExpr(MapleAllocator &allocator,
   astExpr->SetObjExpr(ProcessExpr(allocator, atomicExpr.getPtr()));
   astExpr->SetType(astFile->CvtType(atomicExpr.getPtr()->getType()));
   astExpr->SetRefType(astFile->CvtType(atomicExpr.getPtr()->getType()->getPointeeType()));
-  astExpr->SetValExpr1(ProcessExpr(allocator, atomicExpr.getVal1()));
-  astExpr->SetValExpr2(ProcessExpr(allocator, atomicExpr.getVal2()));
-  astExpr->SetVal1Type(astFile->CvtType(atomicExpr.getVal1()->getType()));
-  astExpr->SetVal2Type(astFile->CvtType(atomicExpr.getVal2()->getType()));
+  if (atomicExpr.getOp() != clang::AtomicExpr::AO__atomic_load_n &&
+      atomicExpr.getOp() != clang::AtomicExpr::AO__c11_atomic_load) {
+    astExpr->SetValExpr1(ProcessExpr(allocator, atomicExpr.getVal1()));
+    astExpr->SetVal1Type(astFile->CvtType(atomicExpr.getVal1()->getType()));
+  }
   switch (atomicExpr.getOp()) {
     case clang::AtomicExpr::AO__atomic_add_fetch:
     case clang::AtomicExpr::AO__atomic_fetch_add:
@@ -1318,6 +1332,8 @@ ASTExpr *ASTParser::ProcessExprAtomicExpr(MapleAllocator &allocator,
     case clang::AtomicExpr::AO__atomic_compare_exchange_n:
     case clang::AtomicExpr::AO__c11_atomic_compare_exchange_weak:
     case clang::AtomicExpr::AO__c11_atomic_compare_exchange_strong:
+      astExpr->SetValExpr2(ProcessExpr(allocator, atomicExpr.getVal2()));
+      astExpr->SetVal2Type(astFile->CvtType(atomicExpr.getVal2()->getType()));
       astExpr->SetAtomicOp(kAtomicOpCompareExchange);
       break;
     default:
