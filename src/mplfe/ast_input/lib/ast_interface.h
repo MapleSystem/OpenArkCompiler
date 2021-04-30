@@ -22,6 +22,7 @@
 #include "mpl_logging.h"
 
 namespace maple {
+using Pos = std::pair<uint32, uint32>;
 enum AccessKind {
   kPublic,
   kProtected,
@@ -73,6 +74,8 @@ class LibAstFile {
   const clang::ASTContext *GetContext() {
     return astContext;
   }
+
+  Pos GetDeclPosInfo(const clang::Decl &decl);
 
  private:
   using RecordDeclMap = std::map<TyIdx, const clang::RecordDecl*>;

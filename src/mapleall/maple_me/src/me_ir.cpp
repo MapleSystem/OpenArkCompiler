@@ -577,7 +577,20 @@ bool ConstMeExpr::GtZero() const {
 }
 
 bool ConstMeExpr::IsZero() const {
-  return (GetIntValue() == 0);
+  if (constVal->GetKind() == kConstInt) {
+    auto *intConst = safe_cast<MIRIntConst>(constVal);
+    CHECK_NULL_FATAL(intConst);
+    return (intConst->GetValue() == 0);
+  } else if (constVal->GetKind() == kConstFloatConst) {
+    auto *floatConst = safe_cast<MIRFloatConst>(constVal);
+    CHECK_NULL_FATAL(floatConst);
+    return (floatConst->GetIntValue() == 0);
+  } else if (constVal->GetKind() == kConstDoubleConst) {
+    auto *doubleConst = safe_cast<MIRDoubleConst>(constVal);
+    CHECK_NULL_FATAL(doubleConst);
+    return (doubleConst->GetIntValue() == 0);
+  }
+  return false;
 }
 
 bool ConstMeExpr::IsOne() const {

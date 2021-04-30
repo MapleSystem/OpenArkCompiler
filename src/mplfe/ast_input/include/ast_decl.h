@@ -23,6 +23,7 @@
 #include "fe_function.h"
 
 namespace maple {
+using Pos = std::pair<uint32, uint32>;
 class ASTDecl {
  public:
   ASTDecl(const std::string &srcFile, const std::string &nameIn, const std::vector<MIRType*> &typeDescIn)
@@ -43,17 +44,33 @@ class ASTDecl {
     return isGlobalDecl;
   }
 
+  void SetIsParam(bool flag) {
+    isParam = flag;
+  }
+
+  bool IsParam() const {
+    return isParam;
+  }
+
   void GenerateInitStmt(std::list<UniqueFEIRStmt> &stmts) {
     return GenerateInitStmtImpl(stmts);
   }
 
+  void SetDeclPos(Pos p) {
+    pos = p;
+  }
+
+  std::string GenerateUniqueVarName();
+
  protected:
   virtual void GenerateInitStmtImpl(std::list<UniqueFEIRStmt> &stmts) {}
   bool isGlobalDecl;
+  bool isParam = false;
   const std::string srcFileName;
   std::string name;
   std::vector<MIRType*> typeDesc;
   GenericAttrs genAttrs;
+  Pos pos = { 0, 0 };
 };
 
 class ASTField : public ASTDecl {

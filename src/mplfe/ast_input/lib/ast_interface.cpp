@@ -69,6 +69,12 @@ std::string LibAstFile::GetMangledName(const clang::NamedDecl &decl) {
   return mangledName;
 }
 
+Pos LibAstFile::GetDeclPosInfo(const clang::Decl &decl) {
+  clang::FullSourceLoc fullLocation = astContext->getFullLoc(decl.getBeginLoc());
+  return std::make_pair(static_cast<uint32>(fullLocation.getSpellingLineNumber()),
+                        static_cast<uint32>(fullLocation.getSpellingColumnNumber()));
+}
+
 void LibAstFile::GetCVRAttrs(uint32_t qualifiers, GenericAttrs &genAttrs) {
   if (qualifiers & clang::Qualifiers::Const) {
     genAttrs.SetAttr(GENATTR_const);

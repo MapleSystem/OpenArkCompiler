@@ -715,6 +715,16 @@ ArrayNode *MIRBuilder::CreateExprArray(const MIRType &arrayType, BaseNode *op1, 
   return arrayNode;
 }
 
+ArrayNode *MIRBuilder::CreateExprArray(const MIRType &arrayType, std::vector<BaseNode *> ops) {
+  MIRType *addrType = GlobalTables::GetTypeTable().GetOrCreatePointerType(arrayType);
+  ASSERT(addrType != nullptr, "addrType is null");
+  auto *arrayNode = GetCurrentFuncCodeMp()->New<ArrayNode>(*GetCurrentFuncCodeMpAllocator(),
+                                                           addrType->GetPrimType(), addrType->GetTypeIndex());
+  arrayNode->GetNopnd().insert(arrayNode->GetNopnd().begin(), ops.begin(), ops.end());
+  arrayNode->SetNumOpnds(ops.size());
+  return arrayNode;
+}
+
 IntrinsicopNode *MIRBuilder::CreateExprIntrinsicop(MIRIntrinsicID idx, Opcode opCode, const MIRType &type,
                                                    const MapleVector<BaseNode*> &ops) {
   auto *expr =

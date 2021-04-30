@@ -24,6 +24,10 @@ static MplOption kMeDefaultOptionsO0[] = {
 static MplOption kMpl2MplDefaultOptionsO0[] = {
 #include "default/O0_options_mpl2mpl.def"
 };
+// O0 mpl2mpl options for C language
+static MplOption kMpl2MplDefaultOptionsO0ForC[] = {
+#include "default/O0_options_mpl2mpl_c.def"
+};
 // O0 mplcg options
 static MplOption kMplcgDefaultOptionsO0[] = {
 #include "default/O0_options_mplcg.def"
@@ -35,6 +39,10 @@ static MplOption kMeDefaultOptionsO2[] = {
 // O2 mpl2mpl options
 static MplOption kMpl2MplDefaultOptionsO2[] = {
 #include "default/O2_options_mpl2mpl.def"
+};
+// O2 mpl2mpl options for C language
+static MplOption kMpl2MplDefaultOptionsO2ForC[] = {
+#include "default/O2_options_mpl2mpl_c.def"
 };
 // O2 mplcg options
 static MplOption kMplcgDefaultOptionsO2[] = {

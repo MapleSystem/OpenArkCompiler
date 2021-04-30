@@ -33,10 +33,22 @@ const std::vector<MIRType*> &ASTDecl::GetTypeDesc() const {
   return typeDesc;
 }
 
+std::string ASTDecl::GenerateUniqueVarName() {
+  // add `_line_column` suffix for avoiding local var name conflict
+  if (isGlobalDecl || isParam) {
+    return name;
+  } else {
+    return name + "_" + std::to_string(pos.first) + "_" + std::to_string(pos.second);
+  }
+}
+
 // ---------- ASTVar ----------
 std::unique_ptr<FEIRVar> ASTVar::Translate2FEIRVar() {
   CHECK_FATAL(typeDesc.size() == 1, "Invalid ASTVar");
-  return std::make_unique<FEIRVarName>(name, std::make_unique<FEIRTypeNative>(*(typeDesc[0])));
+  auto feirVar =
+      std::make_unique<FEIRVarName>(GenerateUniqueVarName(), std::make_unique<FEIRTypeNative>(*(typeDesc[0])));
+  feirVar->SetGlobal(isGlobalDecl);
+  return feirVar;
 }
 
 void ASTVar::GenerateInitStmtImpl(std::list<UniqueFEIRStmt> &stmts) {

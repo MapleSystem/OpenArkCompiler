@@ -555,6 +555,14 @@ class MemOperand : public Operand {
     return kNotVary;
   }
 
+  void SetAccessSize(uint8 size) {
+    accessSize = size;
+  }
+
+  uint8 GetAccessSize() const {
+    return accessSize;
+  }
+
   bool Less(const Operand &right) const override = 0;
 
   MemOperand(uint32 size, const MIRSymbol &mirSymbol)
@@ -591,6 +599,7 @@ class MemOperand : public Operand {
   Operand *scaleOpnd = nullptr;
   const MIRSymbol *symbol;  /* AddrMode_Literal */
   uint32 memoryOrder = 0;
+  uint8 accessSize = 0;  /* temp, must be set right before use everytime. */
 };
 
 class LabelOperand : public Operand {

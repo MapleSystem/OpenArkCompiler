@@ -1125,6 +1125,9 @@ InlineResult MInline::AnalyzeCallsite(const MIRFunction &caller, MIRFunction &ca
   if (!FuncInlinable(callee)) {
     return InlineResult(false, "ATTR");
   }
+  if (!callee.GetLabelTab()->GetAddrTakenLabels().empty()) {
+    return InlineResult(false, "ADDR_TAKEN_LABELS");
+  }
   // For inlineList function.
   if (inlineListCallee.find(calleeStrIdx) != inlineListCallee.end()) {
     auto callerList = inlineListCallee[calleeStrIdx];

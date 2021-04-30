@@ -163,6 +163,8 @@ class AArch64Insn : public Insn {
 
   bool CheckRefField(size_t opndIndex, bool isEmit) const;
 
+  uint8 GetLoadStoreSize() const;
+
  private:
   void CheckOpnd(Operand &opnd, OpndProp &mopd) const;
   void EmitClinit(const CG&, Emitter&) const;

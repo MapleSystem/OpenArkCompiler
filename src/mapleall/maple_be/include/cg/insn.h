@@ -285,6 +285,10 @@ class Insn {
     return false;
   }
 
+  virtual bool NoOverlap() const {
+    return false;
+  }
+
   virtual bool IsVolatile() const {
     return false;
   }

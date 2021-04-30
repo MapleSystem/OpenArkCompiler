@@ -430,6 +430,7 @@ bool ControlFlowInInfiniteLoop(const BB &bb, Opcode opcode) {
   switch (opcode) {
     // goto always return true
     case OP_goto:
+    case OP_igoto:
       return true;
     case OP_brtrue:
     case OP_brfalse:

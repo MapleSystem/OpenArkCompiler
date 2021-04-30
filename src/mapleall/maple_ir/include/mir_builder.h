@@ -213,6 +213,7 @@ class MIRBuilder {
   ArrayNode *CreateExprArray(const MIRType &arrayType);
   ArrayNode *CreateExprArray(const MIRType &arrayType, BaseNode *op);
   ArrayNode *CreateExprArray(const MIRType &arrayType, BaseNode *op1, BaseNode *op2);
+  ArrayNode *CreateExprArray(const MIRType &arrayType, std::vector<BaseNode *> ops);
   IntrinsicopNode *CreateExprIntrinsicop(MIRIntrinsicID idx, Opcode opcode, const MIRType &type,
                                          const MapleVector<BaseNode*> &ops);
   // for creating Statement.

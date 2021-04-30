@@ -739,6 +739,8 @@ class AArch64MemOperand : public MemOperand {
 
   bool NoAlias(AArch64MemOperand &rightOpnd) const;
 
+  bool NoOverlap(const AArch64MemOperand &rightOpnd) const;
+
   VaryType GetMemVaryType() override {
     Operand *ofstOpnd = GetOffsetOperand();
     if (ofstOpnd != nullptr) {

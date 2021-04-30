@@ -408,6 +408,7 @@ void AArch64DepAnalysis::BuildDepsUseMem(Insn &insn, MemOperand &memOpnd) {
   AArch64MemOperand &aarchMemOpnd = static_cast<AArch64MemOperand&>(memOpnd);
   AArch64MemOperand *nextMemOpnd = GetNextMemOperand(insn, aarchMemOpnd);
 
+  memOpnd.SetAccessSize(static_cast<AArch64Insn &>(insn).GetLoadStoreSize());
   /* Stack memory address */
   for (auto defInsn : stackDefs) {
     if (defInsn->IsCall() || NeedBuildDepsMem(aarchMemOpnd, nextMemOpnd, *defInsn)) {
@@ -434,6 +435,11 @@ bool AArch64DepAnalysis::NeedBuildDepsMem(const AArch64MemOperand &memOpnd, cons
   if (!memOpnd.NoAlias(*memOpndOfmemInsn) || ((nextMemOpnd != nullptr) && !nextMemOpnd->NoAlias(*memOpndOfmemInsn))) {
     return true;
   }
+  if (cgFunc.GetMirModule().GetSrcLang() == kSrcLangC && memInsn.IsCall() == false) {
+    static_cast<MemOperand*>(memInsn.GetMemOpnd())->SetAccessSize(
+        static_cast<AArch64Insn&>(memInsn).GetLoadStoreSize());
+    return (memOpnd.NoOverlap(*memOpndOfmemInsn) == false);
+  }
   AArch64MemOperand *nextMemOpndOfmemInsn = GetNextMemOperand(memInsn, *memOpndOfmemInsn);
   if (nextMemOpndOfmemInsn != nullptr) {
     if (!memOpnd.NoAlias(*nextMemOpndOfmemInsn) ||
@@ -450,8 +456,9 @@ bool AArch64DepAnalysis::NeedBuildDepsMem(const AArch64MemOperand &memOpnd, cons
  * memOpnd     : insn's memOpnd
  * nextMemOpnd : some memory pair operator instruction (like ldp/stp) defines two memory.
  */
-void AArch64DepAnalysis::BuildAntiDepsDefStackMem(Insn &insn, const AArch64MemOperand &memOpnd,
+void AArch64DepAnalysis::BuildAntiDepsDefStackMem(Insn &insn, AArch64MemOperand &memOpnd,
                                                   const AArch64MemOperand *nextMemOpnd) {
+  memOpnd.SetAccessSize(static_cast<AArch64Insn &>(insn).GetLoadStoreSize());
   for (auto *useInsn : stackUses) {
     if (NeedBuildDepsMem(memOpnd, nextMemOpnd, *useInsn)) {
       AddDependence(*useInsn->GetDepNode(), *insn.GetDepNode(), kDependenceTypeAnti);
@@ -465,8 +472,9 @@ void AArch64DepAnalysis::BuildAntiDepsDefStackMem(Insn &insn, const AArch64MemOp
  * memOpnd     : insn's memOpnd
  * nextMemOpnd : some memory pair operator instruction (like ldp/stp) defines two memory.
  */
-void AArch64DepAnalysis::BuildOutputDepsDefStackMem(Insn &insn, const AArch64MemOperand &memOpnd,
+void AArch64DepAnalysis::BuildOutputDepsDefStackMem(Insn &insn, AArch64MemOperand &memOpnd,
                                                     const AArch64MemOperand *nextMemOpnd) {
+  memOpnd.SetAccessSize(static_cast<AArch64Insn &>(insn).GetLoadStoreSize());
   for (auto defInsn : stackDefs) {
     if (defInsn->IsCall() || NeedBuildDepsMem(memOpnd, nextMemOpnd, *defInsn)) {
       AddDependence(*defInsn->GetDepNode(), *insn.GetDepNode(), kDependenceTypeOutput);
