@@ -490,6 +490,23 @@ bool AArch64MemOperand::NoAlias(AArch64MemOperand &rightOpnd) const {
   return false;
 }
 
+bool AArch64MemOperand::NoOverlap(const AArch64MemOperand &rightOpnd) const {
+  if (addrMode != kAddrModeBOi || rightOpnd.addrMode != kAddrModeBOi || idxOpt != kIntact ||
+      rightOpnd.idxOpt != kIntact) {
+    return false;
+  }
+  if (GetBaseRegister()->GetRegisterNumber() != RFP || rightOpnd.GetBaseRegister()->GetRegisterNumber() != RFP) {
+    return false;
+  }
+  int64 ofset1 = GetOffsetOperand()->GetValue();
+  int64 ofset2 = rightOpnd.GetOffsetOperand()->GetValue();
+  if (ofset1 < ofset2) {
+    return ((ofset1 + GetAccessSize()) <= ofset2);
+  } else {
+    return ((ofset2 + rightOpnd.GetAccessSize()) <= ofset1);
+  }
+}
+
 /* sort the register operand according to their number */
 void AArch64ListOperand::Emit(Emitter &emitter, const OpndProp *opndProp) const {
   (void)opndProp;

@@ -197,7 +197,15 @@ IvarMeExpr *IRMap::BuildLHSIvar(MeExpr &baseAddr, PrimType primType, const TyIdx
 }
 
 IvarMeExpr *IRMap::BuildLHSIvar(MeExpr &baseAddr, IassignMeStmt &iassignMeStmt, FieldID fieldID) {
-  auto *meDef = New<IvarMeExpr>(exprID++, iassignMeStmt.GetRHS()->GetPrimType(), iassignMeStmt.GetTyIdx(), fieldID);
+  MIRType *ptrMIRType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(iassignMeStmt.GetTyIdx());
+  auto *realMIRType = static_cast<MIRPtrType*>(ptrMIRType);
+  MIRType *ty = nullptr;
+  if (fieldID > 0) {
+    ty = GlobalTables::GetTypeTable().GetTypeFromTyIdx(realMIRType->GetPointedTyIdxWithFieldID(fieldID));
+  } else {
+    ty = realMIRType->GetPointedType();
+  }
+  auto *meDef = New<IvarMeExpr>(exprID++, ty->GetPrimType(), iassignMeStmt.GetTyIdx(), fieldID);
   meDef->SetBase(&baseAddr);
   meDef->SetDefStmt(&iassignMeStmt);
   PutToBucket(meDef->GetHashIndex() % mapHashLength, *meDef);

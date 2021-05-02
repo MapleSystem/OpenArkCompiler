@@ -33,6 +33,14 @@ class ASTExpr {
     mirType = type;
   }
 
+  void SetASTDecl(ASTDecl *astDecl) {
+    refedDecl = astDecl;
+  }
+
+  ASTDecl *GetASTDecl() const {
+    return refedDecl;
+  }
+
   ASTOp GetASTOp() {
     return op;
   }
@@ -40,7 +48,8 @@ class ASTExpr {
  protected:
   virtual UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const = 0;
   ASTOp op;
-  MIRType *mirType;
+  MIRType *mirType = nullptr;
+  ASTDecl *refedDecl = nullptr;
 };
 
 class ASTImplicitCastExpr : public ASTExpr {
@@ -69,15 +78,9 @@ class ASTDeclRefExpr : public ASTExpr {
  public:
   ASTDeclRefExpr() : ASTExpr(kASTOpRef) {}
   ~ASTDeclRefExpr() = default;
-  void SetASTDecl(ASTDecl *astDecl);
-
-  ASTDecl *GetASTDecl() const {
-    return var;
-  }
 
  protected:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
-  ASTDecl *var = nullptr;
 };
 
 class ASTUnaryOperatorExpr : public ASTExpr {
@@ -86,13 +89,6 @@ class ASTUnaryOperatorExpr : public ASTExpr {
   ~ASTUnaryOperatorExpr() = default;
   void SetUOExpr(ASTExpr*);
   void SetSubType(MIRType *type);
-  void SetRefName(std::string name) {
-    refName = name;
-  }
-
-  std::string GetRefName() {
-    return refName;
-  }
 
   MIRType *GetMIRType() {
     return subType;
@@ -127,7 +123,6 @@ class ASTUnaryOperatorExpr : public ASTExpr {
   ASTExpr *expr = nullptr;
   MIRType *subType;
   MIRType *uoType;
-  std::string refName;
   int64 pointeeLen;
 };
 
@@ -338,6 +333,8 @@ class ASTInitListExpr : public ASTExpr {
 
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
+  void Emit2FEExprForArray(std::list<UniqueFEIRStmt> &stmts) const;
+  void Emit2FEExprForStruct(std::list<UniqueFEIRStmt> &stmts) const;
   std::vector<ASTExpr*> fillers;
   MIRType *initListType;
   std::string varName;
@@ -446,14 +443,22 @@ class ASTArraySubscriptExpr : public ASTExpr {
     baseExpr = astExpr;
   }
 
+  ASTExpr *GetBaseExpr() const {
+    return baseExpr;
+  }
+
   void SetIdxExpr(ASTExpr *astExpr) {
-    idxExpr = astExpr;
+    idxExprs.push_back(astExpr);
+  }
+
+  std::vector<ASTExpr*> GetIdxExpr() const {
+    return idxExprs;
   }
 
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   ASTExpr *baseExpr;
-  ASTExpr *idxExpr;
+  std::vector<ASTExpr*> idxExprs;
 };
 
 class ASTExprUnaryExprOrTypeTraitExpr : public ASTExpr {

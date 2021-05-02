@@ -218,6 +218,13 @@ bool Prop::Propagatable(const MeExpr &expr, const BB &fromBB, bool atParm) const
       }
       break;
     }
+    case kMeOpConststr:
+    case kMeOpConststr16: {
+      if (mirModule.IsCModule()) {
+        return false;
+      }
+      break;
+    }
     default:
       break;
   }

@@ -1889,6 +1889,14 @@ bool MIRParser::ParseFunction(uint32 fileIdx) {
     Error("bad function attribute in function declaration at ");
     return false;
   }
+  if (funcSymbol != nullptr && funcSymbol->GetSKind() == kStFunc &&
+      funcSymbol->IsNeedForwDecl() == true && !funcSymbol->GetFunction()->GetBody()) {
+    SetSrcPos(funcSymbol->GetSrcPosition(), lexer.GetLineNum());
+    // when parsing func in mplt_inline file, set it as tmpunused.
+    if (options & kParseInlineFuncBody) {
+      funcSymbol->SetIsTmpUnused(true);
+    }
+  }
   if (funcSymbol != nullptr) {
     // there has been an earlier forward declaration, so check consistency
     if (funcSymbol->GetStorageClass() != kScText || funcSymbol->GetSKind() != kStFunc) {
@@ -2449,6 +2457,12 @@ bool MIRParser::ParseMIRForVar() {
       if (prevSt->GetStorageClass() == kScExtern) {
         prevSt->SetStorageClass(st.GetStorageClass());
       }
+    } else if (prevSt->GetSKind() == maple::kStVar && prevSt->GetStorageClass() ==  maple::kScInvalid) {
+      prevSt->SetStorageClass(kScGlobal);
+      prevSt->SetAttrs(st.GetAttrs());
+      prevSt->SetNameStrIdx(st.GetNameStrIdx());
+      prevSt->SetValue(st.GetValue());
+      SetSrcPos(prevSt->GetSrcPosition(), lexer.GetLineNum());
     }
   } else {  // seeing the first time
     maple::MIRBuilder mirBuilder(&mod);

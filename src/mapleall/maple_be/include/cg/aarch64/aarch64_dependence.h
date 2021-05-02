@@ -49,8 +49,8 @@ class AArch64DepAnalysis : public DepAnalysis {
   bool NeedBuildDepsMem(const AArch64MemOperand &memOpnd, const AArch64MemOperand *nextMemOpnd, Insn &memInsn) const;
   void BuildDepsUseMem(Insn &insn, MemOperand &memOpnd) override;
   void BuildDepsDefMem(Insn &insn, MemOperand &memOpnd) override;
-  void BuildAntiDepsDefStackMem(Insn &insn, const AArch64MemOperand &memOpnd, const AArch64MemOperand *nextMemOpnd);
-  void BuildOutputDepsDefStackMem(Insn &insn, const AArch64MemOperand &memOpnd, const AArch64MemOperand *nextMemOpnd);
+  void BuildAntiDepsDefStackMem(Insn &insn, AArch64MemOperand &memOpnd, const AArch64MemOperand *nextMemOpnd);
+  void BuildOutputDepsDefStackMem(Insn &insn, AArch64MemOperand &memOpnd, const AArch64MemOperand *nextMemOpnd);
   void BuildDepsMemBar(Insn &insn) override;
   void BuildDepsSeparator(DepNode &newSepNode, MapleVector<DepNode*> &nodes) override;
   void BuildDepsControlAll(DepNode &depNode, const MapleVector<DepNode*> &nodes) override;

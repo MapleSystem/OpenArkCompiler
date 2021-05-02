@@ -856,7 +856,8 @@ class FEIRExprJavaArrayLength : public FEIRExpr {
 // ---------- FEIRExprArrayStoreForC ----------
 class FEIRExprArrayStoreForC : public FEIRExpr {
  public:
-  FEIRExprArrayStoreForC(UniqueFEIRExpr argExprArray, UniqueFEIRExpr argExprIndex, UniqueFEIRType argTypeNative);
+  FEIRExprArrayStoreForC(UniqueFEIRExpr argExprArray, std::stack<uint64> argIndexs,
+                         UniqueFEIRType argTypeNative);
   ~FEIRExprArrayStoreForC() = default;
 
   FEIRExpr &GetExprArray() const {
@@ -864,9 +865,9 @@ class FEIRExprArrayStoreForC : public FEIRExpr {
     return *exprArray.get();
   }
 
-  FEIRExpr &GetExprIndex() const {
-    ASSERT(exprIndex != nullptr, "exprIndex is nullptr");
-    return *exprIndex.get();
+  std::stack<uint64> GetIndexs() const {
+    ASSERT(!indexs.empty(), "exprIndex is nullptr");
+    return indexs;
   }
 
   FEIRType &GetTypeArray() const {
@@ -880,7 +881,7 @@ class FEIRExprArrayStoreForC : public FEIRExpr {
 
  private:
   UniqueFEIRExpr exprArray;
-  UniqueFEIRExpr exprIndex;
+  mutable std::stack<uint64> indexs;
   UniqueFEIRType typeNative;
 };
 
@@ -1667,6 +1668,13 @@ class FEIRStmtArrayStore : public FEIRStmt {
  public:
   FEIRStmtArrayStore(UniqueFEIRExpr argExprElem, UniqueFEIRExpr argExprArray, UniqueFEIRExpr argExprIndex,
                      UniqueFEIRType argTypeArray);
+  // for C mul array
+  FEIRStmtArrayStore(UniqueFEIRExpr argExprElem, UniqueFEIRExpr argExprArray, UniqueFEIRExpr argExprIndex,
+                     UniqueFEIRType argTypeArray, UniqueFEIRType argTypeElem);
+  // for C mul array
+  FEIRStmtArrayStore(UniqueFEIRExpr argExprElem, UniqueFEIRExpr argExprArray, std::stack<uint64> argIndexs,
+                     UniqueFEIRType argTypeArray);
+
   ~FEIRStmtArrayStore() = default;
 
  protected:
@@ -1675,12 +1683,17 @@ class FEIRStmtArrayStore : public FEIRStmt {
   bool CalculateDefs4AllUsesImpl(FEIRStmtCheckPoint &checkPoint, FEIRUseDefChain &udChain) override;
   void InitTrans4AllVarsImpl() override;
   std::list<StmtNode*> GenMIRStmtsImpl(MIRBuilder &mirBuilder) const override;
+  void GenMIRStmtsImplForCPart(MIRBuilder &mirBuilder, MIRType *ptrMIRArrayType, MIRType **mIRElemType,
+                               BaseNode **arrayExpr) const;
 
  private:
   UniqueFEIRExpr exprElem;
   UniqueFEIRExpr exprArray;
   UniqueFEIRExpr exprIndex;
+  // for C mul array
+  mutable std::stack<uint64> indexs;
   UniqueFEIRType typeArray;
+  mutable UniqueFEIRType typeElem = nullptr;
 };
 
 // ---------- FEIRStmtFieldStore ----------

@@ -81,6 +81,8 @@ class FEIRBuilder {
   static UniqueFEIRExpr CreateExprJavaArrayLength(UniqueFEIRExpr exprArray);
   static UniqueFEIRExpr CreateExprArrayStoreForC(UniqueFEIRExpr argExprArray, UniqueFEIRExpr argExprIndex,
                                                  UniqueFEIRType argTypeNative);
+  static UniqueFEIRExpr CreateExprArrayStoreForC(UniqueFEIRExpr argExprArray, std::stack<uint64> argIndexs,
+                                                 UniqueFEIRType argTypeNative);
   // Stmt
   static UniqueFEIRStmt CreateStmtDAssign(UniqueFEIRVar dstVar, UniqueFEIRExpr srcExpr, bool hasException = false);
   static UniqueFEIRStmt CreateStmtGoto(uint32 targetLabelIdx);
@@ -106,6 +108,9 @@ class FEIRBuilder {
                                                     UniqueFEIRExpr exprIndex);
   static UniqueFEIRStmt CreateStmtArrayStoreOneStmtForC(UniqueFEIRExpr exprElem, UniqueFEIRExpr exprArray,
                                                         UniqueFEIRExpr exprIndex, UniqueFEIRType arrayType);
+  static UniqueFEIRStmt CreateStmtArrayStoreOneStmtForC(UniqueFEIRExpr exprElem, UniqueFEIRExpr exprArray,
+                                                        UniqueFEIRExpr exprIndex, UniqueFEIRType arrayType,
+                                                        UniqueFEIRType elemType);
   static std::list<UniqueFEIRStmt> CreateStmtArrayLoad(UniqueFEIRVar varElem, UniqueFEIRVar varArray,
                                                        UniqueFEIRVar varIndex);
   static UniqueFEIRStmt CreateStmtArrayLength(UniqueFEIRVar varLength, UniqueFEIRVar varArray);

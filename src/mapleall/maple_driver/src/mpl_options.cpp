@@ -342,7 +342,12 @@ ErrorCode MplOptions::AppendCombOptions(MIRSrcLang srcLang) {
       ret = AppendDefaultOptions(kBinNameMpl2mpl, kMpl2MplDefaultOptionsO0,
                                  sizeof(kMpl2MplDefaultOptionsO0) / sizeof(MplOption));
       UpdatePhaseOption(mpl2mplOptArgs, kBinNameMpl2mpl);
+    } else {
+      ret = AppendDefaultOptions(kBinNameMpl2mpl, kMpl2MplDefaultOptionsO0ForC,
+                                 sizeof(kMpl2MplDefaultOptionsO0ForC) / sizeof(MplOption));
+      UpdatePhaseOption(mpl2mplOptArgs, kBinNameMpl2mpl);
     }
+
     if (ret != kErrorNoError) {
       return ret;
     }
@@ -354,6 +359,10 @@ ErrorCode MplOptions::AppendCombOptions(MIRSrcLang srcLang) {
     if (srcLang != kSrcLangC) {
       ret = AppendDefaultOptions(kBinNameMpl2mpl, kMpl2MplDefaultOptionsO2,
                                  sizeof(kMpl2MplDefaultOptionsO2) / sizeof(MplOption));
+      UpdatePhaseOption(mpl2mplOptArgs, kBinNameMpl2mpl);
+    } else {
+      ret = AppendDefaultOptions(kBinNameMpl2mpl, kMpl2MplDefaultOptionsO2ForC,
+                                 sizeof(kMpl2MplDefaultOptionsO2ForC) / sizeof(MplOption));
       UpdatePhaseOption(mpl2mplOptArgs, kBinNameMpl2mpl);
     }
     if (ret != kErrorNoError) {

@@ -281,9 +281,10 @@ void MeDoLoopCanon::FindHeadBBs(MeFunction &func, Dominance &dom, const BB *bb) 
       hasTry = true;
     }
   }
-  // backedge is constructed by igoto 
+  // backedge is constructed by igoto
   if (bb->GetBBLabel() != 0) {
-    const MapleUnorderedSet<LabelIdx> &addrTakenLabels = func.GetMirFunc()->GetLabelTab()->GetAddrTakenLabels();
+    const MapleUnorderedSet<LabelIdx> &addrTakenLabels =
+        func.GetMirFunc()->GetLabelTab()->GetAddrTakenLabels();
     if (addrTakenLabels.find(bb->GetBBLabel()) != addrTakenLabels.end()) {
       hasIgoto = true;
     }

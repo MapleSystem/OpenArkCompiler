@@ -46,4 +46,14 @@ std::string MPLFEUTRegx::RefIndex(uint32 typeIdx) {
   }
   return ss.str();
 }
+
+std::string MPLFEUTRegx::AnyNum(uint32 typeIdx) {
+  std::stringstream ss;
+  if (typeIdx == kAnyNumber) {
+    ss << "[0-9]+";
+  } else {
+    ss << "" << typeIdx;
+  }
+  return ss.str();
+}
 }  // namespace maple
