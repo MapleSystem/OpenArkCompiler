@@ -204,6 +204,7 @@ class Ebo {
   virtual void DefineCallUseSpecialRegister(Insn &insn) = 0;
   virtual void DefineClinitSpecialRegisters(InsnInfo &insnInfo) = 0;
   virtual bool IsMovToSIMDVmov(Insn &insn, const Insn &replaceInsn) const = 0;
+  virtual bool IsPseudoRet(Insn &insn) const = 0;
   virtual bool ChangeLdrMop(Insn &insn, const Operand &opnd) const = 0;
   virtual bool IsAdd(const Insn &insn) const = 0;
   virtual bool IsClinitCheck(const Insn &insn) const = 0;
