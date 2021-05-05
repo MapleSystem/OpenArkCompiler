@@ -50,12 +50,7 @@ class OriginalSt {
     return GlobalTables::GetGsymTable().GetModule()->CurFunction()->GetPregTab()->PregFromPregIdx(symOrPreg.pregIdx);
   }
 
-  const MIRSymbol *GetMIRSymbol() const {
-    ASSERT(ostType == kSymbolOst, "OriginalSt must be SymbolOst");
-    return symOrPreg.mirSt;
-  }
-
-  MIRSymbol *GetMIRSymbol() {
+  MIRSymbol *GetMIRSymbol() const {
     ASSERT(ostType == kSymbolOst, "OriginalSt must be SymbolOst");
     return symOrPreg.mirSt;
   }
@@ -343,7 +338,9 @@ class OriginalStTable {
   MIRModule &mirModule;
   MapleVector<OriginalSt*> originalStVector;  // the vector that map a OriginalSt's index to its pointer
   // mir symbol to original table, this only exists for no-original variables.
+ public:
   MapleUnorderedMap<SymbolFieldPair, OStIdx, HashSymbolFieldPair> mirSt2Ost;
+ private:
   MapleUnorderedMap<PregIdx, OStIdx> preg2Ost;
   // mir type to virtual variables in original table. this only exists for no-original variables.
   MapleMap<TyIdx, OStIdx> pType2Ost;
