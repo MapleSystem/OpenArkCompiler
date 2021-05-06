@@ -61,6 +61,7 @@
 #include "me_emit.h"
 #include "me_rc_lowering.h"
 #include "gen_check_cast.h"
+#include "me_fsaa.h"
 #if MIR_JAVA
 #include "sync_select.h"
 #endif  // MIR_JAVA
