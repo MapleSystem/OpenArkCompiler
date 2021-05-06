@@ -904,6 +904,14 @@ bool AArch64Ebo::IsMovToSIMDVmov(Insn &insn, const Insn &replaceInsn) const {
   return false;
 }
 
+bool AArch64Ebo::IsPseudoRet(Insn &insn) const {
+  MOperator mop = insn.GetMachineOpcode();
+  if (mop == MOP_pseudo_ret_int || mop == MOP_pseudo_ret_float) {
+    return true;
+  }
+  return false;
+}
+
 bool AArch64Ebo::ChangeLdrMop(Insn &insn, const Operand &opnd) const {
   ASSERT(insn.IsLoad(), "expect insn is load in ChangeLdrMop");
   ASSERT(opnd.IsRegister(), "expect opnd is a register in ChangeLdrMop");

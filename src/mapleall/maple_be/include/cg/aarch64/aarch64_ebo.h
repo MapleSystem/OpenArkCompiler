@@ -51,6 +51,7 @@ class AArch64Ebo : public Ebo {
   void DefineClinitSpecialRegisters(InsnInfo &insnInfo) override;
   bool SpecialSequence(Insn &insn, const MapleVector<OpndInfo*> &origInfos) override;
   bool IsMovToSIMDVmov(Insn &insn, const Insn &replaceInsn) const override;
+  bool IsPseudoRet(Insn &insn) const override;
   bool ChangeLdrMop(Insn &insn, const Operand &opnd) const override;
   bool IsAdd(const Insn &insn) const override;
   bool IsFmov(const Insn &insn) const override;
