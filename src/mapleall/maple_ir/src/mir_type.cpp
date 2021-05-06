@@ -572,6 +572,7 @@ void MIRArrayType::Dump(int indent, bool dontUseName) const {
   }
   LogInfo::MapleLogger() << " ";
   GlobalTables::GetTypeTable().GetTypeFromTyIdx(eTyIdx)->Dump(indent + 1);
+  GetTypeAttrs().DumpAttributes();
   LogInfo::MapleLogger() << ">";
 }
 
@@ -1252,7 +1253,7 @@ bool MIRArrayType::EqualTo(const MIRType &type) const {
     return false;
   }
   const auto &pType = static_cast<const MIRArrayType&>(type);
-  if (dim != pType.GetDim() || eTyIdx != pType.GetElemTyIdx()) {
+  if (dim != pType.GetDim() || eTyIdx != pType.GetElemTyIdx() || typeAttrs != pType.GetTypeAttrs()) {
     return false;
   }
   for (size_t i = 0; i < dim; ++i) {
