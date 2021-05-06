@@ -327,7 +327,7 @@ class AArch64CGFunc : public CGFunc {
     return *memPool->New<ExtendShiftOperand>(op, amount, bitLen);
   }
 
-  void SplitMovImmOpndInstruction(int64 immVal, RegOperand &destReg);
+  void SplitMovImmOpndInstruction(int64 immVal, RegOperand &destReg, Insn *curInsn = nullptr);
 
   Operand &GetOrCreateFuncNameOpnd(const MIRSymbol &symbol);
   void GenerateYieldpoint(BB &bb) override;

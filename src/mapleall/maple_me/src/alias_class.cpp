@@ -65,14 +65,14 @@ static bool OpCanFormAddress(Opcode op) {
   return false;
 }
 
-inline bool IsNullOrDummySymbolOst(OriginalSt *ost) {
+inline bool IsNullOrDummySymbolOst(const OriginalSt *ost) {
   if ((ost == nullptr) || (ost && ost->IsSymbolOst() && (ost->GetMIRSymbol()->GetName() == "__nads_dummysym__"))) {
     return true;
   }
   return false;
 }
 
-inline bool OriginalStIsAuto(OriginalSt *ost) {
+inline bool OriginalStIsAuto(const OriginalSt *ost) {
   if (!ost->IsSymbolOst()) {
     return false;
   }
@@ -318,7 +318,8 @@ void AliasClass::ApplyUnionForFieldsInAggCopy(const OriginalSt *lhsost, const Or
       if (!IsPotentialAddress(fieldType->GetPrimType(), &mirModule)) {
         continue;
       }
-      MapleUnorderedMap<SymbolFieldPair, OStIdx, HashSymbolFieldPair> &mirSt2Ost = ssaTab.GetOriginalStTable().mirSt2Ost;
+      MapleUnorderedMap<SymbolFieldPair, OStIdx, HashSymbolFieldPair> &mirSt2Ost =
+          ssaTab.GetOriginalStTable().mirSt2Ost;
       auto lhsit = mirSt2Ost.find(SymbolFieldPair(lhsost->GetMIRSymbol()->GetStIdx(), fieldID));
       auto rhsit = mirSt2Ost.find(SymbolFieldPair(rhsost->GetMIRSymbol()->GetStIdx(), fieldID));
       if (lhsit == mirSt2Ost.end() && rhsit == mirSt2Ost.end()) {
@@ -329,7 +330,8 @@ void AliasClass::ApplyUnionForFieldsInAggCopy(const OriginalSt *lhsost, const Or
       OriginalSt *rhsFieldOst = nullptr;
       if (lhsit == mirSt2Ost.end()) {
         // create a new OriginalSt for lhs field
-        lhsFieldOst = ssaTab.GetOriginalStTable().CreateSymbolOriginalSt(*lhsost->GetMIRSymbol(), lhsost->GetPuIdx(), fieldID);
+        lhsFieldOst = ssaTab.GetOriginalStTable().CreateSymbolOriginalSt(
+            *lhsost->GetMIRSymbol(), lhsost->GetPuIdx(), fieldID);
         osym2Elem.push_back(nullptr);
         ssaTab.GetVersionStTable().CreateZeroVersionSt(lhsFieldOst);
 
@@ -339,7 +341,8 @@ void AliasClass::ApplyUnionForFieldsInAggCopy(const OriginalSt *lhsost, const Or
 
         if (rhsit == mirSt2Ost.end()) {
           // create a new OriginalSt for rhs field
-          rhsFieldOst = ssaTab.GetOriginalStTable().CreateSymbolOriginalSt(*rhsost->GetMIRSymbol(), rhsost->GetPuIdx(), fieldID);
+          rhsFieldOst = ssaTab.GetOriginalStTable().CreateSymbolOriginalSt(
+              *rhsost->GetMIRSymbol(), rhsost->GetPuIdx(), fieldID);
           osym2Elem.push_back(nullptr);
           ssaTab.GetVersionStTable().CreateZeroVersionSt(rhsFieldOst);
         } else {
@@ -360,7 +363,8 @@ void AliasClass::ApplyUnionForFieldsInAggCopy(const OriginalSt *lhsost, const Or
       if (!IsPotentialAddress(fieldType->GetPrimType(), &mirModule)) {
         continue;
       }
-      MapleUnorderedMap<SymbolFieldPair, OStIdx, HashSymbolFieldPair> &mirSt2Ost = ssaTab.GetOriginalStTable().mirSt2Ost;
+      MapleUnorderedMap<SymbolFieldPair, OStIdx, HashSymbolFieldPair> &mirSt2Ost =
+          ssaTab.GetOriginalStTable().mirSt2Ost;
       auto it = mirSt2Ost.find(SymbolFieldPair(lhsost->GetMIRSymbol()->GetStIdx(), fieldID));
       if (it == mirSt2Ost.end()) {
         continue;
@@ -379,7 +383,8 @@ void AliasClass::ApplyUnionForFieldsInAggCopy(const OriginalSt *lhsost, const Or
       if (!IsPotentialAddress(fieldType->GetPrimType(), &mirModule)) {
         continue;
       }
-      MapleUnorderedMap<SymbolFieldPair, OStIdx, HashSymbolFieldPair> &mirSt2Ost = ssaTab.GetOriginalStTable().mirSt2Ost;
+      MapleUnorderedMap<SymbolFieldPair, OStIdx, HashSymbolFieldPair> &mirSt2Ost =
+          ssaTab.GetOriginalStTable().mirSt2Ost;
       auto it = mirSt2Ost.find(SymbolFieldPair(rhsost->GetMIRSymbol()->GetStIdx(), fieldID));
       if (it == mirSt2Ost.end()) {
         continue;

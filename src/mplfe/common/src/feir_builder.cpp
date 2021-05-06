@@ -242,6 +242,14 @@ UniqueFEIRExpr FEIRBuilder::CreateExprCvtPrim(UniqueFEIRExpr srcExpr, PrimType d
   return expr;
 }
 
+UniqueFEIRExpr FEIRBuilder::CreateExprCvtPrim(Opcode argOp, UniqueFEIRExpr srcExpr, PrimType dstType) {
+  UniqueFEIRExpr expr = std::make_unique<FEIRExprTypeCvt>(argOp, std::move(srcExpr));
+  CHECK_NULL_FATAL(expr);
+  FEIRExprTypeCvt *ptrExpr = static_cast<FEIRExprTypeCvt*>(expr.get());
+  ptrExpr->GetType()->SetPrimType(dstType);
+  return expr;
+}
+
 UniqueFEIRExpr FEIRBuilder::CreateExprJavaNewInstance(UniqueFEIRType type) {
   UniqueFEIRExpr expr = std::make_unique<FEIRExprJavaNewInstance>(std::move(type));
   CHECK_NULL_FATAL(expr);

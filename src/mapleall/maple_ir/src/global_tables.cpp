@@ -305,8 +305,7 @@ MIRIntConst *IntConstTable::GetOrCreateIntConst(int64 val, MIRType &type) {
 }
 
 MIRIntConst *IntConstTable::DoGetOrCreateIntConst(int64 val, MIRType &type) {
-  uint64 idid = static_cast<uint64>(type.GetTypeIndex()); // shift bit is 32
-  IntConstKey key(val, idid);
+  IntConstKey key(val, type.GetTypeIndex());
   if (intConstTable.find(key) != intConstTable.end()) {
     return intConstTable[key];
   }
@@ -315,8 +314,7 @@ MIRIntConst *IntConstTable::DoGetOrCreateIntConst(int64 val, MIRType &type) {
 }
 
 MIRIntConst *IntConstTable::DoGetOrCreateIntConstTreadSafe(int64 val, MIRType &type) {
-  uint64 idid = static_cast<uint64>(type.GetTypeIndex()); // shift bit is 32
-  IntConstKey key(val, idid);
+  IntConstKey key(val, type.GetTypeIndex());
   {
     std::shared_lock<std::shared_timed_mutex> lock(mtx);
     if (intConstTable.find(key) != intConstTable.end()) {

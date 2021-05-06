@@ -121,6 +121,7 @@ enum ASTOp {
   kASTOpSubstNonTypeTemplateParm,
   kASTOpDependentScopeDeclRef,
   kASTOpAtomic,
+  kASTOpStmtExpr,
 };
 
 enum ASTStmtOp {

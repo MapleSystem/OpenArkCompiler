@@ -19,6 +19,7 @@
 
 namespace maple {
 class ASTDecl;
+class ASTStmt;
 class ASTExpr {
  public:
   explicit ASTExpr(ASTOp o) : op(o) {}
@@ -69,9 +70,36 @@ class ASTImplicitCastExpr : public ASTExpr {
     return child->GetType();
   }
 
+  void SetSrcType(MIRType *type) {
+    src = type;
+  }
+
+  const MIRType *GetSrcType() const {
+    return src;
+  }
+
+  void SetDstType(MIRType *type) {
+    dst = type;
+  }
+
+  const MIRType *GetDstType() const {
+    return dst;
+  }
+
+  void SetNeededCvt(bool cvt) {
+    isNeededCvt = cvt;
+  }
+
+  bool IsNeededCvt(const UniqueFEIRExpr &expr) const;
+
  protected:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
+
+ private:
   ASTExpr *child = nullptr;
+  MIRType *src = nullptr;
+  MIRType *dst = nullptr;
+  bool isNeededCvt = false;
 };
 
 class ASTDeclRefExpr : public ASTExpr {
@@ -1030,6 +1058,24 @@ class ASTAtomicExpr : public ASTExpr {
   ASTExpr *valExpr2 = nullptr;
   ASTAtomicOp atomicOp;
   bool isFromStmt = false;
+};
+
+class ASTExprStmtExpr : public ASTExpr {
+ public:
+  ASTExprStmtExpr() : ASTExpr(kASTOpStmtExpr) {}
+  ~ASTExprStmtExpr() = default;
+  void SetCompoundStmt(ASTStmt *sub) {
+    cpdStmt = sub;
+  }
+
+  ASTStmt *GetSubExpr() const {
+    return cpdStmt;
+  }
+
+ private:
+  UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
+
+  ASTStmt *cpdStmt = nullptr;
 };
 }
 #endif //MPLFE_AST_INPUT_INCLUDE_AST_EXPR_H
