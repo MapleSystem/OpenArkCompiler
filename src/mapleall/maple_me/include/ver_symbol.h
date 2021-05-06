@@ -57,7 +57,7 @@ class VersionSt {
     defBB = defbb;
   }
 
-  const BB *GetDefBB() const {
+  BB *GetDefBB() const {
     return defBB;
   }
 

@@ -18,6 +18,7 @@
 #include "ver_symbol.h"
 #include "me_ssa.h"
 #include "me_cfg.h"
+#include "me_fsaa.h"
 
 namespace maple {
 void MeDSE::VerifyPhi() const {
@@ -60,7 +61,7 @@ void MeDSE::RunDSE() {
   }
 }
 
-AnalysisResult *MeDoDSE::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) {
+AnalysisResult *MeDoDSE::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr *mrm) {
   CHECK_NULL_FATAL(func);
   auto *postDom = static_cast<Dominance*>(m->GetAnalysisResult(MeFuncPhase_DOMINANCE, func));
   CHECK_NULL_FATAL(postDom);
@@ -71,6 +72,16 @@ AnalysisResult *MeDoDSE::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultM
   if (dse.UpdatedCfg()) {
     m->InvalidAnalysisResult(MeFuncPhase_DOMINANCE, func);
   }
+
+  if (func->GetMIRModule().IsCModule() && MeOption::performFSAA) {
+    /* invoke FSAA */
+    MeDoFSAA doFSAA(MeFuncPhase_FSAA);
+    if (!MeOption::quiet) {
+      LogInfo::MapleLogger() << "  == " << PhaseName() << " invokes [ " << doFSAA.PhaseName() << " ] ==\n";
+    }
+    doFSAA.Run(func, m, mrm);
+  }
+
   return nullptr;
 }
 }  // namespace maple
