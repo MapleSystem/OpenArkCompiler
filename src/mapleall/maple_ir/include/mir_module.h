@@ -295,6 +295,10 @@ class MIRModule {
     return srcLang == kSrcLangC || srcLang == kSrcLangCPlusPlus;
   }
 
+  bool IsCPlusPlusModule() const {
+    return srcLang == kSrcLangCPlusPlus;
+  }
+
   bool IsCharModule() const {
     return srcLang == kSrcLangChar;
   }
