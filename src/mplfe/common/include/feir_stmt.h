@@ -856,7 +856,7 @@ class FEIRExprJavaArrayLength : public FEIRExpr {
 // ---------- FEIRExprArrayStoreForC ----------
 class FEIRExprArrayStoreForC : public FEIRExpr {
  public:
-  FEIRExprArrayStoreForC(UniqueFEIRExpr argExprArray, std::stack<uint64> argIndexs,
+  FEIRExprArrayStoreForC(UniqueFEIRExpr argExprArray, std::list<UniqueFEIRExpr> &argExprIndexs,
                          UniqueFEIRType argTypeNative);
   ~FEIRExprArrayStoreForC() = default;
 
@@ -865,9 +865,13 @@ class FEIRExprArrayStoreForC : public FEIRExpr {
     return *exprArray.get();
   }
 
-  std::stack<uint64> GetIndexs() const {
-    ASSERT(!indexs.empty(), "exprIndex is nullptr");
-    return indexs;
+  std::list<UniqueFEIRExpr> &GetExprIndexs() const {
+    ASSERT(!exprIndexs.empty(), "exprIndex is nullptr");
+    return exprIndexs;
+  }
+
+  void SetIndexsExprs(std::list<UniqueFEIRExpr> &exprs) {
+    std::move(begin(exprs), end(exprs), std::inserter(exprIndexs, end(exprIndexs)));
   }
 
   FEIRType &GetTypeArray() const {
@@ -881,7 +885,7 @@ class FEIRExprArrayStoreForC : public FEIRExpr {
 
  private:
   UniqueFEIRExpr exprArray;
-  mutable std::stack<uint64> indexs;
+  mutable std::list<UniqueFEIRExpr> exprIndexs;
   UniqueFEIRType typeNative;
 };
 
@@ -1672,10 +1676,14 @@ class FEIRStmtArrayStore : public FEIRStmt {
   FEIRStmtArrayStore(UniqueFEIRExpr argExprElem, UniqueFEIRExpr argExprArray, UniqueFEIRExpr argExprIndex,
                      UniqueFEIRType argTypeArray, UniqueFEIRType argTypeElem);
   // for C mul array
-  FEIRStmtArrayStore(UniqueFEIRExpr argExprElem, UniqueFEIRExpr argExprArray, std::stack<uint64> argIndexs,
+  FEIRStmtArrayStore(UniqueFEIRExpr argExprElem, UniqueFEIRExpr argExprArray, std::list<UniqueFEIRExpr> &argExprIndexs,
                      UniqueFEIRType argTypeArray);
 
   ~FEIRStmtArrayStore() = default;
+
+  void SetIndexsExprs(std::list<UniqueFEIRExpr> &exprs) {
+    std::move(begin(exprs), end(exprs), std::inserter(exprIndexs, end(exprIndexs)));
+  }
 
  protected:
   std::string DumpDotStringImpl() const override;
@@ -1691,7 +1699,7 @@ class FEIRStmtArrayStore : public FEIRStmt {
   UniqueFEIRExpr exprArray;
   UniqueFEIRExpr exprIndex;
   // for C mul array
-  mutable std::stack<uint64> indexs;
+  mutable std::list<UniqueFEIRExpr> exprIndexs;
   UniqueFEIRType typeArray;
   mutable UniqueFEIRType typeElem = nullptr;
 };

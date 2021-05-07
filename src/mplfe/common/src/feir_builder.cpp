@@ -294,10 +294,11 @@ UniqueFEIRExpr FEIRBuilder::CreateExprJavaArrayLength(UniqueFEIRExpr exprArray) 
   return expr;
 }
 
-UniqueFEIRExpr FEIRBuilder::CreateExprArrayStoreForC(UniqueFEIRExpr argExprArray, std::stack<uint64> argIndexs,
+UniqueFEIRExpr FEIRBuilder::CreateExprArrayStoreForC(UniqueFEIRExpr argExprArray,
+                                                     std::list<UniqueFEIRExpr> &argExprIndexs,
                                                      UniqueFEIRType argTypeNative) {
-  UniqueFEIRExpr expr = std::make_unique<FEIRExprArrayStoreForC>(std::move(argExprArray), argIndexs,
-                                                                                          std::move(argTypeNative));
+  UniqueFEIRExpr expr = std::make_unique<FEIRExprArrayStoreForC>(std::move(argExprArray), argExprIndexs,
+                                                                 std::move(argTypeNative));
   CHECK_NULL_FATAL(expr);
   return expr;
 }

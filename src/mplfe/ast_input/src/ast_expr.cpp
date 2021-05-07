@@ -552,13 +552,14 @@ UniqueFEIRExpr ASTStringLiteral::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmt
 }
 
 UniqueFEIRExpr ASTArraySubscriptExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
-  std::stack<uint64> idxVals;
+  std::list<UniqueFEIRExpr> indexExprs;
   UniqueFEIRType typeNative = FEIRTypeHelper::CreateTypeNative(*baseExpr->GetType());
   UniqueFEIRExpr baseFEExpr = baseExpr->Emit2FEExpr(stmts);
-  for (auto index : idxExprs) {
-    idxVals.push(static_cast<ASTIntegerLiteral*>(index)->GetVal());
+  for (auto expr : idxExprs) {
+    UniqueFEIRExpr feirExpr = expr->Emit2FEExpr(stmts);
+    indexExprs.emplace_front(std::move(feirExpr));
   }
-  return FEIRBuilder::CreateExprArrayStoreForC(std::move(baseFEExpr), idxVals, std::move(typeNative));
+  return FEIRBuilder::CreateExprArrayStoreForC(std::move(baseFEExpr), indexExprs, std::move(typeNative));
 }
 
 UniqueFEIRExpr ASTExprUnaryExprOrTypeTraitExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
@@ -631,13 +632,13 @@ UniqueFEIRExpr ASTAssignExpr::ProcessAssign(std::list<UniqueFEIRStmt> &stmts, Un
   } else if (leftFEExpr->GetKind() == FEIRNodeKind::kExprArrayStoreForC) {
     auto arrayStoreForC = static_cast<FEIRExprArrayStoreForC*>(leftFEExpr.get());
     FEIRExpr &exprArray = arrayStoreForC->GetExprArray();
-    auto indexs = arrayStoreForC->GetIndexs();
+    std::list<UniqueFEIRExpr> &indexsExpr = arrayStoreForC->GetExprIndexs();
     FEIRType &typeArray = arrayStoreForC->GetTypeArray();
     UniqueFEIRExpr uExprArray = exprArray.Clone();
     UniqueFEIRType uTypeArray = typeArray.Clone();
     UniqueFEIRStmt stmt = std::make_unique<FEIRStmtArrayStore>(std::move(rightFEExpr),
                                                                std::move(uExprArray),
-                                                               indexs,
+                                                               indexsExpr,
                                                                std::move(uTypeArray));
     stmts.emplace_back(std::move(stmt));
   }

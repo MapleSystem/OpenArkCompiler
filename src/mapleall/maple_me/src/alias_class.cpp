@@ -172,9 +172,7 @@ AliasElem *AliasClass::FindOrCreateExtraLevAliasElem(BaseNode &expr, TyIdx tyIdx
     if (ainfo.ae == nullptr) {
       return nullptr;
     }
-  } else if (ainfo.ae == nullptr ||
-             (fieldId && ainfo.ae->GetOriginalSt().GetIndirectLev() != -1 &&
-              ainfo.ae->GetOriginalSt().GetTyIdx() != tyIdx)) {
+  } else if (ainfo.ae == nullptr) {
     return FindOrCreateDummyNADSAe();
   }
   OriginalSt *newOst = nullptr;
@@ -1413,30 +1411,31 @@ void AliasClass::CollectMayDefForIassign(StmtNode &stmt, std::set<OriginalSt*> &
   auto &iassignNode = static_cast<IassignNode&>(stmt);
   AliasInfo baseAinfo = CreateAliasElemsExpr(*iassignNode.Opnd(0));
   AliasElem *lhsAe = nullptr;
-  if (baseAinfo.ae != nullptr &&
-      (!mirModule.IsCModule() ||
-       iassignNode.GetFieldID() == 0 ||
-       baseAinfo.ae->GetOriginalSt().GetIndirectLev() == -1 ||
-       baseAinfo.ae->GetOriginalSt().GetTyIdx() == iassignNode.GetTyIdx())) {
+  if (baseAinfo.ae != nullptr) {
     // get the next-level-ost that will be assigned to
-    FieldID fldOfIass = iassignNode.GetFieldID() + baseAinfo.fieldID;
-    if (mirModule.IsCModule() &&
-        baseAinfo.ae->GetOriginalSt().GetTyIdx() != iassignNode.GetTyIdx()) {
-      fldOfIass = 0;
-    }
-    OriginalSt *lhsOst = nullptr;
-    TyIdx tyIdxOfIass = iassignNode.GetTyIdx();
-    OriginalSt &ostOfBaseExpr = baseAinfo.ae->GetOriginalSt();
-    TyIdx tyIdxOfBaseOSt = ostOfBaseExpr.GetTyIdx();
-    for (OriginalSt *nextLevelNode : *(GetAliasAnalysisTable()->GetNextLevelNodes(ostOfBaseExpr))) {
-      FieldID fldOfNextLevelOSt = nextLevelNode->GetFieldID();
-      if (IsEquivalentField(tyIdxOfIass, fldOfIass, tyIdxOfBaseOSt, fldOfNextLevelOSt)) {
-        lhsOst = nextLevelNode;
-        break;
+    if (mirModule.IsCModule() && baseAinfo.ae->GetOriginalSt().GetTyIdx() != iassignNode.GetTyIdx()) {
+      // in case of type incompatible, set fieldId to zero of the mayDefed virtual-var
+      lhsAe = FindOrCreateExtraLevAliasElem(*iassignNode.Opnd(0), baseAinfo.ae->GetOriginalSt().GetTyIdx(), 0);
+    } else if (!mirModule.IsCModule() || iassignNode.GetFieldID() == 0 ||
+               baseAinfo.ae->GetOriginalSt().GetIndirectLev() == -1 ||
+               baseAinfo.ae->GetOriginalSt().GetTyIdx() == iassignNode.GetTyIdx()) {
+      OriginalSt *lhsOst = nullptr;
+      TyIdx tyIdxOfIass = iassignNode.GetTyIdx();
+      OriginalSt &ostOfBaseExpr = baseAinfo.ae->GetOriginalSt();
+      TyIdx tyIdxOfBaseOSt = ostOfBaseExpr.GetTyIdx();
+      FieldID fldOfIass = iassignNode.GetFieldID() + baseAinfo.fieldID;
+      for (OriginalSt *nextLevelNode : *(GetAliasAnalysisTable()->GetNextLevelNodes(ostOfBaseExpr))) {
+        FieldID fldOfNextLevelOSt = nextLevelNode->GetFieldID();
+        if (IsEquivalentField(tyIdxOfIass, fldOfIass, tyIdxOfBaseOSt, fldOfNextLevelOSt)) {
+          lhsOst = nextLevelNode;
+          break;
+        }
       }
+      CHECK_FATAL(lhsOst != nullptr, "AliasClass::InsertMayUseExpr: cannot find next level ost");
+      lhsAe = osym2Elem[lhsOst->GetIndex()];
+    } else {
+      lhsAe = FindOrCreateDummyNADSAe();
     }
-    CHECK_FATAL(lhsOst != nullptr, "AliasClass::InsertMayUseExpr: cannot find next level ost");
-    lhsAe = osym2Elem[lhsOst->GetIndex()];
   } else {
     lhsAe = FindOrCreateDummyNADSAe();
   }

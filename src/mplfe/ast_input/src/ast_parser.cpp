@@ -294,17 +294,19 @@ ASTStmt *ASTParser::ProcessStmtIfStmt(MapleAllocator &allocator, const clang::If
     return nullptr;
   }
   astStmt->SetCondExpr(astExpr);
-  ASTStmt *thenStmt = ProcessStmtCompoundStmt(allocator, *llvm::cast<clang::CompoundStmt>(ifStmt.getThen()));
-  if (thenStmt == nullptr) {
-    return nullptr;
+  ASTStmt *astThenStmt = nullptr;
+  const clang::Stmt *thenStmt = ifStmt.getThen();
+  if (thenStmt->getStmtClass() == clang::Stmt::CompoundStmtClass) {
+    astThenStmt = ProcessStmtCompoundStmt(allocator, *llvm::cast<clang::CompoundStmt>(thenStmt));
   }
-  astStmt->SetThenStmt(thenStmt);
+  astStmt->SetThenStmt(astThenStmt);
   if (ifStmt.hasElseStorage()) {
-    ASTStmt *elseStmt = ProcessStmtCompoundStmt(allocator, *llvm::cast<clang::CompoundStmt>(ifStmt.getElse()));
-    if (elseStmt == nullptr) {
-      return nullptr;
+    ASTStmt *astElseStmt = nullptr;
+    const clang::Stmt *elseStmt = ifStmt.getElse();
+    if (elseStmt->getStmtClass() == clang::Stmt::CompoundStmtClass) {
+      astElseStmt = ProcessStmtCompoundStmt(allocator, *llvm::cast<clang::CompoundStmt>(elseStmt));
     }
-    astStmt->SetElseStmt(elseStmt);
+    astStmt->SetElseStmt(astElseStmt);
   }
   return astStmt;
 }
@@ -333,9 +335,12 @@ ASTStmt *ASTParser::ProcessStmtForStmt(MapleAllocator &allocator, const clang::F
     }
     astStmt->SetIncExpr(incExpr);
   }
-  ASTStmt *bodyStmt = ProcessStmtCompoundStmt(allocator, *llvm::cast<clang::CompoundStmt>(forStmt.getBody()));
-  if (bodyStmt == nullptr) {
-    return nullptr;
+  ASTStmt *bodyStmt = nullptr;
+  if (llvm::isa<clang::CompoundStmt>(forStmt.getBody())) {
+    const auto *tmpCpdStmt = llvm::cast<clang::CompoundStmt>(forStmt.getBody());
+    bodyStmt = ProcessStmtCompoundStmt(allocator, *tmpCpdStmt);
+  } else {
+    bodyStmt = ProcessStmt(allocator, *forStmt.getBody());
   }
   astStmt->SetBodyStmt(bodyStmt);
   return astStmt;
@@ -349,9 +354,12 @@ ASTStmt *ASTParser::ProcessStmtWhileStmt(MapleAllocator &allocator, const clang:
     return nullptr;
   }
   astStmt->SetCondExpr(condExpr);
-  ASTStmt *bodyStmt = ProcessStmtCompoundStmt(allocator, *llvm::cast<clang::CompoundStmt>(whileStmt.getBody()));
-  if (bodyStmt == nullptr) {
-    return nullptr;
+  ASTStmt *bodyStmt = nullptr;
+  if (llvm::isa<clang::CompoundStmt>(whileStmt.getBody())) {
+    const auto *tmpCpdStmt = llvm::cast<clang::CompoundStmt>(whileStmt.getBody());
+    bodyStmt = ProcessStmtCompoundStmt(allocator, *tmpCpdStmt);
+  } else {
+    bodyStmt = ProcessStmt(allocator, *whileStmt.getBody());
   }
   astStmt->SetBodyStmt(bodyStmt);
   return astStmt;
@@ -415,9 +423,9 @@ ASTStmt *ASTParser::ProcessStmtDoStmt(MapleAllocator &allocator, const clang::Do
     return nullptr;
   }
   astStmt->SetCondExpr(condExpr);
-  ASTStmt *bodyStmt = ProcessStmtCompoundStmt(allocator, *llvm::cast<clang::CompoundStmt>(doStmt.getBody()));
-  if (bodyStmt == nullptr) {
-    return nullptr;
+  ASTStmt *bodyStmt = nullptr;
+  if (doStmt.getBody()->getStmtClass() == clang::Stmt::CompoundStmtClass) {
+    bodyStmt = ProcessStmtCompoundStmt(allocator, *llvm::cast<clang::CompoundStmt>(doStmt.getBody()));
   }
   astStmt->SetBodyStmt(bodyStmt);
   return astStmt;
