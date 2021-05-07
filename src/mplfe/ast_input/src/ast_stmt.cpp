@@ -346,9 +346,7 @@ std::list<UniqueFEIRStmt> ASTCharacterLiteralStmt::Emit2FEStmtImpl() const {
 
 // ---------- ASTStmtExprStmt ----------
 std::list<UniqueFEIRStmt> ASTStmtExprStmt::Emit2FEStmtImpl() const {
-  CHECK_FATAL(false, "NYI");
-  std::list<UniqueFEIRStmt> stmts;
-  return stmts;
+  return cpdStmt->Emit2FEStmt();
 }
 
 // ---------- ASTCStyleCastExprStmt ----------

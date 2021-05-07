@@ -1213,8 +1213,8 @@ class GraphColorRegAllocator : public AArch64RegAllocator {
   RegOperand *GetReplaceOpndForLRA(Insn &insn, const Operand &opnd, uint32 &spillIdx, uint64 &usedRegMask, bool isDef);
   RegOperand *GetReplaceOpnd(Insn &insn, const Operand &opnd, uint32 &spillIdx, uint64 &usedRegMask, bool isDef);
   void MarkCalleeSaveRegs();
-  void MarkUsedRegs(Operand &opnd, BBAssignInfo *bbInfo, uint64 &usedRegMask);
-  uint64 FinalizeRegisterPreprocess(BBAssignInfo *bbInfo, FinalizeRegisterInfo &fInfo, Insn &insn);
+  void MarkUsedRegs(Operand &opnd, uint64 &usedRegMask);
+  uint64 FinalizeRegisterPreprocess(FinalizeRegisterInfo &fInfo, Insn &insn);
   void FinalizeRegisters();
 
   MapleVector<LiveRange*>::iterator GetHighPriorityLr(MapleVector<LiveRange*> &lrSet) const;

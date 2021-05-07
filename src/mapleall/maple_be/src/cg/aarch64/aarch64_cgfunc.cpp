@@ -535,7 +535,7 @@ bool AArch64CGFunc::IsStoreMop(MOperator mOp) const {
   }
 }
 
-void AArch64CGFunc::SplitMovImmOpndInstruction(int64 immVal, RegOperand &destReg) {
+void AArch64CGFunc::SplitMovImmOpndInstruction(int64 immVal, RegOperand &destReg, Insn *curInsn) {
   bool useMovz = BetterUseMOVZ(immVal);
   bool useMovk = false;
   /* get lower 32 bits of the immediate */
@@ -550,6 +550,7 @@ void AArch64CGFunc::SplitMovImmOpndInstruction(int64 immVal, RegOperand &destReg
   }
 
   uint64 sa = 0;
+  auto *bb = (curInsn != nullptr) ? curInsn->GetBB() : GetCurBB();
   for (int64 i = 0 ; i < maxLoopTime; ++i, sa += k16BitSize) {
     /* create an imm opereand which represents the i-th 16-bit chunk of the immediate */
     uint64 chunkVal = (static_cast<uint64>(immVal) >> sa) & 0x0000FFFFULL;
@@ -558,16 +559,22 @@ void AArch64CGFunc::SplitMovImmOpndInstruction(int64 immVal, RegOperand &destReg
     }
     ImmOperand &src16 = CreateImmOperand(chunkVal, k16BitSize, false);
     LogicalShiftLeftOperand *lslOpnd = GetLogicalShiftLeftOperand(sa, true);
+    Insn *newInsn = nullptr;
     if (!useMovk) {
       /* use movz or movn */
       if (!useMovz) {
         src16.BitwiseNegate();
       }
       MOperator mOpCode = useMovz ? MOP_xmovzri16 : MOP_xmovnri16;
-      GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(mOpCode, destReg, src16, *lslOpnd));
+      newInsn = &GetCG()->BuildInstruction<AArch64Insn>(mOpCode, destReg, src16, *lslOpnd);
       useMovk = true;
     } else {
-      GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xmovkri16, destReg, src16, *lslOpnd));
+      newInsn = &GetCG()->BuildInstruction<AArch64Insn>(MOP_xmovkri16, destReg, src16, *lslOpnd);
+    }
+    if (curInsn != nullptr) {
+      bb->InsertInsnBefore(*curInsn, *newInsn);
+    } else {
+      bb->AppendInsn(*newInsn);
     }
   }
 
@@ -575,7 +582,11 @@ void AArch64CGFunc::SplitMovImmOpndInstruction(int64 immVal, RegOperand &destReg
     /* copy lower 32 bits to higher 32 bits */
     AArch64ImmOperand &immOpnd = CreateImmOperand(k32BitSize, k8BitSize, false);
     Insn &insn = GetCG()->BuildInstruction<AArch64Insn>(MPO_xbfirri6i6, destReg, destReg, immOpnd, immOpnd);
-    GetCurBB()->AppendInsn(insn);
+    if (curInsn != nullptr) {
+      bb->InsertInsnBefore(*curInsn, insn);
+    } else {
+      bb->AppendInsn(insn);
+    }
   }
 }
 

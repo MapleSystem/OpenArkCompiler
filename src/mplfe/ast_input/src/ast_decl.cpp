@@ -56,7 +56,14 @@ void ASTVar::GenerateInitStmtImpl(std::list<UniqueFEIRStmt> &stmts) {
     UniqueFEIRVar feirVar = Translate2FEIRVar();
     UniqueFEIRExpr expr = GetInitExpr()->Emit2FEExpr(stmts);
     if (expr != nullptr) { // InitListExpr array not emit here
-      UniqueFEIRStmt stmt = FEIRBuilder::CreateStmtDAssign(std::move(feirVar), std::move(expr));
+      PrimType srcPrimType = expr->GetPrimType();
+      UniqueFEIRStmt stmt;
+      if (srcPrimType != feirVar->GetType()->GetPrimType() && srcPrimType != PTY_agg && srcPrimType != PTY_void) {
+        UniqueFEIRExpr cvtExpr = FEIRBuilder::CreateExprCvtPrim(std::move(expr), feirVar->GetType()->GetPrimType());
+        stmt = FEIRBuilder::CreateStmtDAssign(std::move(feirVar), std::move(cvtExpr));
+      } else {
+        stmt = FEIRBuilder::CreateStmtDAssign(std::move(feirVar), std::move(expr));
+      }
       stmts.emplace_back(std::move(stmt));
     }
   }

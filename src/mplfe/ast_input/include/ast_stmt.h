@@ -30,6 +30,14 @@ class ASTStmt {
     return Emit2FEStmtImpl();
   }
 
+  ASTStmtOp GetASTStmtOp() const {
+    return op;
+  }
+
+  const std::vector<ASTExpr*> &GetExprs() const {
+    return exprs;
+  }
+
  protected:
   virtual std::list<UniqueFEIRStmt> Emit2FEStmtImpl() const = 0;
   ASTStmtOp op;
@@ -434,8 +442,14 @@ class ASTStmtExprStmt : public ASTStmt {
   ASTStmtExprStmt() : ASTStmt(kASTStmtStmtExpr) {}
   ~ASTStmtExprStmt() override = default;
 
+  void SetBodyStmt(ASTStmt *stmt) {
+    cpdStmt = stmt;
+  }
+
  private:
   std::list<UniqueFEIRStmt> Emit2FEStmtImpl() const override;
+
+  ASTStmt *cpdStmt = nullptr;
 };
 
 class ASTCStyleCastExprStmt : public ASTStmt {

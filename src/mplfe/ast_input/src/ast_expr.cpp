@@ -21,6 +21,7 @@
 #include "fe_utils_ast.h"
 #include "feir_type_helper.h"
 #include "fe_manager.h"
+#include "ast_stmt.h"
 
 namespace maple {
 // ---------- ASTExpr ----------
@@ -103,7 +104,18 @@ UniqueFEIRExpr ASTImplicitCastExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &s
   const ASTExpr *childExpr = child;
   CHECK_FATAL(childExpr != nullptr, "childExpr is nullptr");
   UniqueFEIRExpr feirImplicitCastExpr = childExpr->Emit2FEExpr(stmts);
+  if (IsNeededCvt(feirImplicitCastExpr)) {
+    return FEIRBuilder::CreateExprCvtPrim(std::move(feirImplicitCastExpr), dst->GetPrimType());
+  }
   return feirImplicitCastExpr;
+}
+
+bool ASTImplicitCastExpr::IsNeededCvt(const UniqueFEIRExpr &expr) const {
+  if (expr == nullptr || dst == nullptr) {
+    return false;
+  }
+  PrimType srcPrimType = expr->GetPrimType();
+  return isNeededCvt && srcPrimType != dst->GetPrimType() && srcPrimType != PTY_agg && srcPrimType != PTY_void;
 }
 
 // ---------- ASTUnaryOperatorExpr ----------
@@ -832,5 +844,16 @@ UniqueFEIRExpr ASTAtomicExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) 
     return FEIRBuilder::CreateExprDRead(var->Clone());
   }
   return atomicExpr;
+}
+
+// ---------- ASTExprStmtExpr ----------
+UniqueFEIRExpr ASTExprStmtExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
+  std::list<UniqueFEIRStmt> stmts0 = cpdStmt->Emit2FEStmt();
+  for (auto &stmt : stmts0) {
+    stmts.emplace_back(std::move(stmt));
+  }
+  CHECK_FATAL(cpdStmt->GetASTStmtOp() == kASTStmtCompound, "Invalid in ASTExprStmtExpr");
+  stmts0.clear();
+  return static_cast<ASTCompoundStmt*>(cpdStmt)->GetASTStmtList().back()->GetExprs().back()->Emit2FEExpr(stmts);
 }
 }

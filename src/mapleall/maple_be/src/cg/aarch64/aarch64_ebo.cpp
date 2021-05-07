@@ -594,7 +594,7 @@ bool AArch64Ebo::SimplifyBothConst(BB &bb, Insn &insn, const AArch64ImmOperand &
   AArch64ImmOperand *immOperand = &a64CGFunc->CreateImmOperand(val, opndSize, false);
   if (!immOperand->IsSingleInstructionMovable()) {
     ASSERT(res->IsRegister(), " expect a register operand");
-    static_cast<AArch64CGFunc*>(cgFunc)->SplitMovImmOpndInstruction(val, *(static_cast<RegOperand*>(res)));
+    static_cast<AArch64CGFunc*>(cgFunc)->SplitMovImmOpndInstruction(val, *(static_cast<RegOperand*>(res)), &insn);
     bb.RemoveInsn(insn);
   } else {
     MOperator newmOp = opndSize == k64BitSize ? MOP_xmovri64 : MOP_xmovri32;
