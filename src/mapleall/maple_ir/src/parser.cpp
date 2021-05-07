@@ -2462,6 +2462,7 @@ bool MIRParser::ParseMIRForVar() {
       prevSt->SetAttrs(st.GetAttrs());
       prevSt->SetNameStrIdx(st.GetNameStrIdx());
       prevSt->SetValue(st.GetValue());
+      prevSt->SetTyIdx(st.GetTyIdx());
       SetSrcPos(prevSt->GetSrcPosition(), lexer.GetLineNum());
     }
   } else {  // seeing the first time

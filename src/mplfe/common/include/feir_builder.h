@@ -82,7 +82,7 @@ class FEIRBuilder {
   static UniqueFEIRExpr CreateExprJavaArrayLength(UniqueFEIRExpr exprArray);
   static UniqueFEIRExpr CreateExprArrayStoreForC(UniqueFEIRExpr argExprArray, UniqueFEIRExpr argExprIndex,
                                                  UniqueFEIRType argTypeNative);
-  static UniqueFEIRExpr CreateExprArrayStoreForC(UniqueFEIRExpr argExprArray, std::stack<uint64> argIndexs,
+  static UniqueFEIRExpr CreateExprArrayStoreForC(UniqueFEIRExpr argExprArray, std::list<UniqueFEIRExpr> &argExprIndexs,
                                                  UniqueFEIRType argTypeNative);
   // Stmt
   static UniqueFEIRStmt CreateStmtDAssign(UniqueFEIRVar dstVar, UniqueFEIRExpr srcExpr, bool hasException = false);

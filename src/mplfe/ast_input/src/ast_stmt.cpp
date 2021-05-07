@@ -55,8 +55,11 @@ std::list<UniqueFEIRStmt> ASTReturnStmt::Emit2FEStmtImpl() const {
 
 std::list<UniqueFEIRStmt> ASTIfStmt::Emit2FEStmtImpl() const {
   std::list<UniqueFEIRStmt> stmts;
-  std::list<UniqueFEIRStmt> thenStmts = thenStmt->Emit2FEStmt();
+  std::list<UniqueFEIRStmt> thenStmts;
   std::list<UniqueFEIRStmt> elseStmts;
+  if (thenStmt != nullptr) {
+    thenStmts = thenStmt->Emit2FEStmt();
+  }
   if (elseStmt != nullptr) {
     elseStmts = elseStmt->Emit2FEStmt();
   }
@@ -131,7 +134,10 @@ std::list<UniqueFEIRStmt> ASTDoStmt::Emit2FEStmtImpl() const {
   AstLoopUtil::Instance().PushLoop(std::make_pair(loopBodyEndLabelName, loopEndLabelName));
   auto labelBodyEndStmt = std::make_unique<FEIRStmtLabel>(loopBodyEndLabelName);
   auto labelLoopEndStmt = std::make_unique<FEIRStmtLabel>(loopEndLabelName);
-  std::list<UniqueFEIRStmt> bodyFEStmts = bodyStmt->Emit2FEStmt();
+  std::list<UniqueFEIRStmt> bodyFEStmts;
+  if (bodyStmt != nullptr) {
+    bodyFEStmts = bodyStmt->Emit2FEStmt();
+  }
   bodyFEStmts.emplace_back(std::move(labelBodyEndStmt));
   std::list<UniqueFEIRStmt> condStmts;
   UniqueFEIRExpr condFEExpr = condExpr->Emit2FEExpr(condStmts);

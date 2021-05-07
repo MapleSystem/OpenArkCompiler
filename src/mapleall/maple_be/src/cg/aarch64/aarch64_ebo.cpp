@@ -774,7 +774,7 @@ bool AArch64Ebo::SpecialSequence(Insn &insn, const MapleVector<OpndInfo*> &origI
                 }
               } else {
                 immVal = imm0Val + imm1.GetValue() +
-                           static_cast<int64>(static_cast<uint64>(immOpnd2.GetValue()) << kMaxImmVal12Bits);
+                         static_cast<int64>(static_cast<uint64>(immOpnd2.GetValue()) << kMaxImmVal12Bits);
               }
               op1 = &base2;
             } else {
