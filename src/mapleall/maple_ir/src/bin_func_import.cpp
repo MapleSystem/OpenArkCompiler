@@ -706,7 +706,7 @@ BlockNode *BinaryMplImport::ImportBlockNode(MIRFunction *func) {
         s->SetDefaultLabel(ReadNum());
         uint32 tagSize = ReadNum();
         for (uint32 i = 0; i < tagSize; i++) {
-          int32 casetag = ReadNum();
+          int64 casetag = ReadNum();
           LabelIdx lidx(ReadNum());
           CasePair cpair = std::make_pair(casetag, lidx);
           s->GetSwitchTable().push_back(cpair);
