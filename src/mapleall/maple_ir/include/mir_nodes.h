@@ -1527,6 +1527,7 @@ class IassignNode : public StmtNode {
  private:
   TyIdx tyIdx;
   FieldID fieldID;
+ public:
   BaseNode *addrExpr;
   BaseNode *rhs;
 };

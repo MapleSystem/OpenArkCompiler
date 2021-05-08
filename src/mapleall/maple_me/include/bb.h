@@ -470,7 +470,9 @@ class BB {
   uint32 frequency = 0;
   BBKind kind = kBBUnknown;
   uint32 attributes = 0;
+ public:
   StmtNodes stmtNodeList;
+ private:
   MeStmts meStmtList;
   BB *group;
 };
