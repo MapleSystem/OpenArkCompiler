@@ -199,6 +199,10 @@ void AArch64Schedule::FindAndCombineMemoryAccessPair(const std::vector<DepNode*>
             &(memList[0]->GetInsn()->GetOperand(0)) == &((*it)->GetInsn()->GetOperand(0))) {
           continue;
         }
+        if (static_cast<RegOperand&>((*it)->GetInsn()->GetOperand(0)).GetRegisterType() !=
+            static_cast<RegOperand&>(memList[0]->GetInsn()->GetOperand(0)).GetRegisterType()) {
+          continue;
+        }
 
         if (LIST_SCHED_DUMP_REF) {
           LogInfo::MapleLogger() << "Combine inse: " << "\n";
