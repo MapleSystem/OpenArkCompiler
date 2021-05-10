@@ -1093,10 +1093,25 @@ class GraphColorRegAllocator : public AArch64RegAllocator {
         fpSpillRegSet(alloc.Adapter()),
         intCalleeUsed(alloc.Adapter()),
         fpCalleeUsed(alloc.Adapter()) {
+    constexpr uint32 kNumInsnThreashold = 200000;
     numVregs = cgFunc.GetMaxVReg();
     lrVec.resize(numVregs);
     localRegVec.resize(cgFunc.NumBBs());
     bbRegInfo.resize(cgFunc.NumBBs());
+    if (CGOptions::DoMultiPassColorRA()) {
+      int32 cnt = 0;
+      FOR_ALL_BB(bb, &cgFunc) {
+        FOR_BB_INSNS(insn, bb) {
+          ++cnt;
+        }
+      }
+      ASSERT(cnt <= cgFunc.GetTotalNumberOfInstructions(), "Incorrect insn count");
+      if (cnt <= kNumInsnThreashold) {
+        doMultiPass = true;
+        doLRA = false;
+        doOptProlog = false;
+      }
+    }
   }
 
   ~GraphColorRegAllocator() override = default;
@@ -1215,6 +1230,9 @@ class GraphColorRegAllocator : public AArch64RegAllocator {
   void MarkCalleeSaveRegs();
   void MarkUsedRegs(Operand &opnd, uint64 &usedRegMask);
   uint64 FinalizeRegisterPreprocess(FinalizeRegisterInfo &fInfo, Insn &insn);
+  void GenerateSpillFillRegs(Insn &insn);
+  RegOperand *CreateSpillFillCode(RegOperand &opnd, Insn &insn, uint32 spillCnt, bool isdef = false);
+  void SpillLiveRangeForSpills();
   void FinalizeRegisters();
 
   MapleVector<LiveRange*>::iterator GetHighPriorityLr(MapleVector<LiveRange*> &lrSet) const;
@@ -1294,7 +1312,21 @@ class GraphColorRegAllocator : public AArch64RegAllocator {
    */
   static constexpr size_t kSpillMemOpndNum = 4;
   std::array<MemOperand*, kSpillMemOpndNum> spillMemOpnds = { nullptr };
+  regno_t intSpillFillRegs[kSpillMemOpndNum];
+  regno_t fpSpillFillRegs[kSpillMemOpndNum];
   bool needExtraSpillReg = false;
+#ifdef USE_LRA
+  bool doLRA = true;
+#else
+  bool doLRA = false;
+#endif
+#ifdef OPTIMIZE_FOR_PROLOG
+  bool doOptProlog = true;
+#else
+  bool doOptProlog = false;
+#endif
+  bool hasSpill = false;
+  bool doMultiPass = false;
 };
 }  /* namespace maplebe */
 
