@@ -1099,7 +1099,7 @@ class GraphColorRegAllocator : public AArch64RegAllocator {
     localRegVec.resize(cgFunc.NumBBs());
     bbRegInfo.resize(cgFunc.NumBBs());
     if (CGOptions::DoMultiPassColorRA()) {
-      int32 cnt = 0;
+      uint32 cnt = 0;
       FOR_ALL_BB(bb, &cgFunc) {
         FOR_BB_INSNS(insn, bb) {
           ++cnt;
@@ -1230,10 +1230,10 @@ class GraphColorRegAllocator : public AArch64RegAllocator {
   void MarkCalleeSaveRegs();
   void MarkUsedRegs(Operand &opnd, uint64 &usedRegMask);
   uint64 FinalizeRegisterPreprocess(FinalizeRegisterInfo &fInfo, Insn &insn);
+  void FinalizeRegisters();
   void GenerateSpillFillRegs(Insn &insn);
   RegOperand *CreateSpillFillCode(RegOperand &opnd, Insn &insn, uint32 spillCnt, bool isdef = false);
   void SpillLiveRangeForSpills();
-  void FinalizeRegisters();
 
   MapleVector<LiveRange*>::iterator GetHighPriorityLr(MapleVector<LiveRange*> &lrSet) const;
   void UpdateForbiddenForNeighbors(LiveRange &lr) const;

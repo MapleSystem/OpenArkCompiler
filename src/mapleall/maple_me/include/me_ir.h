@@ -1707,7 +1707,7 @@ class MaydassignMeStmt : public MeStmt {
 
   void Dump(const IRMap*) const;
   VarMeExpr *GetLHS() const {
-    return chiList.begin()->second->GetLHS();
+    return chiList.find(mayDSSym->GetIndex())->second->GetLHS();
   }
 
   MeExpr *GetRHS() const {
@@ -1719,11 +1719,11 @@ class MaydassignMeStmt : public MeStmt {
   }
 
   VarMeExpr *GetVarLHS() const {
-    return chiList.begin()->second->GetLHS();
+    return chiList.find(mayDSSym->GetIndex())->second->GetLHS();
   }
 
   VarMeExpr *GetVarLHS() {
-    return chiList.begin()->second->GetLHS();
+    return chiList.find(mayDSSym->GetIndex())->second->GetLHS();
   }
 
   MeExpr *GetLHSRef(bool excludeLocalRefVar);

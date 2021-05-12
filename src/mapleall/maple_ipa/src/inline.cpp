@@ -248,6 +248,18 @@ void MInline::ReplaceSymbols(BaseNode *baseNode, uint32 stIdxOff,
   if (baseNode == nullptr) {
     return;
   }
+  // IfStmtNode's `numOpnds` and actual operands number are different, so we treat it as a special case
+  if (baseNode->GetOpCode() == OP_if) {
+    IfStmtNode *ifStmtNode = static_cast<IfStmtNode*>(baseNode);
+    ReplaceSymbols(baseNode->Opnd(0), stIdxOff, staticOld2New);
+    if (ifStmtNode->GetThenPart() != nullptr) {
+      ReplaceSymbols(ifStmtNode->GetThenPart(), stIdxOff, staticOld2New);
+    }
+    if (ifStmtNode->GetElsePart() != nullptr) {
+      ReplaceSymbols(ifStmtNode->GetElsePart(), stIdxOff, staticOld2New);
+    }
+    return;
+  }
   CallReturnVector *returnVector = baseNode->GetCallReturnVector();
   if (baseNode->GetOpCode() == OP_block) {
     BlockNode *blockNode = static_cast<BlockNode*>(baseNode);

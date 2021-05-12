@@ -303,6 +303,19 @@ UniqueFEIRExpr FEIRBuilder::CreateExprArrayStoreForC(UniqueFEIRExpr argExprArray
   return expr;
 }
 
+UniqueFEIRExpr FEIRBuilder::CreateExprArrayStoreForC(UniqueFEIRExpr argExprArray,
+                                                     std::list<UniqueFEIRExpr> &argExprIndexs,
+                                                     UniqueFEIRType argArrayTypeNative,
+                                                     UniqueFEIRExpr argExprStruct,
+                                                     UniqueFEIRType argStructTypeNative) {
+  UniqueFEIRExpr expr = std::make_unique<FEIRExprArrayStoreForC>(std::move(argExprArray), argExprIndexs,
+                                                                 std::move(argArrayTypeNative),
+                                                                 std::move(argExprStruct),
+                                                                 std::move(argStructTypeNative));
+  CHECK_NULL_FATAL(expr);
+  return expr;
+}
+
 UniqueFEIRStmt FEIRBuilder::CreateStmtDAssign(UniqueFEIRVar dstVar, UniqueFEIRExpr srcExpr, bool hasException) {
   UniqueFEIRStmt stmt = std::make_unique<FEIRStmtDAssign>(std::move(dstVar), std::move(srcExpr));
   FEIRStmtDAssign *ptrStmt = static_cast<FEIRStmtDAssign*>(stmt.get());

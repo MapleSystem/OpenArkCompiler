@@ -32,7 +32,7 @@ enum AccessKind {
 
 class LibAstFile {
  public:
-  LibAstFile() = default;
+  explicit LibAstFile(MapleList<clang::Decl*> &recordDeclesIn) : recordDecles(recordDeclesIn) {}
   ~LibAstFile() = default;
 
   bool Open(const std::string &fileName,
@@ -80,8 +80,11 @@ class LibAstFile {
  private:
   using RecordDeclMap = std::map<TyIdx, const clang::RecordDecl*>;
   RecordDeclMap recordDeclMap;
+  std::set<const clang::RecordDecl*> recordDeclSet;
   std::map<uint32_t, std::string> unnamedSymbolMap;
   MIRModule *module;
+
+  MapleList<clang::Decl*> &recordDecles;
 
   clang::ASTContext *astContext = nullptr;
   clang::TranslationUnitDecl *astUnitDecl = nullptr;

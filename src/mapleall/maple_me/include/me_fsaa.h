@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -21,10 +21,10 @@
 #include "ssa_tab.h"
 
 namespace maple {
-
 class FSAA {
  public:
-  explicit FSAA(MeFunction *f, Dominance *dm): func(f), mirModule(&f->GetMIRModule()), ssaTab(f->GetMeSSATab()), dom(dm) {}
+  FSAA(MeFunction *f, Dominance *dm)
+      : func(f), mirModule(&f->GetMIRModule()), ssaTab(f->GetMeSSATab()), dom(dm) {}
   ~FSAA() {}
 
   BB *FindUniquePointerValueDefBB(VersionSt *vst);
@@ -48,7 +48,7 @@ class MeDoFSAA : public MeFuncPhase {
 
   ~MeDoFSAA() {}
 
-  AnalysisResult *Run(MeFunction *ir, MeFuncResultMgr *m, ModuleResultMgr *mrm) override;
+  AnalysisResult *Run(MeFunction *ir, MeFuncResultMgr *m, ModuleResultMgr*) override;
   std::string PhaseName() const override {
     return "fsaa";
   }

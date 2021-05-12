@@ -131,7 +131,7 @@ class MustDefNode {
 };
 
 using TypeOfMayUseList = MapleVector<MayUseNode>;
-using TypeOfMayDefList = MapleVector<MayDefNode>;
+using TypeOfMayDefList = MapleList<MayDefNode>;
 using TypeOfMustDefList = MapleVector<MustDefNode>;
 class AccessSSANodes {
  public:

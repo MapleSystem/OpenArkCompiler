@@ -158,7 +158,8 @@ enum ASTStmtOp {
   kASTStmtStmtExpr,
   kASTStmtCStyleCastExpr,
   kASTStmtCallExpr,
-  kASTStmtAtomicExpr
+  kASTStmtAtomicExpr,
+  kASTStmtGCCAsmStmt,
 };
 }  // namespace maple
 #endif  // MPLFE_AST_INPUT_INCLUDE_AST_OP_H

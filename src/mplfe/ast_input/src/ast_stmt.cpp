@@ -47,7 +47,7 @@ std::list<UniqueFEIRStmt> ASTCompoundStmt::Emit2FEStmtImpl() const {
 std::list<UniqueFEIRStmt> ASTReturnStmt::Emit2FEStmtImpl() const {
   std::list<UniqueFEIRStmt> stmts;
   auto astExpr = exprs.front();
-  UniqueFEIRExpr feExpr = astExpr->Emit2FEExpr(stmts);
+  UniqueFEIRExpr feExpr = astExpr != nullptr ? astExpr->Emit2FEExpr(stmts) : nullptr;
   UniqueFEIRStmt stmt = std::make_unique<FEIRStmtReturn>(std::move(feExpr));
   stmts.emplace_back(std::move(stmt));
   return stmts;
@@ -244,6 +244,16 @@ std::list<UniqueFEIRStmt> ASTDeclStmt::Emit2FEStmtImpl() const {
 }
 
 // ---------- ASTCallExprStmt ----------
+std::map<std::string, ASTCallExprStmt::FuncPtrBuiltinFunc> ASTCallExprStmt::funcPtrMap =
+    ASTCallExprStmt::InitFuncPtrMap();
+
+std::map<std::string, ASTCallExprStmt::FuncPtrBuiltinFunc> ASTCallExprStmt::InitFuncPtrMap() {
+  std::map<std::string, FuncPtrBuiltinFunc> ans;
+  ans["__builtin_va_start"] = &ASTCallExprStmt::ProcessBuiltinVaStart;
+  ans["__builtin_va_end"] = &ASTCallExprStmt::ProcessBuiltinVaEnd;
+  return ans;
+}
+
 std::list<UniqueFEIRStmt> ASTCallExprStmt::Emit2FEStmtCall() const {
   std::list<UniqueFEIRStmt> stmts;
   ASTCallExpr *callExpr = static_cast<ASTCallExpr*>(exprs.front());
@@ -298,8 +308,59 @@ std::list<UniqueFEIRStmt> ASTCallExprStmt::Emit2FEStmtImpl() const {
   if (callExpr->IsIcall()) {
     return Emit2FEStmtICall();
   } else {
+    if (callExpr->GetCalleeExpr() != nullptr && callExpr->GetCalleeExpr()->GetASTOp() == kASTOpCast &&
+        static_cast<ASTImplicitCastExpr*>(callExpr->GetCalleeExpr())->IsBuilinFunc()) {
+      auto ptrFunc = funcPtrMap.find(callExpr->GetFuncName());
+      CHECK_FATAL(ptrFunc != funcPtrMap.end(), "unsupported BuiltinFunc: %s", callExpr->GetFuncName().c_str());
+      return (this->*(ptrFunc->second))();
+    }
     return Emit2FEStmtCall();
   }
+}
+
+std::list<UniqueFEIRStmt> ASTCallExprStmt::ProcessBuiltinVaStart() const {
+  std::list<UniqueFEIRStmt> stmts;
+  ASTCallExpr *callExpr = static_cast<ASTCallExpr*>(exprs.front());
+  // args
+  std::vector<ASTExpr*> argsExprs = callExpr->GetArgsExpr();
+  auto exprArgList = std::make_unique<std::list<UniqueFEIRExpr>>();
+  for (int32 i = argsExprs.size() - 1; i >= 0; --i) {
+    UniqueFEIRExpr expr = argsExprs[i]->Emit2FEExpr(stmts);
+    // addrof va_list instead of dread va_list
+    if (i == 0 && expr->GetKind() == kExprDRead) {
+      UniqueFEIRVar var = static_cast<FEIRExprDRead*>(expr.get())->GetVar()->Clone();
+      expr = FEIRBuilder::CreateExprAddrofVar(std::move(var));
+    }
+    exprArgList->push_front(std::move(expr));
+  }
+#ifndef USE_OPS
+    CHECK_FATAL(false, "implemention in ops branch");
+#else
+  std::unique_ptr<FEIRStmtIntrinsicCallAssign> stmt = std::make_unique<FEIRStmtIntrinsicCallAssign>(
+      INTRN_C_va_start, nullptr /* type */, nullptr /* retVar */, std::move(exprArgList));
+  stmts.emplace_back(std::move(stmt));
+#endif
+  return stmts;
+}
+
+std::list<UniqueFEIRStmt> ASTCallExprStmt::ProcessBuiltinVaEnd() const {
+  std::list<UniqueFEIRStmt> stmts;
+  ASTCallExpr *callExpr = static_cast<ASTCallExpr*>(exprs.front());
+  // args
+  std::vector<ASTExpr*> argsExprs = callExpr->GetArgsExpr();
+  std::list<UniqueFEIRExpr> exprArgList;
+  for (int32 i = argsExprs.size() - 1; i >= 0; --i) {
+    UniqueFEIRExpr expr = argsExprs[i]->Emit2FEExpr(stmts);
+    // addrof va_list instead of dread va_list
+    if (i == 0 && expr->GetKind() == kExprDRead) {
+      UniqueFEIRVar var = static_cast<FEIRExprDRead*>(expr.get())->GetVar()->Clone();
+      expr = FEIRBuilder::CreateExprAddrofVar(std::move(var));
+    }
+    exprArgList.push_front(std::move(expr));
+  }
+  auto stmt = std::make_unique<FEIRStmtNary>(OP_eval, std::move(exprArgList));
+  stmts.emplace_back(std::move(stmt));
+  return stmts;
 }
 
 // ---------- ASTImplicitCastExprStmt ----------
@@ -330,7 +391,6 @@ std::list<UniqueFEIRStmt> ASTIntegerLiteralStmt::Emit2FEStmtImpl() const {
 
 // ---------- ASTVAArgExprStmt ----------
 std::list<UniqueFEIRStmt> ASTVAArgExprStmt::Emit2FEStmtImpl() const {
-  CHECK_FATAL(false, "NYI");
   std::list<UniqueFEIRStmt> stmts;
   return stmts;
 }
@@ -396,6 +456,21 @@ std::list<UniqueFEIRStmt> ASTAtomicExprStmt::Emit2FEStmtImpl() const {
   UniqueFEIRExpr feExpr = astExpr->Emit2FEExpr(stmts);
   auto stmt = std::make_unique<FEIRStmtAtomic>(std::move(feExpr));
   stmts.emplace_back(std::move(stmt));
+  return stmts;
+}
+
+// ---------- ASTGCCAsmStmt ----------
+std::list<UniqueFEIRStmt> ASTGCCAsmStmt::Emit2FEStmtImpl() const {
+  std::list<UniqueFEIRStmt> stmts;
+  std::vector<UniqueFEIRExpr> outputsExprs;
+  std::vector<UniqueFEIRExpr> inputsExprs;
+  for (uint32 i = 0; i < numOfOutputs; ++i) {
+    outputsExprs.emplace_back(exprs[i]->Emit2FEExpr(stmts));
+  }
+  for (uint32 i = 0; i < numOfInputs; ++i) {
+    inputsExprs.emplace_back(exprs[i + numOfOutputs]->Emit2FEExpr(stmts));
+  }
+  // Translate asm info to FEIR and MIR.
   return stmts;
 }
 } // namespace maple
