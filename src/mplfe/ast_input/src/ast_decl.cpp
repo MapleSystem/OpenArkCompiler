@@ -52,21 +52,23 @@ std::unique_ptr<FEIRVar> ASTVar::Translate2FEIRVar() {
 }
 
 void ASTVar::GenerateInitStmtImpl(std::list<UniqueFEIRStmt> &stmts) {
-  if (GetInitExpr() != nullptr) {
-    UniqueFEIRVar feirVar = Translate2FEIRVar();
-    UniqueFEIRExpr expr = GetInitExpr()->Emit2FEExpr(stmts);
-    if (expr != nullptr) { // InitListExpr array not emit here
-      PrimType srcPrimType = expr->GetPrimType();
-      UniqueFEIRStmt stmt;
-      if (srcPrimType != feirVar->GetType()->GetPrimType() && srcPrimType != PTY_agg && srcPrimType != PTY_void) {
-        UniqueFEIRExpr cvtExpr = FEIRBuilder::CreateExprCvtPrim(std::move(expr), feirVar->GetType()->GetPrimType());
-        stmt = FEIRBuilder::CreateStmtDAssign(std::move(feirVar), std::move(cvtExpr));
-      } else {
-        stmt = FEIRBuilder::CreateStmtDAssign(std::move(feirVar), std::move(expr));
-      }
-      stmts.emplace_back(std::move(stmt));
-    }
+  if (GetInitExpr() == nullptr) {
+    return;
   }
+  UniqueFEIRVar feirVar = Translate2FEIRVar();
+  UniqueFEIRExpr expr = GetInitExpr()->Emit2FEExpr(stmts);
+  if (expr == nullptr) {
+    return;
+  }
+  PrimType srcPrimType = expr->GetPrimType();
+  UniqueFEIRStmt stmt;
+  if (srcPrimType != feirVar->GetType()->GetPrimType() && srcPrimType != PTY_agg && srcPrimType != PTY_void) {
+    UniqueFEIRExpr cvtExpr = FEIRBuilder::CreateExprCvtPrim(std::move(expr), feirVar->GetType()->GetPrimType());
+    stmt = FEIRBuilder::CreateStmtDAssign(std::move(feirVar), std::move(cvtExpr));
+  } else {
+    stmt = FEIRBuilder::CreateStmtDAssign(std::move(feirVar), std::move(expr));
+  }
+  stmts.emplace_back(std::move(stmt));
 }
 
 // ---------- ASTLocalEnumDecl ----------

@@ -84,6 +84,10 @@ class FEIRBuilder {
                                                  UniqueFEIRType argTypeNative);
   static UniqueFEIRExpr CreateExprArrayStoreForC(UniqueFEIRExpr argExprArray, std::list<UniqueFEIRExpr> &argExprIndexs,
                                                  UniqueFEIRType argTypeNative);
+  static UniqueFEIRExpr CreateExprArrayStoreForC(UniqueFEIRExpr argExprArray, std::list<UniqueFEIRExpr> &argExprIndexs,
+                                                 UniqueFEIRType argArrayTypeNative,
+                                                 UniqueFEIRExpr argExprStruct,
+                                                 UniqueFEIRType argStructTypeNative);
   // Stmt
   static UniqueFEIRStmt CreateStmtDAssign(UniqueFEIRVar dstVar, UniqueFEIRExpr srcExpr, bool hasException = false);
   static UniqueFEIRStmt CreateStmtGoto(uint32 targetLabelIdx);

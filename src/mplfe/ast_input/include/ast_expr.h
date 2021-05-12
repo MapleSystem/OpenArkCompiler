@@ -25,6 +25,7 @@ class ASTExpr {
   explicit ASTExpr(ASTOp o) : op(o) {}
   virtual ~ASTExpr() = default;
   UniqueFEIRExpr Emit2FEExpr(std::list<UniqueFEIRStmt> &stmts) const;
+  UniqueFEIRExpr ImplicitInitFieldValue(MIRType *type, std::list<UniqueFEIRStmt> &stmts) const;
 
   virtual MIRType *GetType() {
     return mirType;
@@ -92,6 +93,22 @@ class ASTImplicitCastExpr : public ASTExpr {
 
   bool IsNeededCvt(const UniqueFEIRExpr &expr) const;
 
+  void SetComplexType(MIRType *type) {
+    complexType = type;
+  }
+
+  void SetComplexCastKind(bool flag) {
+    imageZero = flag;
+  }
+
+  bool IsBuilinFunc() const {
+    return isBuilinFunc;
+  }
+
+  void SetBuilinFunc(bool flag) {
+    isBuilinFunc = flag;
+  }
+
  protected:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 
@@ -100,6 +117,9 @@ class ASTImplicitCastExpr : public ASTExpr {
   MIRType *src = nullptr;
   MIRType *dst = nullptr;
   bool isNeededCvt = false;
+  MIRType *complexType = nullptr;
+  bool imageZero = false;
+  bool isBuilinFunc = false;
 };
 
 class ASTDeclRefExpr : public ASTExpr {
@@ -126,7 +146,7 @@ class ASTUnaryOperatorExpr : public ASTExpr {
     return uoType = type;
   }
 
-  MIRType *GetUOType() {
+  const MIRType *GetUOType() const {
     return uoType;
   }
 
@@ -410,6 +430,7 @@ class ASTBinaryOperatorExpr : public ASTExpr {
 
  protected:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
+
   Opcode opcode;
   MIRType *retType;
   ASTExpr *leftExpr = nullptr;
@@ -483,9 +504,18 @@ class ASTArraySubscriptExpr : public ASTExpr {
     return idxExprs;
   }
 
+  void SetMemberExpr(ASTExpr &astExpr) {
+    memberExpr = &astExpr;
+  }
+
+  ASTExpr* GetMemberExpr() const {
+    return memberExpr;
+  }
+
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   ASTExpr *baseExpr;
+  ASTExpr *memberExpr = nullptr;
   std::vector<ASTExpr*> idxExprs;
 };
 
@@ -522,8 +552,16 @@ class ASTMemberExpr : public ASTExpr {
     baseExpr = astExpr;
   }
 
+  ASTExpr *GetBaseExpr() const {
+    return baseExpr;
+  }
+
   void SetMemberName(std::string name) {
     memberName = std::move(name);
+  }
+
+  std::string GetMemberName() const {
+    return memberName;
   }
 
   void SetMemberType(MIRType *type) {
@@ -532,6 +570,14 @@ class ASTMemberExpr : public ASTExpr {
 
   void SetBaseType(MIRType *type) {
     baseType = type;
+  }
+
+  MIRType *GetMemberType() const {
+    return memberType;
+  }
+
+  MIRType *GetBaseType() const {
+    return baseType;
   }
 
   void SetIsArrow(bool arrow) {
@@ -661,10 +707,13 @@ class ASTCallExpr : public ASTExpr {
   }
 
  private:
+  using FuncPtrBuiltinFunc = UniqueFEIRExpr (ASTCallExpr::*)(std::list<UniqueFEIRStmt> &stmts) const;
+  static std::map<std::string, FuncPtrBuiltinFunc> InitFuncPtrMap();
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   UniqueFEIRExpr Emit2FEExprCall(std::list<UniqueFEIRStmt> &stmts) const;
   UniqueFEIRExpr Emit2FEExprICall(std::list<UniqueFEIRStmt> &stmts) const;
 
+  static std::map<std::string, FuncPtrBuiltinFunc> funcPtrMap;
   std::vector<ASTExpr*> args;
   ASTExpr *calleeExpr = nullptr;
   MIRType *retType = nullptr;

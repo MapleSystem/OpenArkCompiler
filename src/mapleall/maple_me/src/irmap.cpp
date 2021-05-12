@@ -555,7 +555,7 @@ static bool IgnoreInnerTypeCvt(PrimType typeA, PrimType typeB, PrimType typeC) {
       if (IsPrimitiveInteger(typeC)) {
         return GetPrimTypeSize(typeB) >= GetPrimTypeSize(typeA) || GetPrimTypeSize(typeB) >= GetPrimTypeSize(typeC);
       } else if (IsPrimitiveFloat(typeC)) {
-        return GetPrimTypeSize(typeB) >= GetPrimTypeSize(typeA);
+        return GetPrimTypeSize(typeB) >= GetPrimTypeSize(typeA) && IsSignedInteger(typeB) == IsSignedInteger(typeA);
       }
     } else if (IsPrimitiveFloat(typeB)) {
       if (IsPrimitiveFloat(typeC)) {
@@ -594,7 +594,8 @@ MeExpr *IRMap::SimplifyOpMeExpr(OpMeExpr *opmeexpr) {
         if (maple::GetPrimTypeSize(cvtopnd0->GetPrimType()) >=
             maple::GetPrimTypeSize(cvtopnd0->GetOpnd(0)->GetPrimType())) {
           if ((maple::IsPrimitiveInteger(cvtopnd0->GetPrimType()) &&
-               maple::IsPrimitiveInteger(cvtopnd0->GetOpnd(0)->GetPrimType())) ||
+               maple::IsPrimitiveInteger(cvtopnd0->GetOpnd(0)->GetPrimType()) &&
+               !maple::IsPrimitiveFloat(cvtmeexpr->GetPrimType())) ||
               (maple::IsPrimitiveFloat(cvtopnd0->GetPrimType()) &&
                maple::IsPrimitiveFloat(cvtopnd0->GetOpnd(0)->GetPrimType()))) {
             if (cvtmeexpr->GetPrimType() == cvtopnd0->GetOpndType()) {
@@ -606,7 +607,8 @@ MeExpr *IRMap::SimplifyOpMeExpr(OpMeExpr *opmeexpr) {
         }
         if (maple::GetPrimTypeSize(cvtopnd0->GetPrimType()) >= maple::GetPrimTypeSize(cvtmeexpr->GetPrimType())) {
           if ((maple::IsPrimitiveInteger(cvtopnd0->GetPrimType()) &&
-               maple::IsPrimitiveInteger(cvtmeexpr->GetPrimType())) ||
+               maple::IsPrimitiveInteger(cvtmeexpr->GetPrimType()) &&
+               !maple::IsPrimitiveFloat(cvtopnd0->GetOpnd(0)->GetPrimType())) ||
               (maple::IsPrimitiveFloat(cvtopnd0->GetPrimType()) &&
                maple::IsPrimitiveFloat(cvtmeexpr->GetPrimType()))) {
             return CreateMeExprTypeCvt(cvtmeexpr->GetPrimType(), cvtopnd0->GetOpndType(), *cvtopnd0->GetOpnd(0));

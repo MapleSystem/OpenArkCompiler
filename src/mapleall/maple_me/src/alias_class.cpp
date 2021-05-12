@@ -1415,7 +1415,7 @@ void AliasClass::CollectMayDefForIassign(StmtNode &stmt, std::set<OriginalSt*> &
     // get the next-level-ost that will be assigned to
     if (mirModule.IsCModule() && baseAinfo.ae->GetOriginalSt().GetTyIdx() != iassignNode.GetTyIdx()) {
       // in case of type incompatible, set fieldId to zero of the mayDefed virtual-var
-      lhsAe = FindOrCreateExtraLevAliasElem(*iassignNode.Opnd(0), baseAinfo.ae->GetOriginalSt().GetTyIdx(), 0);
+      lhsAe = FindOrCreateExtraLevAliasElem(*iassignNode.Opnd(0), iassignNode.GetTyIdx(), 0);
     } else if (!mirModule.IsCModule() || iassignNode.GetFieldID() == 0 ||
                baseAinfo.ae->GetOriginalSt().GetIndirectLev() == -1 ||
                baseAinfo.ae->GetOriginalSt().GetTyIdx() == iassignNode.GetTyIdx()) {

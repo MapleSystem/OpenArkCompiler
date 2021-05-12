@@ -986,26 +986,23 @@ std::list<StmtNode*> FEIRStmtSwitchForC::GenMIRStmtsImpl(MIRBuilder &mirBuilder)
   AstSwitchUtil::Instance().PushNestedBreakLabels(exitName);  // exit label
   AstSwitchUtil::Instance().PushNestedCaseVectors(std::pair<CaseVector*, LabelIdx>(caseVec, swDefaultLabel));
   BaseNode *exprNode = expr->GenMIRNode(mirBuilder);
+  BlockNode *tempBlock = module.CurFuncCodeMemPool()->New<BlockNode>();
   CaseVector &switchTable = *AstSwitchUtil::Instance().GetTopOfNestedCaseVectors().first;
   for (auto &sub : subStmts) {
-    if (sub.get()->GetKind() == kStmtCaseForC) {
-      auto caseStmt = static_cast<FEIRStmtCaseForC*>(sub.get());
-      for (auto targetPair : caseStmt->GetPesudoLabelMap()) {
-        targetPair.second->GenerateLabelIdx(mirBuilder);
-        switchTable.push_back(std::make_pair(targetPair.first, targetPair.second->GetMIRLabelIdx()));
-      }
-    }
     if (sub.get()->GetKind() == FEIRNodeKind::kStmtBreak) {
       AstSwitchUtil::Instance().MarkLabelUsed(exitName);
       auto feirStmtBreak = static_cast<FEIRStmtBreak*>(sub.get());
       feirStmtBreak->SetSwitchLabelName(exitName);
       feirStmtBreak->SetIsFromSwitch(true);
     }
+    for (auto mirStmt : sub->GenMIRStmts(mirBuilder)) {
+      tempBlock->AddStatement(mirStmt);
+    }
   }
   SwitchNode *mirSwitchStmt = mirBuilder.CreateStmtSwitch(exprNode, swDefaultLabel, switchTable);
   ans.push_back(mirSwitchStmt);
-  for (auto &sub : subStmts) {
-    ans.splice(ans.end(), sub.get()->GenMIRStmts(mirBuilder));
+  for (auto &it : tempBlock->GetStmtNodes()) {
+    ans.emplace_back(&it);
   }
   if (!hasDefault) {
     LabelIdx endLab = mirBuilder.GetOrCreateMIRLabel(endName);
@@ -1044,13 +1041,16 @@ std::list<StmtNode*> FEIRStmtCaseForC::GenMIRStmtsImpl(MIRBuilder &mirBuilder) c
   std::list<StmtNode*> ans;
   CaseVector &caseVec = *AstSwitchUtil::Instance().GetTopOfNestedCaseVectors().first;
   StmtNode *mirLabelStmt = nullptr;
+  for (auto targetPair : GetPesudoLabelMap()) {
+    targetPair.second->GenerateLabelIdx(mirBuilder);
+    caseVec.push_back(std::make_pair(targetPair.first, targetPair.second->GetMIRLabelIdx()));
+  }
   for (auto it : caseVec) {
     if (lCaseLabel == it.first) {
       mirLabelStmt = mirBuilder.CreateStmtLabel(it.second);
       ans.emplace_back(mirLabelStmt);
     }
   }
-
   for (auto &sub : subStmts) {
     if (sub.get()->GetKind() == FEIRNodeKind::kStmtBreak) {
       std::string switchBreakLabelName = AstSwitchUtil::Instance().GetTopOfBreakLabels();
@@ -1124,6 +1124,18 @@ FEIRStmtArrayStore::FEIRStmtArrayStore(UniqueFEIRExpr argExprElem, UniqueFEIRExp
   SetIndexsExprs(argExprIndexs);
 }
 
+FEIRStmtArrayStore::FEIRStmtArrayStore(UniqueFEIRExpr argExprElem, UniqueFEIRExpr argExprArray,
+                                       std::list<UniqueFEIRExpr> &argExprIndexs, UniqueFEIRType argTypeArray,
+                                       UniqueFEIRExpr argExprStruct, UniqueFEIRType argTypeStruct)
+    : FEIRStmt(FEIRNodeKind::kStmtArrayStore),
+      exprElem(std::move(argExprElem)),
+      exprArray(std::move(argExprArray)),
+      typeArray(std::move(argTypeArray)),
+      exprStruct(std::move(argExprStruct)),
+      typeStruct(std::move(argTypeStruct)) {
+  SetIndexsExprs(argExprIndexs);
+}
+
 void FEIRStmtArrayStore::RegisterDFGNodes2CheckPointImpl(FEIRStmtCheckPoint &checkPoint) {
   exprArray->RegisterDFGNodes2CheckPoint(checkPoint);
   exprIndex->RegisterDFGNodes2CheckPoint(checkPoint);
@@ -1152,7 +1164,7 @@ std::list<StmtNode*> FEIRStmtArrayStore::GenMIRStmtsImpl(MIRBuilder &mirBuilder)
   CHECK_FATAL(((exprIndex == nullptr) && (exprIndexs.size() != 0))||
               (exprIndex->GetKind() == kExprDRead) ||
               (exprIndex->GetKind() == kExprConst), "only support dread/const expr for exprIndex");
-  CHECK_FATAL(exprElem == nullptr ||
+  CHECK_FATAL(exprElem == nullptr || exprElem->GetKind() == kExprUnary ||
               (exprElem->GetKind() == kExprDRead) ||
               (exprElem->GetKind() == kExprConst), "only support dread/const expr for exprElem");
   MIRType *ptrMIRArrayType = typeArray->GenerateMIRType(false);
@@ -1189,9 +1201,18 @@ void FEIRStmtArrayStore::GenMIRStmtsImplForCPart(MIRBuilder &mirBuilder, MIRType
   if (typeElem == nullptr) {
     typeElem = std::make_unique<FEIRTypeNative>(*static_cast<MIRArrayType*>(ptrMIRArrayType)->GetElemType());
   }
+  uint32 fieldID = 0;
+  // array in struct
+  if (typeStruct != nullptr) {
+    GStrIdx fieldNameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(
+        static_cast<FEIRExprDRead*>(exprArray.get())->GetFieldName());
+    MIRType *ptrMIRStructType = typeStruct->GenerateMIRType(false);
+    MIRStructType* mirStructType = static_cast<MIRStructType*>(ptrMIRStructType);
+    FEManager::GetMIRBuilder().TraverseToNamedField(*mirStructType, fieldNameIdx, fieldID);
+  }
   *mIRElemType = typeElem->GenerateMIRType(true);
   MIRSymbol *mirSymbol = exprArray->GetVarUses().front()->GenerateLocalMIRSymbol(mirBuilder);
-  BaseNode *arrayAddrOfExpr = mirBuilder.CreateExprAddrof(0, *mirSymbol);
+  BaseNode *arrayAddrOfExpr = mirBuilder.CreateExprAddrof(fieldID, *mirSymbol);
   if (exprIndex == nullptr) {
     std::vector<BaseNode*> nds;
     nds.push_back(arrayAddrOfExpr);
@@ -1833,9 +1854,8 @@ std::list<StmtNode*> FEIRStmtIntrinsicCallAssign::GenMIRStmtsImpl(MIRBuilder &mi
       BaseNode *argNumExpr = mirBuilder.CreateIntConst(static_cast<int64>(typeID), PTY_i32);
       args.push_back(argNumExpr);
     }
-    stmtCall =
-        mirBuilder.CreateStmtIntrinsicCall(INTRN_JAVA_CLINIT_CHECK, std::move(args),
-            type->GenerateMIRType()->GetTypeIndex());
+    stmtCall = mirBuilder.CreateStmtIntrinsicCall(INTRN_JAVA_CLINIT_CHECK, std::move(args),
+                                                  type->GenerateMIRType()->GetTypeIndex());
   } else if (intrinsicId == INTRN_JAVA_FILL_NEW_ARRAY) {
     MapleVector<BaseNode*> args(mirBuilder.GetCurrentFuncCodeMpAllocator()->Adapter());
     if (exprList != nullptr) {
@@ -1853,6 +1873,18 @@ std::list<StmtNode*> FEIRStmtIntrinsicCallAssign::GenMIRStmtsImpl(MIRBuilder &mi
   } else if (intrinsicId == INTRN_JAVA_POLYMORPHIC_CALL) {
     return GenMIRStmtsForInvokePolyMorphic(mirBuilder);
   }
+#ifdef USE_OPS
+  else if (intrinsicId == INTRN_C_va_start) {
+    MapleVector<BaseNode*> args(mirBuilder.GetCurrentFuncCodeMpAllocator()->Adapter());
+    if (exprList != nullptr) {
+      for (const auto &expr : *exprList) {
+        BaseNode *node = expr->GenMIRNode(mirBuilder);
+        args.push_back(node);
+      }
+    }
+    stmtCall = mirBuilder.CreateStmtIntrinsicCall(INTRN_C_va_start, std::move(args), TyIdx(0));
+  }
+#endif
   // other intrinsic call should be implemented
   ans.emplace_back(stmtCall);
   return ans;
@@ -2062,13 +2094,20 @@ FEIRExprDRead::FEIRExprDRead(std::unique_ptr<FEIRVar> argVarSrc)
   SetVarSrc(std::move(argVarSrc));
 }
 
+FEIRExprDRead::FEIRExprDRead(std::unique_ptr<FEIRType> argType, std::unique_ptr<FEIRVar> argVarSrc,
+                             const std::string &argFieldName)
+    : FEIRExpr(FEIRNodeKind::kExprDRead, std::move(argType)),
+      fieldName(argFieldName) {
+  SetVarSrc(std::move(argVarSrc));
+}
+
 FEIRExprDRead::FEIRExprDRead(std::unique_ptr<FEIRType> argType, std::unique_ptr<FEIRVar> argVarSrc)
     : FEIRExpr(FEIRNodeKind::kExprDRead, std::move(argType)) {
   SetVarSrc(std::move(argVarSrc));
 }
 
 std::unique_ptr<FEIRExpr> FEIRExprDRead::CloneImpl() const {
-  std::unique_ptr<FEIRExpr> expr = std::make_unique<FEIRExprDRead>(type->Clone(), varSrc->Clone());
+  std::unique_ptr<FEIRExpr> expr = std::make_unique<FEIRExprDRead>(type->Clone(), varSrc->Clone(), fieldName);
   return expr;
 }
 
@@ -2098,11 +2137,25 @@ std::vector<FEIRVar*> FEIRExprDRead::GetVarUsesImpl() const {
   return std::vector<FEIRVar*>({ varSrc.get() });
 }
 
+PrimType FEIRExprDRead::GetPrimTypeImpl() const {
+  PrimType primType = type->GetPrimType();
+  MIRType *mirType = GetFieldType();
+  if (primType == PTY_agg && mirType != nullptr) {
+    return mirType->GetPrimType();
+  }
+  return primType;
+}
+
 // ---------- FEIRExprIRead ----------
 std::unique_ptr<FEIRExpr> FEIRExprIRead::CloneImpl() const {
   std::unique_ptr<FEIRExpr> expr = std::make_unique<FEIRExprIRead>(retType->Clone(), ptrType->Clone(),
                                                                    fieldID, subExpr->Clone());
   return expr;
+}
+
+PrimType FEIRExprIRead::GetPrimTypeImpl() const {
+  CHECK_NULL_FATAL(retType);
+  return retType->GetPrimType();
 }
 
 BaseNode *FEIRExprIRead::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
@@ -2314,7 +2367,8 @@ BaseNode *FEIRExprTypeCvt::GenMIRNodeMode1(MIRBuilder &mirBuilder) const {
   // MIR: op <to-type> <from-type> (<opnd0>)
   MIRType *mirTypeDst =
       GlobalTables::GetTypeTable().GetTypeFromTyIdx(TyIdx(static_cast<uint32>(GetTypeRef().GetPrimType())));
-  MIRType *mirTypeSrc = GlobalTables::GetTypeTable().GetTypeFromTyIdx(TyIdx(static_cast<uint32>(opnd->GetPrimType())));
+  MIRType *mirTypeSrc = nullptr;
+  mirTypeSrc = GlobalTables::GetTypeTable().GetTypeFromTyIdx(TyIdx(static_cast<uint32>(opnd->GetPrimType())));
   BaseNode *nodeOpnd = opnd->GenMIRNode(mirBuilder);
   BaseNode *expr = mirBuilder.CreateExprTypeCvt(op, *mirTypeDst, *mirTypeSrc, nodeOpnd);
   return expr;
@@ -2662,12 +2716,6 @@ void FEIRExprBinary::SetExprTypeByOpLogic() {
 }
 
 void FEIRExprBinary::SetExprTypeByOpCompare() {
-  PrimType primTypeOpnd0 = opnd0->GetPrimType();
-  PrimType primTypeOpnd1 = opnd1->GetPrimType();
-  CHECK_FATAL(primTypeOpnd0 == primTypeOpnd1 ||
-              (opnd0->GetKind() == kExprConst && static_cast<FEIRExprConst*>(opnd0.get())->GetValue().u64 == 0) ||
-              (opnd1->GetKind() == kExprConst && static_cast<FEIRExprConst*>(opnd1.get())->GetValue().u64 == 0),
-              "primtype of opnds must be the same");
   if (op == OP_cmp || op == OP_cmpl || op == OP_cmpg) {
     type->SetPrimType(PTY_i32);
   } else {
@@ -3072,14 +3120,34 @@ FEIRExprArrayStoreForC::FEIRExprArrayStoreForC(UniqueFEIRExpr argExprArray, std:
   SetIndexsExprs(argExprIndexs);
 }
 
+FEIRExprArrayStoreForC::FEIRExprArrayStoreForC(UniqueFEIRExpr argExprArray, std::list<UniqueFEIRExpr> &argExprIndexs,
+                                               UniqueFEIRType argArrayTypeNative,
+                                               UniqueFEIRExpr argExprStruct,
+                                               UniqueFEIRType argStructTypeNative)
+    : FEIRExpr(FEIRNodeKind::kExprArrayStoreForC),
+      exprArray(std::move(argExprArray)),
+      typeNative(std::move(argArrayTypeNative)),
+      exprStruct(std::move(argExprStruct)),
+      typeNativeStruct(std::move(argStructTypeNative)) {
+  SetIndexsExprs(argExprIndexs);
+}
+
 // only ArraySubscriptExpr is right value, left not need
 BaseNode *FEIRExprArrayStoreForC::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
   MIRType *ptrMIRArrayType = typeNative->GenerateMIRType(false);
   std::unique_ptr<FEIRVar> tmpVar = std::make_unique<FEIRVarName>(exprArray->GetVarUses().front()->GetNameRaw(),
                                                                   typeNative->Clone());
-  MIRSymbol *mirSymbol = tmpVar->GenerateLocalMIRSymbol(mirBuilder);
-  BaseNode *nodeAddrof = mirBuilder.CreateExprAddrof(0, *mirSymbol);
   std::vector<BaseNode*> nds;
+  uint32 fieldID = 0;
+  if (IsMember()) {
+    GStrIdx fieldNameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(
+        static_cast<FEIRExprDRead*>(exprArray.get())->GetFieldName());
+    MIRType *ptrMIRStructType = typeNativeStruct->GenerateMIRType(false);
+    MIRStructType* mirStructType = static_cast<MIRStructType*>(ptrMIRStructType);
+    FEManager::GetMIRBuilder().TraverseToNamedField(*mirStructType, fieldNameIdx, fieldID);
+  }
+  MIRSymbol *mirSymbol = tmpVar->GenerateLocalMIRSymbol(mirBuilder);
+  BaseNode *nodeAddrof = mirBuilder.CreateExprAddrof(fieldID, *mirSymbol);
   nds.push_back(nodeAddrof);
   for (auto &e : exprIndexs) {
     BaseNode *no = e->GenMIRNode(mirBuilder);
@@ -3098,6 +3166,12 @@ std::unique_ptr<FEIRExpr> FEIRExprArrayStoreForC::CloneImpl() const {
   CHECK_FATAL(false, "not support clone here");
   std::unique_ptr<FEIRExpr> expr;
   return expr;
+}
+
+PrimType FEIRExprArrayStoreForC::GetPrimTypeImpl() const {
+  CHECK_NULL_FATAL(typeNative);
+  MIRType *ptrMIRArrayType = typeNative->GenerateMIRType(false);
+  return static_cast<MIRArrayType*>(ptrMIRArrayType)->GetElemType()->GetPrimType();
 }
 
 // ---------- FEIRExprArrayLoad ----------

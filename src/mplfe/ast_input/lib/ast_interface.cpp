@@ -287,5 +287,10 @@ void LibAstFile::EmitTypeName(const clang::RecordType &recoType, std::stringstre
     uint32_t id = recoType.getDecl()->getLocation().getRawEncoding();
     ss << GetOrCreateMappedUnnamedName(id);
   }
+
+  if (!recoDecl->isDefinedOutsideFunctionOrMethod()) {
+    Pos p = GetDeclPosInfo(*recoDecl);
+    ss << "_" << p.first << "_" << p.second;
+  }
 }
 } // namespace maple

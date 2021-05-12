@@ -456,7 +456,7 @@ PrimType FEIRTypeNative::GetPrimTypeImpl() const {
 }
 
 void FEIRTypeNative::SetPrimTypeImpl(PrimType pt) {
-  CHECK_FATAL(false, "Should not get here");
+  mirType.SetPrimType(pt);
 }
 
 void FEIRTypeNative::CopyFromImpl(const FEIRType &type) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -32,7 +32,6 @@
 using namespace std;
 
 namespace maple {
-
 // if the pointer represented by vst is found to have a unique pointer value,
 // return the BB of the definition
 BB *FSAA::FindUniquePointerValueDefBB(VersionSt *vst) {
@@ -58,7 +57,8 @@ BB *FSAA::FindUniquePointerValueDefBB(VersionSt *vst) {
     }
     return nullptr;
   } else if (rhs->GetOpCode() == OP_iread) {
-    if (func->GetMirFunc()->IsConstructor() || func->GetMirFunc()->IsStatic() || func->GetMirFunc()->GetFormalDefVec().empty()) {
+    if (func->GetMirFunc()->IsConstructor() || func->GetMirFunc()->IsStatic() ||
+        func->GetMirFunc()->GetFormalDefVec().empty()) {
       return nullptr;
     }
     // check if rhs is reading a final field thru this
@@ -107,7 +107,7 @@ void FSAA::ProcessBB(BB *bb) {
         hasErase = false;
         TypeOfMayDefList::iterator it = mayDefNodes->begin();
         // due to use of iterator, can do at most 1 erasion each iterator usage
-        for (; it != mayDefNodes->end(); it++) {
+        for (; it != mayDefNodes->end(); ++it) {
           if ((*it).base == nullptr) {
           } else {
             BB *aliasedDefBB = (*it).base->GetDefBB();
@@ -120,11 +120,11 @@ void FSAA::ProcessBB(BB *bb) {
           if (hasErase) {
             if (DEBUGFUNC(func)) {
               LogInfo::MapleLogger() << "FSAA deletes mayDef of ";
-              (*it).GetResult()->Dump(mirModule);
+              (*it).GetResult()->Dump();
               LogInfo::MapleLogger() << " in BB " << bb->GetBBId() << " at:" << endl;
               itStmt->Dump();
             }
-            mayDefNodes->erase(it);
+            (void)mayDefNodes->erase(it);
             needUpdateSSA = true;
             CHECK_FATAL(!mayDefNodes->empty(), "FSAA::ProcessBB: mayDefNodes of iassign rendered empty");
             break;
@@ -135,7 +135,7 @@ void FSAA::ProcessBB(BB *bb) {
   }
 }
 
-AnalysisResult *MeDoFSAA::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr *mrm) {
+AnalysisResult *MeDoFSAA::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) {
   SSATab *ssaTab = static_cast<SSATab *>(m->GetAnalysisResult(MeFuncPhase_SSATAB, func));
   ASSERT(ssaTab != nullptr, "ssaTab phase has problem");
 
@@ -172,5 +172,4 @@ AnalysisResult *MeDoFSAA::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResult
 
   return nullptr;
 }
-
 }  // namespace maple

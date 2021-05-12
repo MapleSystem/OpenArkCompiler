@@ -157,7 +157,11 @@ bool MIRFloatConst::operator==(const MIRConst &rhs) const {
   if (std::isnan(value.floatValue)) {
     return std::isnan(floatConst.value.floatValue);
   }
-  return (fabs(floatConst.value.floatValue - value.floatValue) <= 1e-6);
+  if (floatConst.value.floatValue == 0.0 && value.floatValue == 0.0) {
+    return floatConst.IsNeg() == IsNeg();
+  }
+  // Use bitwise comparison instead of approximate comparison for FP to avoid treating 0.0 and FLT_MIN as equal
+  return (floatConst.value.intValue == value.intValue);
 }
 
 bool MIRDoubleConst::operator==(const MIRConst &rhs) const {
@@ -174,7 +178,11 @@ bool MIRDoubleConst::operator==(const MIRConst &rhs) const {
   if (std::isnan(value.dValue)) {
     return std::isnan(floatConst.value.dValue);
   }
-  return (fabs(floatConst.value.dValue - value.dValue) <= 1e-15);
+  if (floatConst.value.dValue == 0.0 && value.dValue == 0.0) {
+    return floatConst.IsNeg() == IsNeg();
+  }
+  // Use bitwise comparison instead of approximate comparison for FP to avoid treating 0.0 and DBL_MIN as equal
+  return (floatConst.value.intValue == value.intValue);
 }
 
 bool MIRFloat128Const::operator==(const MIRConst &rhs) const {

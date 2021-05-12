@@ -128,6 +128,9 @@ MIRType *LibAstFile::CvtOtherType(const clang::QualType srcType) {
 MIRType *LibAstFile::CvtRecordType(const clang::QualType srcType) {
   const auto *recordType = llvm::cast<clang::RecordType>(srcType);
   clang::RecordDecl *recordDecl = recordType->getDecl();
+  if (!recordDecl->isLambda() && recordDecl->isImplicit() && recordDeclSet.emplace(recordDecl).second == true) {
+    recordDecles.emplace_back(recordDecl);
+  }
   MIRStructType *type = nullptr;
   std::stringstream ss;
   EmitTypeName(srcType, ss);

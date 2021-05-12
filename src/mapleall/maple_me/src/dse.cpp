@@ -401,7 +401,7 @@ void DSE::CollectNotNullNode(StmtNode &stmt, BB &bb) {
       }
     } else if (i == 0 && stmt.GetOpCode() == OP_iassign) {
       // A iass stmt, mark and save
-      BaseNode &base = static_cast<IassignNode&>(stmt).GetAddrExprBase();
+      BaseNode &base = *static_cast<IassignNode&>(stmt).Opnd(0);
       stmt2NotNullExpr[&stmt].push_back(&base);
       MarkSingleUseLive(base);
       notNullExpr2Stmt[&base].push_back(std::make_pair(&stmt, &bb));
@@ -432,7 +432,7 @@ void DSE::CollectNotNullNode(StmtNode &stmt, BaseNode &node, BB &bb, uint8 nodeT
       break;
     }
     case OP_iread: {
-      BaseNode &base = static_cast<IreadNode&>(node).GetAddrExprBase();
+      BaseNode &base = *static_cast<IreadNode&>(node).Opnd(0);
       if (nodeType != kNodeTypeIvar) {
         stmt2NotNullExpr[&stmt].push_back(&base);
         MarkSingleUseLive(base);

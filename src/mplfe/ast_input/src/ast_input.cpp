@@ -21,15 +21,18 @@ ASTInput::ASTInput(MIRModule &moduleIn, MapleAllocator &allocatorIn)
       astStructs(allocatorIn.Adapter()), astFuncs(allocatorIn.Adapter()), astVars(allocatorIn.Adapter()) {}
 
 bool ASTInput::ReadASTFile(MapleAllocator &allocatorIn, uint32 index, const std::string &fileName) {
-  ASTParser *astParser = allocator.GetMemPool()->New<ASTParser>(allocator, index, fileName);
+  ASTParser *astParser =
+      allocator.GetMemPool()->New<ASTParser>(allocator, index, fileName, astStructs, astFuncs, astVars);
   astParser->SetAstIn(this);
   TRY_DO(astParser->OpenFile());
   TRY_DO(astParser->Verify());
   TRY_DO(astParser->PreProcessAST());
-  TRY_DO(astParser->ProcessGlobalEnums(allocatorIn, astVars));
-  TRY_DO(astParser->RetrieveStructs(allocatorIn, astStructs));
-  TRY_DO(astParser->RetrieveFuncs(allocatorIn, astFuncs));
-  TRY_DO(astParser->RetrieveGlobalVars(allocatorIn, astVars));
+  TRY_DO(astParser->ProcessGlobalEnums(allocatorIn));
+  // Some implicit record decl would be retrieved in func body at use,
+  // so we put `RetrieveFuncs` before `RetrieveStructs`
+  TRY_DO(astParser->RetrieveFuncs(allocatorIn));
+  TRY_DO(astParser->RetrieveStructs(allocatorIn));
+  TRY_DO(astParser->RetrieveGlobalVars(allocatorIn));
   astParserMap.emplace(fileName, astParser);
   return true;
 }

@@ -79,7 +79,7 @@ AnalysisResult *MeDoDSE::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultM
     if (!MeOption::quiet) {
       LogInfo::MapleLogger() << "  == " << PhaseName() << " invokes [ " << doFSAA.PhaseName() << " ] ==\n";
     }
-    doFSAA.Run(func, m, mrm);
+    (void)doFSAA.Run(func, m, mrm);
   }
 
   return nullptr;
