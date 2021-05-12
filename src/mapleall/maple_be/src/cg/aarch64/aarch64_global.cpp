@@ -679,14 +679,12 @@ uint32 RedundantUxtPattern::GetInsnValidBit(Insn &insn) {
       nRet = 1;
       break;
     case MOP_wldrb:
-    case MOP_wldrsb:
     case MOP_wldarb:
     case MOP_wldxrb:
     case MOP_wldaxrb:
       nRet = k8BitSize;
       break;
     case MOP_wldrh:
-    case MOP_wldrsh:
     case MOP_wldarh:
     case MOP_wldxrh:
     case MOP_wldaxrh:
@@ -694,6 +692,8 @@ uint32 RedundantUxtPattern::GetInsnValidBit(Insn &insn) {
       break;
     case MOP_wmovrr:
     case MOP_xmovri32:
+    case MOP_wldrsb:
+    case MOP_wldrsh:
     case MOP_wldli:
     case MOP_wldr:
     case MOP_wldp:
