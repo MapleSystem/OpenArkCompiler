@@ -172,7 +172,7 @@ AliasElem *AliasClass::FindOrCreateExtraLevAliasElem(BaseNode &expr, TyIdx tyIdx
     if (ainfo.ae == nullptr) {
       return nullptr;
     }
-  } else if (ainfo.ae == nullptr) {
+  } else if (ainfo.ae == nullptr || IsNullOrDummySymbolOst(ainfo.ae->GetOst())) {
     return FindOrCreateDummyNADSAe();
   }
   OriginalSt *newOst = nullptr;
