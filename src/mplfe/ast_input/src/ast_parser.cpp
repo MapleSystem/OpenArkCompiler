@@ -631,9 +631,13 @@ const clang::Expr *ASTParser::PeelParen(const clang::Expr &expr) {
   const clang::Expr *exprPtr = &expr;
   while (llvm::isa<clang::ParenExpr>(exprPtr) ||
          (llvm::isa<clang::UnaryOperator>(exprPtr) &&
-          llvm::cast<clang::UnaryOperator>(exprPtr)->getOpcode() == clang::UO_Extension)) {
+          llvm::cast<clang::UnaryOperator>(exprPtr)->getOpcode() == clang::UO_Extension) ||
+         (llvm::isa<clang::ImplicitCastExpr>(exprPtr) &&
+          llvm::cast<clang::ImplicitCastExpr>(exprPtr)->getCastKind() == clang::CK_LValueToRValue)) {
     if (llvm::isa<clang::ParenExpr>(exprPtr)) {
       exprPtr = llvm::cast<clang::ParenExpr>(exprPtr)->getSubExpr();
+    } else if (llvm::isa<clang::ImplicitCastExpr>(exprPtr)) {
+      exprPtr = llvm::cast<clang::ImplicitCastExpr>(exprPtr)->getSubExpr();
     } else {
       exprPtr = llvm::cast<clang::UnaryOperator>(exprPtr)->getSubExpr();
     }
@@ -1120,7 +1124,27 @@ ASTExpr *ASTParser::ProcessExprCharacterLiteral(MapleAllocator &allocator, const
   if (qualType->isPromotableIntegerType()) {
     kind = clang::BuiltinType::Int;
   }
+  PrimType primType = PTY_i32;
+  switch (kind) {
+    case clang::BuiltinType::UInt:
+      primType = PTY_u32;
+      break;
+    case clang::BuiltinType::Int:
+      primType = PTY_i32;
+      break;
+    case clang::BuiltinType::ULong:
+    case clang::BuiltinType::ULongLong:
+      primType = PTY_u64;
+      break;
+    case clang::BuiltinType::Long:
+    case clang::BuiltinType::LongLong:
+      primType = PTY_i64;
+      break;
+    default:
+      break;
+  }
   astCharacterLiteral->SetVal(expr.getValue());
+  astCharacterLiteral->SetPrimType(primType);
   return astCharacterLiteral;
 }
 
@@ -1173,6 +1197,8 @@ ASTExpr *ASTParser::ProcessExprImplicitCastExpr(MapleAllocator &allocator, const
     case clang::CK_FunctionToPointerDecay:
     case clang::CK_LValueToRValue:
     case clang::CK_BitCast:
+    case clang::CK_NullToPointer:
+    case clang::CK_IntegralToPointer:
       break;
     case clang::CK_BuiltinFnToFnPtr:
       astImplicitCastExpr->SetBuilinFunc(true);
@@ -1181,6 +1207,7 @@ ASTExpr *ASTParser::ProcessExprImplicitCastExpr(MapleAllocator &allocator, const
     case clang::CK_IntegralToFloating:
     case clang::CK_FloatingCast:
     case clang::CK_IntegralCast:
+    case clang::CK_IntegralToBoolean:
       astImplicitCastExpr->SetSrcType(astFile->CvtType(expr.getSubExpr()->getType()));
       astImplicitCastExpr->SetDstType(astFile->CvtType(expr.getType()));
       astImplicitCastExpr->SetNeededCvt(true);

@@ -432,7 +432,7 @@ class ASTBinaryOperatorExpr : public ASTExpr {
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 
   Opcode opcode;
-  MIRType *retType;
+  MIRType *retType = nullptr;
   ASTExpr *leftExpr = nullptr;
   ASTExpr *rightExpr = nullptr;
 };
@@ -512,11 +512,16 @@ class ASTArraySubscriptExpr : public ASTExpr {
     return memberExpr;
   }
 
+  void SetAddrOfFlag(bool flag) {
+    isAddrOf = flag;
+  }
+
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   ASTExpr *baseExpr;
   ASTExpr *memberExpr = nullptr;
   std::vector<ASTExpr*> idxExprs;
+  bool isAddrOf = false;
 };
 
 class ASTExprUnaryExprOrTypeTraitExpr : public ASTExpr {
@@ -582,6 +587,10 @@ class ASTMemberExpr : public ASTExpr {
 
   void SetIsArrow(bool arrow) {
     isArrow = arrow;
+  }
+
+  bool GetIsArrow() const {
+    return isArrow;
   }
 
  private:
@@ -799,9 +808,14 @@ class ASTCharacterLiteral : public ASTExpr {
     val = valIn;
   }
 
+  void SetPrimType(PrimType primType) {
+    type = primType;
+  }
+
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   int8 val;
+  PrimType type;
 };
 
 class ASTVAArgExpr : public ASTExpr {

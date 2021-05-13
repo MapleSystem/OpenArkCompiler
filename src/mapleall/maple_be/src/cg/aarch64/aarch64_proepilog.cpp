@@ -1032,7 +1032,8 @@ void AArch64GenProEpilog::AppendInstructionAllocateCallFrame(AArch64reg reg0, AA
   if (cgFunc.GenCfi()) {
     BB *curBB = cgFunc.GetCurBB();
     ipoint = curBB->InsertInsnAfter(*ipoint, aarchCGFunc.CreateCfiOffsetInsn(RFP, -cfiOffsetSecond, k64BitSize));
-    curBB->InsertInsnAfter(*ipoint, aarchCGFunc.CreateCfiOffsetInsn(RLR, -cfiOffsetSecond + kOffset8MemPos, k64BitSize));
+    curBB->InsertInsnAfter(*ipoint,
+                           aarchCGFunc.CreateCfiOffsetInsn(RLR, -cfiOffsetSecond + kOffset8MemPos, k64BitSize));
   }
 }
 

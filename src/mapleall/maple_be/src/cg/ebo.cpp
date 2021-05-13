@@ -993,7 +993,7 @@ void Ebo::RemoveUnusedInsns(BB &bb, bool normal) {
                 bool pattern3 = false;
                 bool pattern4 = false;
                 if (opInfo->refCount == 1) {
-                  if (IsOfSameClass(*reg, *res1)) {
+                  if (IsOfSameClass(*reg, *res1) && insn->IsMove()) {
                     pattern3 = true;
                     pattern1 = true;
                   } else if (prev->IsLoad() && ChangeLdrMop(*prev, *res1)) {
