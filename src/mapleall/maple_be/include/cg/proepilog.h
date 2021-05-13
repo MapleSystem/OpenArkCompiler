@@ -35,6 +35,12 @@ class GenProEpilog {
     return false;
   }
 
+  virtual bool NeedProEpilog() {
+    return true;
+  }
+
+
+
   /* CFI related routines */
   int64 GetOffsetFromCFA() const {
     return offsetFromCfa;
