@@ -2145,8 +2145,9 @@ PrimType FEIRExprDRead::GetPrimTypeImpl() const {
 
 // ---------- FEIRExprIRead ----------
 std::unique_ptr<FEIRExpr> FEIRExprIRead::CloneImpl() const {
-  std::unique_ptr<FEIRExpr> expr = std::make_unique<FEIRExprIRead>(retType->Clone(), ptrType->Clone(),
-                                                                   fieldID, subExpr->Clone());
+  std::unique_ptr<FEIRExprIRead> expr = std::make_unique<FEIRExprIRead>(retType->Clone(), ptrType->Clone(),
+                                                                        fieldID, subExpr->Clone());
+  expr->SetFieldName(fieldName);
   return expr;
 }
 
@@ -2204,7 +2205,10 @@ BaseNode *FEIRExprAddrof::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
 
 // ---------- FEIRExprAddrofVar ----------
 std::unique_ptr<FEIRExpr> FEIRExprAddrofVar::CloneImpl() const {
-  std::unique_ptr<FEIRExpr> expr = std::make_unique<FEIRExprAddrofVar>(varSrc->Clone());
+  std::unique_ptr<FEIRExprAddrofVar> expr = std::make_unique<FEIRExprAddrofVar>(varSrc->Clone());
+  expr->SetFieldID(fieldID);
+  expr->SetFieldName(fieldName);
+  expr->SetFieldType(fieldType);
   return expr;
 }
 
@@ -3273,6 +3277,11 @@ std::unique_ptr<FEIRExpr> FEIRExprCStyleCast::CloneImpl() const {
                                                    subExpr->Clone(), isArray2Pointer);
   expr->SetRefName(refName);
   return expr;
+}
+
+PrimType FEIRExprCStyleCast::GetPrimTypeImpl() const {
+  CHECK_NULL_FATAL(destType);
+  return destType->GetPrimType();
 }
 
 BaseNode *FEIRExprCStyleCast::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {

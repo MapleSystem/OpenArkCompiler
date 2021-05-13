@@ -1197,12 +1197,12 @@ ASTExpr *ASTParser::ProcessExprImplicitCastExpr(MapleAllocator &allocator, const
     case clang::CK_FunctionToPointerDecay:
     case clang::CK_LValueToRValue:
     case clang::CK_BitCast:
-    case clang::CK_NullToPointer:
-    case clang::CK_IntegralToPointer:
       break;
     case clang::CK_BuiltinFnToFnPtr:
       astImplicitCastExpr->SetBuilinFunc(true);
       break;
+    case clang::CK_NullToPointer:
+    case clang::CK_IntegralToPointer:
     case clang::CK_FloatingToIntegral:
     case clang::CK_IntegralToFloating:
     case clang::CK_FloatingCast:
@@ -1282,7 +1282,7 @@ ASTExpr *ASTParser::ProcessExprBinaryOperator(MapleAllocator &allocator, const c
   astBinOpExpr->SetRetType(astFile->CvtType(qualType));
   ASTExpr *astRExpr = ProcessExpr(allocator, bo.getRHS());
   ASTExpr *astLExpr = ProcessExpr(allocator, bo.getLHS());
-  if (bo.getType()->isPointerType()) {
+  if (bo.getType()->isPointerType() && bo.isAdditiveOp()) {
     auto ptrSizeExpr = ASTDeclsBuilder::ASTExprBuilder<ASTIntegerLiteral>(allocator);
     ptrSizeExpr->SetType(PTY_ptr);
     ptrSizeExpr->SetVal(GetSizeFromQualType(bo.getType()->getPointeeType()));
@@ -1632,8 +1632,10 @@ ASTDecl *ASTParser::ProcessDeclFieldDecl(MapleAllocator &allocator, const clang:
   clang::QualType qualType = decl.getType();
   std::string fieldName = astFile->GetMangledName(decl);
   if (fieldName.empty()) {
-    return nullptr;
+    uint32 id = decl.getLocation().getRawEncoding();
+    fieldName = astFile->GetOrCreateMappedUnnamedName(id);
   }
+  CHECK_FATAL(!fieldName.empty(), "fieldName is empty");
   MIRType *fieldType = astFile->CvtType(qualType);
   if (fieldType == nullptr) {
     return nullptr;
