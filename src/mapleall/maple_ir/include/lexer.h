@@ -148,7 +148,7 @@ class MIRLexer {
 };
 
 inline bool IsPrimitiveType(TokenKind tk) {
-  return (tk >= TK_void) && (tk <= TK_agg);
+  return (tk >= TK_void) && (tk < TK_unknown);
 }
 
 inline bool IsVarName(TokenKind tk) {

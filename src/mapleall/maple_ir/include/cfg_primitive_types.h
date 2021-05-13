@@ -41,6 +41,7 @@ struct PrimitiveTypeProperty {
   bool isDynamic;
   bool isDynamicAny;
   bool isDynamicNone;
+  bool isVector;
 };
 
 const PrimitiveTypeProperty &GetPrimitiveTypeProperty(PrimType pType);

@@ -55,6 +55,9 @@ class PrimitiveType {
   bool IsDynamicNone() const {
     return property.isDynamicNone;
   }
+  bool IsVector() const {
+    return property.isVector;
+  }
 
  private:
   const PrimitiveTypeProperty &property;
