@@ -486,12 +486,23 @@ class FEIRExprAddrofVar : public FEIRExpr {
       : FEIRExpr(FEIRNodeKind::kExprAddrofVar), varSrc(std::move(argVarSrc)) {}
   ~FEIRExprAddrofVar() = default;
 
+  void SetFieldName(const std::string &argFieldName) {
+    fieldName = argFieldName;
+  }
+
+  void SetFieldType(MIRType *type) {
+    fieldType = type;
+  }
+
  protected:
   std::unique_ptr<FEIRExpr> CloneImpl() const override;
   BaseNode *GenMIRNodeImpl(MIRBuilder &mirBuilder) const override;
 
  private:
   std::unique_ptr<FEIRVar> varSrc;
+  FieldID fieldID = 0;
+  std::string fieldName;
+  MIRType *fieldType = nullptr;
 };
 
 class FEIRExprAddrofFunc : public FEIRExpr {
@@ -512,6 +523,7 @@ class FEIRExprAddrofFunc : public FEIRExpr {
 class FEIRExprUnary : public FEIRExpr {
  public:
   FEIRExprUnary(Opcode argOp, std::unique_ptr<FEIRExpr> argOpnd);
+  FEIRExprUnary(Opcode argOp, MIRType *type, std::unique_ptr<FEIRExpr> argOpnd);
   FEIRExprUnary(std::unique_ptr<FEIRType> argType, Opcode argOp, std::unique_ptr<FEIRExpr> argOpnd);
   ~FEIRExprUnary() = default;
   void SetOpnd(std::unique_ptr<FEIRExpr> argOpnd);
@@ -526,9 +538,11 @@ class FEIRExprUnary : public FEIRExpr {
 
   Opcode op;
   std::unique_ptr<FEIRExpr> opnd;
+  std::unique_ptr<FEIRVar> var;
 
  private:
   void SetExprTypeByOp();
+  MIRType *subType = nullptr;
 
   static std::map<Opcode, bool> mapOpNestable;
 };  // class FEIRExprUnary
@@ -909,6 +923,10 @@ class FEIRExprArrayStoreForC : public FEIRExpr {
     return typeNativeStruct != nullptr;
   }
 
+  void SetAddrOfFlag(bool flag) {
+    isAddrOf = flag;
+  }
+
  protected:
   std::unique_ptr<FEIRExpr> CloneImpl() const override;
   BaseNode *GenMIRNodeImpl(MIRBuilder &mirBuilder) const override;
@@ -918,6 +936,7 @@ class FEIRExprArrayStoreForC : public FEIRExpr {
   UniqueFEIRExpr exprArray;
   mutable std::list<UniqueFEIRExpr> exprIndexs;
   UniqueFEIRType typeNative = nullptr;
+  bool isAddrOf = false;
 
   // for array in struct
   UniqueFEIRExpr exprStruct = nullptr;

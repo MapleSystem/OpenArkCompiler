@@ -935,8 +935,10 @@ bool AArch64Ebo::ChangeLdrMop(Insn &insn, const Operand &opnd) const {
   ASSERT(opnd.IsRegister(), "expect opnd is a register in ChangeLdrMop");
 
   const RegOperand *regOpnd = static_cast<const RegOperand*>(&opnd);
-  ASSERT(static_cast<RegOperand&>(insn.GetOperand(kInsnFirstOpnd)).GetRegisterType() != regOpnd->GetRegisterType(),
-         "expected matched register type in AArch64Ebo::ChangeLdrMop");
+  if (static_cast<RegOperand&>(insn.GetOperand(kInsnFirstOpnd)).GetRegisterType() != regOpnd->GetRegisterType()) {
+    return false;
+  }
+
   if (static_cast<MemOperand&>(insn.GetOperand(kInsnSecondOpnd)).GetIndexRegister()) {
     return false;
   }
