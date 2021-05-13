@@ -494,6 +494,10 @@ class FEIRExprAddrofVar : public FEIRExpr {
     fieldType = type;
   }
 
+  void SetFieldID(FieldID id) {
+    fieldID = id;
+  }
+
  protected:
   std::unique_ptr<FEIRExpr> CloneImpl() const override;
   BaseNode *GenMIRNodeImpl(MIRBuilder &mirBuilder) const override;
@@ -992,6 +996,7 @@ class FEIRExprCStyleCast : public FEIRExpr {
  protected:
   std::unique_ptr<FEIRExpr> CloneImpl() const override;
   BaseNode *GenMIRNodeImpl(MIRBuilder &mirBuilder) const override;
+  PrimType GetPrimTypeImpl() const override;
 
  private:
   MIRType *srcType = nullptr;
