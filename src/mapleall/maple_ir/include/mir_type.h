@@ -113,6 +113,18 @@ inline bool IsPrimitivePoint(PrimitiveType primitiveType) {
   return primitiveType.IsPointer();
 }
 
+inline bool IsPrimitiveVector(PrimitiveType primitiveType) {
+  return primitiveType.IsVector();
+}
+
+inline bool IsPrimitiveVectorFloat(PrimitiveType primitiveType) {
+  return primitiveType.IsVector() && primitiveType.IsFloat();
+}
+
+inline bool IsPrimitiveVectorInteger(PrimitiveType primitiveType) {
+  return primitiveType.IsVector() && primitiveType.IsInteger();
+}
+
 bool IsNoCvtNeeded(PrimType toType, PrimType fromType);
 
 inline bool IsRefOrPtrAssign(PrimType toType, PrimType fromType) {
