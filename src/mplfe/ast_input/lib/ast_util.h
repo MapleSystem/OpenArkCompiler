@@ -50,6 +50,21 @@ class ASTUtil {
   static bool IsVoidPointerType(const TyIdx &tyIdx);
   static std::string AdjustFuncName(std::string funcName);
   static bool InsertFuncSet(GStrIdx idx);
+
+  template <typename Range, typename Value = typename Range::value_type>
+  static std::string Join(const Range &elements, const char *delimiter) {
+    std::ostringstream os;
+    auto b = begin(elements);
+    auto e = end(elements);
+    if (b != e) {
+      std::copy(b, prev(e), std::ostream_iterator<Value>(os, delimiter));
+      b = prev(e);
+    }
+    if (b != e) {
+      os << *b;
+    }
+    return os.str();
+  }
 };
 }  // namespace maple
 #endif  // AST2MPL_INCLUDE_ASTUTIL_H_

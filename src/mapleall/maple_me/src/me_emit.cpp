@@ -21,13 +21,12 @@
 #include "constantfold.h"
 
 namespace maple {
-
 // emit IR to specified file
 AnalysisResult *MeDoEmit::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) {
   static std::mutex mtx;
   ParallelGuard guard(mtx, ThreadEnv::IsMeParallel());
   if (func->NumBBs() > 0) {
-    if(!func->HasLaidOut()) {
+    if (!func->HasLaidOut()) {
       (void)m->GetAnalysisResult(MeFuncPhase_BBLAYOUT, func);
       CHECK_FATAL(func->HasLaidOut(), "Check bb layout phase.");
     }

@@ -1773,27 +1773,29 @@ bool MIRParser::ParseDeclaredSt(StIdx &stidx) {
   return true;
 }
 
+void MIRParser::CreateFuncMIRSymbol(PUIdx &puidx, GStrIdx strIdx) {
+  MIRSymbol *funcSt = GlobalTables::GetGsymTable().CreateSymbol(kScopeGlobal);
+  funcSt->SetNameStrIdx(strIdx);
+  (void)GlobalTables::GetGsymTable().AddToStringSymbolMap(*funcSt);
+  funcSt->SetStorageClass(kScText);
+  funcSt->SetSKind(kStFunc);
+  funcSt->SetNeedForwDecl();
+  auto *fn = mod.GetMemPool()->New<MIRFunction>(&mod, funcSt->GetStIdx());
+  puidx = GlobalTables::GetFunctionTable().GetFuncTable().size();
+  fn->SetPuidx(puidx);
+  GlobalTables::GetFunctionTable().GetFuncTable().push_back(fn);
+  funcSt->SetFunction(fn);
+}
+
 bool MIRParser::ParseDeclaredFunc(PUIdx &puidx) {
   GStrIdx stridx = GlobalTables::GetStrTable().GetStrIdxFromName(lexer.GetName());
   if (stridx == 0u) {
-    GStrIdx newStrIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(lexer.GetName());
-    MIRSymbol *funcSt = GlobalTables::GetGsymTable().CreateSymbol(kScopeGlobal);
-    funcSt->SetNameStrIdx(newStrIdx);
-    (void)GlobalTables::GetGsymTable().AddToStringSymbolMap(*funcSt);
-    funcSt->SetStorageClass(kScText);
-    funcSt->SetSKind(kStFunc);
-    funcSt->SetNeedForwDecl();
-    auto *fn = mod.GetMemPool()->New<MIRFunction>(&mod, funcSt->GetStIdx());
-    puidx = GlobalTables::GetFunctionTable().GetFuncTable().size();
-    fn->SetPuidx(puidx);
-    GlobalTables::GetFunctionTable().GetFuncTable().push_back(fn);
-    funcSt->SetFunction(fn);
-    return true;
+    stridx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(lexer.GetName());
   }
   StIdx stidx = GlobalTables::GetGsymTable().GetStIdxFromStrIdx(stridx);
   if (stidx.FullIdx() == 0) {
-    Error("function symbol not declared ");
-    return false;
+    CreateFuncMIRSymbol(puidx, stridx);
+    return true;
   }
   MIRSymbol *st = GlobalTables::GetGsymTable().GetSymbolFromStidx(stidx.Idx());
   if (st->GetSKind() != kStFunc) {

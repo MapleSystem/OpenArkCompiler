@@ -19,6 +19,7 @@
 #include <list>
 #include "mpl_logging.h"
 #include "prim_types.h"
+#include "mir_type.h"
 #include "global_tables.h"
 #include "mempool.h"
 #include "mir_nodes.h"
@@ -39,6 +40,7 @@ class FEUtils {
   static PrimType GetPrimType(const GStrIdx &typeNameIdx);
   static std::string GetSequentialName0(const std::string &prefix, uint32_t num);
   static std::string GetSequentialName(const std::string &prefix);
+  static FieldID GetStructFieldID(MIRBuilder &mirBuilder, MIRStructType *base, const std::string &fieldName);
 
   static const std::string kBoolean;
   static const std::string kByte;

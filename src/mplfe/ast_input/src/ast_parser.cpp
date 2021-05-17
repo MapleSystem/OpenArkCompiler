@@ -124,7 +124,7 @@ ASTStmt *ASTParser::ProcessStmt(MapleAllocator &allocator, const clang::Stmt &st
     STMT_CASE(AtomicExpr);
     STMT_CASE(GCCAsmStmt);
     default: {
-      CHECK_FATAL(false, "ASTStmt: %d NIY", stmt.getStmtClass());
+      CHECK_FATAL(false, "ASTStmt: %s NIY", stmt.getStmtClassName());
       return nullptr;
     }
   }
@@ -586,7 +586,7 @@ ASTExpr *ASTParser::ProcessExpr(MapleAllocator &allocator, const clang::Expr *ex
     EXPR_CASE(DependentScopeDeclRefExpr);
     EXPR_CASE(AtomicExpr);
     default:
-      CHECK_FATAL(false, "NIY");
+      CHECK_FATAL(false, "ASTExpr %s NIY", expr->getStmtClassName());
       return nullptr;
   }
 }
@@ -1094,6 +1094,7 @@ ASTExpr *ASTParser::ProcessExprCallExpr(MapleAllocator &allocator, const clang::
   const clang::FunctionDecl *funcDecl = expr.getDirectCallee();
   if (funcDecl != nullptr) {
     std::string funcName = astFile->GetMangledName(*funcDecl);
+    funcName = astCallExpr->CvtBuiltInFuncName(funcName);
     if (!ASTUtil::IsValidName(funcName)) {
       ASTUtil::AdjustName(funcName);
     }
@@ -1173,18 +1174,23 @@ ASTExpr *ASTParser::ProcessExprFloatingLiteral(MapleAllocator &allocator, const 
   ASSERT(astFloatingLiteral != nullptr, "astFloatingLiteral is nullptr");
   llvm::APFloat apf = expr.getValue();
   const llvm::fltSemantics &fltSem = expr.getSemantics();
-  if ((&fltSem != &llvm::APFloat::IEEEsingle()) && (&fltSem != &llvm::APFloat::IEEEdouble())) {
-    ASSERT(false, "unsupported floating literal");
-  }
-  double val;
+  double val = 0;
   if (&fltSem == &llvm::APFloat::IEEEdouble()) {
     val = static_cast<double>(apf.convertToDouble());
-    astFloatingLiteral->SetFlag(false);
-  } else {
+    astFloatingLiteral->SetKind(F64);
+    astFloatingLiteral->SetVal(val);
+  } else if (&fltSem == &llvm::APFloat::IEEEsingle()) {
     val = static_cast<double>(apf.convertToFloat());
-    astFloatingLiteral->SetFlag(true);
+    astFloatingLiteral->SetKind(F32);
+    astFloatingLiteral->SetVal(val);
+  } else if (&fltSem == &llvm::APFloat::x87DoubleExtended()) {
+    WARN(kLncWarn, "True Type is Float128, try to get a approximate double, but it is not exact");
+    val = static_cast<double>(llvm::cast<clang::FloatingLiteral>(expr).getValueAsApproximateDouble());
+    astFloatingLiteral->SetKind(F64);
+    astFloatingLiteral->SetVal(val);
+  } else {
+    CHECK_FATAL(false, "unsupported floating literal");
   }
-  astFloatingLiteral->SetVal(val);
   return astFloatingLiteral;
 }
 
@@ -1522,7 +1528,7 @@ ASTDecl *ASTParser::ProcessDecl(MapleAllocator &allocator, const clang::Decl &de
     DECL_CASE(Enum);
     DECL_CASE(Typedef);
     default:
-      CHECK_FATAL(false, " Decl: %d NIY", decl.getKind());
+      CHECK_FATAL(false, "ASTDecl: %s NIY", decl.getDeclKindName());
       return nullptr;
   }
   return nullptr;

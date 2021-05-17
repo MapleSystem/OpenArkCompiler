@@ -32,9 +32,17 @@ static MplOption kMpl2MplDefaultOptionsO0ForC[] = {
 static MplOption kMplcgDefaultOptionsO0[] = {
 #include "default/O0_options_mplcg.def"
 };
+// O0 mplcg options for C language
+static MplOption kMplcgDefaultOptionsO0ForC[] = {
+#include "default/O0_options_mplcg_c.def"
+};
 // O2 ME options
 static MplOption kMeDefaultOptionsO2[] = {
 #include "default/O2_options_me.def"
+};
+// O2 ME options for C language
+static MplOption kMeDefaultOptionsO2ForC[] = {
+#include "default/O2_options_me_c.def"
 };
 // O2 mpl2mpl options
 static MplOption kMpl2MplDefaultOptionsO2[] = {
@@ -47,6 +55,10 @@ static MplOption kMpl2MplDefaultOptionsO2ForC[] = {
 // O2 mplcg options
 static MplOption kMplcgDefaultOptionsO2[] = {
 #include "default/O2_options_mplcg.def"
+};
+// O2 mplcg options for C language
+static MplOption kMplcgDefaultOptionsO2ForC[] = {
+#include "default/O2_options_mplcg_c.def"
 };
 }  // namespace maple
 #endif  // MAPLE_DRIVER_INCLUDE_DEFAULT_OPTIONS_H

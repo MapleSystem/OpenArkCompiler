@@ -58,6 +58,7 @@ class MIRParser {
   bool ParseConstAddrLeafExpr(MIRConstPtr&);
   bool ParseInitValue(MIRConstPtr&, TyIdx, bool allowEmpty = false);
   bool ParseDeclaredSt(StIdx&);
+  void CreateFuncMIRSymbol(PUIdx &puidx, GStrIdx strIdx);
   bool ParseDeclaredFunc(PUIdx&);
   bool ParseTypeAttrs(TypeAttrs&);
   bool ParseVarTypeAttrs(MIRSymbol &st);
@@ -193,6 +194,7 @@ class MIRParser {
   bool ParseFuncInfo(void);
   void PrepareParsingMIR();
   void PrepareParsingMplt();
+  bool ParseSrcLang(MIRSrcLang &srcLang);
   bool ParseMIR(uint32 fileIdx = 0, uint32 option = 0, bool isIpa = false, bool isComb = false);
   bool ParseMIR(std::ifstream&);  // the main entry point
   bool ParseInlineFuncBody(std::ifstream&);

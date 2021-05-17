@@ -288,18 +288,14 @@ std::list<StmtNode*> FEIRStmtDAssign::GenMIRStmtsImpl(MIRBuilder &mirBuilder) co
   ASSERT(expr != nullptr, "src expr is nullptr");
   MIRSymbol *dstSym = var->GenerateMIRSymbol(mirBuilder);
   BaseNode *srcNode = expr->GenMIRNode(mirBuilder);
-  if (!fieldName.empty() && fieldID == 0) {
-    MIRType *mirType = var->GetType()->GenerateMIRTypeAuto();
-    if (mirType->IsMIRStructType()) {
-      MIRStructType *mirStructType = static_cast<MIRStructType*>(mirType);
-      FieldID fid = mirBuilder.GetStructFieldIDFromFieldName(*mirStructType, fieldName);
-      StmtNode *mirStmt = mirBuilder.CreateStmtDassign(*dstSym, fid, srcNode);
-      ans.push_back(mirStmt);
-    }
-  } else {
-    StmtNode *mirStmt = mirBuilder.CreateStmtDassign(*dstSym, fieldID, srcNode);
-    ans.push_back(mirStmt);
+  MIRType *mirType = var->GetType()->GenerateMIRTypeAuto();
+  FieldID fieldID = this->fieldID;
+  if (mirType->IsMIRStructType() && !fieldName.empty() && fieldID == 0) {
+    MIRStructType *mirStructType = static_cast<MIRStructType*>(mirType);
+    fieldID = FEUtils::GetStructFieldID(mirBuilder, mirStructType, fieldName);
   }
+  StmtNode *mirStmt = mirBuilder.CreateStmtDassign(*dstSym, fieldID, srcNode);
+  ans.push_back(mirStmt);
   return ans;
 }
 
@@ -1167,7 +1163,7 @@ std::list<StmtNode*> FEIRStmtArrayStore::GenMIRStmtsImpl(MIRBuilder &mirBuilder)
   MIRType *ptrMIRArrayType = typeArray->GenerateMIRType(false);
   BaseNode *arrayExpr = nullptr;
   MIRType *mIRElemType = nullptr;
-  if (exprArray->GetType()->GetSrcLang() == kSrcLangC) {
+  if (FEManager::GetManager().GetModule().GetSrcLang() == kSrcLangC) {
     GenMIRStmtsImplForCPart(mirBuilder, ptrMIRArrayType, &mIRElemType, &arrayExpr);
   } else {
     BaseNode *addrBase = exprArray->GenMIRNode(mirBuilder);
@@ -1182,7 +1178,7 @@ std::list<StmtNode*> FEIRStmtArrayStore::GenMIRStmtsImpl(MIRBuilder &mirBuilder)
   }
   BaseNode *elemBn = exprElem->GenMIRNode(mirBuilder);
   IassignNode *stmt = nullptr;
-  if ((exprArray->GetType()->GetSrcLang() == kSrcLangC) ||
+  if ((FEManager::GetManager().GetModule().GetSrcLang() == kSrcLangC) ||
       (exprIndex->GetKind() != kExprConst) || (!FEOptions::GetInstance().IsAOT())) {
     MIRType *ptrMIRElemType = GlobalTables::GetTypeTable().GetOrCreatePointerType(*mIRElemType, PTY_ptr);
     stmt = mirBuilder.CreateStmtIassign(*ptrMIRElemType, 0, arrayExpr, elemBn);
@@ -1208,8 +1204,13 @@ void FEIRStmtArrayStore::GenMIRStmtsImplForCPart(MIRBuilder &mirBuilder, MIRType
     FEManager::GetMIRBuilder().TraverseToNamedField(*mirStructType, fieldNameIdx, fieldID);
   }
   *mIRElemType = typeElem->GenerateMIRType(true);
-  MIRSymbol *mirSymbol = exprArray->GetVarUses().front()->GenerateLocalMIRSymbol(mirBuilder);
-  BaseNode *arrayAddrOfExpr = mirBuilder.CreateExprAddrof(fieldID, *mirSymbol);
+  BaseNode *arrayAddrOfExpr;
+  if (exprArray->GetKind() == kExprDRead) {
+    MIRSymbol *mirSymbol = exprArray->GetVarUses().front()->GenerateLocalMIRSymbol(mirBuilder);
+    arrayAddrOfExpr = mirBuilder.CreateExprAddrof(fieldID, *mirSymbol);
+  } else {
+    arrayAddrOfExpr = exprArray->GenMIRNode(mirBuilder);
+  }
   if (exprIndex == nullptr) {
     std::vector<BaseNode*> nds;
     nds.push_back(arrayAddrOfExpr);
@@ -2115,11 +2116,14 @@ BaseNode *FEIRExprDRead::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
   AddrofNode *node = mirBuilder.CreateExprDread(*type, *symbol);
   if ((type->IsMIRStructType() || type->GetKind() == MIRTypeKind::kTypeUnion) &&
       (!fieldName.empty() || (fieldID != 0))) {
-    FieldID fieldIdVar = fieldID;
-    if (fieldIdVar == 0) {
-      fieldIdVar = mirBuilder.GetStructFieldIDFromFieldName(*type, fieldName);
+    FieldID fieldID = this->fieldID;
+    if (fieldID == 0) {
+      fieldID = FEUtils::GetStructFieldID(mirBuilder, static_cast<MIRStructType*>(type), fieldName);
     }
-    node = mirBuilder.CreateExprDread(*fieldType, fieldIdVar, *symbol);
+    FieldID tmpID = fieldID;
+    FieldPair fieldPair = static_cast<MIRStructType*>(type)->TraverseToFieldRef(tmpID);
+    MIRType *fieldType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(fieldPair.second.first);
+    node = mirBuilder.CreateExprDread(*fieldType, fieldID, *symbol);
   }
   return node;
 }
@@ -2163,20 +2167,18 @@ BaseNode *FEIRExprIRead::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
   CHECK_FATAL(pointerType->IsMIRPtrType(), "Must be ptr type!");
   MIRPtrType *mirPtrType = static_cast<MIRPtrType*>(pointerType);
   MIRType *pointedMirType = mirPtrType->GetPointedType();
-  FieldID fid = fieldID;
-  if (pointedMirType->IsMIRStructType() || pointedMirType->GetKind() == MIRTypeKind::kTypeUnion) {
-    CHECK_FATAL(!fieldName.empty() || fid != 0, "error");
-    if (fid == 0) {
-      fid = mirBuilder.GetStructFieldIDFromFieldName(*pointedMirType, fieldName);
+  FieldID fieldID = this->fieldID;
+  if ((pointedMirType->IsMIRStructType() || pointedMirType->GetKind() == MIRTypeKind::kTypeUnion) &&
+      (!fieldName.empty() || fieldID != 0)) {
+    auto *structMirType = static_cast<MIRStructType*>(pointedMirType);
+    if (fieldID == 0) {
+      fieldID = FEUtils::GetStructFieldID(mirBuilder, structMirType, fieldName);
     }
-    MIRStructType *structMirType = static_cast<MIRStructType*>(pointedMirType);
-    FieldID id = fid;
-    FieldPair fieldPair = structMirType->TraverseToFieldRef(id);
+    FieldID tmpID = fieldID;
+    FieldPair fieldPair = structMirType->TraverseToFieldRef(tmpID);
     returnType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(fieldPair.second.first);
-  } else {
-    CHECK_FATAL(fid == 0, "fieldid must be 0!");
   }
-  return mirBuilder.CreateExprIread(*returnType, *mirPtrType, fid, node);
+  return mirBuilder.CreateExprIread(*returnType, *mirPtrType, fieldID, node);
 }
 
 // ---------- FEIRExprAddrof ----------
@@ -3161,8 +3163,6 @@ FEIRExprArrayStoreForC::FEIRExprArrayStoreForC(UniqueFEIRExpr argExprArray, std:
 // only ArraySubscriptExpr is right value, left not need
 BaseNode *FEIRExprArrayStoreForC::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
   MIRType *ptrMIRArrayType = typeNative->GenerateMIRType(false);
-  std::unique_ptr<FEIRVar> tmpVar = std::make_unique<FEIRVarName>(exprArray->GetVarUses().front()->GetNameRaw(),
-                                                                  typeNative->Clone());
   std::vector<BaseNode*> nds;
   uint32 fieldID = 0;
   if (IsMember()) {
@@ -3172,8 +3172,13 @@ BaseNode *FEIRExprArrayStoreForC::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
     MIRStructType* mirStructType = static_cast<MIRStructType*>(ptrMIRStructType);
     FEManager::GetMIRBuilder().TraverseToNamedField(*mirStructType, fieldNameIdx, fieldID);
   }
-  MIRSymbol *mirSymbol = tmpVar->GenerateLocalMIRSymbol(mirBuilder);
-  BaseNode *nodeAddrof = mirBuilder.CreateExprAddrof(fieldID, *mirSymbol);
+  BaseNode *nodeAddrof;
+  if (exprArray->GetKind() == kExprDRead) {
+    MIRSymbol *mirSymbol = exprArray->GetVarUses().front()->GenerateLocalMIRSymbol(mirBuilder);
+    nodeAddrof = mirBuilder.CreateExprAddrof(fieldID, *mirSymbol);
+  } else {
+    nodeAddrof = exprArray->GenMIRNode(mirBuilder);
+  }
   nds.push_back(nodeAddrof);
   for (auto &e : exprIndexs) {
     BaseNode *no = e->GenMIRNode(mirBuilder);
@@ -3725,18 +3730,16 @@ std::string FEIRStmtPesudoCommentForInst::DumpDotStringImpl() const {
 std::list<StmtNode*> FEIRStmtIAssign::GenMIRStmtsImpl(MIRBuilder &mirBuilder) const {
   std::list<StmtNode*> ans;
   MIRType *mirType = addrType->GenerateMIRTypeAuto();
+  CHECK_FATAL(mirType->IsMIRPtrType(), "Must be ptr type");
   BaseNode *addrNode = addrExpr->GenMIRNode(mirBuilder);
   BaseNode *baseNode = baseExpr->GenMIRNode(mirBuilder);
-  FieldID fid = fieldID;
-  if (!fieldName.empty() && fid == 0) {
-    if (mirType->IsMIRPtrType()) {
-      MIRPtrType *mirPtrType = static_cast<MIRPtrType*>(mirType);
-      if (mirPtrType->GetPointedType()->IsMIRStructType()) {
-        fid = mirBuilder.GetStructFieldIDFromFieldName(*mirPtrType->GetPointedType(), fieldName);
-      }
-    }
+  auto *mirPtrType = static_cast<MIRPtrType*>(mirType);
+  FieldID fieldID = this->fieldID;
+  if (mirPtrType->GetPointedType()->IsMIRStructType() && !fieldName.empty() && fieldID == 0) {
+    auto *mirStructType = static_cast<MIRStructType*>(mirPtrType->GetPointedType());
+    fieldID = FEUtils::GetStructFieldID(mirBuilder, mirStructType, fieldName);
   }
-  IassignNode *iAssignNode = mirBuilder.CreateStmtIassign(*mirType, fid, addrNode, baseNode);
+  IassignNode *iAssignNode = mirBuilder.CreateStmtIassign(*mirType, fieldID, addrNode, baseNode);
   ans.emplace_back(iAssignNode);
   return ans;
 }

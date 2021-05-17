@@ -37,6 +37,7 @@ enum InputFileType {
   kFileTypeVtableImplMpl,
   kFileTypeS,
   kFileTypeBpl,
+  kFileTypeMeMpl,
 };
 
 enum OptimizationLevel {
@@ -134,6 +135,10 @@ class MplOptions {
     return mpltFile;
   }
 
+  const RunMode &GetRunMode() const {
+    return runMode;
+  }
+
   bool HasSetDefaultLevel() const {
     return setDefaultLevel;
   }
@@ -183,7 +188,7 @@ class MplOptions {
   }
 
   ErrorCode AppendCombOptions(MIRSrcLang srcLang);
-  ErrorCode AppendMplcgOptions();
+  ErrorCode AppendMplcgOptions(MIRSrcLang srcLang);
   std::string GetInputFileNameForPrint() const;
   void PrintCommand();
   void connectOptStr(std::string &optionStr, const std::string &exeName, bool &firstComb, std::string &runStr);

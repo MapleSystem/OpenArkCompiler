@@ -2324,6 +2324,29 @@ bool MIRParser::ParseInlineFuncBody(std::ifstream &mplFile) {
   return status;
 }
 
+bool MIRParser::ParseSrcLang(MIRSrcLang &srcLang) {
+  PrepareParsingMIR();
+  bool atEof = false;
+  lexer.NextToken();
+  while (!atEof) {
+    paramTokenKind = lexer.GetTokenKind();
+    if (paramTokenKind == TK_eof) {
+      atEof = true;
+    } else if (paramTokenKind == TK_srclang) {
+      lexer.NextToken();
+      if (lexer.GetTokenKind() != TK_intconst) {
+        Error("expect integer after srclang but get ");
+        return false;
+      }
+      srcLang = static_cast<MIRSrcLang>(lexer.GetTheIntVal());
+      return true;
+    } else {
+      lexer.NextToken();
+    }
+  }
+  return false;
+}
+
 bool MIRParser::ParseMIR(uint32 fileIdx, uint32 option, bool isIPA, bool isComb) {
   if ((option & kParseOptFunc) == 0) {
     PrepareParsingMIR();
