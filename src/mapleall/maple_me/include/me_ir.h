@@ -814,7 +814,7 @@ class OpMeExpr : public MeExpr {
     opndType = opndTypeVal;
   }
 
-  uint8 GetBitsOffSet() {
+  uint8 GetBitsOffSet() const {
     return bitsOffset;
   }
 
