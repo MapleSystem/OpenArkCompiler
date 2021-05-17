@@ -954,8 +954,8 @@ void Ebo::RemoveUnusedInsns(BB &bb, bool normal) {
           RegOperand *reg = static_cast<RegOperand*>(opInfo->opnd);
           Operand *res1 = insn->GetResult(0);
           ASSERT(res1 != nullptr, "null ptr check");
-          if (!reg->IsSPOrFP() && (prev->IsLoad() || IsAdd(*prev)) &&
-              (!LiveOutOfBB(*reg, bb) || opInfo->redefinedInBB)) {
+          if (!reg->IsSPOrFP() && (reg->GetRegisterNumber() != R0) && (reg->GetRegisterNumber() != V0) &&
+              (prev->IsLoad() || IsAdd(*prev)) && (!LiveOutOfBB(*reg, bb) || opInfo->redefinedInBB)) {
             /*
              * pattern 1:
              * ldr(154) (opnd0: vreg:R105 class: [I]) (opnd1: Mem:base: reg:R29 class: [I]offset:ofst:96)

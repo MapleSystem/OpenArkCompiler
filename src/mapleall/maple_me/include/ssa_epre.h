@@ -26,6 +26,7 @@ class SSAEPre : public SSAPre {
   virtual ~SSAEPre() = default;
 
  private:
+  MeExpr *GetTruncExpr(const IvarMeExpr &theLHS, MeExpr &savedRHS);
   void GenerateSaveLHSRealocc(MeRealOcc &realOcc, ScalarMeExpr &regOrVar);
   void GenerateSaveRealOcc(MeRealOcc &realOcc);
   bool ReserveCalFuncAddrForDecouple(MeExpr &meExpr) const;

@@ -154,6 +154,7 @@ bool ASTGlobalVar2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
     UniqueFEIRExpr expr = initExpr->Emit2FEExpr(stmts);
     FEIRExprConst *constExpr = static_cast<FEIRExprConst*>(expr.get());
     switch (primType) {
+      case PTY_u1:
       case PTY_i8:
       case PTY_u8:
       case PTY_i16:

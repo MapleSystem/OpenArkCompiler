@@ -194,6 +194,26 @@ std::string FEUtils::GetSequentialName(const std::string &prefix) {
   return name;
 }
 
+FieldID FEUtils::GetStructFieldID(MIRBuilder &mirBuilder, MIRStructType *base, const std::string &fieldName) {
+  MIRStructType *type = base;
+  std::vector<std::string> fieldNames = FEUtils::Split(fieldName, '.');
+  std::reverse(fieldNames.begin(), fieldNames.end());
+  FieldID fieldID = 0;
+  for (const auto &f: fieldNames) {
+    auto &structType = static_cast<MIRStructType&>(*type);
+    GStrIdx strIdx = mirBuilder.GetStringIndex(f);
+    uint32 tempFieldID = fieldID;
+    if (mirBuilder.TraverseToNamedFieldWithTypeAndMatchStyle(structType, strIdx, TyIdx(0), tempFieldID,
+                                                             MIRBuilder::MatchStyle::kMatchAnyField)) {
+      fieldID = tempFieldID;
+      FieldID tmpId = tempFieldID;
+      FieldPair fieldPair = base->TraverseToFieldRef(tmpId);
+      type = static_cast<MIRStructType*>(GlobalTables::GetTypeTable().GetTypeFromTyIdx(fieldPair.second.first));
+    }
+  }
+  return fieldID;
+}
+
 // ---------- FELinkListNode ----------
 FELinkListNode::FELinkListNode()
     : prev(nullptr), next(nullptr) {}

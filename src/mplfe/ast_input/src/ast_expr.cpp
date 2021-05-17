@@ -22,6 +22,7 @@
 #include "feir_type_helper.h"
 #include "fe_manager.h"
 #include "ast_stmt.h"
+#include "ast_util.h"
 
 namespace maple {
 // ---------- ASTExpr ----------
@@ -81,6 +82,10 @@ UniqueFEIRExpr ASTDeclRefExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts)
   if (mirType->GetKind() == kTypePointer &&
       static_cast<MIRPtrType*>(mirType)->GetPointedType()->GetKind() == kTypeFunction) {
     feirRefExpr = FEIRBuilder::CreateExprAddrofFunc(refedDecl->GetName());
+  } else if (mirType->GetKind() == kTypeArray) {
+    UniqueFEIRVar feirVar =
+        FEIRBuilder::CreateVarNameForC(refedDecl->GenerateUniqueVarName(), *mirType, refedDecl->IsGlobal(), false);
+    feirRefExpr = FEIRBuilder::CreateExprAddrofVar(std::move(feirVar));
   } else {
     UniqueFEIRVar feirVar =
         FEIRBuilder::CreateVarNameForC(refedDecl->GenerateUniqueVarName(), *mirType, refedDecl->IsGlobal(), false);
@@ -95,6 +100,21 @@ std::map<std::string, ASTCallExpr::FuncPtrBuiltinFunc> ASTCallExpr::funcPtrMap =
 std::map<std::string, ASTCallExpr::FuncPtrBuiltinFunc> ASTCallExpr::InitFuncPtrMap() {
   std::map<std::string, FuncPtrBuiltinFunc> ans;
   return ans;
+}
+
+std::string ASTCallExpr::CvtBuiltInFuncName(std::string builtInName) const {
+#define BUILTIN_FUNC(funcName) \
+    {"__builtin_"#funcName, #funcName},
+  static std::map<std::string, std::string> cvtMap = {
+#include "ast_builtin_func.def"
+#undef BUILTIN_FUNC
+  };
+  auto it = cvtMap.find(builtInName);
+  if (it != cvtMap.end()) {
+    return cvtMap.find(builtInName)->second;
+  } else {
+    return builtInName;
+  }
 }
 
 UniqueFEIRExpr ASTCallExpr::Emit2FEExprCall(std::list<UniqueFEIRStmt> &stmts) const {
@@ -150,8 +170,9 @@ UniqueFEIRExpr ASTCallExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) co
     if (calleeExpr != nullptr && calleeExpr->GetASTOp() == kASTOpCast &&
         static_cast<ASTImplicitCastExpr*>(calleeExpr)->IsBuilinFunc()) {
       auto ptrFunc = funcPtrMap.find(funcName);
-      CHECK_FATAL(ptrFunc != funcPtrMap.end(), "unsupported BuiltinFunc: %s", funcName.c_str());
-      return (this->*(ptrFunc->second))(stmts);
+      if (ptrFunc != funcPtrMap.end()) {
+        return (this->*(ptrFunc->second))(stmts);
+      }
     }
     return Emit2FEExprCall(stmts);
   }
@@ -600,7 +621,7 @@ void ASTInitListExpr::Emit2FEExprForArray(std::list<UniqueFEIRStmt> &stmts) cons
   UniqueFEIRVar feirVar = FEIRBuilder::CreateVarNameForC(varName, *initListType);
   UniqueFEIRVar feirVarTmp = feirVar->Clone();
   UniqueFEIRType typeNative = FEIRTypeHelper::CreateTypeNative(*initListType);
-  UniqueFEIRExpr arrayExpr = FEIRBuilder::CreateExprDRead(std::move(feirVarTmp));
+  UniqueFEIRExpr arrayExpr = FEIRBuilder::CreateExprAddrofVar(std::move(feirVarTmp));
   if (fillers[0]->GetASTOp() == kASTOpInitListExpr) {
     for (int i = 0; i < fillers.size(); ++i) {
       MIRType *mirType = static_cast<ASTInitListExpr*>(fillers[i])->initListType;
@@ -728,26 +749,40 @@ UniqueFEIRExpr ASTExprUnaryExprOrTypeTraitExpr::Emit2FEExprImpl(std::list<Unique
   return nullptr;
 }
 
+ASTMemberExpr *ASTMemberExpr::findFinalMember(ASTMemberExpr *startExpr, std::list<std::string> &memberNames) const {
+  memberNames.emplace_back(startExpr->memberName);
+  if (startExpr->isArrow || startExpr->baseExpr->GetASTOp() != kASTMemberExpr) {
+    return startExpr;
+  }
+  return findFinalMember(static_cast<ASTMemberExpr*>(startExpr->baseExpr), memberNames);
+}
+
 UniqueFEIRExpr ASTMemberExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
-  UniqueFEIRExpr baseFEExpr = baseExpr->Emit2FEExpr(stmts);
+  UniqueFEIRExpr baseFEExpr;
+  std::string fieldName = memberName;
+  bool isArrow = this->isArrow;
+  MIRType *baseType = this->baseType;
+  if (baseExpr->GetASTOp() == kASTMemberExpr) {
+    std::list<std::string> memberNameList;
+    memberNameList.emplace_back(memberName);
+    ASTMemberExpr *finalMember = findFinalMember(static_cast<ASTMemberExpr*>(baseExpr), memberNameList);
+    baseFEExpr = finalMember->baseExpr->Emit2FEExpr(stmts);
+    isArrow = finalMember->isArrow;
+    baseType = finalMember->baseType;
+    fieldName = ASTUtil::Join(memberNameList, ".");
+  } else {
+    baseFEExpr = baseExpr->Emit2FEExpr(stmts);
+  }
   UniqueFEIRType baseFEType = std::make_unique<FEIRTypeNative>(*baseType);
   if (isArrow) {
     auto iread = std::make_unique<FEIRExprIRead>(baseFEType->Clone(), std::move(baseFEType), 0,
                                                  std::move(baseFEExpr));
-    iread->SetFieldName(memberName);
+    iread->SetFieldName(fieldName);
     return iread;
   } else {
-    UniqueFEIRVar tmpVar;
-    if (baseFEExpr->GetKind() == kExprDRead) {
-      auto dreadFEExpr = static_cast<FEIRExprDRead*>(baseFEExpr.get());
-      tmpVar = dreadFEExpr->GetVar()->Clone();
-    } else {
-      tmpVar = FEIRBuilder::CreateVarNameForC(FEUtils::GetSequentialName("struct_tmpvar_"), *baseType);
-      UniqueFEIRStmt readStmt = FEIRBuilder::CreateStmtDAssign(tmpVar->Clone(), baseFEExpr->Clone());
-      stmts.emplace_back(std::move(readStmt));
-    }
+    UniqueFEIRVar tmpVar = static_cast<FEIRExprDRead*>(baseFEExpr.get())->GetVar()->Clone();
     auto dread = std::make_unique<FEIRExprDRead>(std::move(tmpVar));
-    dread->SetFieldName(memberName);
+    dread->SetFieldName(fieldName);
     dread->SetFieldType(memberType);
     return dread;
   }
@@ -857,7 +892,7 @@ UniqueFEIRExpr ASTIntegerLiteral::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stm
 // ---------- ASTFloatingLiteral ----------
 UniqueFEIRExpr ASTFloatingLiteral::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   UniqueFEIRExpr expr;
-  if (isFloat) {
+  if (kind == F32) {
     expr = FEIRBuilder::CreateExprConstF32(static_cast<float>(val));
   } else {
     expr = FEIRBuilder::CreateExprConstF64(val);

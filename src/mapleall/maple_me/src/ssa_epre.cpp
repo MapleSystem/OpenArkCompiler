@@ -19,6 +19,35 @@ namespace {
 }
 
 namespace maple {
+MeExpr *SSAEPre::GetTruncExpr(const IvarMeExpr &theLHS, MeExpr &savedRHS) {
+  MIRType *lhsType = theLHS.GetType();
+  if (lhsType->GetKind() != kTypeBitField) {
+    return &savedRHS;
+  }
+  MIRBitFieldType *bitfieldTy = static_cast<MIRBitFieldType *>(lhsType);
+  if (GetPrimTypeBitSize(savedRHS.GetPrimType()) <= bitfieldTy->GetFieldSize()) {
+    return &savedRHS;
+  }
+  // insert OP_zext or OP_sext
+  Opcode extOp = IsSignedInteger(savedRHS.GetPrimType()) ? OP_sext : OP_zext;
+  PrimType newPrimType = PTY_u32;
+  if (bitfieldTy->GetFieldSize() <= GetPrimTypeBitSize(PTY_u32)) {
+    if (IsSignedInteger(lhsType->GetPrimType())) {
+      newPrimType = PTY_i32;
+    }
+  } else {
+    if (IsSignedInteger(lhsType->GetPrimType())) {
+      newPrimType = PTY_i64;
+    } else {
+      newPrimType = PTY_u64;
+    }
+  }
+  OpMeExpr opmeexpr(-1, extOp, newPrimType, 1);
+  opmeexpr.SetBitsSize(bitfieldTy->GetFieldSize());
+  opmeexpr.SetOpnd(0, &savedRHS);
+  return irMap->HashMeExpr(opmeexpr);
+}
+
 void SSAEPre::GenerateSaveLHSRealocc(MeRealOcc &realOcc, ScalarMeExpr &regOrVar) {
   CHECK_FATAL(realOcc.GetOpcodeOfMeStmt() == OP_iassign, "GenerateSaveLHSReal: only iassign expected");
   auto *iass = static_cast<IassignMeStmt*>(realOcc.GetMeStmt());
@@ -32,6 +61,8 @@ void SSAEPre::GenerateSaveLHSRealocc(MeRealOcc &realOcc, ScalarMeExpr &regOrVar)
   MeStmt *savedPrev = iass->GetPrev();
   MeStmt *savedNext = iass->GetNext();
   AssignMeStmt *rass = nullptr;
+  // update rhs if the iassign need extension
+  savedRHS = GetTruncExpr(*theLHS, *savedRHS);
   if (!workCand->NeedLocalRefVar() || GetPlacementRCOn()) {
     CHECK_FATAL(regOrVar.GetMeOp() == kMeOpReg, "GenerateSaveLHSRealocc: EPRE temp must b e preg here");
     // change original iassign to regassign;

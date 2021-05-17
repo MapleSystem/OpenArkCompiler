@@ -595,6 +595,7 @@ class ASTMemberExpr : public ASTExpr {
 
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
+  ASTMemberExpr *findFinalMember(ASTMemberExpr *startExpr, std::list<std::string> &memberNames) const;
   ASTExpr *baseExpr;
   std::string memberName;
   MIRType *memberType;
@@ -715,6 +716,8 @@ class ASTCallExpr : public ASTExpr {
     return isIcall;
   }
 
+  std::string CvtBuiltInFuncName(std::string builtInName) const;
+
  private:
   using FuncPtrBuiltinFunc = UniqueFEIRExpr (ASTCallExpr::*)(std::list<UniqueFEIRStmt> &stmts) const;
   static std::map<std::string, FuncPtrBuiltinFunc> InitFuncPtrMap();
@@ -768,6 +771,11 @@ class ASTIntegerLiteral : public ASTExpr {
   PrimType type;
 };
 
+enum FloatKind {
+  F32,
+  F64
+};
+
 class ASTFloatingLiteral : public ASTExpr {
  public:
   ASTFloatingLiteral() : ASTExpr(kASTFloatingLiteral) {}
@@ -781,18 +789,18 @@ class ASTFloatingLiteral : public ASTExpr {
     val = valIn;
   }
 
-  void SetFlag(bool tf) {
-    isFloat = tf;
+  void SetKind(FloatKind argKind) {
+    kind = argKind;
   }
 
-  bool GetFlag() {
-    return isFloat;
+  FloatKind GetKind() const {
+    return kind;
   }
 
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   double val;
-  bool isFloat;
+  FloatKind kind;
 };
 
 class ASTCharacterLiteral : public ASTExpr {

@@ -47,7 +47,7 @@ std::list<UniqueFEIRStmt> ASTCompoundStmt::Emit2FEStmtImpl() const {
 std::list<UniqueFEIRStmt> ASTReturnStmt::Emit2FEStmtImpl() const {
   std::list<UniqueFEIRStmt> stmts;
   auto astExpr = exprs.front();
-  UniqueFEIRExpr feExpr = astExpr != nullptr ? astExpr->Emit2FEExpr(stmts) : nullptr;
+  UniqueFEIRExpr feExpr = (astExpr != nullptr) ? astExpr->Emit2FEExpr(stmts) : nullptr;
   UniqueFEIRStmt stmt = std::make_unique<FEIRStmtReturn>(std::move(feExpr));
   stmts.emplace_back(std::move(stmt));
   return stmts;
@@ -311,8 +311,9 @@ std::list<UniqueFEIRStmt> ASTCallExprStmt::Emit2FEStmtImpl() const {
     if (callExpr->GetCalleeExpr() != nullptr && callExpr->GetCalleeExpr()->GetASTOp() == kASTOpCast &&
         static_cast<ASTImplicitCastExpr*>(callExpr->GetCalleeExpr())->IsBuilinFunc()) {
       auto ptrFunc = funcPtrMap.find(callExpr->GetFuncName());
-      CHECK_FATAL(ptrFunc != funcPtrMap.end(), "unsupported BuiltinFunc: %s", callExpr->GetFuncName().c_str());
-      return (this->*(ptrFunc->second))();
+      if (ptrFunc != funcPtrMap.end()) {
+        return (this->*(ptrFunc->second))();
+      }
     }
     return Emit2FEStmtCall();
   }

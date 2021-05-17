@@ -126,9 +126,10 @@ class MplcgCompiler : public Compiler {
   ErrorCode Compile(MplOptions &options, std::unique_ptr<MIRModule> &theModule) override;
   void PrintMplcgCommand(const MplOptions &options, const MIRModule &md) const;
   void SetOutputFileName(const MplOptions &options, const MIRModule &md);
-  std::string GetInputFile(const MplOptions &options, const MIRModule &md) const;
+  std::string GetInputFile(const MplOptions &options, const MIRModule *md) const;
  private:
   DefaultOption GetDefaultOptions(const MplOptions &options) const override;
+  ErrorCode GetMplcgOptions(MplOptions &options, const MIRModule *theModule);
   ErrorCode MakeCGOptions(const MplOptions &options);
   const std::string &GetBinName() const override;
   std::string baseName;

@@ -48,6 +48,12 @@ bool ASTCompilerComponent::ParseInputImpl() {
 
   for (auto &astFunc : astInput.GetASTFuncs()) {
     FEInputMethodHelper *funcHelper = allocator.GetMemPool()->New<ASTFunc2FEHelper>(allocator, *astFunc);
+    for (auto &e : globalFuncHelpers) {
+      if (funcHelper->GetMethodName(false) == e->GetMethodName(false)) {
+        globalFuncHelpers.remove(e);
+        break;
+      }
+    }
     globalFuncHelpers.emplace_back(funcHelper);
   }
 

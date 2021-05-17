@@ -71,7 +71,8 @@ PrimType LibAstFile::CvtPrimType(const clang::BuiltinType::Kind kind) const {
       return PTY_f64;
     case clang::BuiltinType::LongDouble:
     case clang::BuiltinType::Float128:
-      return PTY_f128;
+      WARN(kLncWarn, "True Type is Float128, cvt double, but it is not exact");
+      return PTY_f64;
     case clang::BuiltinType::NullPtr: // default 64-bit, need to update
       return PTY_a64;
     case clang::BuiltinType::Void:

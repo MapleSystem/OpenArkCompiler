@@ -45,7 +45,7 @@ const std::string &MplcgCompiler::GetBinName() const {
   return kBinNameMplcg;
 }
 
-std::string MplcgCompiler::GetInputFile(const MplOptions &options, const MIRModule &md) const {
+std::string MplcgCompiler::GetInputFile(const MplOptions &options, const MIRModule *md) const {
   if (!options.GetRunningExes().empty()) {
     if (options.GetRunningExes()[0] == kBinNameMplcg) {
       return options.GetInputFiles();
@@ -57,7 +57,7 @@ std::string MplcgCompiler::GetInputFile(const MplOptions &options, const MIRModu
   if (idx != std::string::npos) {
     outputName = options.GetOutputName().substr(0, idx);
   }
-  if (md.GetSrcLang() == kSrcLangC) {
+  if (md->GetSrcLang() == kSrcLangC) {
     return options.GetOutputFolder() + outputName + ".me.mpl";
   }
   return options.GetOutputFolder() + outputName + ".VtableImpl.mpl";
@@ -67,7 +67,7 @@ void MplcgCompiler::SetOutputFileName(const MplOptions &options, const MIRModule
   if (md.GetSrcLang() == kSrcLangC) {
     baseName = options.GetOutputFolder() + options.GetOutputName();
   } else {
-    baseName = options.GetOutputFolder() + FileUtils::GetFileName(GetInputFile(options, md), false);
+    baseName = options.GetOutputFolder() + FileUtils::GetFileName(GetInputFile(options, &md), false);
   }
   outputFile = baseName + ".s";
 }
@@ -89,7 +89,7 @@ void MplcgCompiler::PrintMplcgCommand(const MplOptions &options, const MIRModule
   }
   optionStr += "\"";
   LogInfo::MapleLogger() << "Starting:" << options.GetExeFolder() << "maple " << runStr << " " << optionStr
-                         << " --infile " << GetInputFile(options, md) << '\n';
+                         << " --infile " << GetInputFile(options, &md) << '\n';
 }
 
 ErrorCode MplcgCompiler::MakeCGOptions(const MplOptions &options) {
@@ -114,18 +114,42 @@ ErrorCode MplcgCompiler::MakeCGOptions(const MplOptions &options) {
   return kErrorNoError;
 }
 
+ErrorCode MplcgCompiler::GetMplcgOptions(MplOptions &options, const MIRModule *theModule) {
+  ErrorCode ret;
+  if (options.GetRunMode() == kAutoRun) {
+    if (theModule == nullptr) {
+      std::string fileName = GetInputFile(options, theModule);
+      MIRModule module(fileName);
+      std::unique_ptr<MIRParser> theParser;
+      theParser.reset(new MIRParser(module));
+      MIRSrcLang srcLang = kSrcLangUnknown;
+      bool parsed = theParser->ParseSrcLang(srcLang);
+      if (!parsed) {
+        return kErrorCompileFail;
+      }
+      ret = options.AppendMplcgOptions(srcLang);
+      if (ret != kErrorNoError) {
+        return kErrorCompileFail;
+      }
+    } else {
+      ret = options.AppendMplcgOptions(theModule->GetSrcLang());
+      if (ret != kErrorNoError) {
+        return kErrorCompileFail;
+      }
+    }
+  }
+
+  ret = MakeCGOptions(options);
+  return ret;
+}
+
 ErrorCode MplcgCompiler::Compile(MplOptions &options, std::unique_ptr<MIRModule> &theModule) {
-  // Append Default cg options for auto mode
-  ErrorCode ret = options.AppendMplcgOptions();
+  ErrorCode ret = GetMplcgOptions(options, theModule.get());
   if (ret != kErrorNoError) {
     return kErrorCompileFail;
   }
   CGOptions &cgOption = CGOptions::GetInstance();
-  ret = MakeCGOptions(options);
-  if (ret != kErrorNoError) {
-    return kErrorCompileFail;
-  }
-  std::string fileName = GetInputFile(options, *theModule);
+  std::string fileName = GetInputFile(options, theModule.get());
   MemPool *optMp = memPoolCtrler.NewMemPool("maplecg mempool", false /* isLcalPool */);
   bool fileRead = true;
   if (theModule == nullptr) {
