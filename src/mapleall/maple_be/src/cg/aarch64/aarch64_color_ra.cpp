@@ -3313,7 +3313,6 @@ bool GraphColorRegAllocator::AllocateRegisters() {
   SplitAndColor();
 
 #ifdef USE_LRA
-  LocalRegisterAllocator(true);
   if (doLRA) {
     LocalRegisterAllocator(true);
   }
