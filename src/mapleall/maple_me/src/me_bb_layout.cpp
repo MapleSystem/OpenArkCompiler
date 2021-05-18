@@ -434,11 +434,11 @@ void BBLayout::ResolveUnconditionalFallThru(BB &bb, BB &nextBB) {
 void BBLayout::FixEndTryBB(BB &bb) {
   BBId prevID = bb.GetBBId() - 1UL;
   for (BBId id = prevID; id != 0; --id) {
-    auto prevBB = func.GetBBFromID(id);
+    auto prevBB = func.GetCfg()->GetBBFromID(id);
     if (prevBB != nullptr) {
       if (prevBB->GetAttributes(kBBAttrIsTry) && !prevBB->GetAttributes(kBBAttrIsTryEnd)) {
         prevBB->SetAttributes(kBBAttrIsTryEnd);
-        func.SetTryBBByOtherEndTryBB(prevBB, &bb);
+        cfg->SetTryBBByOtherEndTryBB(prevBB, &bb);
       }
       break;
     }
@@ -461,15 +461,15 @@ void BBLayout::DealWithStartTryBB() {
     if (!startTryBBVec[i]) {
       continue;
     }
-    auto curBB = func.GetBBFromID(BBId(i));
+    auto curBB = cfg->GetBBFromID(BBId(i));
     for (size_t j = i + 1; j < size && !startTryBBVec[j]; ++j) {
-      auto nextBB = func.GetBBFromID(BBId(j));
+      auto nextBB = cfg->GetBBFromID(BBId(j));
       if (nextBB != nullptr) {
         if (nextBB->GetAttributes(kBBAttrIsTry)) {
           FixTryBB(*curBB, *nextBB);
         } else {
           curBB->RemoveAllSucc();
-          func.NullifyBBByID(curBB->GetBBId());
+          cfg->NullifyBBByID(curBB->GetBBId());
           for (auto it = layoutBBs.begin(); it != layoutBBs.end(); ++it) {
             if (*it == curBB) {
               layoutBBs.erase(it);
@@ -480,7 +480,7 @@ void BBLayout::DealWithStartTryBB() {
         break;
       } else if (j == size - 1) {
         curBB->RemoveAllSucc();
-        func.NullifyBBByID(curBB->GetBBId());
+        cfg->NullifyBBByID(curBB->GetBBId());
         for (auto it = layoutBBs.begin(); it != layoutBBs.end(); ++it) {
           if (*it == curBB) {
             layoutBBs.erase(it);
@@ -521,7 +521,7 @@ void BBLayout::RemoveUnreachable(BB &bb) {
     FixEndTryBB(bb);
   }
   bb.RemoveAllSucc();
-  func.NullifyBBByID(bb.GetBBId());
+  cfg->NullifyBBByID(bb.GetBBId());
   for (auto it = layoutBBs.begin(); it != layoutBBs.end(); ++it) {
     if (*it == &bb) {
       layoutBBs.erase(it);
@@ -536,10 +536,10 @@ void BBLayout::UpdateNewBBWithAttrTry(const BB &bb, BB &fallthru) const {
   fallthru.SetAttributes(kBBAttrIsTry);
   if (bb.IsReturnBB()) {
     int i = 1;
-    tryBB = func.GetBBFromID(bb.GetBBId() - i);
+    tryBB = cfg->GetBBFromID(bb.GetBBId() - i);
     while (tryBB == nullptr || tryBB->IsReturnBB()) {
       ++i;
-      tryBB = func.GetBBFromID(bb.GetBBId() - i);
+      tryBB = cfg->GetBBFromID(bb.GetBBId() - i);
     }
     ASSERT_NOT_NULL(tryBB);
     ASSERT(tryBB->GetAttributes(kBBAttrIsTry), "must be try");
@@ -562,7 +562,7 @@ void BBLayout::UpdateNewBBWithAttrTry(const BB &bb, BB &fallthru) const {
 // fallthru       fallthru
 BB *BBLayout::CreateGotoBBAfterCondBB(BB &bb, BB &fallthru) {
   ASSERT(bb.GetKind() == kBBCondGoto, "CreateGotoBBAfterCondBB: unexpected BB kind");
-  BB *newFallthru = func.NewBasicBlock();
+  BB *newFallthru = cfg->NewBasicBlock();
   newFallthru->SetAttributes(kBBAttrArtificial);
   AddLaidOut(false);
   newFallthru->SetKind(kBBGoto);
@@ -614,9 +614,9 @@ void BBLayout::DumpBBPhyOrder() const {
 }
 
 void BBLayout::OptimiseCFG() {
-  auto eIt = func.valid_end();
-  for (auto bIt = func.valid_begin(); bIt != eIt; ++bIt) {
-    if (bIt == func.common_entry() || bIt == func.common_exit()) {
+  auto eIt = cfg->valid_end();
+  for (auto bIt = cfg->valid_begin(); bIt != eIt; ++bIt) {
+    if (bIt == cfg->common_entry() || bIt == cfg->common_exit()) {
       continue;
     }
     auto *bb = *bIt;
@@ -630,7 +630,7 @@ void BBLayout::SetAttrTryForTheCanBeMovedBB(BB &bb, BB &canBeMovedBB) const {
   if (bb.GetAttributes(kBBAttrIsTryEnd)) {
     bb.ClearAttributes(kBBAttrIsTryEnd);
     canBeMovedBB.SetAttributes(kBBAttrIsTryEnd);
-    func.SetTryBBByOtherEndTryBB(&canBeMovedBB, &bb);
+    cfg->SetTryBBByOtherEndTryBB(&canBeMovedBB, &bb);
   }
   if (bb.GetAttributes(kBBAttrIsTry) && !canBeMovedBB.GetAttributes(kBBAttrIsTry)) {
     UpdateNewBBWithAttrTry(bb, canBeMovedBB);
@@ -638,7 +638,7 @@ void BBLayout::SetAttrTryForTheCanBeMovedBB(BB &bb, BB &canBeMovedBB) const {
 }
 
 void BBLayout::LayoutWithoutProf() {
-  BB *bb = func.GetFirstBB();
+  BB *bb = cfg->GetFirstBB();
   while (bb != nullptr) {
     AddBB(*bb);
     if (bb->GetKind() == kBBCondGoto || bb->GetKind() == kBBGoto) {
@@ -656,8 +656,8 @@ void BBLayout::LayoutWithoutProf() {
       }
       ASSERT(!(isTry && GetTryOutstanding()), "cannot emit another try if last try has not been ended");
       if (nextBB->GetAttributes(kBBAttrIsTryEnd)) {
-        ASSERT(func.GetTryBBFromEndTryBB(nextBB) == nextBB ||
-               IsBBLaidOut(func.GetTryBBFromEndTryBB(nextBB)->GetBBId()),
+        ASSERT(cfg->GetTryBBFromEndTryBB(nextBB) == nextBB ||
+               IsBBLaidOut(cfg->GetTryBBFromEndTryBB(nextBB)->GetBBId()),
                "cannot emit endtry bb before its corresponding try bb");
       }
     }
@@ -777,9 +777,9 @@ void BBLayout::AddBBProf(BB &bb) {
 }
 
 void BBLayout::BuildEdges() {
-  auto eIt = func.valid_end();
-  for (auto bIt = func.valid_begin(); bIt != eIt; ++bIt) {
-    if (bIt == func.common_entry() || bIt == func.common_exit()) {
+  auto eIt = cfg->valid_end();
+  for (auto bIt = cfg->valid_begin(); bIt != eIt; ++bIt) {
+    if (bIt == cfg->common_entry() || bIt == cfg->common_exit()) {
       continue;
     }
     auto *bb = *bIt;
@@ -866,7 +866,7 @@ BB *BBLayout::NextBBProf(BB &bb) {
 void BBLayout::LayoutWithProf() {
   OptimiseCFG();
   BuildEdges();
-  BB *bb = func.GetFirstBB();
+  BB *bb = cfg->GetFirstBB();
   while (bb != nullptr) {
     AddBBProf(*bb);
     bb = NextBBProf(*bb);
@@ -893,20 +893,21 @@ void BBLayout::RunLayout() {
 }
 
 AnalysisResult *MeDoBBLayout::Run(MeFunction *func, MeFuncResultMgr *funcResMgr, ModuleResultMgr*) {
+  MeCFG *cfg = static_cast<MeCFG *>(funcResMgr->GetAnalysisResult(MeFuncPhase_MECFG, func));
   // mempool used in analysisresult
   MemPool *layoutMp = NewMemPool();
   auto *bbLayout = layoutMp->New<BBLayout>(*layoutMp, *func, DEBUGFUNC(func));
   // assume common_entry_bb is always bb 0
-  ASSERT(func->front() == func->GetCommonEntryBB(), "assume bb[0] is the commont entry bb");
+  ASSERT(cfg->front() == cfg->GetCommonEntryBB(), "assume bb[0] is the commont entry bb");
   if (DEBUGFUNC(func)) {
-    func->GetTheCfg()->DumpToFile("beforeBBLayout", false);
+    cfg->DumpToFile("beforeBBLayout", false);
   }
   bbLayout->RunLayout();
   func->SetLaidOutBBs(bbLayout->GetBBs());
   funcResMgr->InvalidAnalysisResult(MeFuncPhase_DOMINANCE, func);
   if (DEBUGFUNC(func)) {
     bbLayout->DumpBBPhyOrder();
-    func->GetTheCfg()->DumpToFile("afterBBLayout", false);
+    cfg->DumpToFile("afterBBLayout", false);
   }
   return nullptr;
 }
