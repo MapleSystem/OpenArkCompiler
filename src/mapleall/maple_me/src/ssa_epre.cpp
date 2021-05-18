@@ -408,6 +408,8 @@ void SSAEPre::BuildWorkListExpr(MeStmt &meStmt, int32 seqStmt, MeExpr &meExpr, b
         break;
       } else if (IsThreadObjField(*ivarMeExpr)) {
         break;
+      } else if (base->GetMeOp() == kMeOpConststr || base->GetMeOp() == kMeOpConststr16) {
+        break;
       } else if (!epreIncludeRef && ivarMeExpr->GetPrimType() == PTY_ref) {
         break;
       } else if (!isRebuild || base->IsUseSameSymbol(*tempVar)) {
@@ -457,6 +459,9 @@ void SSAEPre::BuildWorkListIvarLHSOcc(MeStmt &meStmt, int32 seqStmt, bool isRebu
   }
   MeExpr *base = ivarMeExpr->GetBase();
   if (!base->IsLeaf()) {
+    return;
+  }
+  if (base->GetMeOp() == kMeOpConststr || base->GetMeOp() == kMeOpConststr16) {
     return;
   }
   if (!isRebuild || base->IsUseSameSymbol(*tempVar)) {

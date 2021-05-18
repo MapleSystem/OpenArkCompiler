@@ -151,7 +151,13 @@ bool ASTGlobalVar2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
     if (initExpr == nullptr) {
       return true;
     }
-    UniqueFEIRExpr expr = initExpr->Emit2FEExpr(stmts);
+    UniqueFEIRExpr expr;
+    if (initExpr->GetASTOp() == kASTOpCast) {
+      ASTExpr *astExpr = static_cast<ASTImplicitCastExpr*>(initExpr)->GetASTExpr();
+      expr = astExpr->Emit2FEExpr(stmts);
+    } else {
+      expr = initExpr->Emit2FEExpr(stmts);
+    }
     FEIRExprConst *constExpr = static_cast<FEIRExprConst*>(expr.get());
     switch (primType) {
       case PTY_u1:

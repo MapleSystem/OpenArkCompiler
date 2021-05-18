@@ -379,7 +379,13 @@ std::list<UniqueFEIRStmt> ASTImplicitCastExprStmt::Emit2FEStmtImpl() const {
 // ---------- ASTParenExprStmt ----------
 std::list<UniqueFEIRStmt> ASTParenExprStmt::Emit2FEStmtImpl() const {
   std::list<UniqueFEIRStmt> stmts;
-  exprs.front()->Emit2FEExpr(stmts);
+  std::list<UniqueFEIRExpr> feExprs;
+  auto feExpr = exprs.front()->Emit2FEExpr(stmts);
+  if (feExpr != nullptr) {
+    feExprs.emplace_back(std::move(feExpr));
+    auto stmt = std::make_unique<FEIRStmtNary>(OP_eval, std::move(feExprs));
+    stmts.emplace_back(std::move(stmt));
+  }
   return stmts;
 }
 
