@@ -811,6 +811,12 @@ bool MIRParser::ParseStmtCall(StmtNodePtr &stmt) {
     callStmt = mod.CurFuncCodeMemPool()->New<CallNode>(mod, o);
   }
   callStmt->SetPUIdx(pIdx);
+
+  MIRFunction *callee = GlobalTables::GetFunctionTable().GetFuncTable()[pIdx];
+  if (callee->GetName() == "setjmp") {
+    mod.CurFunction()->SetHasSetjmp();
+  }
+
   MapleVector<BaseNode*> opndsVec(mod.CurFuncCodeMemPoolAllocator()->Adapter());
   if (!ParseExprNaryOperand(opndsVec)) {
     return false;
