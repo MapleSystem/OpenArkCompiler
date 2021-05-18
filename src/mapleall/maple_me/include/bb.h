@@ -459,15 +459,14 @@ class BB {
     group = this;
   }
 
- private:
-  bool IsInList(const MapleVector<BB*> &bbList) const;
-  int RemoveBBFromVector(MapleVector<BB*> &bbVec) const;
-  void RemovePhiOpnd(int index);
- public:
   void RemoveBBFromPred(const BB &bb, bool updatePhi);
   void RemoveBBFromSucc(const BB &bb);
 
  private:
+  bool IsInList(const MapleVector<BB*> &bbList) const;
+  int RemoveBBFromVector(MapleVector<BB*> &bbVec) const;
+  void RemovePhiOpnd(int index);
+
   BBId id;
   LabelIdx bbLabel = 0;       // the BB's label
   MapleVector<BB*> pred;  // predecessor list

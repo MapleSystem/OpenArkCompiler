@@ -39,7 +39,6 @@ class HDSE {
   void DoHDSE();
   void InvokeHDSEUpdateLive();
 
- public:
   bool hdseDebug;
   bool hdseKeepRef = false;
 

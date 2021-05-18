@@ -1421,13 +1421,14 @@ void AArch64CGFunc::SelectAggIassign(IassignNode &stmt, Operand &AddrOpnd) {
     alignUsed = std::min(lhsAlign, rhsAlign);
     ASSERT(alignUsed != 0, "expect non-zero");
     bool parmCopy = IsParamStructCopy(*rhsSymbol);
+    RegOperand *addReg = &CreateRegisterOperandOfType(PTY_i64);
     for (uint32 i = 0; i < (lhsSize / alignUsed); ++i) {
       /* generate the load */
       Operand *rhsMemOpnd = nullptr;
       if (parmCopy) {
         rhsMemOpnd = &LoadStructCopyBase(*rhsSymbol, rhsOffset + i * alignUsed, alignUsed * k8BitSize);
       } else {
-        rhsMemOpnd = &GetOrCreateMemOpnd(*rhsSymbol, rhsOffset + i * alignUsed, alignUsed * k8BitSize);
+        rhsMemOpnd = &GenLargeAggFormalMemOpnd(*rhsSymbol, alignUsed, (rhsOffset + i * alignUsed), *addReg);
       }
       regno_t vRegNO = NewVReg(kRegTyInt, std::max(4u, alignUsed));
       RegOperand &result = CreateVirtualRegisterOperand(vRegNO);

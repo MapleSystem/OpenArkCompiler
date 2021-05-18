@@ -90,6 +90,8 @@ class FEIRBuilder {
                                                  UniqueFEIRType argStructTypeNative);
   // Stmt
   static UniqueFEIRStmt CreateStmtDAssign(UniqueFEIRVar dstVar, UniqueFEIRExpr srcExpr, bool hasException = false);
+  static UniqueFEIRStmt CreateStmtDAssign(UniqueFEIRVar dstVar, UniqueFEIRExpr srcExpr, FieldID fieldID,
+                                          bool hasException = false);
   static UniqueFEIRStmt CreateStmtGoto(uint32 targetLabelIdx);
   static UniqueFEIRStmt CreateStmtGoto(const std::string &labelName);
   static UniqueFEIRStmt CreateStmtCondGoto(uint32 targetLabelIdx, Opcode op, UniqueFEIRExpr expr);

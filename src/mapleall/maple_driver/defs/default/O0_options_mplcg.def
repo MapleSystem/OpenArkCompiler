@@ -15,6 +15,6 @@
 // option name, option value, append maple root path?
 { "--quiet", "", false  },
 { "--no-pie", "", false  },
-{ "--fpic", "", false  },
+{ "--no-fpic", "", false  },
 { "--verbose-asm", "", false  },
 { "--maplelinker", "", false  },

@@ -1747,15 +1747,7 @@ bool MIRParser::ParseDeclareVar(MIRSymbol &symbol) {
     // parse initialized values
     MIRConst *mirConst = nullptr;
     lexer.NextToken();
-    bool allowEmpty = false;
-    // allow empty initialization for vtable, itable, vtableOffsetTable and fieldOffsetTable
-    if (symbolStrName.find(VTAB_PREFIX_STR) == 0 || symbolStrName.find(namemangler::kVtabOffsetTabStr) == 0 ||
-        symbolStrName.find(ITAB_PREFIX_STR) == 0 || symbolStrName.find(namemangler::kFieldOffsetTabStr) == 0 ||
-        symbolStrName.find(ITAB_CONFLICT_PREFIX_STR) == 0 ||
-        symbolStrName.find(namemangler::kDecoupleStaticKeyStr) == 0) {
-      allowEmpty = true;
-    }
-    if (!ParseInitValue(mirConst, tyIdx, allowEmpty)) {
+    if (!ParseInitValue(mirConst, tyIdx, mod.IsCModule())) {
       Error("wrong initialization value at ");
       return false;
     }
@@ -2090,7 +2082,7 @@ bool MIRParser::ParseInitValue(MIRConstPtr &theConst, TyIdx tyIdx, bool allowEmp
               MIRArrayType subArrayType(elemType->GetTypeIndex(), sizeSubArray);
               elemTyIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&subArrayType);
             }
-            if (!ParseInitValue(subConst, elemTyIdx)) {
+            if (!ParseInitValue(subConst, elemTyIdx, allowEmpty)) {
               Error("initializaton value wrong when parsing sub array ");
               return false;
             }

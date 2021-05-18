@@ -388,6 +388,9 @@ void MeDoLoopCanon::AddPreheader(MeFunction &func) {
 void MeDoLoopCanon::InsertNewExitBB(MeFunction &func, LoopDesc &loop) {
   for (auto pair : loop.inloopBB2exitBBs) {
     BB *curBB = func.GetBBFromID(pair.first);
+    if (curBB->GetKind() == kBBIgoto) {
+      continue;
+    }
     for (auto succBB : *pair.second) {
       bool needNewExitBB = false;
       for (auto pred : succBB->GetPred()) {
