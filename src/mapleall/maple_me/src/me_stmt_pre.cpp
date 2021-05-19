@@ -747,9 +747,8 @@ void MeStmtPre::ConstructUseOccurMap() {
   }
   // do a pass over the program
   const MapleVector<BBId> &preOrderDt = dom->GetDtPreOrder();
-  auto cfg = func->GetCfg();
   for (size_t i = 0; i < preOrderDt.size(); ++i) {
-    BB *bb = cfg->GetAllBBs().at(preOrderDt[i]);
+    BB *bb = func->GetAllBBs().at(preOrderDt[i]);
     for (auto &stmt : bb->GetMeStmts()) {
       for (size_t j = 0; j < stmt.NumMeStmtOpnds(); ++j) {
         ConstructUseOccurMapExpr(static_cast<uint32>(i), *stmt.GetOpnd(j));
@@ -1085,7 +1084,7 @@ void MeStmtPre::BuildWorkList() {
     varStack->push(static_cast<VarMeExpr*>(irMap->GetOrCreateZeroVersionVarMeExpr(*ost)));
     versionStackVec[ost->GetIndex()] = varStack;
   }
-  BuildWorkListBB(func->GetCfg()->GetCommonEntryBB());
+  BuildWorkListBB(func->GetCommonEntryBB());
 }
 
 void MeStmtPre::RemoveUnnecessaryDassign(DassignMeStmt &dssMeStmt) {

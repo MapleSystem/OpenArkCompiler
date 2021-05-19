@@ -86,9 +86,8 @@ void MeHDSE::BackwardSubstitution() {
 }
 
 void MeDoHDSE::MakeEmptyTrysUnreachable(MeFunction &func) {
-  auto cfg = func.GetCfg();
-  auto eIt = cfg->valid_end();
-  for (auto bIt = cfg->valid_begin(); bIt != eIt; ++bIt) {
+  auto eIt = func.valid_end();
+  for (auto bIt = func.valid_begin(); bIt != eIt; ++bIt) {
     BB *tryBB = *bIt;
     // get next valid bb
     auto endTryIt = bIt;
@@ -163,8 +162,8 @@ AnalysisResult *MeDoHDSE::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResult
   hdse.DoHDSE();
   hdse.BackwardSubstitution();
   MakeEmptyTrysUnreachable(*func);
-  (void)func->GetCfg()->UnreachCodeAnalysis(/* update_phi = */ true);
-  func->GetCfg()->WontExitAnalysis();
+  (void)func->GetTheCfg()->UnreachCodeAnalysis(/* update_phi = */ true);
+  func->GetTheCfg()->WontExitAnalysis();
   m->InvalidAnalysisResult(MeFuncPhase_DOMINANCE, func);
   m->InvalidAnalysisResult(MeFuncPhase_MELOOP, func);
   if (DEBUGFUNC(func)) {
