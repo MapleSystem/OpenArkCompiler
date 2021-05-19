@@ -391,6 +391,9 @@ void MeDoLoopCanon::InsertNewExitBB(MeFunction &func, LoopDesc &loop) {
   MeCFG *cfg = func.GetCfg();
   for (auto pair : loop.inloopBB2exitBBs) {
     BB *curBB = cfg->GetBBFromID(pair.first);
+    if (curBB->GetKind() == kBBIgoto) {
+      continue;
+    }
     for (auto succBB : *pair.second) {
       bool needNewExitBB = false;
       for (auto pred : succBB->GetPred()) {

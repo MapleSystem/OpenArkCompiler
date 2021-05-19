@@ -30,7 +30,7 @@ class MeHDSE : public HDSE {
              pDom, map, enabledDebug, MeOption::decoupleStatic) {}
 
   virtual ~MeHDSE() = default;
-  void RunHDSE();
+  void BackwardSubstitution();
 };
 
 class MeDoHDSE : public MeFuncPhase {

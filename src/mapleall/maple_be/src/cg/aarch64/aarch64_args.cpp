@@ -162,9 +162,15 @@ void AArch64MoveRegArgs::GenerateStpInsn(const ArgInfo &firstArgInfo, const ArgI
                                                                         firstArgInfo.regType);
   MOperator mOp = firstArgInfo.regType == kRegTyInt ? ((firstArgInfo.stkSize > k4ByteSize) ? MOP_xstp : MOP_wstp)
                                                     : ((firstArgInfo.stkSize > k4ByteSize) ? MOP_dstp : MOP_sstp);
-  RegOperand &regOpnd2 = aarchCGFunc->GetOrCreatePhysicalRegisterOperand(secondArgInfo.reg,
-                                                                         firstArgInfo.stkSize * kBitsPerByte,
-                                                                         firstArgInfo.regType);
+  RegOperand *regOpnd2 = &aarchCGFunc->GetOrCreatePhysicalRegisterOperand(secondArgInfo.reg,
+                                                                          firstArgInfo.stkSize * kBitsPerByte,
+                                                                          firstArgInfo.regType);
+  if (firstArgInfo.doMemPairOpt && firstArgInfo.isTwoRegParm) {
+    AArch64reg regFp2 = static_cast<AArch64reg>(firstArgInfo.reg + kOneRegister);
+    regOpnd2 = &aarchCGFunc->GetOrCreatePhysicalRegisterOperand(regFp2,
+                                                                firstArgInfo.stkSize * kBitsPerByte,
+                                                                firstArgInfo.regType);
+  }
 
   int32 limit = (secondArgInfo.stkSize > k4ByteSize) ? kStpLdpImm64UpperBound : kStpLdpImm32UpperBound;
   int32 stOffset = aarchCGFunc->GetBaseOffset(*firstArgInfo.symLoc);
@@ -193,7 +199,7 @@ void AArch64MoveRegArgs::GenerateStpInsn(const ArgInfo &firstArgInfo, const ArgI
                                                                    firstArgInfo.stkSize * kBitsPerByte,
                                                                    *baseOpnd, nullptr, &offsetOpnd, firstArgInfo.sym);
   }
-  Insn &pushInsn = aarchCGFunc->GetCG()->BuildInstruction<AArch64Insn>(mOp, regOpnd, regOpnd2, *memOpnd);
+  Insn &pushInsn = aarchCGFunc->GetCG()->BuildInstruction<AArch64Insn>(mOp, regOpnd, *regOpnd2, *memOpnd);
   if (aarchCGFunc->GetCG()->GenerateVerboseCG()) {
     std::string argName = firstArgInfo.sym->GetName() + " " + secondArgInfo.sym->GetName();
     pushInsn.SetComment(std::string("store param: ").append(argName));

@@ -294,10 +294,12 @@ void BBLayout::OptimizeBranchTarget(BB &bb) {
           BBContainsOnlyCondGoto(*brTargetBB) && HasSameBranchCond(bb, *brTargetBB))) {
       return;
     }
+    OptimizeBranchTarget(*brTargetBB);
     // optimize stmt
-    BB *newTargetBB = brTargetBB->GetSucc().front();
-    if (brTargetBB->GetKind() == kBBCondGoto) {
-      newTargetBB = brTargetBB->GetSucc().back();
+    BB *newTargetBB =
+        (brTargetBB->GetKind() == kBBCondGoto) ? brTargetBB->GetSucc().back() : brTargetBB->GetSucc().front();
+    if (newTargetBB == brTargetBB) {
+      return;
     }
     LabelIdx newTargetLabel = func.GetOrCreateBBLabel(*newTargetBB);
     if (func.GetIRMap() != nullptr) {

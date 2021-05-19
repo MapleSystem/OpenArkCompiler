@@ -1421,13 +1421,14 @@ void AArch64CGFunc::SelectAggIassign(IassignNode &stmt, Operand &AddrOpnd) {
     alignUsed = std::min(lhsAlign, rhsAlign);
     ASSERT(alignUsed != 0, "expect non-zero");
     bool parmCopy = IsParamStructCopy(*rhsSymbol);
+    RegOperand *addReg = &CreateRegisterOperandOfType(PTY_i64);
     for (uint32 i = 0; i < (lhsSize / alignUsed); ++i) {
       /* generate the load */
       Operand *rhsMemOpnd = nullptr;
       if (parmCopy) {
         rhsMemOpnd = &LoadStructCopyBase(*rhsSymbol, rhsOffset + i * alignUsed, alignUsed * k8BitSize);
       } else {
-        rhsMemOpnd = &GetOrCreateMemOpnd(*rhsSymbol, rhsOffset + i * alignUsed, alignUsed * k8BitSize);
+        rhsMemOpnd = &GenLargeAggFormalMemOpnd(*rhsSymbol, alignUsed, (rhsOffset + i * alignUsed), *addReg);
       }
       regno_t vRegNO = NewVReg(kRegTyInt, std::max(4u, alignUsed));
       RegOperand &result = CreateVirtualRegisterOperand(vRegNO);
@@ -3955,10 +3956,14 @@ void AArch64CGFunc::SelectCvtInt2Int(const BaseNode *parent, Operand *&resOpnd, 
 
     if (fsize > tsize) {
       if (fsize == k64BitSize) {
-        MOperator mOp = IsSignedInteger(toType) ? MOP_xsbfxrri6i6 : MOP_xubfxrri6i6;
-        GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(mOp, *resOpnd, *opnd0,
-                                                                      CreateImmOperand(0, k8BitSize, false),
-                                                                      CreateImmOperand(tsize, k8BitSize, false)));
+        if (tsize == k32BitSize) {
+          GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_wmovrr, *resOpnd, *opnd0));
+        } else {
+          MOperator mOp = IsSignedInteger(toType) ? MOP_xsbfxrri6i6 : MOP_xubfxrri6i6;
+          GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(mOp, *resOpnd, *opnd0,
+                                                                        CreateImmOperand(0, k8BitSize, false),
+                                                                        CreateImmOperand(tsize, k8BitSize, false)));
+        }
       } else {
         MOperator mOp = IsSignedInteger(toType) ? MOP_wsbfxrri5i5 : MOP_wubfxrri5i5;
         GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(mOp, *resOpnd, *opnd0,

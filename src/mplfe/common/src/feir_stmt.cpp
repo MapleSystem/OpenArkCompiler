@@ -290,7 +290,8 @@ std::list<StmtNode*> FEIRStmtDAssign::GenMIRStmtsImpl(MIRBuilder &mirBuilder) co
   BaseNode *srcNode = expr->GenMIRNode(mirBuilder);
   MIRType *mirType = var->GetType()->GenerateMIRTypeAuto();
   FieldID fieldID = this->fieldID;
-  if (mirType->IsMIRStructType() && !fieldName.empty() && fieldID == 0) {
+  if ((mirType->GetKind() == MIRTypeKind::kTypeStruct || mirType->GetKind() == MIRTypeKind::kTypeUnion) &&
+      !fieldName.empty() && fieldID == 0) {
     MIRStructType *mirStructType = static_cast<MIRStructType*>(mirType);
     fieldID = FEUtils::GetStructFieldID(mirBuilder, mirStructType, fieldName);
   }
@@ -2105,7 +2106,10 @@ FEIRExprDRead::FEIRExprDRead(std::unique_ptr<FEIRType> argType, std::unique_ptr<
 }
 
 std::unique_ptr<FEIRExpr> FEIRExprDRead::CloneImpl() const {
-  std::unique_ptr<FEIRExpr> expr = std::make_unique<FEIRExprDRead>(type->Clone(), varSrc->Clone(), fieldName);
+  std::unique_ptr<FEIRExprDRead> expr = std::make_unique<FEIRExprDRead>(type->Clone(), varSrc->Clone());
+  expr->SetFieldType(fieldType);
+  expr->SetFieldName(fieldName);
+  expr->SetFieldID(fieldID);
   return expr;
 }
 
@@ -2114,7 +2118,7 @@ BaseNode *FEIRExprDRead::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
   MIRSymbol *symbol = varSrc->GenerateMIRSymbol(mirBuilder);
   ASSERT(type != nullptr, "type is nullptr");
   AddrofNode *node = mirBuilder.CreateExprDread(*type, *symbol);
-  if ((type->IsMIRStructType() || type->GetKind() == MIRTypeKind::kTypeUnion) &&
+  if ((type->GetKind()  == MIRTypeKind::kTypeStruct || type->GetKind() == MIRTypeKind::kTypeUnion) &&
       (!fieldName.empty() || (fieldID != 0))) {
     FieldID fieldID = this->fieldID;
     if (fieldID == 0) {
@@ -2141,7 +2145,7 @@ std::vector<FEIRVar*> FEIRExprDRead::GetVarUsesImpl() const {
 PrimType FEIRExprDRead::GetPrimTypeImpl() const {
   PrimType primType = type->GetPrimType();
   MIRType *mirType = GetFieldType();
-  if (primType == PTY_agg && mirType != nullptr) {
+  if (primType == PTY_agg && mirType != nullptr && (!fieldName.empty() || fieldID != 0)) {
     return mirType->GetPrimType();
   }
   return primType;
@@ -2168,7 +2172,7 @@ BaseNode *FEIRExprIRead::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
   MIRPtrType *mirPtrType = static_cast<MIRPtrType*>(pointerType);
   MIRType *pointedMirType = mirPtrType->GetPointedType();
   FieldID fieldID = this->fieldID;
-  if ((pointedMirType->IsMIRStructType() || pointedMirType->GetKind() == MIRTypeKind::kTypeUnion) &&
+  if ((pointedMirType->GetKind() == MIRTypeKind::kTypeStruct || pointedMirType->GetKind() == MIRTypeKind::kTypeUnion) &&
       (!fieldName.empty() || fieldID != 0)) {
     auto *structMirType = static_cast<MIRStructType*>(pointedMirType);
     if (fieldID == 0) {
@@ -3735,7 +3739,8 @@ std::list<StmtNode*> FEIRStmtIAssign::GenMIRStmtsImpl(MIRBuilder &mirBuilder) co
   BaseNode *baseNode = baseExpr->GenMIRNode(mirBuilder);
   auto *mirPtrType = static_cast<MIRPtrType*>(mirType);
   FieldID fieldID = this->fieldID;
-  if (mirPtrType->GetPointedType()->IsMIRStructType() && !fieldName.empty() && fieldID == 0) {
+  if ((mirPtrType->GetPointedType()->GetKind() == MIRTypeKind::kTypeStruct ||
+       mirPtrType->GetPointedType()->GetKind() == MIRTypeKind::kTypeUnion) && !fieldName.empty() && fieldID == 0) {
     auto *mirStructType = static_cast<MIRStructType*>(mirPtrType->GetPointedType());
     fieldID = FEUtils::GetStructFieldID(mirBuilder, mirStructType, fieldName);
   }

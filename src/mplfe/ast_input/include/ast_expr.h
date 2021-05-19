@@ -269,8 +269,13 @@ class ASTUORealExpr: public ASTUnaryOperatorExpr {
   ASTUORealExpr() : ASTUnaryOperatorExpr(kASTOpReal) {}
   ~ASTUORealExpr() = default;
 
+  void SetElementType(MIRType *type) {
+    elementType = type;
+  }
+
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
+  MIRType *elementType;
 };
 
 class ASTUOImagExpr: public ASTUnaryOperatorExpr {
@@ -278,8 +283,13 @@ class ASTUOImagExpr: public ASTUnaryOperatorExpr {
   ASTUOImagExpr() : ASTUnaryOperatorExpr(kASTOpImag) {}
   ~ASTUOImagExpr() = default;
 
+  void SetElementType(MIRType *type) {
+    elementType = type;
+  }
+
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
+  MIRType *elementType;
 };
 
 class ASTUOExtensionExpr: public ASTUnaryOperatorExpr {
@@ -428,13 +438,38 @@ class ASTBinaryOperatorExpr : public ASTExpr {
     return opcode;
   }
 
+  void SetComplexElementType(MIRType *type) {
+    complexElementType = type;
+  }
+
+  void SetComplexLeftRealExpr(ASTExpr *expr) {
+    leftRealExpr = expr;
+  }
+
+  void SetComplexLeftImagExpr(ASTExpr *expr) {
+    leftImagExpr = expr;
+  }
+
+  void SetComplexRightRealExpr(ASTExpr *expr) {
+    rightRealExpr = expr;
+  }
+
+  void SetComplexRightImagExpr(ASTExpr *expr) {
+    rightImagExpr = expr;
+  }
+
  protected:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 
   Opcode opcode;
   MIRType *retType = nullptr;
+  MIRType *complexElementType = nullptr;
   ASTExpr *leftExpr = nullptr;
   ASTExpr *rightExpr = nullptr;
+  ASTExpr *leftRealExpr = nullptr;
+  ASTExpr *leftImagExpr = nullptr;
+  ASTExpr *rightRealExpr = nullptr;
+  ASTExpr *rightImagExpr = nullptr;
 };
 
 class ASTImplicitValueInitExpr : public ASTExpr {

@@ -323,6 +323,14 @@ UniqueFEIRStmt FEIRBuilder::CreateStmtDAssign(UniqueFEIRVar dstVar, UniqueFEIREx
   return stmt;
 }
 
+UniqueFEIRStmt FEIRBuilder::CreateStmtDAssign(UniqueFEIRVar dstVar, UniqueFEIRExpr srcExpr, FieldID fieldID,
+                                              bool hasException) {
+  UniqueFEIRStmt stmt = std::make_unique<FEIRStmtDAssign>(std::move(dstVar), std::move(srcExpr), fieldID);
+  auto *ptrStmt = static_cast<FEIRStmtDAssign*>(stmt.get());
+  ptrStmt->SetHasException(hasException);
+  return stmt;
+}
+
 UniqueFEIRStmt FEIRBuilder::CreateStmtGoto(uint32 targetLabelIdx) {
   UniqueFEIRStmt stmt = std::make_unique<FEIRStmtGoto>(targetLabelIdx);
   CHECK_NULL_FATAL(stmt);
