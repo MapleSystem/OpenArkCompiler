@@ -44,7 +44,7 @@ class ASTUtil {
 
   static MIRType *CvtPrimType(const clang::QualType type);
   static Opcode CvtUnaryOpcode(uint32_t opcode);
-  static Opcode CvtBinaryOpcode(uint32_t opcode);
+  static Opcode CvtBinaryOpcode(uint32_t opcode, PrimType pty = PTY_begin);
   static Opcode CvtBinaryAssignOpcode(uint32_t opcode);
 
   static bool IsVoidPointerType(const TyIdx &tyIdx);

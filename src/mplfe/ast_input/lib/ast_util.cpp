@@ -93,7 +93,7 @@ std::string ASTUtil::GetNameWithSuffix(const std::string &origName, const std::s
   return ss.str();
 }
 
-Opcode ASTUtil::CvtBinaryOpcode(uint32_t opcode) {
+Opcode ASTUtil::CvtBinaryOpcode(uint32_t opcode, PrimType pty) {
   switch (opcode) {
     case clang::BO_Mul:
       return OP_mul;    // "*"
@@ -108,7 +108,7 @@ Opcode ASTUtil::CvtBinaryOpcode(uint32_t opcode) {
     case clang::BO_Shl:
       return OP_shl;    // "<<"
     case clang::BO_Shr:
-      return OP_lshr;   // ">>"
+      return IsUnsignedInteger(pty) ? OP_lshr : OP_ashr;   // ">>"
     case clang::BO_LT:
       return OP_lt;     // "<"
     case clang::BO_GT:
