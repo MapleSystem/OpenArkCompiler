@@ -43,11 +43,12 @@ class FEIRBuilder {
                                          bool withType = false);
   // Expr
   static UniqueFEIRExpr CreateExprDRead(UniqueFEIRVar srcVar);
+  static UniqueFEIRExpr CreateExprDReadAggField(UniqueFEIRVar srcVar, FieldID fieldID, MIRType *fieldType);
   static UniqueFEIRExpr CreateExprAddrof(const std::vector<uint32> &array);
   static UniqueFEIRExpr CreateExprAddrofVar(UniqueFEIRVar srcVar);
   static UniqueFEIRExpr CreateExprAddrofFunc(const std::string &addr);
   static UniqueFEIRExpr CreateExprIRead(UniqueFEIRType returnType, UniqueFEIRType ptrType,
-                                        FieldID id, UniqueFEIRExpr expr);
+                                        UniqueFEIRExpr expr, FieldID id = 0);
   static UniqueFEIRExpr CreateExprTernary(Opcode op, UniqueFEIRType type, UniqueFEIRExpr cExpr,
                                           UniqueFEIRExpr tExpr, UniqueFEIRExpr fExpr);
   static UniqueFEIRExpr CreateExprConstRefNull();
@@ -65,6 +66,8 @@ class FEIRBuilder {
   static UniqueFEIRExpr CreateExprMathBinary(Opcode op, UniqueFEIRVar var0, UniqueFEIRVar var1);
   static UniqueFEIRExpr CreateExprMathBinary(Opcode op, UniqueFEIRExpr expr0, UniqueFEIRExpr expr1);
   static UniqueFEIRExpr CreateExprBinary(Opcode op, UniqueFEIRExpr expr0, UniqueFEIRExpr expr1);
+  static UniqueFEIRExpr CreateExprBinary(UniqueFEIRType exprType, Opcode op,
+                                         UniqueFEIRExpr expr0, UniqueFEIRExpr expr1);
   static UniqueFEIRExpr CreateExprSExt(UniqueFEIRVar srcVar);
   static UniqueFEIRExpr CreateExprSExt(UniqueFEIRExpr srcExpr, PrimType dstType);
   static UniqueFEIRExpr CreateExprZExt(UniqueFEIRVar srcVar);
@@ -90,8 +93,7 @@ class FEIRBuilder {
                                                  UniqueFEIRType argStructTypeNative);
   // Stmt
   static UniqueFEIRStmt CreateStmtDAssign(UniqueFEIRVar dstVar, UniqueFEIRExpr srcExpr, bool hasException = false);
-  static UniqueFEIRStmt CreateStmtDAssign(UniqueFEIRVar dstVar, UniqueFEIRExpr srcExpr, FieldID fieldID,
-                                          bool hasException = false);
+  static UniqueFEIRStmt CreateStmtDAssignAggField(UniqueFEIRVar dstVar, UniqueFEIRExpr srcExpr, FieldID fieldID);
   static UniqueFEIRStmt CreateStmtGoto(uint32 targetLabelIdx);
   static UniqueFEIRStmt CreateStmtGoto(const std::string &labelName);
   static UniqueFEIRStmt CreateStmtCondGoto(uint32 targetLabelIdx, Opcode op, UniqueFEIRExpr expr);

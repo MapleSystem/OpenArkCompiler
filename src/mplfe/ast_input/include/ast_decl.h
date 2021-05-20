@@ -60,9 +60,15 @@ class ASTDecl {
     pos = p;
   }
 
+  MIRConst *Translate2MIRConst() const;
+
   std::string GenerateUniqueVarName();
 
  protected:
+  virtual MIRConst *Translate2MIRConstImpl() const {
+    CHECK_FATAL(false, "Maybe implemented for other ASTDecls");
+    return nullptr;
+  }
   virtual void GenerateInitStmtImpl(std::list<UniqueFEIRStmt> &stmts) {}
   bool isGlobalDecl;
   bool isParam = false;
@@ -102,7 +108,7 @@ class ASTFunc : public ASTDecl {
   std::list<UniqueFEIRStmt> EmitASTStmtToFEIR() const;
 
  private:
-  // typeDesc format: [retType, arg0, arg1 ... argN]
+  // typeDesc format: [funcType, retType, arg0, arg1 ... argN]
   ASTStmt *compound;  // func body
   std::vector<std::string> parmNames;
 };
@@ -160,6 +166,7 @@ class ASTVar : public ASTDecl {
   std::unique_ptr<FEIRVar> Translate2FEIRVar();
 
  private:
+  MIRConst *Translate2MIRConstImpl() const override;
   void GenerateInitStmtImpl(std::list<UniqueFEIRStmt> &stmts) override;
   ASTExpr *initExpr = nullptr;
 };

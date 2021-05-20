@@ -2118,16 +2118,20 @@ BaseNode *FEIRExprDRead::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
   MIRSymbol *symbol = varSrc->GenerateMIRSymbol(mirBuilder);
   ASSERT(type != nullptr, "type is nullptr");
   AddrofNode *node = mirBuilder.CreateExprDread(*type, *symbol);
+  FieldID fieldID = this->fieldID;
   if ((type->GetKind()  == MIRTypeKind::kTypeStruct || type->GetKind() == MIRTypeKind::kTypeUnion) &&
       (!fieldName.empty() || (fieldID != 0))) {
-    FieldID fieldID = this->fieldID;
+    MIRType *tmpFieldType = nullptr;
     if (fieldID == 0) {
       fieldID = FEUtils::GetStructFieldID(mirBuilder, static_cast<MIRStructType*>(type), fieldName);
+      FieldID tmpID = fieldID;
+      FieldPair fieldPair = static_cast<MIRStructType*>(type)->TraverseToFieldRef(tmpID);
+      tmpFieldType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(fieldPair.second.first);
+    } else {
+      CHECK_NULL_FATAL(fieldType);
+      tmpFieldType = fieldType;
     }
-    FieldID tmpID = fieldID;
-    FieldPair fieldPair = static_cast<MIRStructType*>(type)->TraverseToFieldRef(tmpID);
-    MIRType *fieldType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(fieldPair.second.first);
-    node = mirBuilder.CreateExprDread(*fieldType, fieldID, *symbol);
+    node = mirBuilder.CreateExprDread(*tmpFieldType, fieldID, *symbol);
   }
   return node;
 }
@@ -2539,7 +2543,9 @@ FEIRExprBinary::FEIRExprBinary(std::unique_ptr<FEIRType> exprType, Opcode argOp,
       op(argOp) {
   SetOpnd0(std::move(argOpnd0));
   SetOpnd1(std::move(argOpnd1));
-  SetExprTypeByOp();
+  if (FEManager::GetManager().GetModule().GetSrcLang() != kSrcLangC) {
+    SetExprTypeByOp();
+  }
 }
 
 std::unique_ptr<FEIRExpr> FEIRExprBinary::CloneImpl() const {
@@ -3176,9 +3182,9 @@ BaseNode *FEIRExprArrayStoreForC::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
     MIRStructType* mirStructType = static_cast<MIRStructType*>(ptrMIRStructType);
     FEManager::GetMIRBuilder().TraverseToNamedField(*mirStructType, fieldNameIdx, fieldID);
   }
-  BaseNode *nodeAddrof;
+  BaseNode *nodeAddrof = nullptr;
   if (exprArray->GetKind() == kExprDRead) {
-    MIRSymbol *mirSymbol = exprArray->GetVarUses().front()->GenerateLocalMIRSymbol(mirBuilder);
+    MIRSymbol *mirSymbol = exprArray->GetVarUses().front()->GenerateMIRSymbol(mirBuilder);
     nodeAddrof = mirBuilder.CreateExprAddrof(fieldID, *mirSymbol);
   } else {
     nodeAddrof = exprArray->GenMIRNode(mirBuilder);

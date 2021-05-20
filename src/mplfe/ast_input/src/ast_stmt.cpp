@@ -81,14 +81,17 @@ std::list<UniqueFEIRStmt> ASTForStmt::Emit2FEStmtImpl() const {
     std::list<UniqueFEIRStmt> feStmts = initStmt->Emit2FEStmt();
     stmts.splice(stmts.cend(), feStmts);
   }
+  std::list<UniqueFEIRStmt> bodyFEStmts = bodyStmt->Emit2FEStmt();
+  bodyFEStmts.emplace_back(std::move(labelBodyEndStmt));
   UniqueFEIRExpr condFEExpr;
   if (condExpr != nullptr) {
     condFEExpr = condExpr->Emit2FEExpr(stmts);
+    std::list<UniqueFEIRStmt> condStmts;
+    condFEExpr = condExpr->Emit2FEExpr(condStmts);
+    bodyFEStmts.splice(bodyFEStmts.cend(), condStmts);
   } else {
     condFEExpr = std::make_unique<FEIRExprConst>(static_cast<int64>(1), PTY_i32);
   }
-  std::list<UniqueFEIRStmt> bodyFEStmts = bodyStmt->Emit2FEStmt();
-  bodyFEStmts.emplace_back(std::move(labelBodyEndStmt));
   if (incExpr != nullptr) {
     std::list<UniqueFEIRExpr> exprs;
     std::list<UniqueFEIRStmt> incStmts;
@@ -424,8 +427,9 @@ std::list<UniqueFEIRStmt> ASTStmtExprStmt::Emit2FEStmtImpl() const {
 
 // ---------- ASTCStyleCastExprStmt ----------
 std::list<UniqueFEIRStmt> ASTCStyleCastExprStmt::Emit2FEStmtImpl() const {
-  CHECK_FATAL(false, "NYI");
+  CHECK_FATAL(exprs.front() != nullptr, "child expr must not be nullptr!");
   std::list<UniqueFEIRStmt> stmts;
+  exprs.front()->Emit2FEExpr(stmts);
   return stmts;
 }
 
