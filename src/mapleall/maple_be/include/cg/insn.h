@@ -171,6 +171,10 @@ class Insn {
     return nullptr;
   }
 
+  virtual void SetMemOpnd(MemOperand *memOpnd) {
+    return;
+  }
+
   virtual Operand *GetResult(uint32 index) const{
     (void)index;
     return nullptr;
@@ -270,6 +274,10 @@ class Insn {
   }
 
   virtual bool IsStorePair() const {
+    return false;
+  }
+
+  virtual bool IsLoadStorePair() const {
     return false;
   }
 

@@ -1255,6 +1255,18 @@ Operand *AArch64Insn::GetMemOpnd() const {
   return nullptr;
 }
 
+/* Set the first memory access operand. */
+void AArch64Insn::SetMemOpnd(MemOperand *memOpnd) {
+  for (size_t i = 0; i < opnds.size(); ++i) {
+    Operand &opnd = GetOperand(i);
+    if (opnd.IsMemoryAccessOperand()) {
+      SetOperand(i, *memOpnd);
+      return;
+    }
+  }
+  return ;
+}
+
 bool AArch64Insn::IsVolatile() const {
   return AArch64CG::kMd[mOp].IsVolatile();
 }
