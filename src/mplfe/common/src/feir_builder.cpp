@@ -96,8 +96,17 @@ UniqueFEIRExpr FEIRBuilder::CreateExprDRead(UniqueFEIRVar srcVar) {
   return expr;
 }
 
+UniqueFEIRExpr FEIRBuilder::CreateExprDReadAggField(UniqueFEIRVar srcVar, FieldID fieldID, MIRType *fieldType) {
+  CHECK_FATAL(srcVar != nullptr && srcVar->GetType()->GetPrimType() == PTY_agg,
+              "var type must be struct type, %u", srcVar->GetType()->GetPrimType());
+  std::unique_ptr<FEIRExprDRead> expr = std::make_unique<FEIRExprDRead>(std::move(srcVar));
+  expr->SetFieldID(fieldID);
+  expr->SetFieldType(fieldType);
+  return expr;
+}
+
 UniqueFEIRExpr FEIRBuilder::CreateExprIRead(UniqueFEIRType returnType, UniqueFEIRType ptrType,
-                                            FieldID id, UniqueFEIRExpr expr) {
+                                            UniqueFEIRExpr expr, FieldID id /* optional parameters */) {
   UniqueFEIRExpr feirExpr = std::make_unique<FEIRExprIRead>(std::move(returnType), std::move(ptrType),
                                                             id, std::move(expr));
   return feirExpr;
@@ -206,6 +215,11 @@ UniqueFEIRExpr FEIRBuilder::CreateExprMathBinary(Opcode op, UniqueFEIRVar var0, 
 
 UniqueFEIRExpr FEIRBuilder::CreateExprMathBinary(Opcode op, UniqueFEIRExpr expr0, UniqueFEIRExpr expr1) {
   return std::make_unique<FEIRExprBinary>(op, std::move(expr0), std::move(expr1));
+}
+
+UniqueFEIRExpr FEIRBuilder::CreateExprBinary(UniqueFEIRType exprType, Opcode op,
+                                             UniqueFEIRExpr expr0, UniqueFEIRExpr expr1) {
+  return std::make_unique<FEIRExprBinary>(std::move(exprType), op, std::move(expr0), std::move(expr1));
 }
 
 UniqueFEIRExpr FEIRBuilder::CreateExprBinary(Opcode op, UniqueFEIRExpr expr0, UniqueFEIRExpr expr1) {
@@ -317,17 +331,13 @@ UniqueFEIRExpr FEIRBuilder::CreateExprArrayStoreForC(UniqueFEIRExpr argExprArray
 }
 
 UniqueFEIRStmt FEIRBuilder::CreateStmtDAssign(UniqueFEIRVar dstVar, UniqueFEIRExpr srcExpr, bool hasException) {
-  UniqueFEIRStmt stmt = std::make_unique<FEIRStmtDAssign>(std::move(dstVar), std::move(srcExpr));
-  FEIRStmtDAssign *ptrStmt = static_cast<FEIRStmtDAssign*>(stmt.get());
-  ptrStmt->SetHasException(hasException);
+  std::unique_ptr<FEIRStmtDAssign> stmt = std::make_unique<FEIRStmtDAssign>(std::move(dstVar), std::move(srcExpr));
+  stmt->SetHasException(hasException);
   return stmt;
 }
 
-UniqueFEIRStmt FEIRBuilder::CreateStmtDAssign(UniqueFEIRVar dstVar, UniqueFEIRExpr srcExpr, FieldID fieldID,
-                                              bool hasException) {
+UniqueFEIRStmt FEIRBuilder::CreateStmtDAssignAggField(UniqueFEIRVar dstVar, UniqueFEIRExpr srcExpr, FieldID fieldID) {
   UniqueFEIRStmt stmt = std::make_unique<FEIRStmtDAssign>(std::move(dstVar), std::move(srcExpr), fieldID);
-  auto *ptrStmt = static_cast<FEIRStmtDAssign*>(stmt.get());
-  ptrStmt->SetHasException(hasException);
   return stmt;
 }
 

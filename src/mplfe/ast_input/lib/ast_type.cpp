@@ -184,8 +184,7 @@ MIRType *LibAstFile::CvtArrayType(const clang::QualType srcType) {
   }
 
   if (srcType->isIncompleteArrayType()) {
-    // create pointer type
-    retType = GlobalTables::GetTypeTable().GetOrCreatePointerType(*retType);
+    retType = GlobalTables::GetTypeTable().GetOrCreateArrayType(*retType, 1);
   }
   return retType;
 }

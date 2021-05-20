@@ -18,16 +18,32 @@
 #include "mempool_allocator.h"
 
 namespace maple {
+static std::map<int64, ASTDecl*> declesTable;
 class ASTDeclsBuilder {
  public:
+  static ASTDecl *GetASTDecl(int64 id) {
+    ASTDecl *decl = declesTable[id];
+    return decl;
+  }
+
   static ASTDecl *ASTDeclBuilder(MapleAllocator &allocator, const std::string &srcFile,
-      const std::string &nameIn, const std::vector<MIRType*> &typeDescIn) {
-    return allocator.GetMemPool()->New<ASTDecl>(srcFile, nameIn, typeDescIn);
+      const std::string &nameIn, const std::vector<MIRType*> &typeDescIn, int64 id = INT64_MAX) {
+    if (id == INT64_MAX) {
+      return allocator.GetMemPool()->New<ASTDecl>(srcFile, nameIn, typeDescIn);  // for temp decl
+    } else if (declesTable[id] == nullptr) {
+      declesTable[id] = allocator.GetMemPool()->New<ASTDecl>(srcFile, nameIn, typeDescIn);
+    }
+    return declesTable[id];
   }
 
   static ASTVar *ASTVarBuilder(MapleAllocator &allocator, const std::string &srcFile, const std::string &varName,
-      const std::vector<MIRType*> &desc, const GenericAttrs &genAttrsIn) {
-    return allocator.GetMemPool()->New<ASTVar>(srcFile, varName, desc, genAttrsIn);
+      const std::vector<MIRType*> &desc, const GenericAttrs &genAttrsIn, int64 id = INT64_MAX) {
+    if (id == INT64_MAX) {
+      return allocator.GetMemPool()->New<ASTVar>(srcFile, varName, desc, genAttrsIn);
+    } else if (declesTable[id] == nullptr) {
+      declesTable[id] = allocator.GetMemPool()->New<ASTVar>(srcFile, varName, desc, genAttrsIn);
+    }
+    return static_cast<ASTVar*>(declesTable[id]);
   }
 
   static ASTLocalEnumDecl *ASTLocalEnumDeclBuilder(MapleAllocator &allocator, const std::string &srcFile,
@@ -37,8 +53,13 @@ class ASTDeclsBuilder {
 
   static ASTFunc *ASTFuncBuilder(MapleAllocator &allocator, const std::string &srcFile, const std::string &nameIn,
                                  const std::vector<MIRType*> &typeDescIn, const GenericAttrs &genAttrsIn,
-                                 const std::vector<std::string> &parmNamesIn) {
-    return allocator.GetMemPool()->New<ASTFunc>(srcFile, nameIn, typeDescIn, genAttrsIn, parmNamesIn);
+                                 const std::vector<std::string> &parmNamesIn, int64 id = INT64_MAX) {
+    if (id == INT64_MAX) {
+      allocator.GetMemPool()->New<ASTFunc>(srcFile, nameIn, typeDescIn, genAttrsIn, parmNamesIn);
+    } else if (declesTable[id] == nullptr) {
+      declesTable[id] = allocator.GetMemPool()->New<ASTFunc>(srcFile, nameIn, typeDescIn, genAttrsIn, parmNamesIn);
+    }
+    return static_cast<ASTFunc*>(declesTable[id]);
   }
 
   template<typename T>
@@ -52,8 +73,13 @@ class ASTDeclsBuilder {
   }
 
   static ASTStruct *ASTStructBuilder(MapleAllocator &allocator, const std::string &srcFile, const std::string &nameIn,
-      const std::vector<MIRType*> &typeDescIn, const GenericAttrs &genAttrsIn) {
-    return allocator.GetMemPool()->New<ASTStruct>(srcFile, nameIn, typeDescIn, genAttrsIn);
+      const std::vector<MIRType*> &typeDescIn, const GenericAttrs &genAttrsIn, int64 id = INT64_MAX) {
+    if (id == INT64_MAX) {
+      allocator.GetMemPool()->New<ASTStruct>(srcFile, nameIn, typeDescIn, genAttrsIn);
+    } else if (declesTable[id] == nullptr) {
+      declesTable[id] = allocator.GetMemPool()->New<ASTStruct>(srcFile, nameIn, typeDescIn, genAttrsIn);
+    }
+    return static_cast<ASTStruct*>(declesTable[id]);
   }
 
   static ASTField *ASTFieldBuilder(MapleAllocator &allocator, const std::string &srcFile, const std::string &varName,

@@ -305,7 +305,6 @@ void RemoveIdenticalLoadAndStoreAArch64::Run(BB &bb, Insn &insn) {
   if ((mop1 == MOP_wstr && mop2 == MOP_wstr) || (mop1 == MOP_xstr && mop2 == MOP_xstr)) {
     if (IsMemOperandsIdentical(insn, *nextInsn)) {
       bb.RemoveInsn(insn);
-      insn = *nextInsn;
     }
   } else if ((mop1 == MOP_wstr && mop2 == MOP_wldr) || (mop1 == MOP_xstr && mop2 == MOP_xldr)) {
     if (IsMemOperandsIdentical(insn, *nextInsn)) {
@@ -464,7 +463,6 @@ void CombineContiLoadAndStoreAArch64::Run(BB &bb, Insn &insn) {
     }
     bb.RemoveInsn(insn);
     bb.RemoveInsn(*nextInsn);
-    insn = *nn;
   }  /* pattern found */
 }
 
@@ -882,11 +880,9 @@ void ContiLDRorSTRToSameMEMAArch64::Run(BB &bb, Insn &insn) {
     CG *cg = cgFunc.GetCG();
     bb.InsertInsnAfter(*prevInsn, cg->BuildInstruction<AArch64Insn>(newOp, reg1, reg2));
     bb.RemoveInsn(insn);
-    insn = *(prevInsn->GetNext());
   } else if (reg1.GetRegisterNumber() == reg2.GetRegisterNumber() &&
              base1->GetRegisterNumber() != reg2.GetRegisterNumber()) {
     bb.RemoveInsn(insn);
-    insn = *prevInsn;
   }
 }
 

@@ -85,6 +85,8 @@ class ASTParser {
   // ProcessExpr
   const clang::Expr *PeelParen(const clang::Expr &expr);
   ASTUnaryOperatorExpr *AllocUnaryOperatorExpr(MapleAllocator &allocator, const clang::UnaryOperator &expr);
+  ASTValue *AllocASTValue(MapleAllocator &allocator) const;
+  ASTValue *TranslateExprEval(MapleAllocator &allocator, const clang::Expr *expr) const;
   ASTExpr *ProcessExpr(MapleAllocator &allocator, const clang::Expr *expr);
   ASTBinaryOperatorExpr *AllocBinaryOperatorExpr(MapleAllocator &allocator, const clang::BinaryOperator &bo);
 #define PROCESS_EXPR(CLASS) ProcessExpr##CLASS(MapleAllocator&, const clang::CLASS&)
@@ -136,10 +138,14 @@ class ASTParser {
   ASTDecl *PROCESS_DECL(Function);
   ASTDecl *PROCESS_DECL(Record);
   ASTDecl *PROCESS_DECL(Var);
+  ASTDecl *PROCESS_DECL(ParmVar);
   ASTDecl *PROCESS_DECL(Enum);
   ASTDecl *PROCESS_DECL(Typedef);
+  ASTDecl *PROCESS_DECL(EnumConstant);
 
  private:
+  ASTValue *TranslateRValue2ASTValue(MapleAllocator &allocator, const clang::Expr *expr) const;
+  ASTValue *TranslateLValue2ASTValue(MapleAllocator &allocator, const clang::Expr *expr) const;
   void TraverseDecl(const clang::Decl *decl, std::function<void (clang::Decl*)> const &functor);
   ASTDecl *GetAstDeclOfDeclRefExpr(MapleAllocator &allocator, const clang::Expr &expr);
   void SetSourceFileInfo(clang::Decl *decl);
