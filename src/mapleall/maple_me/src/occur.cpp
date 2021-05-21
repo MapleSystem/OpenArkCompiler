@@ -323,7 +323,7 @@ uint32 PreWorkCandHashTable::ComputeStmtWorkCandHashIndex(const MeStmt &stmt) {
     case OP_dassign: {
       CHECK_NULL_FATAL(stmt.GetVarLHS());
       CHECK_NULL_FATAL(stmt.GetRHS());
-      VarMeExpr *varMeExpr = stmt.GetVarLHS();
+      ScalarMeExpr *varMeExpr = stmt.GetVarLHS();
       hIdx += static_cast<uint32_t>(varMeExpr->GetOstIdx()) << kOffsetVarMeExprOstIdx;
       hIdx += ComputeWorkCandHashIndex(*stmt.GetRHS()) << 1;
       break;
