@@ -48,6 +48,7 @@ enum DriverOptionIndex {
   kGenVtableImpl,
   kVerbose,
   kAllDebug,
+  kWithDwarf,
   kHelpLevel,
   kCommonOptionEnd,
 };

@@ -153,6 +153,9 @@ ErrorCode MplOptions::HandleGeneralOptions() {
       case kAllDebug:
         debugFlag = true;
         break;
+      case kWithDwarf:
+        withDwarf = true;
+        break;
       default:
         // I do not care
         break;
