@@ -38,10 +38,26 @@ class ASTStmt {
     return exprs;
   }
 
+  void SetSrcLOC(uint32 fileIdx, uint32 lineNum) {
+    srcFileIdx = fileIdx;
+    srcFileLineNum = lineNum;
+  }
+
+  uint32 GetSrcFileIdx() const {
+    return srcFileIdx;
+  }
+
+  uint32 GetSrcFileLineNum() const {
+    return srcFileLineNum;
+  }
+
  protected:
   virtual std::list<UniqueFEIRStmt> Emit2FEStmtImpl() const = 0;
   ASTStmtOp op;
   std::vector<ASTExpr*> exprs;
+
+  uint32 srcFileIdx = 0;
+  uint32 srcFileLineNum = 0;
 };
 
 class ASTCompoundStmt : public ASTStmt {
@@ -463,7 +479,7 @@ class ASTCStyleCastExprStmt : public ASTStmt {
 
 class ASTCallExprStmt : public ASTStmt {
  public:
-  ASTCallExprStmt() : ASTStmt(kASTStmtCallExpr) {}
+  ASTCallExprStmt() : ASTStmt(kASTStmtCallExpr), varName(FEUtils::GetSequentialName("retVar_")) {}
   ~ASTCallExprStmt() override = default;
 
  private:
@@ -476,6 +492,7 @@ class ASTCallExprStmt : public ASTStmt {
   std::list<UniqueFEIRStmt> ProcessBuiltinVaEnd() const;
 
   static std::map<std::string, FuncPtrBuiltinFunc> funcPtrMap;
+  std::string varName;
 };
 
 class ASTAtomicExprStmt : public ASTStmt {

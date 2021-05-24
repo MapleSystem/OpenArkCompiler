@@ -331,8 +331,18 @@ void DriverRunner::ProcessCGPhase(const std::string &outputFile, const std::stri
       cg->GetEmitter()->EmitFileInfo(actualInput);
     }
     // Run the cg optimizations phases
-    RunCGFunctions(*cg, cgfpm, extraPhasesTime, extraPhasesName);
-
+    if (theModule->HasPartO2List()) {
+      CHECK_FATAL(cgOptions->GetOptimizeLevel() == CGOptions::kLevel2, "partO2 need coroperate with O2");
+      CgFuncPhaseManager cgO0fpm(*optMp, *theModule);
+      cgO0fpm.RegisterFuncPhases();
+      cgO0fpm.SetCGPhase(kCgPhaseMainOpt);
+      cgOptions->EnableO0();
+      std::vector<std::string> phases;
+      cgO0fpm.AddPhases(phases);
+      RunCGFunctions(*cg, cgfpm, cgO0fpm, extraPhasesTime, extraPhasesName);
+    } else {
+      RunCGFunctions(*cg, cgfpm, cgfpm, extraPhasesTime, extraPhasesName);
+    }
     // Emit global info
     timeStart = std::chrono::system_clock::now();
     EmitGlobalInfo(*cg);
@@ -390,7 +400,8 @@ CG *DriverRunner::CreateCGAndBeCommon(const std::string &outputFile, const std::
 }
 
 
-void DriverRunner::RunCGFunctions(CG &cg, CgFuncPhaseManager &cgfpm, std::vector<long> &extraPhasesTime,
+void DriverRunner::RunCGFunctions(CG &cg, CgFuncPhaseManager &cgNormalfpm, CgFuncPhaseManager &cgO0fpm,
+                                  std::vector<long> &extraPhasesTime,
                                   std::vector<std::string> &extraPhasesName) const {
   MPLTimer timer;
   long lowerTime = 0;
@@ -408,7 +419,7 @@ void DriverRunner::RunCGFunctions(CG &cg, CgFuncPhaseManager &cgfpm, std::vector
   timer.Stop();
   lowerTime += timer.ElapsedMicroseconds();
 
-  if (cg.AddStackGuard()) {
+  if (cg.AddStackGuard() || theModule->HasPartO2List()) {
     cg.AddStackGuardvar();
   }
 
@@ -420,7 +431,20 @@ void DriverRunner::RunCGFunctions(CG &cg, CgFuncPhaseManager &cgfpm, std::vector
     if (mirFunc->GetBody() == nullptr) {
       continue;
     }
-
+    CgFuncPhaseManager *cgfpm = nullptr;
+    if (&cgNormalfpm == &cgO0fpm) {
+      cgfpm = &cgNormalfpm;
+    } else {
+      if (theModule->HasPartO2List() && theModule->IsInPartO2List(mirFunc->GetNameStrIdx())) {
+        cgfpm = &cgNormalfpm;
+        cgOptions->EnableO2();
+      } else {
+        cgfpm = &cgO0fpm;
+        cgOptions->EnableO0();
+      }
+      cg.UpdateCGOptions(*cgOptions);
+      Globals::GetInstance()->SetOptimLevel(cgOptions->GetOptimizeLevel());
+    }
     // LowerIR.
     theModule->SetCurFunction(mirFunc);
     timer.Start();
@@ -457,15 +481,15 @@ void DriverRunner::RunCGFunctions(CG &cg, CgFuncPhaseManager &cgfpm, std::vector
     CHECK_FATAL(cgFunc != nullptr, "nullptr check");
     CG::SetCurCGFunc(*cgFunc);
 
-    cgfpm.Run(*cgFunc);
+    cgfpm->Run(*cgFunc);
 
     cg.GetEmitter()->EmitLocalVariable(*cgFunc);
 
     // Invalid all analysis result.
-    cgfpm.Emit(*cgFunc);
+    cgfpm->Emit(*cgFunc);
     cg.GetEmitter()->EmitHugeSoRoutines();
-    cgfpm.GetAnalysisResultManager()->InvalidIRbaseAnalysisResult(*cgFunc);
-    cgfpm.ClearPhaseNameInfo();
+    cgfpm->GetAnalysisResultManager()->InvalidIRbaseAnalysisResult(*cgFunc);
+    cgfpm->ClearPhaseNameInfo();
 
     // Delete mempool.
     mirFunc->ReleaseCodeMemory();

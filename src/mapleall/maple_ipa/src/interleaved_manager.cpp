@@ -189,6 +189,10 @@ void InterleavedManager::OptimizeFuncs(MeFuncPhaseManager &fpm, MapleVector<MIRF
   for (size_t i = 0; i < compList.size(); ++i) {
     MIRFunction *func = compList[i];
     ASSERT_NOT_NULL(func);
+    // when partO2 is set, skip func which not exists in partO2FuncList.
+    if (mirModule.HasPartO2List() && !mirModule.IsInPartO2List(func->GetNameStrIdx())) {
+      continue;
+    }
     // skip empty func, and skip the func out of range  if `useRange` is true
     if (func->GetBody() == nullptr || (MeOption::useRange && (i < MeOption::range[0] || i > MeOption::range[1]))) {
       continue;
@@ -210,6 +214,10 @@ void InterleavedManager::OptimizeFuncsParallel(const MeFuncPhaseManager &fpm, Ma
   for (size_t i = 0; i < compList.size(); ++i) {
     MIRFunction *func = compList[i];
     ASSERT_NOT_NULL(func);
+    // when partO2 is set, skip func which not exists in partO2FuncList.
+    if (mirModule.HasPartO2List() && !mirModule.IsInPartO2List(func->GetNameStrIdx())) {
+      continue;
+    }
     // skip empty func, and skip the func out of range if `useRange` is true
     if (func->GetBody() == nullptr || (MeOption::useRange && (i < MeOption::range[0] || i > MeOption::range[1]))) {
       continue;

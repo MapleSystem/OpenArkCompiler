@@ -141,6 +141,14 @@ class FEIRVar {
     return HashImpl();
   }
 
+  void SetAttrs(GenericAttrs &argGenericAttrs) {
+    genAttrs = argGenericAttrs;
+  }
+
+  void SetConst(MIRConst *argMirConst) {
+    mirConst = argMirConst;
+  }
+
  protected:
   virtual MIRSymbol *GenerateGlobalMIRSymbolImpl(MIRBuilder &builder) const;
   virtual MIRSymbol *GenerateLocalMIRSymbolImpl(MIRBuilder &builder) const;
@@ -156,6 +164,8 @@ class FEIRVar {
   bool isDef : 1;
   UniqueFEIRType type;
   UniqueFEIRVarTrans trans;
+  GenericAttrs genAttrs;
+  MIRConst *mirConst;
 };
 
 using UniqueFEIRVar = std::unique_ptr<FEIRVar>;

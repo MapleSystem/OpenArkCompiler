@@ -298,6 +298,7 @@ static_library("lib_mplfe_ast_input") {
     "${MPLFE_ROOT}/ast_input/src/ast_function.cpp",
     "${MPLFE_ROOT}/ast_input/src/ast_input.cpp",
     "${MPLFE_ROOT}/ast_input/src/ast_parser.cpp",
+    "${MPLFE_ROOT}/ast_input/src/ast_parser_builting_func.cpp",
     "${MPLFE_ROOT}/ast_input/src/ast_struct2fe_helper.cpp",
     "${MPLFE_ROOT}/ast_input/lib/ast_type.cpp",
     "${MPLFE_ROOT}/ast_input/lib/ast_util.cpp",

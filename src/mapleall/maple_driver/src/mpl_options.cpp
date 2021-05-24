@@ -156,6 +156,9 @@ ErrorCode MplOptions::HandleGeneralOptions() {
       case kWithDwarf:
         withDwarf = true;
         break;
+      case kPartO2:
+        partO2List = opt.Args();
+        break;
       default:
         // I do not care
         break;

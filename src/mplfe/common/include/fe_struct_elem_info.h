@@ -188,6 +188,10 @@ class FEStructMethodInfo : public FEStructElemInfo {
     return isReturnVoid;
   }
 
+  void SetReturnVoid() {
+    isReturnVoid = true;
+  }
+
   bool IsJavaPolymorphicCall() const {
     return isJavaPolymorphicCall;
   }
@@ -224,6 +228,22 @@ class FEStructMethodInfo : public FEStructElemInfo {
     argTypes = argTypesIn;
   }
 
+  void SetArgsName(const std::vector<std::string> &names) {
+    argNames = names;
+  }
+
+  const std::vector<std::string> &GetArgsName() const {
+    return argNames;
+  }
+
+  void SetFuncAttrs(const FuncAttrs &attrs) {
+    funcAttrs = attrs;
+  }
+
+  const FuncAttrs &GetFuncAttrs() const {
+    return funcAttrs;
+  }
+
  LLT_PROTECTED:
   void PrepareImpl(MIRBuilder &mirBuilder, bool argIsStatic) override;
 
@@ -247,6 +267,8 @@ class FEStructMethodInfo : public FEStructElemInfo {
   FEIRType *ownerType;
   MIRFunction *mirFunc;
   MapleVector<FEIRType*> argTypes;
+  std::vector<std::string> argNames;
+  FuncAttrs funcAttrs;
 };
 }  // namespace maple
 #endif  // MPLFE_INCLUDE_COMMON_FE_STRUCT_ELEM_INFO_H

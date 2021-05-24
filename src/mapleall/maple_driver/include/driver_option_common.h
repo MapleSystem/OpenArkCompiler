@@ -50,6 +50,7 @@ enum DriverOptionIndex {
   kAllDebug,
   kWithDwarf,
   kHelpLevel,
+  kPartO2,
   kCommonOptionEnd,
 };
 

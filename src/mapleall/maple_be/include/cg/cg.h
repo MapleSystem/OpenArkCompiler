@@ -311,6 +311,10 @@ class CG {
     return cgOption;
   }
 
+  void UpdateCGOptions(const CGOptions &newOption) {
+    cgOption.SetOptionFlag(newOption.GetOptionFlag());
+  }
+
   bool IsLibcore() const {
     return isLibcore;
   }

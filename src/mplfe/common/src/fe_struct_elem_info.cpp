@@ -324,16 +324,15 @@ void FEStructMethodInfo::LoadMethodTypeJava() {
 void FEStructMethodInfo::PrepareMethodC() {
   mirFunc = FEManager::GetTypeManager().GetMIRFunction(methodNameIdx, isStatic);
   if (mirFunc == nullptr) {
-    // This branch should not be used for C languages, and mirFunc must not be nullptr.
     MIRType *mirRetType = retType->GenerateMIRTypeAuto(srcLang);
-    bool isVarg = false; // need to update
     std::vector<TyIdx> argsTypeIdx;
     for (const FEIRType *argType : argTypes) {
       MIRType *mirArgType = argType->GenerateMIRTypeAuto(srcLang);
       argsTypeIdx.push_back(mirArgType->GetTypeIndex());
     }
     mirFunc = FEManager::GetTypeManager().CreateFunction(methodNameIdx, mirRetType->GetTypeIndex(),
-                                                         argsTypeIdx, isVarg, isStatic);
+                                                         argsTypeIdx, false, isStatic);
+    mirFunc->SetFuncAttrs(funcAttrs);
   }
   isPrepared = true;
 }
