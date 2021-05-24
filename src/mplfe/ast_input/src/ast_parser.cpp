@@ -1218,6 +1218,8 @@ ASTExpr *ASTParser::ProcessExprImaginaryLiteral(MapleAllocator &allocator, const
   return astImaginaryLiteral;
 }
 
+std::map<std::string, ASTParser::ParseBuiltinFunc> ASTParser::builtingFuncPtrMap = ASTParser::InitFuncPtrMap();
+
 ASTExpr *ASTParser::ProcessExprCallExpr(MapleAllocator &allocator, const clang::CallExpr &expr) {
   ASTCallExpr *astCallExpr = ASTDeclsBuilder::ASTExprBuilder<ASTCallExpr>(allocator);
   ASSERT(astCallExpr != nullptr, "astCallExpr is nullptr");
@@ -1245,6 +1247,10 @@ ASTExpr *ASTParser::ProcessExprCallExpr(MapleAllocator &allocator, const clang::
     funcName = astCallExpr->CvtBuiltInFuncName(funcName);
     if (!ASTUtil::IsValidName(funcName)) {
       ASTUtil::AdjustName(funcName);
+    }
+    auto ptrFunc = builtingFuncPtrMap.find(funcName);
+    if (ptrFunc != builtingFuncPtrMap.end()) {
+      return (this->*(ptrFunc->second))(allocator, expr);
     }
     astCallExpr->SetFuncName(funcName);
     GenericAttrs attrs;
