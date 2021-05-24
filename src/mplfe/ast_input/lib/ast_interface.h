@@ -75,7 +75,9 @@ class LibAstFile {
     return astContext;
   }
 
-  Pos GetDeclPosInfo(const clang::Decl &decl);
+  Pos GetDeclPosInfo(const clang::Decl &decl) const;
+  Pos GetStmtLOC(const clang::Stmt &stmt) const;
+  Pos GetLOC(const clang::SourceLocation &srcLoc) const;
 
  private:
   using RecordDeclMap = std::map<TyIdx, const clang::RecordDecl*>;

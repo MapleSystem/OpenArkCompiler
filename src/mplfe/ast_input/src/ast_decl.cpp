@@ -60,11 +60,15 @@ MIRConst *ASTVar::Translate2MIRConstImpl() const {
 }
 
 void ASTVar::GenerateInitStmtImpl(std::list<UniqueFEIRStmt> &stmts) {
-  if (GetInitExpr() == nullptr) {
+  if (genAttrs.GetAttr(GenericAttrKind::GENATTR_static)) {
+    return;
+  }
+  ASTExpr *initExpr = GetInitExpr();
+  if (initExpr == nullptr) {
     return;
   }
   UniqueFEIRVar feirVar = Translate2FEIRVar();
-  UniqueFEIRExpr expr = GetInitExpr()->Emit2FEExpr(stmts);
+  UniqueFEIRExpr expr = initExpr->Emit2FEExpr(stmts);
   if (expr == nullptr) {
     return;
   }
@@ -102,8 +106,18 @@ std::vector<std::unique_ptr<FEIRVar>> ASTFunc::GenArgVarList() const {
 
 std::list<UniqueFEIRStmt> ASTFunc::EmitASTStmtToFEIR() const {
   std::list<UniqueFEIRStmt> stmts;
+  // fix int main() no return stmt. there are multiple branches, insert return at the end.
+  bool needRet = false;
+  UniqueFEIRExpr feExpr = std::make_unique<FEIRExprConst>(static_cast<int64>(0), PTY_i32);
+  UniqueFEIRStmt retStmt = std::make_unique<FEIRStmtReturn>(std::move(feExpr));
+  if (name == "main" && typeDesc[1]->GetPrimType() == PTY_i32) {
+    needRet = true;
+  }
   const ASTStmt *astStmt = GetCompoundStmt();
   if (astStmt == nullptr) {
+    if (needRet) {
+      stmts.emplace_back(std::move(retStmt));
+    }
     return stmts;
   }
   const ASTCompoundStmt *astCpdStmt = static_cast<const ASTCompoundStmt*>(astStmt);
@@ -114,6 +128,9 @@ std::list<UniqueFEIRStmt> ASTFunc::EmitASTStmtToFEIR() const {
       // Link jump stmt not implemented yet
       stmts.emplace_back(std::move(stmt));
     }
+  }
+  if (needRet && (stmts.size() == 0 || stmts.back()->GetKind() != kStmtReturn)) {
+    stmts.emplace_back(std::move(retStmt));
   }
   return stmts;
 }

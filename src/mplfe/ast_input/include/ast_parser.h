@@ -142,6 +142,7 @@ class ASTParser {
   ASTDecl *PROCESS_DECL(Enum);
   ASTDecl *PROCESS_DECL(Typedef);
   ASTDecl *PROCESS_DECL(EnumConstant);
+  ASTDecl *PROCESS_DECL(Label);
 
  private:
   ASTValue *TranslateRValue2ASTValue(MapleAllocator &allocator, const clang::Expr *expr) const;
@@ -150,6 +151,8 @@ class ASTParser {
   ASTDecl *GetAstDeclOfDeclRefExpr(MapleAllocator &allocator, const clang::Expr &expr);
   void SetSourceFileInfo(clang::Decl *decl);
   uint32 GetSizeFromQualType(const clang::QualType qualType);
+  uint32_t GetAlignOfType(const clang::QualType currQualType, clang::UnaryExprOrTypeTrait exprKind);
+  uint32_t GetAlignOfExpr(const clang::Expr &expr, clang::UnaryExprOrTypeTrait exprKind);
   ASTExpr *ProcessExprBinaryOperatorComplex(MapleAllocator &allocator, const clang::BinaryOperator &bo);
   uint32 fileIdx;
   const std::string fileName;

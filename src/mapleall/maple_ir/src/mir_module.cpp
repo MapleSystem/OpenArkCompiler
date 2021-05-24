@@ -52,7 +52,8 @@ MIRModule::MIRModule(const std::string &fn)
       classList(memPoolAllocator.Adapter()),
       optimizedFuncs(memPoolAllocator.Adapter()),
       puIdxFieldInitializedMap(std::less<PUIdx>(), memPoolAllocator.Adapter()),
-      inliningGlobals(memPoolAllocator.Adapter()) {
+      inliningGlobals(memPoolAllocator.Adapter()),
+      partO2FuncList(memPoolAllocator.Adapter()) {
   GlobalTables::GetGsymTable().SetModule(this);
   typeNameTab = memPool->New<MIRTypeNameTable>(memPoolAllocator);
   mirBuilder = memPool->New<MIRBuilder>(this);
@@ -712,4 +713,27 @@ void MIRModule::ReleaseCurFuncMemPoolTmp() {
 void MIRModule::SetFuncInfoPrinted() const {
   CurFunction()->SetInfoPrinted();
 }
+
+void MIRModule::InitPartO2List(const std::string &list) {
+  if (list.empty()) {
+    return;
+  }
+  SetHasPartO2List(true);
+  std::ifstream infile(list);
+  if (!infile.is_open()) {
+    LogInfo::MapleLogger(kLlErr) << "Cannot open partO2 function list file " << list << '\n';
+    return;
+  }
+  std::string str;
+
+  while (getline(infile, str)) {
+    if (str.empty()) {
+      continue;
+    }
+    GStrIdx funcStrIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(str);
+    partO2FuncList.insert(funcStrIdx);
+  }
+  infile.close();
+}
+
 }  // namespace maple

@@ -153,6 +153,9 @@ ErrorCode MplOptions::HandleGeneralOptions() {
       case kAllDebug:
         debugFlag = true;
         break;
+      case kPartO2:
+        partO2List = opt.Args();
+        break;
       default:
         // I do not care
         break;

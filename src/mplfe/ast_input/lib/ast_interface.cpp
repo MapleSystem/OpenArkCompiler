@@ -22,6 +22,9 @@ bool LibAstFile::Open(const std::string &fileName,
                       int excludeDeclFromPCH, int displayDiagnostics) {
   CXIndex index = clang_createIndex(excludeDeclFromPCH, displayDiagnostics);
   CXTranslationUnit translationUnit = clang_createTranslationUnit(index, fileName.c_str());
+  if (translationUnit == nullptr) {
+    return false;
+  }
   clang::ASTUnit *astUnit = translationUnit->TheASTUnit;
   if (astUnit == nullptr) {
     return false;
@@ -69,10 +72,21 @@ std::string LibAstFile::GetMangledName(const clang::NamedDecl &decl) {
   return mangledName;
 }
 
-Pos LibAstFile::GetDeclPosInfo(const clang::Decl &decl) {
+Pos LibAstFile::GetDeclPosInfo(const clang::Decl &decl) const {
   clang::FullSourceLoc fullLocation = astContext->getFullLoc(decl.getBeginLoc());
   return std::make_pair(static_cast<uint32>(fullLocation.getSpellingLineNumber()),
                         static_cast<uint32>(fullLocation.getSpellingColumnNumber()));
+}
+
+Pos LibAstFile::GetStmtLOC(const clang::Stmt &stmt) const {
+  return GetLOC(stmt.getBeginLoc());
+}
+
+Pos LibAstFile::GetLOC(const clang::SourceLocation &srcLoc) const {
+  clang::FullSourceLoc fullLocation = astContext->getFullLoc(srcLoc);
+  const auto *fileEntry = fullLocation.getFileEntry();
+  return std::make_pair(static_cast<uint32>(fileEntry == nullptr ? 0 : fullLocation.getFileEntry()->getUID()),
+                        static_cast<uint32>(fullLocation.getSpellingLineNumber()));
 }
 
 void LibAstFile::GetCVRAttrs(uint32_t qualifiers, GenericAttrs &genAttrs) {

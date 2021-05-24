@@ -135,6 +135,10 @@ class MplOptions {
     return mpltFile;
   }
 
+  const std::string &GetPartO2List() const {
+    return partO2List;
+  }
+
   const RunMode &GetRunMode() const {
     return runMode;
   }
@@ -235,6 +239,7 @@ class MplOptions {
   bool genVtableImpl = false;
   bool hasPrinted = false;
   unsigned int helpLevel = mapleOption::kBuildTypeDefault;
+  std::string partO2List = "";
 };
 }  // namespace maple
 #endif  // MAPLE_DRIVER_INCLUDE_MPL_OPTIONS_H

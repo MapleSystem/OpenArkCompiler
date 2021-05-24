@@ -429,7 +429,7 @@ class FEOptions {
   int dumpLevel;
   bool isDumpTime;
   bool isDumpComment = false;
-  bool isDumpLOC = false;
+  bool isDumpLOC = true;
   bool isDumpPhaseTime = false;
   bool isDumpPhaseTimeDetail = false;
 

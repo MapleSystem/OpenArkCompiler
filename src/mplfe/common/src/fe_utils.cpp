@@ -17,6 +17,7 @@
 #include "mpl_logging.h"
 #include "mir_type.h"
 #include "mir_builder.h"
+#include "fe_manager.h"
 namespace maple {
 // ---------- FEUtils ----------
 const std::string FEUtils::kBoolean = "Z";
@@ -194,24 +195,30 @@ std::string FEUtils::GetSequentialName(const std::string &prefix) {
   return name;
 }
 
-FieldID FEUtils::GetStructFieldID(MIRBuilder &mirBuilder, MIRStructType *base, const std::string &fieldName) {
+FieldID FEUtils::GetStructFieldID(MIRStructType *base, const std::string &fieldName) {
   MIRStructType *type = base;
   std::vector<std::string> fieldNames = FEUtils::Split(fieldName, '.');
   std::reverse(fieldNames.begin(), fieldNames.end());
   FieldID fieldID = 0;
   for (const auto &f: fieldNames) {
-    auto &structType = static_cast<MIRStructType&>(*type);
-    GStrIdx strIdx = mirBuilder.GetStringIndex(f);
+    GStrIdx strIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(f);
     uint32 tempFieldID = fieldID;
-    if (mirBuilder.TraverseToNamedFieldWithTypeAndMatchStyle(structType, strIdx, TyIdx(0), tempFieldID,
-                                                             MIRBuilder::MatchStyle::kMatchAnyField)) {
+    if (FEManager::GetMIRBuilder().TraverseToNamedFieldWithTypeAndMatchStyle(*type, strIdx, TyIdx(0), tempFieldID,
+        MIRBuilder::MatchStyle::kMatchAnyField)) {
       fieldID = tempFieldID;
-      FieldID tmpId = tempFieldID;
-      FieldPair fieldPair = base->TraverseToFieldRef(tmpId);
+      FieldID tmpID = tempFieldID;
+      FieldPair fieldPair = base->TraverseToFieldRef(tmpID);
       type = static_cast<MIRStructType*>(GlobalTables::GetTypeTable().GetTypeFromTyIdx(fieldPair.second.first));
     }
   }
   return fieldID;
+}
+
+MIRType *FEUtils::GetStructFieldType(MIRStructType *type, FieldID fieldID) {
+  FieldID tmpID = fieldID;
+  FieldPair fieldPair = type->TraverseToFieldRef(tmpID);
+  MIRType *fieldType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(fieldPair.second.first);
+  return fieldType;
 }
 
 // ---------- FELinkListNode ----------
