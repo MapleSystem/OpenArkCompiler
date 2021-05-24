@@ -515,6 +515,14 @@ class FEIRExprAddrofVar : public FEIRExpr {
     fieldID = id;
   }
 
+  void SetVarValue(MIRConst *val) {
+    cst = val;
+  }
+
+  MIRConst *GetVarValue() const {
+    return cst;
+  }
+
  protected:
   std::unique_ptr<FEIRExpr> CloneImpl() const override;
   BaseNode *GenMIRNodeImpl(MIRBuilder &mirBuilder) const override;
@@ -525,6 +533,7 @@ class FEIRExprAddrofVar : public FEIRExpr {
   FieldID fieldID = 0;
   std::string fieldName;
   MIRType *fieldType = nullptr;
+  MIRConst *cst = nullptr;
 };
 
 // ---------- FEIRExprIAddrof ----------

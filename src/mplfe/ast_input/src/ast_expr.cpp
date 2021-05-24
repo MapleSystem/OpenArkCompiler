@@ -338,6 +338,9 @@ UniqueFEIRExpr ASTImplicitCastExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &s
   UniqueFEIRExpr subExpr = childExpr->Emit2FEExpr(stmts);
   if (complexType == nullptr) {
     if (IsNeededCvt(subExpr)) {
+      if (IsPrimitiveFloat(subExpr->GetPrimType()) && IsPrimitiveInteger(dst->GetPrimType())) {
+        return FEIRBuilder::CreateExprCvtPrim(OP_trunc, std::move(subExpr), dst->GetPrimType());
+      }
       return FEIRBuilder::CreateExprCvtPrim(std::move(subExpr), dst->GetPrimType());
     }
   } else {
@@ -1070,7 +1073,16 @@ UniqueFEIRExpr ASTArraySubscriptExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> 
   std::list<UniqueFEIRExpr> indexExprs;
   UniqueFEIRExpr arrayStoreForCExpr;
   UniqueFEIRType typeNative = FEIRTypeHelper::CreateTypeNative(*baseExpr->GetType());
-  UniqueFEIRExpr baseFEExpr = baseExpr->Emit2FEExpr(stmts);
+  UniqueFEIRExpr baseFEExpr;
+  if (baseExpr->GetASTOp() == kASTStringLiteral) {
+    UniqueFEIRVar unamedVar = FEIRBuilder::CreateVarNameForC(FEUtils::GetSequentialName("unamedstr_"),
+                                                             *baseExpr->GetType(), true, false);
+    baseFEExpr = FEIRBuilder::CreateExprAddrofVar(std::move(unamedVar));
+    FEIRExprAddrofVar *addrofVarExpr = static_cast<FEIRExprAddrofVar*>(baseFEExpr.get());
+    addrofVarExpr->SetVarValue(baseExpr->GenerateMIRConst());
+  } else {
+    baseFEExpr = baseExpr->Emit2FEExpr(stmts);
+  }
   for (auto expr : idxExprs) {
     UniqueFEIRExpr feirExpr = expr->Emit2FEExpr(stmts);
     indexExprs.emplace_front(std::move(feirExpr));

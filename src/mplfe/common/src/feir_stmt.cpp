@@ -2360,6 +2360,9 @@ std::unique_ptr<FEIRExpr> FEIRExprAddrofVar::CloneImpl() const {
 
 BaseNode *FEIRExprAddrofVar::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
   MIRSymbol *varSymbol = varSrc->GenerateMIRSymbol(mirBuilder);
+  if (cst != nullptr) {
+    varSymbol->SetKonst(cst);
+  }
   MIRType *type = varSrc->GetType()->GenerateMIRTypeAuto();
   AddrofNode *node = mirBuilder.CreateExprAddrof(fieldID, *varSymbol);
   FieldID fieldID = this->fieldID;
@@ -3370,6 +3373,9 @@ BaseNode *FEIRExprArrayStoreForC::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
   if (mirtype->GetKind() == kTypePointer) {
     nodeAddrof = exprArray->GenMIRNode(mirBuilder);
   } else {
+    if (mirSymbol->GetKonst() == nullptr && exprArray->GetKind() == kExprAddrofVar) {
+      mirSymbol->SetKonst(static_cast<FEIRExprAddrofVar*>(exprArray.get())->GetVarValue());
+    }
     nodeAddrof = mirBuilder.CreateExprAddrof(fieldID, *mirSymbol);
   }
   nds.push_back(nodeAddrof);
