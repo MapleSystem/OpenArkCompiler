@@ -40,7 +40,8 @@ class FEUtils {
   static PrimType GetPrimType(const GStrIdx &typeNameIdx);
   static std::string GetSequentialName0(const std::string &prefix, uint32_t num);
   static std::string GetSequentialName(const std::string &prefix);
-  static FieldID GetStructFieldID(MIRBuilder &mirBuilder, MIRStructType *base, const std::string &fieldName);
+  static FieldID GetStructFieldID(MIRStructType *base, const std::string &fieldName);
+  static MIRType *GetStructFieldType(MIRStructType *type, FieldID feildID);
 
   static const std::string kBoolean;
   static const std::string kByte;

@@ -1017,6 +1017,14 @@ class CGOptions : public MapleDriverOptionBase {
     return gcOnly;
   }
 
+  const OptionFlag &GetOptionFlag() const {
+    return options;
+  }
+
+  void SetOptionFlag(const OptionFlag &flag) {
+    options = flag;
+  }
+
  private:
   std::vector<std::string> phaseSequence;
 

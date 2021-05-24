@@ -24,6 +24,16 @@
 
 namespace maple {
 using Pos = std::pair<uint32, uint32>;
+enum DeclKind {
+  kUnknownDecl = 0,
+  kASTDecl,
+  kASTField,
+  kASTFunc,
+  kASTStruct,
+  kASTVar,
+  kASTLocalEnumDecl,
+};
+
 class ASTDecl {
  public:
   ASTDecl(const std::string &srcFile, const std::string &nameIn, const std::vector<MIRType*> &typeDescIn)
@@ -60,6 +70,10 @@ class ASTDecl {
     pos = p;
   }
 
+  DeclKind GetDeclKind() const {
+    return declKind;
+  }
+
   MIRConst *Translate2MIRConst() const;
 
   std::string GenerateUniqueVarName();
@@ -77,16 +91,24 @@ class ASTDecl {
   std::vector<MIRType*> typeDesc;
   GenericAttrs genAttrs;
   Pos pos = { 0, 0 };
+  DeclKind declKind = kASTDecl;
 };
 
 class ASTField : public ASTDecl {
  public:
   ASTField(const std::string &srcFile, const std::string &nameIn, const std::vector<MIRType*> &typeDescIn,
-           const GenericAttrs &genAttrsIn)
-      : ASTDecl(srcFile, nameIn, typeDescIn) {
+           const GenericAttrs &genAttrsIn, bool isAnonymous = false)
+      : ASTDecl(srcFile, nameIn, typeDescIn), isAnonymousField(isAnonymous) {
     genAttrs = genAttrsIn;
+    declKind = kASTField;
   }
   ~ASTField() = default;
+  bool IsAnonymousField() const {
+    return isAnonymousField;
+  }
+
+ private:
+  bool isAnonymousField = false;
 };
 
 class ASTFunc : public ASTDecl {
@@ -95,6 +117,7 @@ class ASTFunc : public ASTDecl {
           const GenericAttrs &genAttrsIn, const std::vector<std::string> &parmNamesIn)
       : ASTDecl(srcFile, nameIn, typeDescIn), compound(nullptr), parmNames(parmNamesIn) {
     genAttrs = genAttrsIn;
+    declKind = kASTFunc;
   }
   ~ASTFunc() {
     compound = nullptr;
@@ -119,6 +142,7 @@ class ASTStruct : public ASTDecl {
             const GenericAttrs &genAttrsIn)
       : ASTDecl(srcFile, nameIn, typeDescIn), isUnion(false) {
     genAttrs = genAttrsIn;
+    declKind = kASTStruct;
   }
   ~ASTStruct() = default;
 
@@ -152,6 +176,7 @@ class ASTVar : public ASTDecl {
          const GenericAttrs &genAttrsIn)
       : ASTDecl(srcFile, nameIn, typeDescIn) {
     genAttrs = genAttrsIn;
+    declKind = kASTVar;
   }
   virtual ~ASTVar() = default;
 
@@ -178,6 +203,7 @@ class ASTLocalEnumDecl : public ASTDecl {
           const GenericAttrs &genAttrsIn)
       : ASTDecl(srcFile, nameIn, typeDescIn) {
     genAttrs = genAttrsIn;
+    declKind = kASTLocalEnumDecl;
   }
   ~ASTLocalEnumDecl() = default;
 

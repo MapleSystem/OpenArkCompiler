@@ -94,7 +94,9 @@ class DriverRunner final {
   std::string cgInput;
   BECommon *beCommon = nullptr;
   CG *CreateCGAndBeCommon(const std::string &outputFile, const std::string &oriBasename);
-  void RunCGFunctions(CG &cg, CgFuncPhaseManager &cgfpm, std::vector<long> &extraPhasesTime,
+  void RunCGFunctions(CG &cg, CgFuncPhaseManager &cgNormalfpm,
+                      CgFuncPhaseManager &cgO0fpm,
+                      std::vector<long> &extraPhasesTime,
                       std::vector<std::string> &extraPhasesName) const;
   void EmitGlobalInfo(CG &cg) const;
   void EmitDuplicatedAsmFunc(const CG &cg) const;

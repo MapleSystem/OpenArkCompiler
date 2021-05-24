@@ -555,11 +555,26 @@ class MIRModule {
   DebugInfo *GetDbgInfo() {
     return dbgInfo;
   }
+
   void SetWithDbgInfo(bool v) {
     withDbgInfo = v;
   }
+
   bool IsWithDbgInfo() const {
     return withDbgInfo;
+  }
+
+  bool HasPartO2List() {
+    return hasPartO2List;
+  }
+
+  void SetHasPartO2List(bool value) {
+    hasPartO2List = value;
+  }
+
+  void InitPartO2List(const std::string &list);
+  bool IsInPartO2List(GStrIdx idx) {
+    return partO2FuncList.count(idx) > 0;
   }
 
  private:
@@ -643,6 +658,8 @@ class MIRModule {
   mutable std::shared_timed_mutex fieldMapMutex;
   std::map<std::pair<GStrIdx, GStrIdx>, GStrIdx> realCaller;
   MapleSet<uint32_t> inliningGlobals;  // global symbols accessed, used for inlining
+  bool hasPartO2List = false;
+  MapleSet<GStrIdx> partO2FuncList;
 };
 #endif  // MIR_FEATURE_FULL
 }  // namespace maple

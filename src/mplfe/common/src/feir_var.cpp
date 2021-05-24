@@ -139,7 +139,15 @@ MIRSymbol *FEIRVar::GenerateLocalMIRSymbolImpl(MIRBuilder &builder) const {
 #ifndef USE_OPS
   return SymbolBuilder::Instance().GetOrCreateLocalSymbol(*mirType, name, *builder.GetCurrentFunction());
 #else
-  return builder.GetOrCreateLocalDecl(name, *mirType);
+  MIRSymbol *mirSymbol = builder.GetOrCreateLocalDecl(name, *mirType);
+  if (genAttrs.GetAttr(GenericAttrKind::GENATTR_static)) {
+    auto attrs = TypeAttrs();
+    attrs.SetAttr(ATTR_static);
+    mirSymbol->SetAttrs(attrs);
+    mirSymbol->SetStorageClass(MIRStorageClass::kScPstatic);
+    mirSymbol->SetKonst(mirConst);
+  }
+  return mirSymbol;
 #endif
 }
 
