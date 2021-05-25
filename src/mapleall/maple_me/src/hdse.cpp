@@ -43,7 +43,12 @@ void HDSE::CheckBackSubsCandidacy(DassignMeStmt *dass) {
     return;
   }
   ScalarMeExpr *lhsscalar = static_cast<ScalarMeExpr *>(dass->GetLHS());
-  if (!lhsscalar->GetOst()->IsLocal()) {
+  OriginalSt *ost = lhsscalar->GetOst();
+  if (!ost->IsLocal()) {
+    return;
+  }
+  MIRType *ty = GlobalTables::GetTypeTable().GetTypeFromTyIdx(ost->GetTyIdx());
+  if (ty->GetPrimType() == PTY_agg && ty->GetSize() <= 16) {
     return;
   }
   ScalarMeExpr *rhsscalar = static_cast<ScalarMeExpr *>(dass->GetRHS());
