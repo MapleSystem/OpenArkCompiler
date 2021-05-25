@@ -59,7 +59,7 @@ class ASTExpr {
   }
 
   ASTDecl *GetASTDecl() const {
-    return refedDecl;
+    return GetASTDeclImpl();
   }
 
   ASTOp GetASTOp() {
@@ -98,6 +98,11 @@ class ASTExpr {
   }
   virtual MIRConst *GenerateMIRConstImpl() const;
   virtual UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const = 0;
+
+  virtual ASTDecl *GetASTDeclImpl() const {
+    return refedDecl;
+  }
+
   ASTOp op;
   MIRType *mirType = nullptr;
   ASTDecl *refedDecl = nullptr;
@@ -171,6 +176,10 @@ class ASTImplicitCastExpr : public ASTExpr {
   ASTValue *GetConstantValueImpl() const override;
   MIRConst *GenerateMIRConstImpl() const override;
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
+
+  ASTDecl *GetASTDeclImpl() const override {
+    return child->GetASTDecl();
+  }
 
  private:
   MIRConst *GenerateMIRDoubleConst() const;
@@ -472,6 +481,14 @@ class ASTInitListExpr : public ASTExpr {
     return isUnionInitListExpr;
   }
 
+  void SetHasArrayFiller(bool flag) {
+    hasArrayFiller = flag;
+  }
+
+  bool HasArrayFiller() const {
+    return hasArrayFiller;
+  }
+
  private:
   MIRConst *GenerateMIRConstImpl() const override;
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
@@ -487,6 +504,7 @@ class ASTInitListExpr : public ASTExpr {
   std::string varName;
   ParentFlag parentFlag = kNoParent;
   bool isUnionInitListExpr = false;
+  bool hasArrayFiller = false;
 };
 
 class ASTBinaryConditionalOperator : public ASTExpr {
@@ -646,6 +664,16 @@ class ASTArraySubscriptExpr : public ASTExpr {
     return idxExprs;
   }
 
+  void SetBaseExprType(MIRType *ty) {
+    baseExprTypes.push_back(ty);
+  }
+
+  const std::vector<MIRType*> &GetBaseExprType() const {
+    return baseExprTypes;
+  }
+
+  int32 TranslateArraySubscript2Offset() const;
+
   void SetMemberExpr(ASTExpr &astExpr) {
     memberExpr = &astExpr;
   }
@@ -668,8 +696,9 @@ class ASTArraySubscriptExpr : public ASTExpr {
 
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
-  ASTExpr *baseExpr;
+  ASTExpr *baseExpr = nullptr;
   ASTExpr *memberExpr = nullptr;
+  std::vector<MIRType*> baseExprTypes;
   std::vector<ASTExpr*> idxExprs;
   bool isAddrOf = false;
   std::string baseExprVarName;
@@ -750,11 +779,11 @@ class ASTMemberExpr : public ASTExpr {
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   void Emit2FEExprImplForArrayElemIsStruct(UniqueFEIRExpr baseFEExpr, std::string &tmpStructName,
                                            std::list<UniqueFEIRStmt> &stmts) const;
-  ASTExpr *baseExpr;
+  ASTExpr *baseExpr = nullptr;
   std::string memberName;
-  MIRType *memberType;
-  MIRType *baseType;
-  bool isArrow;
+  MIRType *memberType = nullptr;
+  MIRType *baseType = nullptr;
+  bool isArrow = false;
 };
 
 class ASTDesignatedInitUpdateExpr : public ASTExpr {
