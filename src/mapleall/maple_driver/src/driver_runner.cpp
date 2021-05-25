@@ -38,6 +38,7 @@
 using namespace maplebe;
 
 #define JAVALANG (theModule->IsJavaModule())
+#define CLANG (theModule->IsCModule())
 
 #define CHECK_MODULE(errorCode...)                                              \
   do {                                                                          \
