@@ -30,7 +30,7 @@ class MeDoLoopCanon : public MeFuncPhase {
   std::string PhaseName() const override {
     return "loopcanon";
   }
-
+  bool cfgchanged = false;
  private:
   using Key = std::pair<BB*, BB*>;
   std::map<BBId, std::vector<BB*>> heads;
