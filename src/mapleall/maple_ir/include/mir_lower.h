@@ -66,6 +66,8 @@ class MIRLower {
   BlockNode *LowerBlock(BlockNode&);
   void LowerBrCondition(BlockNode &block);
   void LowerFunc(MIRFunction &func);
+  BaseNode *LowerFarray(ArrayNode *array);
+  BaseNode *LowerCArray(ArrayNode *array);
   void ExpandArrayMrt(MIRFunction &func);
   IfStmtNode *ExpandArrayMrtIfBlock(IfStmtNode &node);
   WhileStmtNode *ExpandArrayMrtWhileBlock(WhileStmtNode &node);
