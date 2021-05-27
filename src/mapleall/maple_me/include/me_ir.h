@@ -1568,7 +1568,7 @@ class AssignMeStmt : public MeStmt {
   bool needIncref = false;  // to be determined by analyzerc phase
   bool needDecref = false;  // to be determined by analyzerc phase
  public:
-  bool isIncDecStmt = false;// has the form of an increment or decrement stmt
+  bool isIncDecStmt = false;  // has the form of an increment or decrement stmt
 };
 
 class DassignMeStmt : public AssignMeStmt {

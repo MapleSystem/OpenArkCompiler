@@ -55,9 +55,8 @@ class DriverRunner final {
   DriverRunner(MIRModule *theModule, const std::vector<std::string> &exeNames, InputFileType inpFileType,
                std::string actualInput, bool dwarf, MemPool *optMp, bool fileParsed = false, bool timePhases = false,
                bool genVtableImpl = false, bool genMeMpl = false)
-      : DriverRunner(theModule, exeNames, inpFileType, "", "", actualInput, dwarf, optMp, fileParsed, timePhases,
-                     genVtableImpl, genMeMpl)
-  {
+      : DriverRunner(theModule, exeNames, inpFileType, "", "", actualInput, dwarf, optMp,
+                     fileParsed, timePhases, genVtableImpl, genMeMpl) {
     auto lastDot = actualInput.find_last_of(".");
     baseName = (lastDot == std::string::npos) ? actualInput : actualInput.substr(0, lastDot);
   }

@@ -1489,8 +1489,8 @@ void AArch64CGFunc::SelectAggIassign(IassignNode &stmt, Operand &AddrOpnd) {
       uint32 numRegs = (lhsSize <= k8ByteSize) ? kOneRegister : kTwoRegister;
       for (uint32 i = 0; i < numRegs; i++) {
         AArch64OfstOperand *rhsOffOpnd = &GetOrCreateOfstOpnd(rhsOffset + i * loadSize, loadSize * kBitsPerByte);
-        Operand &rhsmemopnd =
-            GetOrCreateMemOpnd(AArch64MemOperand::kAddrModeBOi, loadSize, rhsAddrOpnd, nullptr, rhsOffOpnd, nullptr);
+        Operand &rhsmemopnd = GetOrCreateMemOpnd(AArch64MemOperand::kAddrModeBOi, loadSize * kBitsPerByte,
+            rhsAddrOpnd, nullptr, rhsOffOpnd, nullptr);
         result[i] = &CreateVirtualRegisterOperand(NewVReg(kRegTyInt, loadSize));
         MOperator mop1 = PickLdInsn(loadSize * kBitsPerByte, PTY_u32);
         Insn &ld = GetCG()->BuildInstruction<AArch64Insn>(mop1, *(result[i]), rhsmemopnd);

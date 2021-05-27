@@ -39,6 +39,9 @@ std::string FEIRVarName::GetNameRawImpl() const {
 std::unique_ptr<FEIRVar> FEIRVarName::CloneImpl() const {
   std::unique_ptr<FEIRVar> var = std::make_unique<FEIRVarName>(nameIdx, type->Clone(), withType);
   var->SetGlobal(isGlobal);
+  GenericAttrs attrs = genAttrs;
+  var->SetAttrs(attrs);
+  var->SetConst(mirConst);
   return var;
 }
 

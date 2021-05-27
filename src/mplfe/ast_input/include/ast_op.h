@@ -34,6 +34,7 @@ enum ASTOp {
   kASTOpPreInc,
   kASTOpPreDec,
   kASTOpAddrOf,
+  kASTOpAddrOfLabel,
   kASTOpDeref,
   kASTOpPlus,
   kASTOpReal,
@@ -128,6 +129,7 @@ enum ASTStmtOp {
   // branch
   kASTStmtIf,
   kASTStmtGoto,
+  kASTStmtIndirectGoto,
 
   kASTStmtLabel,
 

@@ -126,6 +126,7 @@ bool ASTStructField2FEHelper::ProcessDeclWithContainerImpl(MapleAllocator &alloc
   std::string fieldName = field.GetName();
   GStrIdx idx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(fieldName);
   FieldAttrs attrs = field.GetGenericAttrs().ConvertToFieldAttrs();
+  attrs.SetAlign(field.GetAlign());
   MIRType *fieldType = field.GetTypeDesc().front();
   ASSERT(fieldType != nullptr, "nullptr check for fieldType");
   mirFieldPair.first = idx;

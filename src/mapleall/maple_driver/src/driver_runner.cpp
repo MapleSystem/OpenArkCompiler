@@ -292,7 +292,7 @@ void DriverRunner::AddPhase(std::vector<std::string> &phases, const std::string 
 void DriverRunner::ProcessCGPhase(const std::string &outputFile, const std::string &originBaseName) {
   CHECK_MODULE();
   if (withDwarf && !theModule->IsWithDbgInfo()) {
-    std::cout << "set up debug info " << std::endl;
+    LogInfo::MapleLogger() << "set up debug info " << '\n';
     theMIRModule->GetDbgInfo()->BuildDebugInfo();
   }
   if (cgOptions == nullptr) {

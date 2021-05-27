@@ -1064,6 +1064,7 @@ void MeOption::DecideMeRealLevel(const std::vector<mapleOption::Option> &inputOp
         break;
       case kMeOptL3:
         realLevel = kLevelThree;
+        break;
       default:
         break;
     }

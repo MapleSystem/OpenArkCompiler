@@ -203,11 +203,23 @@ class SSAPre {
   virtual VarMeExpr *ResolveAllInjuringDefs(VarMeExpr *varx) const { return varx; }
   virtual RegMeExpr *ResolveAllInjuringDefs(RegMeExpr *regx) const { return regx; }
   virtual MeExpr *ResolveAllInjuringDefs(MeExpr *x) const { return x; }
-  virtual void SubstituteOpnd(MeExpr *x, MeExpr *oldopnd, MeExpr *newopnd) {}
-  virtual void SRSetNeedRepair(MeOccur *useocc, std::set<MeStmt *> *needRepairInjuringDefs) {}
+  virtual void SubstituteOpnd(MeExpr *x, MeExpr *oldopnd, MeExpr *newopnd) {
+    (void)x;
+    (void)oldopnd;
+    (void)newopnd;
+  }
+  virtual void SRSetNeedRepair(MeOccur *useocc, std::set<MeStmt *> *needRepairInjuringDefs) {
+    (void)useocc;
+    (void)needRepairInjuringDefs;
+  }
   virtual MeExpr *SRRepairInjuries(MeOccur *useocc,
       std::set<MeStmt *> *needRepairInjuringDefs,
-      std::set<MeStmt *> *repairedInjuringDefs) { return nullptr; }
+      std::set<MeStmt *> *repairedInjuringDefs) {
+    (void)useocc;
+    (void)needRepairInjuringDefs;
+    (void)repairedInjuringDefs;
+    return nullptr;
+  }
 
   IRMap *irMap;
   SSATab *ssaTab;

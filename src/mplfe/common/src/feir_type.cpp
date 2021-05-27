@@ -474,9 +474,6 @@ std::unique_ptr<FEIRType> FEIRTypeNative::CloneImpl() const {
 }
 
 MIRType *FEIRTypeNative::GenerateMIRTypeImpl(bool usePtr, PrimType ptyPtr) const {
-  // To optimize for array type
-  WARN(kLncWarn,
-      "FEIRTypeNative::GenerateMIRType is not recommended, use FEIRTypeNative::GenerateMIRTypeAuto instead.");
   return &mirType;
 }
 

@@ -1264,7 +1264,6 @@ void AArch64Insn::SetMemOpnd(MemOperand *memOpnd) {
       return;
     }
   }
-  return ;
 }
 
 bool AArch64Insn::IsVolatile() const {

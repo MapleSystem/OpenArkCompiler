@@ -348,7 +348,7 @@ void SSARename2Preg::PromoteEmptyFunction() {
 }
 
 AnalysisResult *MeDoSSARename2Preg::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr *mrMgr) {
-  if (func->IsEmpty()) {
+  if (func->GetCfg()->empty()) {
     return nullptr;
   }
   (void)mrMgr;
