@@ -175,7 +175,7 @@ ErrorCode MapleCombCompiler::Compile(MplOptions &options, std::unique_ptr<MIRMod
   LogInfo::MapleLogger() << "Starting maplecomb\n";
   theModule->InitPartO2List(options.GetPartO2List());
   DriverRunner runner(theModule.get(), options.GetSelectedExes(), options.GetInputFileType(), fileName,
-                      fileName, fileName, optMp, fileParsed,
+                      fileName, fileName, options.WithDwarf(), optMp, fileParsed,
                       options.HasSetTimePhases(), options.HasSetGenVtableImpl(), options.HasSetGenMeMpl());
   // Parse the input file
   ErrorCode ret = runner.ParseInput();

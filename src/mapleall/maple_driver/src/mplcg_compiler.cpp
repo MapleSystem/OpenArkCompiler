@@ -191,8 +191,8 @@ ErrorCode MplcgCompiler::Compile(MplOptions &options, std::unique_ptr<MIRModule>
   }
   SetOutputFileName(options, *theModule);
   LogInfo::MapleLogger() << "Starting mplcg\n";
-  DriverRunner runner(theModule.get(), options.GetSelectedExes(), options.GetInputFileType(), fileName, optMp,
-                      fileRead, options.HasSetTimePhases());
+  DriverRunner runner(theModule.get(), options.GetSelectedExes(), options.GetInputFileType(), fileName,
+                      options.WithDwarf(), optMp, fileRead, options.HasSetTimePhases());
   if (options.HasSetDebugFlag()) {
     PrintMplcgCommand(options, *theModule);
   }

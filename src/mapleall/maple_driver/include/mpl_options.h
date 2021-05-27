@@ -179,6 +179,10 @@ class MplOptions {
     return debugFlag;
   }
 
+  bool WithDwarf() const {
+    return withDwarf;
+  }
+
   bool HasSetTimePhases() const {
     return timePhases;
   }
@@ -234,6 +238,7 @@ class MplOptions {
   std::string printCommandStr;
   std::ostringstream printExtraOptStr;
   bool debugFlag = false;
+  bool withDwarf = false;
   bool timePhases = false;
   bool genMeMpl = false;
   bool genVtableImpl = false;
