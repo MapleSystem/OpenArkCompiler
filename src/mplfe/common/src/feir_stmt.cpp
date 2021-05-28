@@ -1245,7 +1245,7 @@ std::list<StmtNode*> FEIRStmtArrayStore::GenMIRStmtsImpl(MIRBuilder &mirBuilder)
     MIRType *ptrMIRElemType = GlobalTables::GetTypeTable().GetOrCreatePointerType(*mIRElemType, PTY_ptr);
     stmt = mirBuilder.CreateStmtIassign(*ptrMIRElemType, 0, arrayExpr, elemBn);
   } else {
-    reinterpret_cast<ArrayNode *>(arrayExpr)->SetBoundsCheck(false);
+    reinterpret_cast<ArrayNode*>(arrayExpr)->SetBoundsCheck(false);
     stmt = mirBuilder.CreateStmtIassign(*mIRElemType, 0, arrayExpr, elemBn);
   }
   return std::list<StmtNode*>({ stmt });
@@ -2454,14 +2454,19 @@ std::unique_ptr<FEIRExpr> FEIRExprAddrofArray::CloneImpl() const {
 
 BaseNode *FEIRExprAddrofArray::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
   MIRType *ptrMIRArrayType = typeNativeArray->GenerateMIRType(false);
-  std::unique_ptr<FEIRVar> tmpVar = std::make_unique<FEIRVarName>(arrayName, typeNativeArray->Clone());
-  std::vector<BaseNode*> nds;
-  MIRSymbol *mirSymbol = tmpVar->GenerateLocalMIRSymbol(mirBuilder);
   BaseNode *nodeAddrof = nullptr;
-  if (ptrMIRArrayType->GetKind() == kTypeArray) {
-    nodeAddrof = mirBuilder.CreateExprAddrof(0, *mirSymbol);
+  std::vector<BaseNode*> nds;
+  if (!arrayName.empty()) {
+    std::unique_ptr<FEIRVar> arrayVar = exprArray->GetVarUses().front()->Clone();
+    MIRSymbol *mirSymbol = arrayVar->GenerateMIRSymbol(mirBuilder);
+    if (ptrMIRArrayType->GetKind() == kTypeArray) {
+      mirSymbol->SetTyIdx(ptrMIRArrayType->GetTypeIndex());
+      nodeAddrof = mirBuilder.CreateExprAddrof(0, *mirSymbol);
+    } else {
+      nodeAddrof = mirBuilder.CreateDread(*mirSymbol, PTY_ptr);
+    }
   } else {
-    nodeAddrof = mirBuilder.CreateDread(*mirSymbol, PTY_ptr);
+    nodeAddrof = exprArray->GenMIRNode(mirBuilder);
   }
   nds.push_back(nodeAddrof);
   for (auto &e : exprIndexs) {
@@ -3211,6 +3216,30 @@ bool FEIRExprIntrinsicop::IsAddrofImpl() const {
   return false;
 }
 
+// ---------- FEIRExprIntrinsicopForC ----------
+FEIRExprIntrinsicopForC::FEIRExprIntrinsicopForC(std::unique_ptr<FEIRType> exprType, MIRIntrinsicID argIntrinsicID,
+                                                 const std::vector<std::unique_ptr<FEIRExpr>> &argOpnds)
+    : FEIRExprNary(OP_intrinsicop),
+      intrinsicID(argIntrinsicID) {
+  kind = FEIRNodeKind::kExprIntrinsicop;
+  SetType(std::move(exprType));
+  AddOpnds(argOpnds);
+}
+
+std::unique_ptr<FEIRExpr> FEIRExprIntrinsicopForC::CloneImpl() const {
+  return std::make_unique<FEIRExprIntrinsicop>(type->Clone(), intrinsicID, opnds);
+}
+
+BaseNode *FEIRExprIntrinsicopForC::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
+  MapleVector<BaseNode*> args(mirBuilder.GetCurrentFuncCodeMpAllocator()->Adapter());
+  for (const auto &e : opnds) {
+    BaseNode *node = e->GenMIRNode(mirBuilder);
+    args.emplace_back(node);
+  }
+  return mirBuilder.CreateExprIntrinsicop(intrinsicID, op,
+                                          *type->GenerateMIRTypeAuto(), MapleVector<BaseNode*>(args));
+}
+
 // ---------- FEIRExprJavaMerge ----------------
 FEIRExprJavaMerge::FEIRExprJavaMerge(std::unique_ptr<FEIRType> mergedTypeArg,
                                      const std::vector<std::unique_ptr<FEIRExpr>> &argOpnds)
@@ -3581,27 +3610,7 @@ BaseNode *FEIRExprCStyleCast::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
     auto *arrayType = static_cast<MIRArrayType*>(srcType);
     ASSERT(arrayType != nullptr, "ERROR:null pointer!");
     ArrayNode *arrayNode = mirBuilder.CreateExprArray(*arrayType);
-    GStrIdx strIdx = GlobalTables::GetStrTable().GetStrIdxFromName(refName);
-    MIRSymbol *var = nullptr;
-    if (strIdx != 0u) {
-      // try to find the decl in local scope first
-      MIRFunction *currentFunctionInner = mirBuilder.GetCurrentFunction();
-#ifndef USE_OPS
-      if (currentFunctionInner != nullptr) {
-        var = SymbolBuilder::Instance().GetSymbolFromStrIdx(strIdx, currentFunctionInner);
-      }
-      if (var == nullptr) {
-        var = SymbolBuilder::Instance().GetSymbolFromStrIdx(strIdx);
-      }
-#else
-      if (currentFunctionInner != nullptr) {
-        var = mirBuilder.GetOrCreateLocalDecl(refName.c_str(), *arrayType);
-      }
-      if (var == nullptr) {
-        var = mirBuilder.GetOrCreateGlobalDecl(refName.c_str(), *arrayType);
-      }
-#endif
-    }
+    MIRSymbol *var = subExpr->GetVarUses().front()->GenerateMIRSymbol(mirBuilder);
     arrayNode->GetNopnd().push_back(mirBuilder.CreateExprAddrof(0, *var));
     for (uint8 i = 0; i < arrayType->GetDim(); ++i) {
       arrayNode->GetNopnd().push_back(mirBuilder.CreateIntConst(0, PTY_i32));

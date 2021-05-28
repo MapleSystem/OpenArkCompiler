@@ -134,6 +134,7 @@ class ASTFunc : public ASTDecl {
     compound = nullptr;
   }
   void SetCompoundStmt(ASTStmt*);
+  void InsertStmtsIntoCompoundStmtAtFront(const std::list<ASTStmt*> &stmts);
   const ASTStmt *GetCompoundStmt() const;
   const std::vector<std::string> &GetParmNames() const {
     return parmNames;

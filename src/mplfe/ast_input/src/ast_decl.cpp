@@ -140,6 +140,10 @@ void ASTFunc::SetCompoundStmt(ASTStmt *astCompoundStmt) {
   compound = astCompoundStmt;
 }
 
+void ASTFunc::InsertStmtsIntoCompoundStmtAtFront(const std::list<ASTStmt*> &stmts) {
+  static_cast<ASTCompoundStmt*>(compound)->InsertASTStmtsAtFront(stmts);
+}
+
 const ASTStmt *ASTFunc::GetCompoundStmt() const {
   return compound;
 }

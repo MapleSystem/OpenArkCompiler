@@ -56,9 +56,9 @@ UniqueFEIRExpr ASTCallExpr::EmitBuiltinCtz(std::list<UniqueFEIRStmt> &stmts) con
 #else
   if (mirType->GetSize() == 4) {
     // 32 bit
-    return std::make_unique<FEIRExprIntrinsicop>(std::move(feTy), INTRN_C_ctz32, argOpnds);
+    return std::make_unique<FEIRExprIntrinsicopForC>(std::move(feTy), INTRN_C_ctz32, argOpnds);
   }
-  return std::make_unique<FEIRExprIntrinsicop>(std::move(feTy), INTRN_C_ctz32, argOpnds);
+  return std::make_unique<FEIRExprIntrinsicopForC>(std::move(feTy), INTRN_C_ctz32, argOpnds);
 #endif
 }
 
@@ -74,9 +74,9 @@ UniqueFEIRExpr ASTCallExpr::EmitBuiltinClz(std::list<UniqueFEIRStmt> &stmts) con
 #else
   if (mirType->GetSize() == 4) {
     // 32 bit
-    return std::make_unique<FEIRExprIntrinsicop>(std::move(feTy), INTRN_C_clz32, argOpnds);
+    return std::make_unique<FEIRExprIntrinsicopForC>(std::move(feTy), INTRN_C_clz32, argOpnds);
   }
-  return std::make_unique<FEIRExprIntrinsicop>(std::move(feTy), INTRN_C_clz64, argOpnds);
+  return std::make_unique<FEIRExprIntrinsicopForC>(std::move(feTy), INTRN_C_clz64, argOpnds);
 #endif
 }
 

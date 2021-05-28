@@ -939,6 +939,20 @@ class FEIRExprIntrinsicop : public FEIRExprNary {
   uint32 typeID = UINT32_MAX;
 };  // class FEIRExprIntrinsicop
 
+class FEIRExprIntrinsicopForC : public FEIRExprNary {
+ public:
+  FEIRExprIntrinsicopForC(std::unique_ptr<FEIRType> exprType, MIRIntrinsicID argIntrinsicID,
+                      const std::vector<std::unique_ptr<FEIRExpr>> &argOpnds);
+  ~FEIRExprIntrinsicopForC() = default;
+
+ protected:
+  std::unique_ptr<FEIRExpr> CloneImpl() const override;
+  BaseNode *GenMIRNodeImpl(MIRBuilder &mirBuilder) const override;
+
+ private:
+  MIRIntrinsicID intrinsicID;
+}; // class FEIRExprIntrinsicopForC
+
 class FEIRExprJavaMerge : public FEIRExprNary {
  public:
   FEIRExprJavaMerge(std::unique_ptr<FEIRType> mergedTypeArg, const std::vector<std::unique_ptr<FEIRExpr>> &argOpnds);
@@ -1105,6 +1119,10 @@ class FEIRExprArrayStoreForC : public FEIRExpr {
 
   void SetFieldTypeImpl(std::unique_ptr<FEIRType> argFieldType) override {
     fieldType = std::move(argFieldType);
+  }
+
+  std::vector<FEIRVar*> GetVarUsesImpl() const override {
+    return exprArray->GetVarUses();
   }
 
  private:

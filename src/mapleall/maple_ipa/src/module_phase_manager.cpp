@@ -31,6 +31,7 @@
 #include "annotation_analysis.h"
 #include "vtable_impl.h"
 #include "java_intrn_lowering.h"
+#include "simplify.h"
 #include "java_eh_lower.h"
 #include "muid_replacement.h"
 #include "gen_check_cast.h"
