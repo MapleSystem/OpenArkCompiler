@@ -2005,6 +2005,8 @@ class CallMeStmt : public NaryMeStmt, public MuChiMePart, public AssignedPart {
     puIdx = idx;
   }
 
+  TyIdx GetTyIdx() const { return tyIdx; }
+
   uint32 GetStmtID() const {
     return stmtID;
   }
@@ -2462,9 +2464,21 @@ class CatchMeStmt : public MeStmt {
   ~CatchMeStmt() = default;
 
   StmtNode &EmitStmt(SSATab &ssaTab);
-
+  const MapleVector<TyIdx> &GetExceptionTyIdxVec() const {
+    return exceptionTyIdxVec;
+  }
  private:
   MapleVector<TyIdx> exceptionTyIdxVec;
+};
+
+class CppCatchMeStmt : public MeStmt {
+ public:
+  TyIdx exceptionTyIdx;
+
+  CppCatchMeStmt(MapleAllocator *alloc, StmtNode *stt) : MeStmt(stt) {}
+
+  ~CppCatchMeStmt() = default;
+  StmtNode &EmitStmt(SSATab &ssaTab);
 };
 
 class SwitchMeStmt : public UnaryMeStmt {
@@ -2511,7 +2525,7 @@ class CommentMeStmt : public MeStmt {
   ~CommentMeStmt() = default;
 
   StmtNode &EmitStmt(SSATab &ssaTab);
-
+  MapleString& GetComment() { return comment; }
  private:
   MapleString comment;
 };
