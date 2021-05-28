@@ -38,6 +38,7 @@ class LibAstFile {
   bool Open(const std::string &fileName,
             int excludeDeclFromPCH, int displayDiagnostics);
   const AstASTContext *GetAstContext();
+  AstASTContext *GetNonConstAstContext();
   AstUnitDecl *GetAstUnitDecl();
   std::string GetMangledName(const clang::NamedDecl &decl);
   const std::string GetOrCreateMappedUnnamedName(uint32_t id);
@@ -78,6 +79,8 @@ class LibAstFile {
   Pos GetDeclPosInfo(const clang::Decl &decl) const;
   Pos GetStmtLOC(const clang::Stmt &stmt) const;
   Pos GetLOC(const clang::SourceLocation &srcLoc) const;
+  uint32 GetMaxAlign(const clang::Decl &decl) const;
+  uint32 RetrieveAggTypeAlign(const clang::Type *ty) const;
 
  private:
   using RecordDeclMap = std::map<TyIdx, const clang::RecordDecl*>;

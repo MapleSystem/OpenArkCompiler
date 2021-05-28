@@ -1690,7 +1690,7 @@ void MeCFG::BuildSCC() {
   SCCTopologicalSort(sccNodes);
 }
 
-AnalysisResult *MeDoMeCfg::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr *mrm) {
+AnalysisResult *MeDoMeCfg::Run(MeFunction *func, MeFuncResultMgr*, ModuleResultMgr*) {
   MemPool *meCfgMp = NewMemPool();
   MeCFG *theCFG = meCfgMp->New<MeCFG>(meCfgMp, *func);
   func->SetTheCfg(theCFG);
@@ -1708,21 +1708,6 @@ AnalysisResult *MeDoMeCfg::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResul
   theCFG->UnreachCodeAnalysis();
   theCFG->WontExitAnalysis();
   theCFG->Verify();
-#if 0  // these 2 phases will be invoked by phase manager
-  if (mrm == nullptr) {
-    MeDoLoopCanon doLoopCanon(MeFuncPhase_LOOPCANON);
-    if (!MeOption::quiet) {
-      LogInfo::MapleLogger() << "  == " << PhaseName() << " invokes [ " << doLoopCanon.PhaseName() << " ] ==\n";
-    }
-    doLoopCanon.Run(func, m, NULL);
-
-    MeDoSplitCEdge doSplitCEdge(MeFuncPhase_SPLITCEDGE);
-    if (!MeOption::quiet) {
-      LogInfo::MapleLogger() << "  == " << PhaseName() << " invokes [ " << doSplitCEdge.PhaseName() << " ] ==\n";
-    }
-    doSplitCEdge.Run(func, m, NULL);
-  }
-#endif
   return theCFG;
 }
 }  // namespace maple

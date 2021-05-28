@@ -37,7 +37,7 @@ bool MeExpr::IsTheSameWorkcand(const MeExpr &expr) const {
   if (IsPrimitiveFloat(primType) != IsPrimitiveFloat(expr.GetPrimType())) {
     return false;
   }
-  if (GetPrimTypeSize(primType) != GetPrimTypeSize(expr.GetPrimType())) {
+  if (GetPrimTypeSize(GetRegPrimType(primType)) != GetPrimTypeSize(GetRegPrimType(expr.GetPrimType()))) {
     return false;
   }
   if (kOpcodeInfo.IsTypeCvt(op) || kOpcodeInfo.IsCompare(op)) {
@@ -567,6 +567,32 @@ MeExpr *OpMeExpr::GetIdenticalExpr(MeExpr &expr, bool isConstructor) const {
   return nullptr;
 }
 
+bool OpMeExpr::StrengthReducible() {
+  if (!IsPrimitiveInteger(primType)) {
+    return false;
+  }
+  switch (op) {
+    case OP_cvt: {
+      return IsPrimitiveInteger(opndType) && GetPrimTypeSize(primType) >= GetPrimTypeSize(opndType);
+    }
+    case OP_mul:
+      return GetOpnd(1)->GetOp() == OP_constval;
+    case OP_add:
+      return true;
+    default: return false;
+  }
+}
+
+int64 OpMeExpr::SRMultiplier() {
+  ASSERT(StrengthReducible(), "OpMeExpr::SRMultiplier: operation is not strength reducible");
+  if (op != OP_mul) {
+    return 1;
+  }
+  MIRConst *constVal = static_cast<ConstMeExpr *>(GetOpnd(1))->GetConstVal();
+  ASSERT(constVal->GetKind() == kConstInt, "OpMeExpr::SRMultiplier: multiplier not an integer constant");
+  return static_cast<MIRIntConst *>(constVal)->GetValueUnderType();
+}
+
 // first, make sure it's int const and return true if the int const great or eq 0
 bool ConstMeExpr::GeZero() const {
   return (GetIntValue() >= 0);
@@ -919,7 +945,7 @@ void NaryMeExpr::Dump(const IRMap *irMap, int32 indent) const {
 }
 
 MeExpr *DassignMeStmt::GetLHSRef(bool excludeLocalRefVar) {
-  VarMeExpr *lhsOpnd = GetVarLHS();
+  ScalarMeExpr *lhsOpnd = GetVarLHS();
   if (lhsOpnd->GetPrimType() != PTY_ref) {
     return nullptr;
   }
@@ -934,7 +960,7 @@ MeExpr *DassignMeStmt::GetLHSRef(bool excludeLocalRefVar) {
 }
 
 MeExpr *MaydassignMeStmt::GetLHSRef(bool excludeLocalRefVar) {
-  VarMeExpr *lhs = GetVarLHS();
+  ScalarMeExpr *lhs = GetVarLHS();
   if (lhs->GetPrimType() != PTY_ref) {
     return nullptr;
   }
@@ -1474,8 +1500,8 @@ bool MeExpr::PointsToSomethingThatNeedsIncRef() {
   return false;
 }
 
-MapleMap<OStIdx, ChiMeNode*> *GenericGetChiListFromVarMeExprInner(VarMeExpr &expr,
-                                                                  std::unordered_set<VarMeExpr*> &visited) {
+MapleMap<OStIdx, ChiMeNode*> *GenericGetChiListFromVarMeExprInner(ScalarMeExpr &expr,
+                                                                  std::unordered_set<ScalarMeExpr*> &visited) {
   if (expr.GetDefBy() == kDefByNo || visited.find(&expr) != visited.end()) {
     return nullptr;
   }
@@ -1498,8 +1524,8 @@ MapleMap<OStIdx, ChiMeNode*> *GenericGetChiListFromVarMeExprInner(VarMeExpr &exp
   return nullptr;
 }
 
-MapleMap<OStIdx, ChiMeNode*> *GenericGetChiListFromVarMeExpr(VarMeExpr &expr) {
-  std::unordered_set<VarMeExpr*> visited;
+MapleMap<OStIdx, ChiMeNode*> *GenericGetChiListFromVarMeExpr(ScalarMeExpr &expr) {
+  std::unordered_set<ScalarMeExpr*> visited;
   return GenericGetChiListFromVarMeExprInner(expr, visited);
 }
 

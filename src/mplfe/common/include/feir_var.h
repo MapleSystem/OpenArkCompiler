@@ -165,7 +165,7 @@ class FEIRVar {
   UniqueFEIRType type;
   UniqueFEIRVarTrans trans;
   GenericAttrs genAttrs;
-  MIRConst *mirConst;
+  MIRConst *mirConst = nullptr;
 };
 
 using UniqueFEIRVar = std::unique_ptr<FEIRVar>;
