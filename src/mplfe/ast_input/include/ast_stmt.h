@@ -198,7 +198,7 @@ class ASTLabelStmt : public ASTStmt {
  private:
   std::list<UniqueFEIRStmt> Emit2FEStmtImpl() const override;
   std::string labelName;
-  ASTStmt *subStmt;
+  ASTStmt *subStmt = nullptr;
 };
 
 class ASTContinueStmt : public ASTStmt {
@@ -244,6 +244,15 @@ class ASTGotoStmt : public ASTStmt {
  private:
   std::list<UniqueFEIRStmt> Emit2FEStmtImpl() const override;
   std::string labelName;
+};
+
+class ASTIndirectGotoStmt : public ASTStmt {
+ public:
+  ASTIndirectGotoStmt() : ASTStmt(kASTStmtIndirectGoto) {}
+  ~ASTIndirectGotoStmt() = default;
+
+ protected:
+  std::list<UniqueFEIRStmt> Emit2FEStmtImpl() const override;
 };
 
 class ASTSwitchStmt : public ASTStmt {
@@ -490,6 +499,7 @@ class ASTCallExprStmt : public ASTStmt {
   std::list<UniqueFEIRStmt> Emit2FEStmtICall() const;
   std::list<UniqueFEIRStmt> ProcessBuiltinVaStart() const;
   std::list<UniqueFEIRStmt> ProcessBuiltinVaEnd() const;
+  std::list<UniqueFEIRStmt> ProcessBuiltinVaCopy() const;
 
   static std::map<std::string, FuncPtrBuiltinFunc> funcPtrMap;
   std::string varName;

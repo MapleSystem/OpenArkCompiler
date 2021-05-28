@@ -120,10 +120,7 @@ RegMeExpr *IRMap::CreateRegMeExpr(MIRType &mirType) {
     return CreateRegMeExpr(mirType.GetPrimType());
   }
   if (mirType.GetPrimType() == PTY_ptr) {
-    MIRType *pointedType = static_cast<MIRPtrType &>(mirType).GetPointedType();
-    if (pointedType == nullptr || pointedType->GetKind() != kTypeFunction) {
-      return CreateRegMeExpr(mirType.GetPrimType());
-    }
+    return CreateRegMeExpr(mirType.GetPrimType());
   }
   MIRFunction *mirFunc = mirModule.CurFunction();
   PregIdx regIdx = mirFunc->GetPregTab()->CreatePreg(PTY_ref, &mirType);

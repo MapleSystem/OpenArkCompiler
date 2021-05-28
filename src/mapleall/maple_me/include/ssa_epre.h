@@ -33,7 +33,8 @@ class SSAEPre : public SSAPre {
   void GenerateReloadRealOcc(MeRealOcc &realOcc) override;
   MeExpr *PhiOpndFromRes(MeRealOcc &realZ, size_t j) const override;
   void ComputeVarAndDfPhis() override;
-  void BuildWorkListExpr(MeStmt &meStmt, int32 seqStmt, MeExpr&, bool isReBuild, MeExpr *tempVar, bool isRootExpr) override;
+  void BuildWorkListExpr(MeStmt &meStmt, int32 seqStmt, MeExpr&, bool isReBuild,
+                         MeExpr *tempVar, bool isRootExpr) override;
   void BuildWorkListIvarLHSOcc(MeStmt &meStmt, int32 seqStmt, bool isReBuild, MeExpr *tempVar) override;
   void CollectVarForMeExpr(MeExpr &meExpr, std::vector<MeExpr*> &varVec) const override;
   void CollectVarForCand(MeRealOcc &realOcc, std::vector<MeExpr*> &varVec) const override;
@@ -72,7 +73,6 @@ class SSAEPre : public SSAPre {
       std::set<MeStmt *> *needRepairInjuringDefs,
       std::set<MeStmt *> *repairedInjuringDefs) override;
 
- private:
   bool epreIncludeRef;
   bool enableLHSIvar;
 };

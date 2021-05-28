@@ -62,6 +62,16 @@ class ASTDecl {
     return isParam;
   }
 
+  void SetAlign(uint32 n) {
+    if (n > align) {
+      align = n;
+    }
+  }
+
+  uint32 GetAlign() const {
+    return align;
+  }
+
   void GenerateInitStmt(std::list<UniqueFEIRStmt> &stmts) {
     return GenerateInitStmtImpl(stmts);
   }
@@ -86,6 +96,7 @@ class ASTDecl {
   virtual void GenerateInitStmtImpl(std::list<UniqueFEIRStmt> &stmts) {}
   bool isGlobalDecl;
   bool isParam = false;
+  uint32 align = 1; // in byte
   const std::string srcFileName;
   std::string name;
   std::vector<MIRType*> typeDesc;
@@ -193,6 +204,8 @@ class ASTVar : public ASTDecl {
  private:
   MIRConst *Translate2MIRConstImpl() const override;
   void GenerateInitStmtImpl(std::list<UniqueFEIRStmt> &stmts) override;
+  void GenerateInitStmt4StringLiteral(ASTExpr *initASTExpr, UniqueFEIRVar feirVar, UniqueFEIRExpr initFeirExpr,
+                                      std::list<UniqueFEIRStmt> &stmts);
   ASTExpr *initExpr = nullptr;
 };
 

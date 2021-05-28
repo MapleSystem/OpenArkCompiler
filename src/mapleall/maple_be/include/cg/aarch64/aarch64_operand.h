@@ -595,7 +595,9 @@ class AArch64MemOperand : public MemOperand {
         idxOpt(kIntact),
         noExtend(false),
         isStackMem(false) {
-    ASSERT(dSize == (k8BitSize << shift), "incompatible data size and shift amount");
+    if (shift != 0 && dSize != (k8BitSize << shift)) {
+      ASSERT(false, "incompatible data size and shift amount");
+    }
     if (baseOpnd.GetRegisterNumber() == RSP || baseOpnd.GetRegisterNumber() == RFP) {
       isStackMem = true;
     }

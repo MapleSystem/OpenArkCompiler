@@ -529,7 +529,7 @@ void Prop::TraversalMeStmt(MeStmt &meStmt) {
       }
       break;
     }
-    case OP_dassign: 
+    case OP_dassign:
     case OP_regassign: {
       AssignMeStmt *asmestmt = static_cast<AssignMeStmt *>(&meStmt);
       asmestmt->SetRHS(&PropMeExpr(*asmestmt->GetRHS(), subProped, false));

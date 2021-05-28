@@ -37,7 +37,7 @@ bool MeExpr::IsTheSameWorkcand(const MeExpr &expr) const {
   if (IsPrimitiveFloat(primType) != IsPrimitiveFloat(expr.GetPrimType())) {
     return false;
   }
-  if (GetPrimTypeSize(primType) != GetPrimTypeSize(expr.GetPrimType())) {
+  if (GetPrimTypeSize(GetRegPrimType(primType)) != GetPrimTypeSize(GetRegPrimType(expr.GetPrimType()))) {
     return false;
   }
   if (kOpcodeInfo.IsTypeCvt(op) || kOpcodeInfo.IsCompare(op)) {

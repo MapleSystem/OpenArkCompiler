@@ -172,7 +172,7 @@ class Insn {
   }
 
   virtual void SetMemOpnd(MemOperand *memOpnd) {
-    return;
+    (void)memOpnd;
   }
 
   virtual Operand *GetResult(uint32 index) const{
