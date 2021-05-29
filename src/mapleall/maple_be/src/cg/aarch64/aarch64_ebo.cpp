@@ -293,7 +293,7 @@ bool AArch64Ebo::DoConstProp(Insn &insn, uint32 idx, Operand &opnd) {
         CHECK_FATAL(src != nullptr, "pointer result is null");
         src->SetSize(targetSize);
       }
-      if (src->IsSingleInstructionMovable()) {
+      if (src->IsSingleInstructionMovable() && (insn.GetOperand(kInsnFirstOpnd).GetSize() == targetSize)) {
         if (EBO_DUMP) {
           LogInfo::MapleLogger() << " Do constprop:Prop constval " << src->GetValue() << "into insn:\n";
           insn.Dump();
