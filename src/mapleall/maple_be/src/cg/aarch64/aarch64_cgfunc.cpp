@@ -3427,6 +3427,28 @@ void AArch64CGFunc::SelectShift(Operand &resOpnd, Operand &opnd0, Operand &opnd1
   GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(mopShift, resOpnd, *firstOpnd, opnd1));
 }
 
+Operand *AArch64CGFunc::SelectAbsSub(Insn &lastInsn, const UnaryNode &node, Operand &newOpnd0) {
+  PrimType dtyp = node.GetPrimType();
+  bool is64Bits = (GetPrimTypeBitSize(dtyp) == k64BitSize);
+  /* promoted type */
+  PrimType primType = is64Bits ? (PTY_i64) : (PTY_i32);
+  RegOperand &resOpnd = CreateRegisterOperandOfType(primType);
+  uint32 mopCsneg = is64Bits ? MOP_xcnegrrrc : MOP_wcnegrrrc;
+  /* ABS requires the operand be interpreted as a signed integer */
+  CondOperand &condOpnd = GetCondOperand(CC_MI);
+  MOperator newMop = lastInsn.GetMachineOpcode() + 1;
+  Operand &rflag = GetOrCreateRflag();
+  std::vector<Operand *> opndVec;
+  opndVec.push_back(&rflag);
+  for (uint32 i = 0; i < lastInsn.GetOperandSize(); i++) {
+    opndVec.push_back(&lastInsn.GetOperand(i));
+  }
+  Insn *subsInsn = &GetCG()->BuildInstruction<AArch64Insn>(newMop, opndVec);
+  GetCurBB()->ReplaceInsn(lastInsn, *subsInsn);
+  GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(mopCsneg, resOpnd, newOpnd0, condOpnd));
+  return &resOpnd;
+}
+
 Operand *AArch64CGFunc::SelectAbs(UnaryNode &node, Operand &opnd0) {
   PrimType dtyp = node.GetPrimType();
   if (IsPrimitiveFloat(dtyp)) {
@@ -3441,8 +3463,13 @@ Operand *AArch64CGFunc::SelectAbs(UnaryNode &node, Operand &opnd0) {
     bool is64Bits = (GetPrimTypeBitSize(dtyp) == k64BitSize);
     /* promoted type */
     PrimType primType = is64Bits ? (PTY_i64) : (PTY_i32);
-    RegOperand &resOpnd = CreateRegisterOperandOfType(primType);
     Operand &newOpnd0 = LoadIntoRegister(opnd0, primType);
+    Insn *lastInsn = GetCurBB()->GetLastInsn();
+    if (lastInsn != nullptr && lastInsn->GetMachineOpcode() >= MOP_xsubrrr &&
+      lastInsn->GetMachineOpcode() <= MOP_wsubrri12) {
+      return SelectAbsSub(*lastInsn, node, newOpnd0);
+    }
+    RegOperand &resOpnd = CreateRegisterOperandOfType(primType);
     SelectAArch64Cmp(newOpnd0, CreateImmOperand(0, is64Bits ? PTY_u64 : PTY_u32, false),
                      true, GetPrimTypeBitSize(dtyp));
     uint32 mopCsneg = is64Bits ? MOP_xcsnegrrrc : MOP_wcsnegrrrc;

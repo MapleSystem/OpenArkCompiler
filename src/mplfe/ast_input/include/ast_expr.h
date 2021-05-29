@@ -242,6 +242,9 @@ class ASTUnaryOperatorExpr : public ASTExpr {
     return isGlobal;
   }
 
+  UniqueFEIRExpr ASTUOSideEffectExpr(Opcode op, std::list<UniqueFEIRStmt> &stmts,
+      std::string varName = "", bool post = false) const;
+
  protected:
   bool isGlobal = false;
   ASTExpr *expr = nullptr;
@@ -711,43 +714,29 @@ class ASTArraySubscriptExpr : public ASTExpr {
   }
 
   void SetBaseExprType(MIRType *ty) {
-    baseExprTypes.push_back(ty);
+    baseExprTypes.emplace_back(ty);
   }
 
   const std::vector<MIRType*> &GetBaseExprType() const {
     return baseExprTypes;
   }
 
+  void SetArrayType(MIRType *ty) {
+    arrayType = ty;
+  }
+
+  const MIRType *GetArrayType() const {
+    return arrayType;
+  }
+
   int32 TranslateArraySubscript2Offset() const;
-
-  void SetMemberExpr(ASTExpr &astExpr) {
-    memberExpr = &astExpr;
-  }
-
-  ASTExpr* GetMemberExpr() const {
-    return memberExpr;
-  }
-
-  std::string GetBaseExprVarName() const {
-    return baseExprVarName;
-  }
-
-  void SetBaseExprVarName(std::string argBaseExprVarName) {
-    baseExprVarName = argBaseExprVarName;
-  }
-
-  void SetAddrOfFlag(bool flag) {
-    isAddrOf = flag;
-  }
 
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   ASTExpr *baseExpr = nullptr;
-  ASTExpr *memberExpr = nullptr;
+  MIRType *arrayType = nullptr;
   std::vector<MIRType*> baseExprTypes;
   std::vector<ASTExpr*> idxExprs;
-  bool isAddrOf = false;
-  std::string baseExprVarName;
 };
 
 class ASTExprUnaryExprOrTypeTraitExpr : public ASTExpr {
@@ -823,8 +812,6 @@ class ASTMemberExpr : public ASTExpr {
 
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
-  void Emit2FEExprImplForArrayElemIsStruct(UniqueFEIRExpr baseFEExpr, std::string &tmpStructName,
-                                           std::list<UniqueFEIRStmt> &stmts) const;
   ASTExpr *baseExpr = nullptr;
   std::string memberName;
   MIRType *memberType = nullptr;
@@ -879,11 +866,6 @@ class ASTAssignExpr : public ASTBinaryOperatorExpr {
     isCompoundAssign = argIsCompoundAssign;
   }
 
- protected:
-  UniqueFEIRExpr ProcessAssign(std::list<UniqueFEIRStmt> &stmts, UniqueFEIRExpr leftExpr,
-                               UniqueFEIRExpr rightExpr) const;
-  void ProcessAssign4ExprArrayStoreForC(std::list<UniqueFEIRStmt> &stmts, UniqueFEIRExpr leftFEExpr,
-                                        UniqueFEIRExpr rightFEExpr) const;
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   bool isCompoundAssign;

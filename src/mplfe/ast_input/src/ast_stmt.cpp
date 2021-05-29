@@ -28,8 +28,22 @@ void ASTStmt::SetASTExpr(ASTExpr *astExpr) {
   exprs.emplace_back(astExpr);
 }
 
+// ---------- ASTStmtDummy ----------
+std::list<UniqueFEIRStmt> ASTStmtDummy::Emit2FEStmtImpl() const {
+  std::list<UniqueFEIRStmt> stmts;
+  for (auto expr : exprs) {
+    (void)expr->Emit2FEExpr(stmts);
+  }
+  return stmts;
+}
+
+// ---------- ASTCompoundStmt ----------
 void ASTCompoundStmt::SetASTStmt(ASTStmt *astStmt) {
   astStmts.emplace_back(astStmt);
+}
+
+void ASTCompoundStmt::InsertASTStmtsAtFront(const std::list<ASTStmt*> &stmts) {
+  astStmts.insert(astStmts.begin(), stmts.begin(), stmts.end());
 }
 
 const std::list<ASTStmt*> &ASTCompoundStmt::GetASTStmtList() const {
@@ -267,6 +281,9 @@ std::list<UniqueFEIRStmt> ASTNullStmt::Emit2FEStmtImpl() const {
 // ---------- ASTDeclStmt ----------
 std::list<UniqueFEIRStmt> ASTDeclStmt::Emit2FEStmtImpl() const {
   std::list<UniqueFEIRStmt> stmts;
+  for (auto expr : exprs) {
+    (void)expr->Emit2FEExpr(stmts);
+  }
   for (auto decl : subDecls) {
     decl->GenerateInitStmt(stmts);
   }
@@ -282,6 +299,7 @@ std::map<std::string, ASTCallExprStmt::FuncPtrBuiltinFunc> ASTCallExprStmt::Init
   ans["__builtin_va_start"] = &ASTCallExprStmt::ProcessBuiltinVaStart;
   ans["__builtin_va_end"] = &ASTCallExprStmt::ProcessBuiltinVaEnd;
   ans["__builtin_va_copy"] = &ASTCallExprStmt::ProcessBuiltinVaCopy;
+  ans["__builtin_prefetch"] = &ASTCallExprStmt::ProcessBuiltinPrefetch;
   return ans;
 }
 
@@ -424,6 +442,11 @@ std::list<UniqueFEIRStmt> ASTCallExprStmt::ProcessBuiltinVaCopy() const {
   stmt->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
   stmts.emplace_back(std::move(stmt));
 #endif
+  return stmts;
+}
+
+std::list<UniqueFEIRStmt> ASTCallExprStmt::ProcessBuiltinPrefetch() const {
+  std::list<UniqueFEIRStmt> stmts;
   return stmts;
 }
 
