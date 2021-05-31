@@ -437,6 +437,14 @@ class PtrListRef {
     return this->erase(const_iterator(_Where));
   }
 
+  void set_first(T *f) {
+    this->first = f;
+  }
+
+  void set_last(T *f) {
+    this->last = f;
+  }
+
  private:
   T *first = nullptr;
   T *last = nullptr;
