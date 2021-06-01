@@ -291,7 +291,13 @@ void BB::SetLastMe(MeStmt *stmt) {
   meStmtList.update_back(stmt);
 }
 
+MeStmt *BB::GetFirstMe() {
+  if (meStmtList.empty()) return nullptr;
+  return &meStmtList.front();
+}
+
 MeStmt *BB::GetLastMe() {
+  if (meStmtList.empty()) return nullptr;
   return &meStmtList.back();
 }
 
