@@ -19,7 +19,6 @@
 #include "me_ir.h"
 
 namespace maple {
-
 class MeFunction;
 
 class LfoWhileInfo {
@@ -38,33 +37,34 @@ class LfoIfInfo {
   LabelIdx elseLabel = 0;  // the label that is the begin of else branch
 };
 
-
 class LfoFunction {
  public:
   MemPool *lfomp;
   MapleAllocator lfoAlloc;
   MeFunction *meFunc;
-  MapleMap<LabelIdx, LfoWhileInfo*> label2WhileInfo; // key is label at beginning of lowered while code sequence
-  MapleMap<LabelIdx, LfoIfInfo*> label2IfInfo;       // key is target label of first conditional branch of lowered if code sequence
-  MapleSet<LabelIdx> lfoCreatedLabelSet;  // for the labels that were created by lfo, we won't emit it
+  // key is label at beginning of lowered while code sequence
+  MapleMap<LabelIdx, LfoWhileInfo*> label2WhileInfo;
+  // key is target label of first conditional branch of lowered if code sequence
+  MapleMap<LabelIdx, LfoIfInfo*> label2IfInfo;
+  // for the labels that were created by lfo, we won't emit it
+  MapleSet<LabelIdx> lfoCreatedLabelSet;
 
  public:
-  LfoFunction(MemPool *mp, MeFunction *func) :
-      lfomp(mp),
-      lfoAlloc(mp),
-      meFunc(func),
-      label2WhileInfo(lfoAlloc.Adapter()),
-      label2IfInfo(lfoAlloc.Adapter()),
-      lfoCreatedLabelSet(lfoAlloc.Adapter()) {}
+  LfoFunction(MemPool *mp, MeFunction *func)
+      : lfomp(mp),
+        lfoAlloc(mp),
+        meFunc(func),
+        label2WhileInfo(lfoAlloc.Adapter()),
+        label2IfInfo(lfoAlloc.Adapter()),
+        lfoCreatedLabelSet(lfoAlloc.Adapter()) {}
 
   void SetLabelCreatedByLfo(LabelIdx lbidx) {
     lfoCreatedLabelSet.insert(lbidx);
   }
 
   bool LabelCreatedByLfo(LabelIdx lbidx) {
-   return lfoCreatedLabelSet.count(lbidx) != 0;
+    return lfoCreatedLabelSet.count(lbidx) != 0;
   }
 };
-
 }  // namespace maple
 #endif  // MAPLE_LFO_INCLUDE_LFO_FUNCTION_H

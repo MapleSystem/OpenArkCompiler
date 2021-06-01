@@ -96,6 +96,7 @@ class ASTFunc2FEHelper : public FEInputMethodHelper {
   bool HasCodeImpl() const override;
 
   ASTFunc &func;
+  bool firstArgRet = false;
 };
 }  // namespace maple
 #endif // MPLFE_AST_INPUT_INCLUDE_AST_STRUCT2FE_HELPER_H

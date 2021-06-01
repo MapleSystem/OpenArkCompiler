@@ -87,9 +87,8 @@ Operand *HandleConstStr16(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc
 }
 
 Operand *HandleAdd(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
-  (void)parent;
   return cgFunc.SelectAdd(static_cast<BinaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)),
-                          *cgFunc.HandleExpr(expr, *expr.Opnd(1)));
+                          *cgFunc.HandleExpr(expr, *expr.Opnd(1)), parent);
 }
 
 Operand *HandleCGArrayElemAdd(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {

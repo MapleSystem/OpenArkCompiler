@@ -29,7 +29,7 @@ namespace maplebe {
 #define OPTIMIZE_FOR_PROLOG
 #undef REUSE_SPILLMEM
 #undef COLOR_SPLIT
-#undef MOVE_COALESCE
+#define MOVE_COALESCE
 
 /* for robust test */
 #undef CONSISTENT_MEMOPND
@@ -1079,6 +1079,7 @@ class GraphColorRegAllocator : public AArch64RegAllocator {
         localRegVec(alloc.Adapter()),
         bbRegInfo(alloc.Adapter()),
         unconstrained(alloc.Adapter()),
+        unconstrainedPref(alloc.Adapter()),
         constrained(alloc.Adapter()),
         mustAssigned(alloc.Adapter()),
 #ifdef OPTIMIZE_FOR_PROLOG
@@ -1283,6 +1284,7 @@ class GraphColorRegAllocator : public AArch64RegAllocator {
   MapleVector<LocalRaInfo*> localRegVec;  /* local reg info for each bb, no local reg if null */
   MapleVector<BBAssignInfo*> bbRegInfo;   /* register assignment info for each bb */
   MapleVector<LiveRange*> unconstrained;
+  MapleVector<LiveRange*> unconstrainedPref;
   MapleVector<LiveRange*> constrained;
   MapleVector<LiveRange*> mustAssigned;
 #ifdef OPTIMIZE_FOR_PROLOG

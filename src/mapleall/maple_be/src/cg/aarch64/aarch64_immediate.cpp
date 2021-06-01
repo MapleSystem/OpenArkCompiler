@@ -35,6 +35,14 @@ constexpr std::array<uint64, kMaxBitTableSize> bitmaskImmMultTable = {
 };
 };
 
+bool IsBitSizeImmediate(uint64 val, uint32 bitLen, uint32 nLowerZeroBits) {
+    /* mask1 is a 64bits number that is all 1 shifts left size bits */
+    const uint64 mask1 = 0xffffffffffffffffUL << bitLen;
+    /* mask2 is a 64 bits number that nlowerZeroBits are all 1, higher bits aro all 0 */
+    uint64 mask2 = (1UL << static_cast<uint64>(nLowerZeroBits)) - 1UL;
+    return (mask2 & val) == 0UL && (mask1 & ((static_cast<uint64>(val)) >> nLowerZeroBits)) == 0UL;
+};
+
 bool IsBitmaskImmediate(uint64 val, uint32 bitLen) {
   ASSERT(val != 0, "IsBitmaskImmediate() don's accept 0 or -1");
   ASSERT(static_cast<int64>(val) != -1, "IsBitmaskImmediate() don's accept 0 or -1");

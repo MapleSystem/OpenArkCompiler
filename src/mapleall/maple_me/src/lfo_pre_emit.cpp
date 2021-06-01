@@ -21,7 +21,6 @@
 #include "constantfold.h"
 
 namespace maple {
-
 LfoParentPart *LfoPreEmitter::EmitLfoExpr(MeExpr *meexpr, LfoParentPart *parent) {
   switch (meexpr->GetOp()) {
     case OP_constval: {
@@ -105,7 +104,8 @@ LfoParentPart *LfoPreEmitter::EmitLfoExpr(MeExpr *meexpr, LfoParentPart *parent)
       AddrofMeExpr *addrMeexpr = static_cast<AddrofMeExpr *> (meexpr);
       OriginalSt *ost = meirmap->GetSSATab().GetOriginalStFromID(addrMeexpr->GetOstIdx());
       MIRSymbol *sym = ost->GetMIRSymbol();
-      LfoAddrofNode *lnoaddrofNode = codeMP->New<LfoAddrofNode>(addrMeexpr->GetPrimType(), sym->GetStIdx(), ost->GetFieldID(), parent);
+      LfoAddrofNode *lnoaddrofNode =
+          codeMP->New<LfoAddrofNode>(addrMeexpr->GetPrimType(), sym->GetStIdx(), ost->GetFieldID(), parent);
       return lnoaddrofNode;
     }
     case OP_addroflabel: {
@@ -117,14 +117,16 @@ LfoParentPart *LfoPreEmitter::EmitLfoExpr(MeExpr *meexpr, LfoParentPart *parent)
     }
     case OP_addroffunc: {
       AddroffuncMeExpr *addrMeexpr = static_cast<AddroffuncMeExpr *>(meexpr);
-      LfoAddroffuncNode *addrfunNode = codeMP->New<LfoAddroffuncNode>(addrMeexpr->GetPrimType(), addrMeexpr->GetPuIdx(), parent);
+      LfoAddroffuncNode *addrfunNode =
+          codeMP->New<LfoAddroffuncNode>(addrMeexpr->GetPrimType(), addrMeexpr->GetPuIdx(), parent);
       return addrfunNode;
     }
     case OP_gcmalloc:
     case OP_gcpermalloc:
     case OP_stackmalloc: {
       GcmallocMeExpr *gcMeexpr = static_cast<GcmallocMeExpr *> (meexpr);
-      LfoGCMallocNode *gcMnode = codeMP->New<LfoGCMallocNode>(meexpr->GetOp(), meexpr->GetPrimType(), gcMeexpr->GetTyIdx(), parent);
+      LfoGCMallocNode *gcMnode =
+          codeMP->New<LfoGCMallocNode>(meexpr->GetOp(), meexpr->GetPrimType(), gcMeexpr->GetTyIdx(), parent);
       gcMnode->SetTyIdx(gcMeexpr->GetTyIdx());
       return gcMnode;
     }
@@ -165,7 +167,8 @@ LfoParentPart *LfoPreEmitter::EmitLfoExpr(MeExpr *meexpr, LfoParentPart *parent)
     }
     case OP_sizeoftype: {
       SizeoftypeMeExpr *sizeofMeexpr = static_cast<SizeoftypeMeExpr *>(meexpr);
-      LfoSizeoftypeNode *sizeofTynode = codeMP->New<LfoSizeoftypeNode>(sizeofMeexpr->GetPrimType(), sizeofMeexpr->GetTyIdx(), parent);
+      LfoSizeoftypeNode *sizeofTynode =
+          codeMP->New<LfoSizeoftypeNode>(sizeofMeexpr->GetPrimType(), sizeofMeexpr->GetTyIdx(), parent);
       return sizeofTynode;
     }
     case OP_fieldsdist: {
@@ -177,12 +180,14 @@ LfoParentPart *LfoPreEmitter::EmitLfoExpr(MeExpr *meexpr, LfoParentPart *parent)
     }
     case OP_conststr: {
       ConststrMeExpr *constrMeexpr = static_cast<ConststrMeExpr *>(meexpr);
-      LfoConststrNode *constrNode = codeMP->New<LfoConststrNode>(constrMeexpr->GetPrimType(), constrMeexpr->GetStrIdx(), parent);
+      LfoConststrNode *constrNode =
+          codeMP->New<LfoConststrNode>(constrMeexpr->GetPrimType(), constrMeexpr->GetStrIdx(), parent);
       return constrNode;
     }
     case OP_conststr16: {
       Conststr16MeExpr *constr16Meexpr = static_cast<Conststr16MeExpr *>(meexpr);
-      LfoConststr16Node *constr16Node = codeMP->New<LfoConststr16Node>(constr16Meexpr->GetPrimType(), constr16Meexpr->GetStrIdx(), parent);
+      LfoConststr16Node *constr16Node =
+          codeMP->New<LfoConststr16Node>(constr16Meexpr->GetPrimType(), constr16Meexpr->GetStrIdx(), parent);
       return constr16Node;
     }
     case OP_abs:
@@ -328,7 +333,8 @@ StmtNode* LfoPreEmitter::EmitLfoStmt(MeStmt *mestmt, LfoParentPart *parent) {
     case OP_icall:
     case OP_icallassigned: {
       IcallMeStmt *icallMeStmt = static_cast<IcallMeStmt *> (mestmt);
-      LfoIcallNode *icallnode = codeMP->New<LfoIcallNode>(codeMPAlloc, OP_icallassigned, icallMeStmt->GetRetTyIdx(), parent, icallMeStmt);
+      LfoIcallNode *icallnode =
+          codeMP->New<LfoIcallNode>(codeMPAlloc, OP_icallassigned, icallMeStmt->GetRetTyIdx(), parent, icallMeStmt);
       for (uint32 i = 0; i < icallMeStmt->GetOpnds().size(); i++) {
         icallnode->GetNopnd().push_back(EmitLfoExpr(icallMeStmt->GetOpnd(i), icallnode)->Cvt2BaseNode());
       }
@@ -374,9 +380,7 @@ StmtNode* LfoPreEmitter::EmitLfoStmt(MeStmt *mestmt, LfoParentPart *parent) {
           if (!retpair.second.IsReg()) {
             StIdx stIdx = retpair.first;
             if (stIdx.Islocal()) {
-              // MIRSymbolTable *symtab = mirFunc->GetSymTab();
-              // MIRSymbol *sym = symtab->GetSymbolFromStIdx(stIdx.Idx());
-              // TODO??
+
             }
           }
         }
@@ -498,7 +502,8 @@ DoloopNode *LfoPreEmitter::EmitLfoDoloop(BB *mewhilebb, LfoBlockNode *curblk, Lf
   lnoDoloopnode->SetStartExpr(EmitLfoExpr(whileInfo->initExpr, lnoDoloopnode)->Cvt2BaseNode());
   lnoDoloopnode->SetContExpr(EmitLfoExpr(condGotostmt->GetOpnd(), lnoDoloopnode)->Cvt2BaseNode());
   lnoDoloopnode->SetDoBody(codeMP->New<LfoBlockNode>(lnoDoloopnode));
-  MIRIntConst *intConst = mirFunc->GetModule()->GetMemPool()->New<MIRIntConst>(whileInfo->stepValue, *whileInfo->ivOst->GetType());
+  MIRIntConst *intConst =
+      mirFunc->GetModule()->GetMemPool()->New<MIRIntConst>(whileInfo->stepValue, *whileInfo->ivOst->GetType());
   LfoConstvalNode *lfoconstnode = codeMP->New<LfoConstvalNode>(intConst, lnoDoloopnode);
   lnoDoloopnode->SetIncrExpr(lfoconstnode);
   lnoDoloopnode->SetIsPreg(false);
@@ -576,7 +581,8 @@ uint32 LfoPreEmitter::Raise2LfoIf(uint32 curj, LfoBlockNode *curblk) {
     mestmt = mestmt->GetNext();
   }
   // emit the if statement
-  CHECK_FATAL(mestmt != nullptr && (mestmt->GetOp() == OP_brfalse || mestmt->GetOp() == OP_brtrue), "Raise2LfoIf: cannot find conditional branch");
+  CHECK_FATAL(mestmt != nullptr && (mestmt->GetOp() == OP_brfalse || mestmt->GetOp() == OP_brtrue),
+              "Raise2LfoIf: cannot find conditional branch");
   CondGotoMeStmt *condgoto = static_cast <CondGotoMeStmt *>(mestmt);
   LfoIfInfo *ifInfo = lfoFunc->label2IfInfo[condgoto->GetOffset()];
   CHECK_FATAL(ifInfo->endLabel != 0, "Raise2LfoIf: endLabel not found");
@@ -708,5 +714,4 @@ AnalysisResult *DoLfoPreEmission::Run(MeFunction *func, MeFuncResultMgr *m, Modu
 
   return nullptr;
 }
-
 }  // namespace maple

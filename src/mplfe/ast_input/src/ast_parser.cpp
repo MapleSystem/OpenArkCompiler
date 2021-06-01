@@ -639,6 +639,9 @@ ASTValue *ASTParser::TranslateExprEval(MapleAllocator &allocator, const clang::E
 #define EXPR_CASE(CLASS)                                                               \
   case clang::Stmt::CLASS##Class: {                                                    \
     ASTExpr *astExpr = ProcessExpr##CLASS(allocator, llvm::cast<clang::CLASS>(*expr)); \
+    if (astExpr == nullptr) {                                                          \
+      return nullptr;                                                                  \
+    }                                                                                  \
     astExpr->SetConstantValue(TranslateExprEval(allocator, expr));                     \
     Pos loc = astFile->GetStmtLOC(*expr);                                              \
     astExpr->SetSrcLOC(loc.first, loc.second);                                         \
@@ -692,6 +695,7 @@ ASTExpr *ASTParser::ProcessExpr(MapleAllocator &allocator, const clang::Expr *ex
     EXPR_CASE(SubstNonTypeTemplateParmExpr);
     EXPR_CASE(DependentScopeDeclRefExpr);
     EXPR_CASE(AtomicExpr);
+    EXPR_CASE(ChooseExpr);
     default:
       CHECK_FATAL(false, "ASTExpr %s NIY", expr->getStmtClassName());
       return nullptr;
@@ -1253,10 +1257,14 @@ ASTExpr *ASTParser::ProcessExprUserDefinedLiteral(MapleAllocator &allocator, con
 }
 
 ASTExpr *ASTParser::ProcessExprTypeTraitExpr(MapleAllocator &allocator, const clang::TypeTraitExpr &expr) {
-  // CXX feature
-  (void)allocator;
-  (void)expr;
-  return nullptr;
+  ASTIntegerLiteral *astIntegerLiteral = ASTDeclsBuilder::ASTExprBuilder<ASTIntegerLiteral>(allocator);
+  if (expr.getValue()) {
+    astIntegerLiteral->SetVal(1);
+  } else {
+    astIntegerLiteral->SetVal(0);
+  }
+  astIntegerLiteral->SetType(astFile->CvtType(expr.getType())->GetPrimType());
+  return astIntegerLiteral;
 }
 
 ASTExpr *ASTParser::ProcessExprShuffleVectorExpr(MapleAllocator &allocator, const clang::ShuffleVectorExpr &expr) {
@@ -1586,7 +1594,8 @@ ASTExpr *ASTParser::ProcessExprBinaryOperator(MapleAllocator &allocator, const c
   }
   ASTExpr *astRExpr = ProcessExpr(allocator, bo.getRHS());
   ASTExpr *astLExpr = ProcessExpr(allocator, bo.getLHS());
-  if (clangOpCode == clang::BO_Div) {
+  if (clangOpCode == clang::BO_Div || clangOpCode == clang::BO_Mul ||
+      clangOpCode == clang::BO_DivAssign || clangOpCode == clang::BO_MulAssign) {
     if (astBinOpExpr->GetRetType()->GetPrimType() == PTY_u16 || astBinOpExpr->GetRetType()->GetPrimType() == PTY_u8) {
       astBinOpExpr->SetRetType(GlobalTables::GetTypeTable().GetPrimType(PTY_u32));
     }
@@ -1817,6 +1826,10 @@ ASTExpr *ASTParser::ProcessExprDependentScopeDeclRefExpr(MapleAllocator &allocat
   (void)allocator;
   (void)depScopeExpr;
   return nullptr;
+}
+
+ASTExpr *ASTParser::ProcessExprChooseExpr(MapleAllocator &allocator, const clang::ChooseExpr &chs) {
+  return ProcessExpr(allocator, chs.getChosenSubExpr());
 }
 
 bool ASTParser::PreProcessAST() {
@@ -2160,8 +2173,6 @@ bool ASTParser::RetrieveFuncs(MapleAllocator &allocator) {
     clang::FunctionDecl *funcDecl = llvm::cast<clang::FunctionDecl>(func);
     if (funcDecl->isDefined()) {
       funcDecl = funcDecl->getDefinition();
-    } else {
-      continue;
     }
     ASTFunc *af = static_cast<ASTFunc*>(ProcessDecl(allocator, *funcDecl));
     if (af == nullptr) {

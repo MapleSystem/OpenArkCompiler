@@ -170,16 +170,16 @@ std::list<UniqueFEIRStmt> ASTFunc::EmitASTStmtToFEIR() const {
   }
   // fix int main() no return 0 and void func() no return. there are multiple branches, insert return at the end.
   if (stmts.size() == 0 || stmts.back()->GetKind() != kStmtReturn) {
-    UniqueFEIRStmt retStmt = nullptr;
-    if (name == "main" && typeDesc[1]->GetPrimType() == PTY_i32) {
-      UniqueFEIRExpr retExpr = std::make_unique<FEIRExprConst>(static_cast<int64>(0), PTY_i32);
-      retStmt = std::make_unique<FEIRStmtReturn>(std::move(retExpr));
-    } else if (typeDesc[1]->GetPrimType() == PTY_void) {
-      retStmt = std::make_unique<FEIRStmtReturn>(nullptr);
+    UniqueFEIRExpr retExpr = nullptr;
+    PrimType retType = typeDesc[1]->GetPrimType();
+    if (retType != PTY_void) {
+      if (!typeDesc[1]->IsScalarType()) {
+        retType = PTY_i32;
+      }
+      retExpr = FEIRBuilder::CreateExprConstAnyScalar(retType, static_cast<int64>(0));
     }
-    if (retStmt != nullptr) {
-      stmts.emplace_back(std::move(retStmt));
-    }
+    UniqueFEIRStmt retStmt = std::make_unique<FEIRStmtReturn>(std::move(retExpr));
+    stmts.emplace_back(std::move(retStmt));
   }
   return stmts;
 }

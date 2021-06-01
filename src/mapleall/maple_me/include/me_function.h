@@ -158,12 +158,12 @@ class MeFunction : public FuncEmit {
         mirFunc(func),
         laidOutBBVec(alloc.Adapter()),
         fileName(fileName, memPool),
-        lfoFunc(nullptr), lfoMp(nullptr) {
+        lfoFunc(nullptr),
+        lfoMp(nullptr) {
           isLfo = (MeOption::optLevel == 3);
         }
 
   ~MeFunction() override = default;
-
   void DumpFunction() const;
   void DumpFunctionNoSSA() const;
   void DumpMayDUFunction() const;

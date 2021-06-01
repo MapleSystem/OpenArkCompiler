@@ -135,6 +135,7 @@ class ASTParser {
   ASTExpr *PROCESS_EXPR(SubstNonTypeTemplateParmExpr);
   ASTExpr *PROCESS_EXPR(DependentScopeDeclRefExpr);
   ASTExpr *PROCESS_EXPR(AtomicExpr);
+  ASTExpr *PROCESS_EXPR(ChooseExpr);
 
   ASTDecl *ProcessDecl(MapleAllocator &allocator, const clang::Decl &decl);
 #define PROCESS_DECL(CLASS) ProcessDecl##CLASS##Decl(MapleAllocator &allocator, const clang::CLASS##Decl&)
