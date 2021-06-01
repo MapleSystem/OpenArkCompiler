@@ -126,6 +126,8 @@ enum ASTOp {
 };
 
 enum ASTStmtOp {
+  kASTStmtNone,
+  kASTStmtDummy,
   // branch
   kASTStmtIf,
   kASTStmtGoto,

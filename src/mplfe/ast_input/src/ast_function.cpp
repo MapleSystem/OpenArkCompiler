@@ -67,6 +67,8 @@ void ASTFunction::SetMIRFunctionInfo() {
 bool ASTFunction::ProcessImpl() {
   FE_INFO_LEVEL(FEOptions::kDumpLevelInfoDetail, "ASTFunction::Process() for %s", astFunc.GetName().c_str());
   bool success = true;
+  mirFunction.NewBody();
+  FEManager::GetMIRBuilder().SetCurrentFunction(mirFunction);
   SetMIRFunctionInfo();
   success = success && GenerateArgVarList("gen arg var list");
   success = success && EmitToFEIRStmt("emit to feir");
@@ -85,8 +87,6 @@ void ASTFunction::FinishImpl() {
 
 bool ASTFunction::EmitToMIR(const std::string &phaseName) {
   phaseResult.RegisterPhaseNameAndStart(phaseName);
-  mirFunction.NewBody();
-  FEManager::GetMIRBuilder().SetCurrentFunction(mirFunction);
   EmitToMIRStmt();
   return phaseResult.Finish();
 }

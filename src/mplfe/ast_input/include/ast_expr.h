@@ -242,6 +242,9 @@ class ASTUnaryOperatorExpr : public ASTExpr {
     return isGlobal;
   }
 
+  UniqueFEIRExpr ASTUOSideEffectExpr(Opcode op, std::list<UniqueFEIRStmt> &stmts,
+      std::string varName = "", bool post = false) const;
+
  protected:
   bool isGlobal = false;
   ASTExpr *expr = nullptr;
@@ -613,6 +616,7 @@ class ASTBinaryOperatorExpr : public ASTExpr {
   }
 
  protected:
+  MIRConst *GenerateMIRConstImpl() const override;
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 
   Opcode opcode;
@@ -711,43 +715,29 @@ class ASTArraySubscriptExpr : public ASTExpr {
   }
 
   void SetBaseExprType(MIRType *ty) {
-    baseExprTypes.push_back(ty);
+    baseExprTypes.emplace_back(ty);
   }
 
   const std::vector<MIRType*> &GetBaseExprType() const {
     return baseExprTypes;
   }
 
+  void SetArrayType(MIRType *ty) {
+    arrayType = ty;
+  }
+
+  const MIRType *GetArrayType() const {
+    return arrayType;
+  }
+
   int32 TranslateArraySubscript2Offset() const;
-
-  void SetMemberExpr(ASTExpr &astExpr) {
-    memberExpr = &astExpr;
-  }
-
-  ASTExpr* GetMemberExpr() const {
-    return memberExpr;
-  }
-
-  std::string GetBaseExprVarName() const {
-    return baseExprVarName;
-  }
-
-  void SetBaseExprVarName(std::string argBaseExprVarName) {
-    baseExprVarName = argBaseExprVarName;
-  }
-
-  void SetAddrOfFlag(bool flag) {
-    isAddrOf = flag;
-  }
 
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   ASTExpr *baseExpr = nullptr;
-  ASTExpr *memberExpr = nullptr;
+  MIRType *arrayType = nullptr;
   std::vector<MIRType*> baseExprTypes;
   std::vector<ASTExpr*> idxExprs;
-  bool isAddrOf = false;
-  std::string baseExprVarName;
 };
 
 class ASTExprUnaryExprOrTypeTraitExpr : public ASTExpr {
@@ -823,8 +813,6 @@ class ASTMemberExpr : public ASTExpr {
 
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
-  void Emit2FEExprImplForArrayElemIsStruct(UniqueFEIRExpr baseFEExpr, std::string &tmpStructName,
-                                           std::list<UniqueFEIRStmt> &stmts) const;
   ASTExpr *baseExpr = nullptr;
   std::string memberName;
   MIRType *memberType = nullptr;
@@ -879,11 +867,6 @@ class ASTAssignExpr : public ASTBinaryOperatorExpr {
     isCompoundAssign = argIsCompoundAssign;
   }
 
- protected:
-  UniqueFEIRExpr ProcessAssign(std::list<UniqueFEIRStmt> &stmts, UniqueFEIRExpr leftExpr,
-                               UniqueFEIRExpr rightExpr) const;
-  void ProcessAssign4ExprArrayStoreForC(std::list<UniqueFEIRStmt> &stmts, UniqueFEIRExpr leftFEExpr,
-                                        UniqueFEIRExpr rightFEExpr) const;
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   bool isCompoundAssign;
@@ -959,7 +942,14 @@ class ASTCallExpr : public ASTExpr {
     return isIcall;
   }
 
+  bool IsNeedRetExpr() const {
+    return retType->GetPrimType() != PTY_void;
+  }
+
   std::string CvtBuiltInFuncName(std::string builtInName) const;
+  std::unique_ptr<FEIRStmtAssign> GenCallStmt() const;
+  void AddArgsExpr(std::unique_ptr<FEIRStmtAssign> &callStmt, std::list<UniqueFEIRStmt> &stmts) const;
+  UniqueFEIRExpr AddRetExpr(std::unique_ptr<FEIRStmtAssign> &callStmt, std::list<UniqueFEIRStmt> &stmts) const;
 
  private:
   using FuncPtrBuiltinFunc = UniqueFEIRExpr (ASTCallExpr::*)(std::list<UniqueFEIRStmt> &stmts) const;
@@ -972,8 +962,6 @@ class ASTCallExpr : public ASTExpr {
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Expect);
 
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
-  UniqueFEIRExpr Emit2FEExprCall(std::list<UniqueFEIRStmt> &stmts) const;
-  UniqueFEIRExpr Emit2FEExprICall(std::list<UniqueFEIRStmt> &stmts) const;
 
   static std::map<std::string, FuncPtrBuiltinFunc> builtingFuncPtrMap;
   std::vector<ASTExpr*> args;
@@ -1015,6 +1003,9 @@ class ASTIntegerLiteral : public ASTExpr {
   void SetType(PrimType pType) {
     type = pType;
   }
+
+ protected:
+  MIRConst *GenerateMIRConstImpl() const override;
 
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;

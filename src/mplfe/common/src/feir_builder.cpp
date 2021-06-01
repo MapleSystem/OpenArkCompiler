@@ -615,18 +615,13 @@ UniqueFEIRStmt FEIRBuilder::AssginStmtField(UniqueFEIRExpr addrExpr, UniqueFEIRE
   UniqueFEIRStmt stmt;
   FieldID baseID = addrExpr->GetFieldID();
   UniqueFEIRType addrType = addrExpr->GetType()->Clone();
-  UniqueFEIRType ptrType = FEIRTypeHelper::CreateTypeNative(
-      *GlobalTables::GetTypeTable().GetOrCreatePointerType(*addrType->GenerateMIRTypeAuto(), PTY_ptr));
   if (addrExpr->GetKind() == kExprDRead) {
     stmt = CreateStmtDAssignAggField(
         static_cast<FEIRExprDRead*>(addrExpr.get())->GetVar()->Clone(), std::move(srcExpr), baseID + fieldID);
-  } else if (addrExpr->GetKind() == kExprArrayStoreForC) {
-    auto arrayExpr = static_cast<FEIRExprArrayStoreForC*>(addrExpr.get());
-    arrayExpr->SetAddrOfFlag(true);  // retrun addr
-    stmt = CreateStmtIAssign(std::move(ptrType), std::move(addrExpr), std::move(srcExpr), baseID + fieldID);
   } else if (addrExpr->GetKind() == kExprIRead) {
     auto ireadExpr = static_cast<FEIRExprIRead*>(addrExpr.get());
-    stmt = CreateStmtIAssign(std::move(ptrType), ireadExpr->GetClonedOpnd(), std::move(srcExpr), baseID + fieldID);
+    stmt = CreateStmtIAssign(ireadExpr->GetClonedPtrType(), ireadExpr->GetClonedOpnd(),
+        std::move(srcExpr), baseID + fieldID);
   } else {
     CHECK_FATAL(false, "unsupported expr in AssginStmtField");
   }

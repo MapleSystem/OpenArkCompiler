@@ -22,7 +22,7 @@ namespace maple {
 class ASTDecl;
 class ASTStmt {
  public:
-  explicit ASTStmt(ASTStmtOp o) : op(o) {}
+  explicit ASTStmt(ASTStmtOp o = kASTStmtNone) : op(o) {}
   virtual ~ASTStmt() = default;
   void SetASTExpr(ASTExpr* astExpr);
 
@@ -60,11 +60,21 @@ class ASTStmt {
   uint32 srcFileLineNum = 0;
 };
 
+class ASTStmtDummy : public ASTStmt {
+ public:
+  ASTStmtDummy() : ASTStmt(kASTStmtDummy) {}
+  ~ASTStmtDummy() = default;
+
+ private:
+  std::list<UniqueFEIRStmt> Emit2FEStmtImpl() const override;
+};
+
 class ASTCompoundStmt : public ASTStmt {
  public:
   ASTCompoundStmt() : ASTStmt(kASTStmtCompound) {}
   ~ASTCompoundStmt() = default;
   void SetASTStmt(ASTStmt*);
+  void InsertASTStmtsAtFront(const std::list<ASTStmt*> &stmts);
   const std::list<ASTStmt*> &GetASTStmtList() const;
 
  private:
@@ -495,11 +505,10 @@ class ASTCallExprStmt : public ASTStmt {
   using FuncPtrBuiltinFunc = std::list<UniqueFEIRStmt> (ASTCallExprStmt::*)() const;
   static std::map<std::string, FuncPtrBuiltinFunc> InitFuncPtrMap();
   std::list<UniqueFEIRStmt> Emit2FEStmtImpl() const override;
-  std::list<UniqueFEIRStmt> Emit2FEStmtCall() const;
-  std::list<UniqueFEIRStmt> Emit2FEStmtICall() const;
   std::list<UniqueFEIRStmt> ProcessBuiltinVaStart() const;
   std::list<UniqueFEIRStmt> ProcessBuiltinVaEnd() const;
   std::list<UniqueFEIRStmt> ProcessBuiltinVaCopy() const;
+  std::list<UniqueFEIRStmt> ProcessBuiltinPrefetch() const;
 
   static std::map<std::string, FuncPtrBuiltinFunc> funcPtrMap;
   std::string varName;

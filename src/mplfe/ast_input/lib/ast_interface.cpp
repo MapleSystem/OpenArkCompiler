@@ -48,7 +48,7 @@ const AstASTContext *LibAstFile::GetAstContext() {
   return astContext;
 }
 
-AstASTContext *LibAstFile::GetNonConstAstContext() {
+AstASTContext *LibAstFile::GetNonConstAstContext() const {
   return astContext;
 }
 

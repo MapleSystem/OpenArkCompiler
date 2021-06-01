@@ -21,4 +21,3 @@ BUILTIN_FUNC(bswap16)
 BUILTIN_FUNC(mul_overflow)
 // not support builtin func
 BUILTIN_FUNC(clzl)
-BUILTIN_FUNC(prefetch)
