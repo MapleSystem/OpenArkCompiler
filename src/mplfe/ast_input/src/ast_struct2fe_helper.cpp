@@ -168,6 +168,11 @@ bool ASTFunc2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
   }
   SolveReturnAndArgTypes(allocator);
   FuncAttrs attrs = GetAttrs();
+#ifdef USE_OPS
+  if (firstArgRet) {
+    attrs.SetAttr(FUNCATTR_firstarg_return);
+  }
+#endif
   bool isStatic = IsStatic();
   bool isVarg = IsVarg();
   CHECK_FATAL(retMIRType != nullptr, "function must have return type");
@@ -177,19 +182,21 @@ bool ASTFunc2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
   }
   mirFunc = FEManager::GetTypeManager().CreateFunction(methodNameIdx, retMIRType->GetTypeIndex(),
                                                        argsTypeIdx, isVarg, isStatic);
+  std::vector<std::string> parmNames = func.GetParmNames();
+  if (firstArgRet) {
+    parmNames.insert(parmNames.begin(), "first_arg_return");
+  }
 #ifndef USE_OPS
-  for (uint32 i = 0; i < func.GetParmNames().size(); ++i) {
-    MIRSymbol *sym = SymbolBuilder::Instance().GetOrCreateLocalSymbol(
-        *argMIRTypes[i], func.GetParmNames()[i], *mirFunc);
+  for (uint32 i = 0; i < parmNames.size(); ++i) {
+    MIRSymbol *sym = SymbolBuilder::Instance().GetOrCreateLocalSymbol(*argMIRTypes[i], parmNames[i], *mirFunc);
     sym->SetStorageClass(kScFormal);
     sym->SetSKind(kStVar);
     mirFunc->AddFormal(sym);
   }
   mirMethodPair.first = mirFunc;
 #else
-  for (uint32 i = 0; i < func.GetParmNames().size(); ++i) {
-    MIRSymbol *sym = FEManager::GetMIRBuilder().GetOrCreateDeclInFunc(
-        func.GetParmNames()[i], *argMIRTypes[i], *mirFunc);
+  for (uint32 i = 0; i < parmNames.size(); ++i) {
+    MIRSymbol *sym = FEManager::GetMIRBuilder().GetOrCreateDeclInFunc(parmNames[i], *argMIRTypes[i], *mirFunc);
     sym->SetStorageClass(kScFormal);
     sym->SetSKind(kStVar);
     mirFunc->AddArgument(sym);
@@ -211,6 +218,12 @@ void ASTFunc2FEHelper::SolveReturnAndArgTypesImpl(MapleAllocator &allocator) {
   retMIRType = returnAndArgTypeNames[1];
   // skip funcType and returnType
   argMIRTypes.insert(argMIRTypes.begin(), returnAndArgTypeNames.begin() + 2, returnAndArgTypeNames.end());
+  if (retMIRType->GetPrimType() == PTY_agg && retMIRType->GetSize() > 16) {
+    firstArgRet = true;
+    MIRType *retPointerType = GlobalTables::GetTypeTable().GetOrCreatePointerType(*retMIRType);
+    argMIRTypes.insert(argMIRTypes.begin(), retPointerType);
+    retMIRType = GlobalTables::GetTypeTable().GetPrimType(PTY_void);
+  }
 }
 
 std::string ASTFunc2FEHelper::GetMethodNameImpl(bool inMpl, bool full) const {

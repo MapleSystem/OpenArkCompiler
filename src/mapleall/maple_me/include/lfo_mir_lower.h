@@ -24,7 +24,8 @@ class LFOMIRLower : public MIRLower {
   LfoFunction *lfoFunc;
 
  public:
-  LFOMIRLower(MIRModule &mod, MeFunction *f) : MIRLower(mod, f->GetMirFunc()),
+  LFOMIRLower(MIRModule &mod, MeFunction *f)
+      : MIRLower(mod, f->GetMirFunc()),
         func(f),
         lfoFunc(f->GetLfoFunc()) {}
 

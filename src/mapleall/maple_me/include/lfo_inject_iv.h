@@ -18,8 +18,7 @@
 #include "me_phase.h"
 
 namespace maple {
-
-/*emit ir to specified file*/
+/* emit ir to specified file */
 class DoLfoInjectIV : public MeFuncPhase {
  public:
   DoLfoInjectIV(MePhaseID id) : MeFuncPhase(id) {}
@@ -27,6 +26,5 @@ class DoLfoInjectIV : public MeFuncPhase {
   AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) override;
   std::string PhaseName() const override { return "injectiv"; }
 };
-
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_LFO_INJECT_IV_H

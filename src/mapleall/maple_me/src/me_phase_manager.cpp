@@ -318,6 +318,10 @@ void MeFuncPhaseManager::Run(MIRFunction *mirFunc, uint64 rangeNum, const std::s
   if (MeOption::optLevel >= 3) {
     memPoolCtrler.DeleteMemPool(func.GetLfoMempool());
   }
+  // release lfo mempool
+  if (MeOption::optLevel >= 3) {
+    memPoolCtrler.DeleteMemPool(func.GetLfoMempool());
+  }
 }
 
 MeFuncPhaseManager &MeFuncPhaseManager::Clone(MemPool &mp, MemPoolCtrler &ctrler) const {

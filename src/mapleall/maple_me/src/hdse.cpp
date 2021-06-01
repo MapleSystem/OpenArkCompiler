@@ -168,7 +168,7 @@ bool HDSE::NeedNotNullCheck(MeExpr &meExpr, const BB &bb) {
   return true;
 }
 
-void HDSE::MarkMuListRequired(MapleMap<OStIdx, VarMeExpr*> &muList) {
+void HDSE::MarkMuListRequired(MapleMap<OStIdx, ScalarMeExpr*> &muList) {
   for (auto &pair : muList) {
     workList.push_front(pair.second);
   }

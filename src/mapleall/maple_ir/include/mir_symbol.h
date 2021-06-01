@@ -530,6 +530,7 @@ class MIRSymbolTable {
 
   void Clear() {
     symbolTable.clear();
+    strIdxToStIdxMap.clear();
   }
 
   MIRSymbol *CloneLocalSymbol(const MIRSymbol &oldSym) const {

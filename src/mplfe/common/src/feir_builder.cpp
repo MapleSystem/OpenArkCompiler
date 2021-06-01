@@ -200,6 +200,7 @@ UniqueFEIRExpr FEIRBuilder::CreateExprConstF64(double val) {
 // Note that loss of precision, byte value is only supported.
 UniqueFEIRExpr FEIRBuilder::CreateExprConstAnyScalar(PrimType primType, int64 val) {
   switch (primType) {
+    case PTY_u1:
     case PTY_u8:
     case PTY_u16:
     case PTY_u32:

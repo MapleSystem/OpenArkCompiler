@@ -1221,36 +1221,19 @@ bool FEFunction::IsNeedInsertBarrier() {
 }
 
 void FEFunction::EmitToMIRStmt() {
-  bool isNeedBarrier = false;
-  bool isWithReturn = false;
-  if (!FEOptions::GetInstance().IsNoBarrier()) {
-    isNeedBarrier = false; // Do not insert it here.
-  }
+  MIRBuilder &builder = FEManager::GetMIRBuilder();
   FELinkListNode *nodeStmt = feirStmtHead->GetNext();
   while (nodeStmt != nullptr && nodeStmt != feirStmtTail) {
     FEIRStmt *stmt = static_cast<FEIRStmt*>(nodeStmt);
-    std::list<StmtNode*> mirStmts = stmt->GenMIRStmts(FEManager::GetMIRBuilder());
-    if (isNeedBarrier && stmt->GetKind() == kStmtReturn) {
-      isWithReturn = true;
-      StmtNode *barrier = mirFunction.GetAttr(FUNCATTR_constructor) ?
-                          mirFunction.GetCodeMempool()->New<StmtNode>(OP_membarrelease) :
-                          mirFunction.GetCodeMempool()->New<StmtNode>(OP_membarstorestore);
-      mirStmts.emplace_front(barrier);
-    }
+    std::list<StmtNode*> mirStmts = stmt->GenMIRStmts(builder);
 #ifdef DEBUG
     // LOC info has been recorded in FEIRStmt already, this could be removed later.
     AddLocForStmt(*stmt, mirStmts);
 #endif
     for (StmtNode *mirStmt : mirStmts) {
-      FEManager::GetMIRBuilder().AddStmtInCurrentFunctionBody(*mirStmt);
+      builder.AddStmtInCurrentFunctionBody(*mirStmt);
     }
     nodeStmt = nodeStmt->GetNext();
-  }
-  if (isNeedBarrier && !isWithReturn) {
-    StmtNode *barrier = mirFunction.GetAttr(FUNCATTR_constructor) ?
-                        mirFunction.GetCodeMempool()->New<StmtNode>(OP_membarrelease) :
-                        mirFunction.GetCodeMempool()->New<StmtNode>(OP_membarstorestore);
-    FEManager::GetMIRBuilder().AddStmtInCurrentFunctionBody(*barrier);
   }
 }
 

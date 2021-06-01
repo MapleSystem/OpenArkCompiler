@@ -189,8 +189,7 @@ void StImmOperand::Emit(Emitter &emitter, const OpndProp *opndProp) const {
   }
 }
 
-const int32 AArch64MemOperand::kMaxPimms[4] = { AArch64MemOperand::kMaxPimm8, AArch64MemOperand::kMaxPimm16,
-                                                AArch64MemOperand::kMaxPimm32, AArch64MemOperand::kMaxPimm64 };
+const int32 AArch64MemOperand::kMaxPimms[4] = { kMaxPimm8, kMaxPimm16, kMaxPimm32, kMaxPimm64 };
 
 Operand *AArch64MemOperand::GetOffset() const {
   switch (addrMode) {

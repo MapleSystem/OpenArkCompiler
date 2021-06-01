@@ -615,6 +615,8 @@ class ASTBinaryOperatorExpr : public ASTExpr {
     cvtNeeded = needed;
   }
 
+  MIRType *SelectBinaryOperatorType(UniqueFEIRExpr &left, UniqueFEIRExpr &right) const;
+
  protected:
   MIRConst *GenerateMIRConstImpl() const override;
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
@@ -733,11 +735,12 @@ class ASTArraySubscriptExpr : public ASTExpr {
   int32 TranslateArraySubscript2Offset() const;
 
  private:
+  bool CheckFirstDimIfZero() const;
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   ASTExpr *baseExpr = nullptr;
-  MIRType *arrayType = nullptr;
+  mutable MIRType *arrayType = nullptr;
   std::vector<MIRType*> baseExprTypes;
-  std::vector<ASTExpr*> idxExprs;
+  mutable std::vector<ASTExpr*> idxExprs;
 };
 
 class ASTExprUnaryExprOrTypeTraitExpr : public ASTExpr {
@@ -869,6 +872,7 @@ class ASTAssignExpr : public ASTBinaryOperatorExpr {
 
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
+  void GetActualRightExpr(UniqueFEIRExpr &right, UniqueFEIRExpr &left) const;
   bool isCompoundAssign;
 };
 
@@ -944,6 +948,10 @@ class ASTCallExpr : public ASTExpr {
 
   bool IsNeedRetExpr() const {
     return retType->GetPrimType() != PTY_void;
+  }
+
+  bool IsFirstArgRet() const {
+    return retType->GetPrimType() == PTY_agg && retType->GetSize() > 16; // Condition needs to be extended synchronously.
   }
 
   std::string CvtBuiltInFuncName(std::string builtInName) const;
@@ -1093,7 +1101,7 @@ class ASTVAArgExpr : public ASTExpr {
   VaArgInfo ProcessValistArgInfo(MIRType &type) const;
   MIRType *IsHFAType(MIRStructType &type) const;
   void CvtHFA2Struct(MIRStructType &type, MIRType &fieldType, UniqueFEIRVar vaArgVar,
-                     UniqueFEIRVar copyedVar, std::list<UniqueFEIRStmt> &stmts) const;
+                     std::list<UniqueFEIRStmt> &stmts) const;
 
   ASTExpr *child = nullptr;
 };

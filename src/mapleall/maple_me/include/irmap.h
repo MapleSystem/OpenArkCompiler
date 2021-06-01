@@ -71,6 +71,9 @@ class IRMap : public AnalysisResult {
     if (mirType == nullptr || mirType->GetPrimType() == PTY_agg) {
       return CreateRegMeExpr(meexpr.GetPrimType());
     }
+    if (meexpr.GetMeOp() == kMeOpIvar && mirType->GetPrimType() != PTY_ref) {
+      return CreateRegMeExpr(meexpr.GetPrimType());
+    }
     return CreateRegMeExpr(*mirType);
   }
 

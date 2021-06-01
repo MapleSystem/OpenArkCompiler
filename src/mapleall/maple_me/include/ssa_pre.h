@@ -229,7 +229,7 @@ class SSAPre {
   MapleAllocator ssaPreAllocator;
   MemPool *perCandMemPool;
   MapleAllocator perCandAllocator;
-  MapleVector<PreWorkCand*> workList;
+  MapleList<PreWorkCand*> workList;
   PreWorkCand *workCand = nullptr;  // the current PreWorkCand
   PreKind preKind;
 

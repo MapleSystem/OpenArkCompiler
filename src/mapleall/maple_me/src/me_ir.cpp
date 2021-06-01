@@ -1127,7 +1127,7 @@ void ChiMeNode::Dump(const IRMap *irMap) const {
   LogInfo::MapleLogger() << "mx" << meRHS->GetExprID() << "}";
 }
 
-void DumpMuList(const IRMap *irMap, const MapleMap<OStIdx, VarMeExpr*> &muList) {
+void DumpMuList(const IRMap *irMap, const MapleMap<OStIdx, ScalarMeExpr*> &muList) {
   if (muList.empty()) {
     return;
   }

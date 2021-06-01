@@ -1507,6 +1507,10 @@ class FEIRStmtUseOnly : public FEIRStmt {
   FEIRStmtUseOnly(Opcode argOp, std::unique_ptr<FEIRExpr> argExpr);
   ~FEIRStmtUseOnly() = default;
 
+  const std::unique_ptr<FEIRExpr> &GetExpr() const {
+    return expr;
+  }
+
  protected:
   bool IsFallThroughImpl() const override {
     if ((op == OP_return) || (op == OP_throw)) {

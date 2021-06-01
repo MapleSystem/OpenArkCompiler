@@ -24,10 +24,8 @@ using namespace maple;
 // <body>
 // goto <whilelabel>
 // label <endlabel>
-
 BlockNode *LFOMIRLower::LowerWhileStmt(WhileStmtNode &whilestmt) {
   MIRBuilder *mirbuilder = mirModule.GetMIRBuilder();
-//DoCondVarProp(whilestmt);
   whilestmt.SetBody(LowerBlock(*whilestmt.GetBody()));
   BlockNode *blk = mirModule.CurFuncCodeMemPool()->New<BlockNode>();
   LabelIdx whilelblidx = func->GetMirFunc()->GetLabelTab()->CreateLabel();
@@ -75,7 +73,7 @@ BlockNode *LFOMIRLower::LowerIfStmt(IfStmtNode &ifstmt, bool recursive) {
 
   BlockNode *blk = mirModule.CurFuncCodeMemPool()->New<BlockNode>();
   MIRFunction *mirFunc = func->GetMirFunc();
-  MIRBuilder *mirbuilder = mirModule.GetMIRBuilder(); 
+  MIRBuilder *mirbuilder = mirModule.GetMIRBuilder();
 
   if (thenempty && elseempty) {
     // generate EVAL <cond> statement

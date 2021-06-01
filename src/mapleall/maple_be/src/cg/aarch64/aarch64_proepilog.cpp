@@ -160,7 +160,7 @@ bool AArch64GenProEpilog::TailCallOpt() {
     exitBB = cgFunc.GetExitBBsVec().front();
   }
 
-  CHECK_FATAL(exitBB->GetFirstInsn() == nullptr, "exit bb should be empty.");
+  CHECK_FATAL(exitBB->GetFirstMachineInsn() == nullptr, "exit bb should be empty.");
 
   /* Count how many call insns in the whole function. */
   uint32 nCount = 0;

@@ -741,7 +741,19 @@ std::list<StmtNode*> FEIRStmtReturn::GenMIRStmtsImpl(MIRBuilder &mirBuilder) con
     mirStmt = mirBuilder.CreateStmtReturn(nullptr);
   } else {
     BaseNode *srcNode = expr->GenMIRNode(mirBuilder);
+#ifdef USE_OPS
+    if (mirBuilder.GetCurrentFunction()->IsFirstArgReturn()) {
+      MIRSymbol *firstArgRetSym = mirBuilder.GetCurrentFunction()->GetFormal(0);
+      BaseNode *addrNode = mirBuilder.CreateDread(*firstArgRetSym, PTY_ptr);
+      StmtNode *iNode = mirBuilder.CreateStmtIassign(*firstArgRetSym->GetType(), 0, addrNode, srcNode);
+      ans.emplace_back(iNode);
+      mirStmt = mirBuilder.CreateStmtReturn(nullptr);
+    } else {
+      mirStmt = mirBuilder.CreateStmtReturn(srcNode);
+    }
+#else
     mirStmt = mirBuilder.CreateStmtReturn(srcNode);
+#endif
   }
   ans.emplace_back(mirStmt);
   return ans;
@@ -3630,7 +3642,7 @@ BaseNode *FEIRExprCStyleCast::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
   if (sub != nullptr && srcType != nullptr && destType != nullptr) {
     PrimType fromType = srcType->GetPrimType();
     PrimType toType = destType->GetPrimType();
-    if (fromType == toType || toType == PTY_void) {
+    if (fromType == toType || toType == PTY_void || destType->GetKind() == kTypeUnion) {
       return sub;
     }
     if (IsPrimitiveFloat(fromType) && IsPrimitiveInteger(toType)) {

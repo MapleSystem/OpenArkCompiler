@@ -130,14 +130,15 @@ void MeFunction::Prepare(unsigned long rangeNum) {
     LogInfo::MapleLogger() << "---Preparing Function  < " << CurFunction()->GetName() << " > [" << rangeNum
                            << "] ---\n";
   }
-  /* lower first */
+
   if (MeOption::optLevel >= 3) {
     MemPool* lfomp = memPoolCtrler.NewMemPool("lfo", true);
     SetLfoFunc(lfomp->New<LfoFunction>(lfomp, this));
     SetLfoMempool(lfomp);
     LFOMIRLower lfomirlowerer(mirModule, this);
     lfomirlowerer.LowerFunc(*CurFunction());
-  }  else {
+  } else {
+    /* lower first */
     MIRLower mirLowerer(mirModule, CurFunction());
     mirLowerer.Init();
     mirLowerer.SetLowerME();

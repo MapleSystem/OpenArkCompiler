@@ -617,9 +617,13 @@ void GraphColorRegAllocator::SetupLiveRangeByOp(Operand &op, Insn &insn, bool is
   }
 #ifdef MOVE_COALESCE
   if (insn.GetMachineOpcode() == MOP_xmovrr || insn.GetMachineOpcode() == MOP_wmovrr) {
-    RegOperand &opnd = static_cast<RegOperand&>(insn.GetOperand(1));
-    if (opnd.GetRegisterNumber() < kAllRegNum) {
-      lr->InsertElemToPrefs(opnd->GetRegisterNumber() - R0);
+    RegOperand &opnd1 = static_cast<RegOperand&>(insn.GetOperand(1));
+    if (opnd1.GetRegisterNumber() < kAllRegNum) {
+      lr->InsertElemToPrefs(opnd1.GetRegisterNumber() - R0);
+    }
+    RegOperand &opnd0 = static_cast<RegOperand&>(insn.GetOperand(0));
+    if (opnd0.GetRegisterNumber() < kAllRegNum) {
+      lr->InsertElemToPrefs(opnd0.GetRegisterNumber() - R0);
     }
   }
 #endif  /*  MOVE_COALESCE */
@@ -1142,7 +1146,11 @@ void GraphColorRegAllocator::Separate() {
     }
 #endif  /* OPTIMIZE_FOR_PROLOG */
     if (HaveAvailableColor(*lr, lr->GetNumBBConflicts() + lr->GetPregvetoSize() + lr->GetForbiddenSize())) {
-      unconstrained.emplace_back(lr);
+      if (lr->GetPrefs().size()) {
+        unconstrainedPref.emplace_back(lr);
+      } else {
+        unconstrained.emplace_back(lr);
+      }
     } else if (lr->IsMustAssigned()) {
       mustAssigned.emplace_back(lr);
     } else {
@@ -1151,6 +1159,9 @@ void GraphColorRegAllocator::Separate() {
   }
   if (GCRA_DUMP) {
     LogInfo::MapleLogger() << "Unconstrained : ";
+    for (auto lr : unconstrainedPref) {
+      LogInfo::MapleLogger() << lr->GetRegNO() << " ";
+    }
     for (auto lr : unconstrained) {
       LogInfo::MapleLogger() << lr->GetRegNO() << " ";
     }
@@ -2007,6 +2018,9 @@ void GraphColorRegAllocator::SplitAndColor() {
 
   /* handle constrained */
   SplitAndColorForEachLr(constrained, true);
+
+  /* assign color for unconstained */
+  SplitAndColorForEachLr(unconstrainedPref, false);
 
   /* assign color for unconstained */
   SplitAndColorForEachLr(unconstrained, false);

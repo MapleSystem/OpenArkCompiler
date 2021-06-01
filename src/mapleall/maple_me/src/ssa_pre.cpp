@@ -1325,7 +1325,7 @@ MeRealOcc *SSAPre::CreateRealOcc(MeStmt &meStmt, int seqStmt, MeExpr &meExpr, bo
   } else if (strengthReduction && meExpr.StrengthReducible() && meStmt.GetBB()->GetAttributes(kBBAttrIsInLoop)) {
     wkCand->isSRCand = true;
   }
-  workList.push_back(wkCand);
+  workList.push_front(wkCand);
   wkCand->AddRealOccAsLast(*newOcc, GetPUIdx());
   // add to bucket at workcandHashTable[hashIdx]
   wkCand->SetNext(*preWorkCandHashTable.GetWorkcandFromIndex(hashIdx));
@@ -1338,8 +1338,12 @@ void SSAPre::CreateMembarOcc(MeStmt &meStmt, int seqStmt) {
     return;
   }
   // go thru all workcands and insert a membar occurrence for each of them
-  for (size_t i = 0; i < workList.size() && i <= preLimit; i++) {
-    PreWorkCand *wkCand = workList[i];
+  uint32 cnt = 0;
+  for (PreWorkCand *wkCand : workList) {
+    ++cnt;
+    if (cnt > preLimit) {
+      break;
+    }
     if (preKind == kExprPre) {
       if (wkCand->GetTheMeExpr()->GetMeOp() != kMeOpIvar) {
         continue;
@@ -1357,8 +1361,12 @@ void SSAPre::CreateMembarOcc(MeStmt &meStmt, int seqStmt) {
 
 void SSAPre::CreateMembarOccAtCatch(BB &bb) {
   // go thru all workcands and insert a membar occurrence for each of them
-  for (size_t i = 0; i < workList.size() && i <= preLimit; i++) {
-    PreWorkCand *wkCand = workList[i];
+  uint32 cnt = 0;
+  for (PreWorkCand *wkCand : workList) {
+    ++cnt;
+    if (cnt > preLimit) {
+      break;
+    }
     MeRealOcc *newOcc = ssaPreMemPool->New<MeRealOcc>(nullptr, 0, wkCand->GetTheMeExpr());
     newOcc->SetOccType(kOccMembar);
     newOcc->SetBB(bb);
@@ -1587,8 +1595,7 @@ void SSAPre::DumpWorkListWrap() const {
 
 void SSAPre::DumpWorkList() const {
   mirModule->GetOut() << "======== in SSAPRE worklist==============\n";
-  for (size_t i = 0; i < workList.size(); i++) {
-    PreWorkCand *workListCand = workList[i];
+  for (PreWorkCand *workListCand : workList) {
     workListCand->Dump(*irMap);
   }
 }
@@ -1606,8 +1613,14 @@ void SSAPre::ApplySSAPRE() {
     mirModule->GetOut() << " worklist initial size " << workList.size() << '\n';
   }
   ConstructUseOccurMap();
-  for (size_t i = 0; i < workList.size() && i <= preLimit; i++) {
-    workCand = workList[i];
+  uint32 cnt = 0;
+  while (!workList.empty()) {
+    ++cnt;
+    if (cnt > preLimit) {
+      break;
+    }
+    workCand = workList.front();
+    workList.pop_front();
     if (workCand->GetRealOccs().empty()) {
       continue;
     }
@@ -1625,7 +1638,8 @@ void SSAPre::ApplySSAPRE() {
       }
     }
     if (GetSSAPreDebug()) {
-      mirModule->GetOut() << "||||||| SSAPRE candidate " << i << " at worklist index " << workCand->GetIndex() << ": ";
+      mirModule->GetOut() << "||||||| SSAPRE candidate " << cnt << " at worklist index "
+                          << workCand->GetIndex() << ": ";
       workCand->DumpCand(*irMap);
       mirModule->GetOut() << '\n';
     }
