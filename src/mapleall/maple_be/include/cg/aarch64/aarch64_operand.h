@@ -752,6 +752,10 @@ class AArch64MemOperand : public MemOperand {
     return addrMode == kAddrModeBOrX;
   }
 
+  void setExtend(ExtendInfo flag) {
+    extend = flag;
+  }
+
   bool SignedExtend() const {
     return IsExtendedRegisterMode() && ((extend & kSignExtend) != 0);
   }
