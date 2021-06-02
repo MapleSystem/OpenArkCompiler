@@ -257,6 +257,10 @@ class CG {
     return cgOption.InstrumentWithProfile();
   }
 
+  bool DoPatchLongBranch() const {
+    return cgOption.DoPatchLongBranch();
+  }
+
   bool GenYieldPoint() const {
     return cgOption.GenYieldPoint();
   }
