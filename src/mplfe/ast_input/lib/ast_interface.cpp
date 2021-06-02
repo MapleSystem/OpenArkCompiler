@@ -48,6 +48,10 @@ const AstASTContext *LibAstFile::GetAstContext() {
   return astContext;
 }
 
+AstASTContext *LibAstFile::GetNonConstAstContext() const {
+  return astContext;
+}
+
 AstUnitDecl *LibAstFile::GetAstUnitDecl() {
   return astUnitDecl;
 }
@@ -87,6 +91,30 @@ Pos LibAstFile::GetLOC(const clang::SourceLocation &srcLoc) const {
   const auto *fileEntry = fullLocation.getFileEntry();
   return std::make_pair(static_cast<uint32>(fileEntry == nullptr ? 0 : fullLocation.getFileEntry()->getUID()),
                         static_cast<uint32>(fullLocation.getSpellingLineNumber()));
+}
+
+uint32 LibAstFile::GetMaxAlign(const clang::Decl &decl) const {
+  uint32 align = 0;
+  const clang::Decl *canonicalDecl = decl.getCanonicalDecl();
+  if (canonicalDecl->getKind() == clang::Decl::Field) {
+    const clang::FieldDecl *fieldDecl = llvm::cast<clang::FieldDecl>(canonicalDecl);
+    clang::QualType qualTy = fieldDecl->getType().getCanonicalType();
+    align = RetrieveAggTypeAlign(qualTy.getTypePtr());
+  }
+  uint32 selfAlign = canonicalDecl->getMaxAlignment();
+  return align > selfAlign ? align : selfAlign;
+}
+
+uint32 LibAstFile::RetrieveAggTypeAlign(const clang::Type *ty) const {
+  if (ty->isRecordType()) {
+    const auto *recordType = llvm::cast<clang::RecordType>(ty);
+    clang::RecordDecl *recordDecl = recordType->getDecl();
+    return (recordDecl->getMaxAlignment()) >> 3;  // 8 bit = 2^3 bit = 1 byte
+  } else if (ty->isArrayType()) {
+    const clang::Type *elemType = ty->getArrayElementTypeNoTypeQual();
+    return RetrieveAggTypeAlign(elemType);
+  }
+  return 0;
 }
 
 void LibAstFile::GetCVRAttrs(uint32_t qualifiers, GenericAttrs &genAttrs) {

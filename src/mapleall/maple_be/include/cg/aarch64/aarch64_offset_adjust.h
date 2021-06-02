@@ -31,6 +31,7 @@ class AArch64FPLROffsetAdjustment : public FPLROffsetAdjustment {
 
  private:
   void AdjustmentOffsetForOpnd(Insn &insn, AArch64CGFunc &aarchCGFunc);
+  void AdjustmentOffsetForImmOpnd(Insn &insn, uint32 index, AArch64CGFunc &aarchCGFunc);
   void AdjustmentOffsetForFPLR();
 };
 } /* namespace maplebe */

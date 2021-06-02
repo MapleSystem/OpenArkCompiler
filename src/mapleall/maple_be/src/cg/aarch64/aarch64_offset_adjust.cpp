@@ -14,6 +14,7 @@
  */
 #include "aarch64_offset_adjust.h"
 #include "aarch64_cgfunc.h"
+#include "aarch64_cg.h"
 
 namespace maplebe {
 void AArch64FPLROffsetAdjustment::Run() {
@@ -50,21 +51,47 @@ void AArch64FPLROffsetAdjustment::AdjustmentOffsetForOpnd(Insn &insn, AArch64CGF
         ofstOpnd->SetVary(kAdjustVary);
       }
       if (ofstOpnd->GetVary() == kAdjustVary) {
-        if (aarchCGFunc.IsImmediateOffsetOutOfRange(memOpnd, memOpnd.GetSize())) {
+        bool condition = aarchCGFunc.IsOperandImmValid(insn.GetMachineOpcode(), &memOpnd, i);
+        if (!condition) {
           AArch64MemOperand &newMemOpnd = aarchCGFunc.SplitOffsetWithAddInstruction(
               memOpnd, memOpnd.GetSize(), static_cast<AArch64reg>(R17), false, &insn);
           insn.SetOperand(i, newMemOpnd);
         }
       }
     } else if (opnd.IsIntImmediate()) {
-      auto &immOpnd = static_cast<ImmOperand&>(opnd);
-      if (immOpnd.GetVary() == kUnAdjustVary) {
-        immOpnd.Add(static_cast<AArch64MemLayout*>(memLayout)->RealStackFrameSize() -
-                     memLayout->SizeOfArgsToStackPass());
-      }
-      immOpnd.SetVary(kAdjustVary);
+      AdjustmentOffsetForImmOpnd(insn, i, aarchCGFunc);
     }
   }
+}
+
+void AArch64FPLROffsetAdjustment::AdjustmentOffsetForImmOpnd(Insn &insn, uint32 index, AArch64CGFunc &aarchCGFunc) {
+  auto &immOpnd = static_cast<ImmOperand&>(insn.GetOperand(static_cast<int32>(index)));
+  MemLayout *memLayout = aarchCGFunc.GetMemlayout();
+  if (immOpnd.GetVary() == kUnAdjustVary) {
+    int64 ofst = static_cast<AArch64MemLayout*>(memLayout)->RealStackFrameSize() - memLayout->SizeOfArgsToStackPass();
+    immOpnd.Add(ofst);
+  }
+  if (!aarchCGFunc.IsOperandImmValid(insn.GetMachineOpcode(), &immOpnd, index)) {
+    if (insn.GetMachineOpcode() >= MOP_xaddrri24 && insn.GetMachineOpcode() <= MOP_waddrri12) {
+      PrimType destTy =
+          static_cast<RegOperand &>(insn.GetOperand(kInsnFirstOpnd)).GetSize() == k64BitSize ? PTY_i64 : PTY_i32;
+      RegOperand *resOpnd = aarchCGFunc.GetBaseRegForSplit(static_cast<AArch64reg>(R17));
+      AArch64ImmOperand &copyImmOpnd = aarchCGFunc.CreateImmOperand(
+          immOpnd.GetValue(), immOpnd.GetSize(), immOpnd.IsSignedValue());
+      aarchCGFunc.SelectAddAfterInsn(*resOpnd, insn.GetOperand(kInsnSecondOpnd), copyImmOpnd, destTy, false, insn);
+      insn.SetOperand(index, *resOpnd);
+      if (destTy == PTY_i64) {
+        insn.SetMOperator(MOP_xaddrrr);
+      } else {
+        insn.SetMOperator(MOP_waddrrr);
+      }
+    } else {
+      CHECK_FATAL(false, "NIY");
+    }
+  }
+  immOpnd.SetVary(kAdjustVary);
+  ASSERT(aarchCGFunc.IsOperandImmValid(insn.GetMachineOpcode(), &immOpnd, index),
+      "Invalid imm operand appears before offset adjusted");
 }
 
 void AArch64FPLROffsetAdjustment::AdjustmentOffsetForFPLR() {

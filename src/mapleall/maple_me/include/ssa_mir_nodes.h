@@ -62,6 +62,10 @@ class MayDefNode {
     LogInfo::MapleLogger() << ")\n";
   }
 
+  bool operator==(const MayDefNode &other) const {
+    return opnd == other.opnd && result == other.result && stmt == other.stmt;
+  }
+
   VersionSt *base = nullptr; // only provided if indirectLev is 1 and attached to iassign
  private:
   VersionSt *opnd;
@@ -87,6 +91,10 @@ class MayUseNode {
     LogInfo::MapleLogger() << " MAYU(";
     opnd->Dump();
     LogInfo::MapleLogger() << ")";
+  }
+
+  bool operator==(const MayUseNode &other) const {
+    return opnd == other.opnd;
   }
 
  private:
@@ -191,9 +199,24 @@ class AccessSSANodes {
     }
   }
 
-  virtual void InsertMayDefNode(VersionSt *vst, StmtNode *stmtNode) {
-    CHECK_FATAL(vst != nullptr, "null ptr check");
-    GetMayDefNodes().emplace_back(MayDefNode(vst, stmtNode));
+  inline void InsertMayDefNode(VersionSt *vst, StmtNode *stmtNode) {
+    ASSERT(vst != nullptr, "null ptr check");
+    auto &mayDefNodes = GetMayDefNodes();
+    MayDefNode mayDefNode(vst, stmtNode);
+    if (std::find(mayDefNodes.begin(), mayDefNodes.end(), mayDefNode) != mayDefNodes.end()) {
+      return;
+    }
+    mayDefNodes.emplace_back(mayDefNode);
+  }
+
+  inline void InsertMayUseNode(VersionSt *vst) {
+    ASSERT(vst != nullptr, "null ptr check");
+    auto &mayUseNodes = GetMayUseNodes();
+    MayUseNode mayUseNode(vst);
+    if (std::find(mayUseNodes.begin(), mayUseNodes.end(), mayUseNode) != mayUseNodes.end()) {
+      return;
+    }
+    mayUseNodes.emplace_back(mayUseNode);
   }
 
   virtual void InsertMustDefNode(VersionSt *sym, StmtNode *s) {

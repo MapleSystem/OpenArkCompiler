@@ -110,7 +110,7 @@ class MInline {
   void InitRCWhiteList();
   void ApplyInlineListInfo(const std::string &list, MapleMap<GStrIdx, MapleSet<GStrIdx>*> &listCallee);
   uint32 RenameSymbols(MIRFunction&, const MIRFunction&, uint32) const;
-  void ReplaceSymbols(BaseNode*, uint32, const std::unordered_map<uint32, uint32>&) const;
+  void ReplaceSymbols(BaseNode*, uint32, const std::vector<uint32>*) const;
   uint32 RenameLabels(MIRFunction&, const MIRFunction&, uint32) const;
   void ReplaceLabels(BaseNode&, uint32) const;
   uint32 RenamePregs(const MIRFunction&, const MIRFunction&, std::unordered_map<PregIdx, PregIdx>&) const;
@@ -126,6 +126,7 @@ class MInline {
     return false;
   }
 
+  void ConvertPStaticToFStatic(MIRFunction &func) const;
   bool CheckCalleeAndInline(MIRFunction*, BlockNode *enclosingBlk, CallNode*, MIRFunction*);
   void InlineCalls(const CGNode&);
   void InlineCallsBlock(MIRFunction&, BlockNode&, BaseNode&, bool&);

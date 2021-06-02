@@ -18,7 +18,6 @@
 #include "aarch64_cg.h"
 #include "mir_lower.h"
 #include "securec.h"
-
 /*
  * Based on concepts from Chow and Hennessey.
  * Phases are as follows:
@@ -618,9 +617,13 @@ void GraphColorRegAllocator::SetupLiveRangeByOp(Operand &op, Insn &insn, bool is
   }
 #ifdef MOVE_COALESCE
   if (insn.GetMachineOpcode() == MOP_xmovrr || insn.GetMachineOpcode() == MOP_wmovrr) {
-    RegOperand &opnd = static_cast<RegOperand&>(insn.GetOperand(1));
-    if (opnd.GetRegisterNumber() < kAllRegNum) {
-      lr->InsertElemToPrefs(opnd->GetRegisterNumber() - R0);
+    RegOperand &opnd1 = static_cast<RegOperand&>(insn.GetOperand(1));
+    if (opnd1.GetRegisterNumber() < kAllRegNum) {
+      lr->InsertElemToPrefs(opnd1.GetRegisterNumber() - R0);
+    }
+    RegOperand &opnd0 = static_cast<RegOperand&>(insn.GetOperand(0));
+    if (opnd0.GetRegisterNumber() < kAllRegNum) {
+      lr->InsertElemToPrefs(opnd0.GetRegisterNumber() - R0);
     }
   }
 #endif  /*  MOVE_COALESCE */
@@ -663,6 +666,9 @@ void GraphColorRegAllocator::ClassifyOperand(std::unordered_set<regno_t> &pregs,
   }
   auto &regOpnd = static_cast<const RegOperand&>(opnd);
   regno_t regNO = regOpnd.GetRegisterNumber();
+  if (IsUnconcernedReg(regNO)) {
+    return;
+  }
   if (regOpnd.IsPhysicalRegister()) {
     (void)pregs.insert(regNO);
   } else {
@@ -1140,7 +1146,11 @@ void GraphColorRegAllocator::Separate() {
     }
 #endif  /* OPTIMIZE_FOR_PROLOG */
     if (HaveAvailableColor(*lr, lr->GetNumBBConflicts() + lr->GetPregvetoSize() + lr->GetForbiddenSize())) {
-      unconstrained.emplace_back(lr);
+      if (lr->GetPrefs().size()) {
+        unconstrainedPref.emplace_back(lr);
+      } else {
+        unconstrained.emplace_back(lr);
+      }
     } else if (lr->IsMustAssigned()) {
       mustAssigned.emplace_back(lr);
     } else {
@@ -1149,6 +1159,9 @@ void GraphColorRegAllocator::Separate() {
   }
   if (GCRA_DUMP) {
     LogInfo::MapleLogger() << "Unconstrained : ";
+    for (auto lr : unconstrainedPref) {
+      LogInfo::MapleLogger() << lr->GetRegNO() << " ";
+    }
     for (auto lr : unconstrained) {
       LogInfo::MapleLogger() << lr->GetRegNO() << " ";
     }
@@ -2005,6 +2018,9 @@ void GraphColorRegAllocator::SplitAndColor() {
 
   /* handle constrained */
   SplitAndColorForEachLr(constrained, true);
+
+  /* assign color for unconstained */
+  SplitAndColorForEachLr(unconstrainedPref, false);
 
   /* assign color for unconstained */
   SplitAndColorForEachLr(unconstrained, false);
@@ -3295,16 +3311,15 @@ bool GraphColorRegAllocator::AllocateRegisters() {
   }
   ASSERT(cnt <= cgFunc->GetTotalNumberOfInstructions(), "Incorrect insn count");
 #endif
-
   cgFunc->SetIsAfterRegAlloc();
   /* EBO propgation extent the live range and might need to be turned off. */
   ComputeBlockOrder();
 
+  InitCCReg();
+
   ComputeLiveRanges();
 
   InitFreeRegPool();
-
-  InitCCReg();
 
   BuildInterferenceGraph();
 

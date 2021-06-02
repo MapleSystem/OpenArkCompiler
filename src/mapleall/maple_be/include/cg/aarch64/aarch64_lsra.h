@@ -438,8 +438,6 @@ class LSRALinearScanRegAllocator : public AArch64RegAllocator {
   void ComputeLiveOut(BB &bb, uint32 insnNum);
   void ComputeLiveIntervalForEachOperand(Insn &insn);
   void ComputeLiveInterval();
-  bool PropagateRenameReg(Insn &insn, uint32 replaceReg, Operand &renameOperand);
-  void PropagateX0();
   void FindLowestPrioInActive(LiveInterval *&li, RegType regType = kRegTyInt, bool startRa = false);
   void LiveIntervalAnalysis();
   bool OpndNeedAllocation(Insn &insn, Operand &opnd, bool isDef, uint32 insnNum);

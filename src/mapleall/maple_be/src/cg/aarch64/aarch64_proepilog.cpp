@@ -160,7 +160,7 @@ bool AArch64GenProEpilog::TailCallOpt() {
     exitBB = cgFunc.GetExitBBsVec().front();
   }
 
-  CHECK_FATAL(exitBB->GetFirstInsn() == nullptr, "exit bb should be empty.");
+  CHECK_FATAL(exitBB->GetFirstMachineInsn() == nullptr, "exit bb should be empty.");
 
   /* Count how many call insns in the whole function. */
   uint32 nCount = 0;
@@ -221,7 +221,7 @@ bool AArch64GenProEpilog::NeedProEpilog() {
   const MapleVector<AArch64reg> &regsToRestore = aarchCGFunc.GetCalleeSavedRegs();
   size_t calleeSavedRegSize = kTwoRegister;
   CHECK_FATAL(regsToRestore.size() >= calleeSavedRegSize, "Forgot FP and LR ?");
-  if (regsToRestore.size() > calleeSavedRegSize || aarchCGFunc.HasStackLoadStore() || HasLoop() ||
+  if (regsToRestore.size() > calleeSavedRegSize || aarchCGFunc.HasStackLoadStore() ||
       cgFunc.GetFunction().GetAttr(FUNCATTR_callersensitive)) {
     return true;
   }

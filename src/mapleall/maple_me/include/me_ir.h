@@ -1183,7 +1183,7 @@ class MeStmt {
     return nullptr;
   }
 
-  virtual MapleMap<OStIdx, VarMeExpr*> *GetMuList() {
+  virtual MapleMap<OStIdx, ScalarMeExpr*> *GetMuList() {
     return nullptr;
   }
 
@@ -1568,7 +1568,7 @@ class AssignMeStmt : public MeStmt {
   bool needIncref = false;  // to be determined by analyzerc phase
   bool needDecref = false;  // to be determined by analyzerc phase
  public:
-  bool isIncDecStmt = false;// has the form of an increment or decrement stmt
+  bool isIncDecStmt = false;  // has the form of an increment or decrement stmt
 };
 
 class DassignMeStmt : public AssignMeStmt {
@@ -1916,7 +1916,7 @@ class NaryMeStmt : public MeStmt {
 
   void DumpOpnds(const IRMap*) const;
   void Dump(const IRMap*) const;
-  virtual MapleMap<OStIdx, VarMeExpr*> *GetMuList() {
+  virtual MapleMap<OStIdx, ScalarMeExpr*> *GetMuList() {
     return nullptr;
   }
 
@@ -1942,7 +1942,7 @@ class MuChiMePart {
   virtual ~MuChiMePart() = default;
 
  protected:
-  MapleMap<OStIdx, VarMeExpr*> muList;
+  MapleMap<OStIdx, ScalarMeExpr*> muList;
   MapleMap<OStIdx, ChiMeNode*> chiList;
 };
 
@@ -2005,12 +2005,14 @@ class CallMeStmt : public NaryMeStmt, public MuChiMePart, public AssignedPart {
     puIdx = idx;
   }
 
+  TyIdx GetTyIdx() const { return tyIdx; }
+
   uint32 GetStmtID() const {
     return stmtID;
   }
 
   void Dump(const IRMap*) const;
-  MapleMap<OStIdx, VarMeExpr*> *GetMuList() {
+  MapleMap<OStIdx, ScalarMeExpr*> *GetMuList() {
     return &muList;
   }
 
@@ -2117,7 +2119,7 @@ class IcallMeStmt : public NaryMeStmt, public MuChiMePart, public AssignedPart {
   virtual ~IcallMeStmt() = default;
 
   void Dump(const IRMap*) const;
-  MapleMap<OStIdx, VarMeExpr*> *GetMuList() {
+  MapleMap<OStIdx, ScalarMeExpr*> *GetMuList() {
     return &muList;
   }
 
@@ -2222,7 +2224,7 @@ class IntrinsiccallMeStmt : public NaryMeStmt, public MuChiMePart, public Assign
   virtual ~IntrinsiccallMeStmt() = default;
 
   void Dump(const IRMap*) const;
-  MapleMap<OStIdx, VarMeExpr*> *GetMuList() {
+  MapleMap<OStIdx, ScalarMeExpr*> *GetMuList() {
     return &muList;
   }
 
@@ -2318,12 +2320,12 @@ class RetMeStmt : public NaryMeStmt {
   ~RetMeStmt() = default;
 
   void Dump(const IRMap*) const;
-  MapleMap<OStIdx, VarMeExpr*> *GetMuList() {
+  MapleMap<OStIdx, ScalarMeExpr*> *GetMuList() {
     return &muList;
   }
 
  private:
-  MapleMap<OStIdx, VarMeExpr*> muList;
+  MapleMap<OStIdx, ScalarMeExpr*> muList;
 };
 
 // eval, free, decref, incref, decrefreset, assertnonnull, igoto
@@ -2462,9 +2464,23 @@ class CatchMeStmt : public MeStmt {
   ~CatchMeStmt() = default;
 
   StmtNode &EmitStmt(SSATab &ssaTab);
-
+  const MapleVector<TyIdx> &GetExceptionTyIdxVec() const {
+    return exceptionTyIdxVec;
+  }
  private:
   MapleVector<TyIdx> exceptionTyIdxVec;
+};
+
+class CppCatchMeStmt : public MeStmt {
+ public:
+  TyIdx exceptionTyIdx;
+
+  CppCatchMeStmt(MapleAllocator *alloc, StmtNode *stt) : MeStmt(stt) {
+    (void)alloc;
+  }
+
+  ~CppCatchMeStmt() = default;
+  StmtNode &EmitStmt(SSATab &ssaTab);
 };
 
 class SwitchMeStmt : public UnaryMeStmt {
@@ -2511,7 +2527,7 @@ class CommentMeStmt : public MeStmt {
   ~CommentMeStmt() = default;
 
   StmtNode &EmitStmt(SSATab &ssaTab);
-
+  MapleString& GetComment() { return comment; }
  private:
   MapleString comment;
 };
@@ -2523,16 +2539,16 @@ class WithMuMeStmt : public MeStmt {
 
   virtual ~WithMuMeStmt() = default;
 
-  MapleMap<OStIdx, VarMeExpr*> *GetMuList() {
+  MapleMap<OStIdx, ScalarMeExpr*> *GetMuList() {
     return &muList;
   }
 
-  const MapleMap<OStIdx, VarMeExpr*> *GetMuList() const {
+  const MapleMap<OStIdx, ScalarMeExpr*> *GetMuList() const {
     return &muList;
   }
 
  private:
-  MapleMap<OStIdx, VarMeExpr*> muList;
+  MapleMap<OStIdx, ScalarMeExpr*> muList;
 };
 
 class GosubMeStmt : public WithMuMeStmt {
@@ -2589,7 +2605,7 @@ class SyncMeStmt : public NaryMeStmt, public MuChiMePart {
   ~SyncMeStmt() = default;
 
   void Dump(const IRMap*) const;
-  MapleMap<OStIdx, VarMeExpr*> *GetMuList() {
+  MapleMap<OStIdx, ScalarMeExpr*> *GetMuList() {
     return &muList;
   }
 
@@ -2663,7 +2679,7 @@ class AssertMeStmt : public MeStmt {
 };
 
 MapleMap<OStIdx, ChiMeNode*> *GenericGetChiListFromVarMeExpr(ScalarMeExpr &expr);
-void DumpMuList(const IRMap *irMap, const MapleMap<OStIdx, VarMeExpr*> &muList);
+void DumpMuList(const IRMap *irMap, const MapleMap<OStIdx, ScalarMeExpr*> &muList);
 void DumpChiList(const IRMap *irMap, const MapleMap<OStIdx, ChiMeNode*> &chiList);
 class DumpOptions {
  public:

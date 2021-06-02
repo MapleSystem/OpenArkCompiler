@@ -26,6 +26,7 @@
 #include "func_emit.h"
 #include "me_ir.h"
 #include "profile.h"
+#include "lfo_function.h"
 
 namespace maple {
 class MeCFG;  // circular dependency exists, no other choice
@@ -156,10 +157,13 @@ class MeFunction : public FuncEmit {
         mirModule(*mod),
         mirFunc(func),
         laidOutBBVec(alloc.Adapter()),
-        fileName(fileName, memPool) {}
+        fileName(fileName, memPool),
+        lfoFunc(nullptr),
+        lfoMp(nullptr) {
+          isLfo = (MeOption::optLevel == 3);
+        }
 
   ~MeFunction() override = default;
-
   void DumpFunction() const;
   void DumpFunctionNoSSA() const;
   void DumpMayDUFunction() const;
@@ -311,6 +315,12 @@ class MeFunction : public FuncEmit {
   MIRFunction *CurFunction() const {
     return mirModule.CurFunction();
   }
+  void SetLfoFunc(LfoFunction *lfoF) { lfoFunc = lfoF; }
+  LfoFunction *GetLfoFunc() { return lfoFunc; }
+  void SetLfoMempool(MemPool *mp) { lfoMp = mp; }
+  MemPool *GetLfoMempool() { return lfoMp; }
+  bool IsLfo() const { return isLfo; }
+  void SetLfo(bool islfo) { isLfo = islfo; }
  private:
   MemPool *memPool;
   StackMemPool &stackMP;
@@ -332,6 +342,10 @@ class MeFunction : public FuncEmit {
   bool profValid = false;
   IRProfileDesc *profileDesc = nullptr;
   uint32 frequency = 0;
+  // lfo
+  bool isLfo;
+  LfoFunction *lfoFunc;
+  MemPool *lfoMp; // used for lfo function
 };
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_ME_FUNCTION_H

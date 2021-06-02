@@ -138,11 +138,16 @@ void IRMapBuild::BuildPhiMeNode(BB &bb) {
   }
 }
 
-void IRMapBuild::BuildMuList(TypeOfMayUseList &mayUseList, MapleMap<OStIdx, VarMeExpr*> &muList) {
+void IRMapBuild::BuildMuList(TypeOfMayUseList &mayUseList, MapleMap<OStIdx, ScalarMeExpr*> &muList) {
   for (auto &mayUseNode : mayUseList) {
     VersionSt *vst = mayUseNode.GetOpnd();
-    VarMeExpr *varMeExpr = GetOrCreateVarFromVerSt(*vst);
-    (void)muList.insert(std::make_pair(varMeExpr->GetOstIdx(), varMeExpr));
+    ScalarMeExpr *muExpr = nullptr;
+    if (vst->GetOst()->IsPregOst()) {
+      muExpr = GetOrCreateRegFromVerSt(*vst);
+    } else {
+      muExpr = GetOrCreateVarFromVerSt(*vst);
+    }
+    (void)muList.insert(std::make_pair(muExpr->GetOstIdx(), muExpr));
   }
 }
 
@@ -394,6 +399,13 @@ MeExpr *IRMapBuild::BuildExpr(BaseNode &mirNode, bool atParm, bool noProp) {
       }
     }
     return retmeexpr;
+  }
+
+  if (op == OP_cvt) {
+    auto *simplifiedMeExpr = irMap->SimplifyOpMeExpr(static_cast<OpMeExpr*>(meExpr));
+    if (simplifiedMeExpr != nullptr) {
+      return simplifiedMeExpr;
+    }
   }
 
   MeExpr *retMeExpr = irMap->HashMeExpr(*meExpr);

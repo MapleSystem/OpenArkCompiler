@@ -90,6 +90,14 @@ UniqueFEIRVar FEIRBuilder::CreateVarNameForC(const std::string &name, MIRType &m
   return CreateVarNameForC(nameIdx, mirType, isGlobal, withType);
 }
 
+UniqueFEIRVar FEIRBuilder::CreateVarNameForC(const std::string &name, UniqueFEIRType type,
+                                             bool isGlobal, bool withType) {
+  GStrIdx nameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(name);
+  UniqueFEIRVar var = std::make_unique<FEIRVarName>(nameIdx, std::move(type), withType);
+  var->SetGlobal(isGlobal);
+  return var;
+}
+
 UniqueFEIRExpr FEIRBuilder::CreateExprSizeOfType(UniqueFEIRType ty) {
   UniqueFEIRExpr expr = std::make_unique<FEIRExprSizeOfType>(std::move(ty));
   return expr;
@@ -104,7 +112,7 @@ UniqueFEIRExpr FEIRBuilder::CreateExprDRead(UniqueFEIRVar srcVar) {
 UniqueFEIRExpr FEIRBuilder::CreateExprDReadAggField(UniqueFEIRVar srcVar, FieldID fieldID, UniqueFEIRType fieldType) {
   CHECK_FATAL(srcVar != nullptr && srcVar->GetType()->GetPrimType() == PTY_agg,
               "var type must be struct type, %u", srcVar->GetType()->GetPrimType());
-  std::unique_ptr<FEIRExprDRead> expr = std::make_unique<FEIRExprDRead>(std::move(srcVar));
+  UniqueFEIRExpr expr = std::make_unique<FEIRExprDRead>(std::move(srcVar));
   expr->SetFieldID(fieldID);
   expr->SetFieldType(std::move(fieldType));
   return expr;
@@ -117,8 +125,8 @@ UniqueFEIRExpr FEIRBuilder::CreateExprIRead(UniqueFEIRType returnType, UniqueFEI
   return feirExpr;
 }
 
-UniqueFEIRExpr FEIRBuilder::CreateExprAddrof(const std::vector<uint32> &array) {
-  UniqueFEIRExpr expr = std::make_unique<FEIRExprAddrof>(array);
+UniqueFEIRExpr FEIRBuilder::CreateExprAddrofLabel(const std::string &lbName, UniqueFEIRType exprTy) {
+  UniqueFEIRExpr expr = std::make_unique<FEIRExprAddrOfLabel>(lbName, std::move(exprTy));
   CHECK_NULL_FATAL(expr);
   return expr;
 }
@@ -190,8 +198,9 @@ UniqueFEIRExpr FEIRBuilder::CreateExprConstF64(double val) {
 
 // Create a const expr of specified prime type with fixed value.
 // Note that loss of precision, byte value is only supported.
-UniqueFEIRExpr FEIRBuilder::CreateExprConstAnyScalar(PrimType primType, int8 val) {
+UniqueFEIRExpr FEIRBuilder::CreateExprConstAnyScalar(PrimType primType, int64 val) {
   switch (primType) {
+    case PTY_u1:
     case PTY_u8:
     case PTY_u16:
     case PTY_u32:
@@ -200,7 +209,7 @@ UniqueFEIRExpr FEIRBuilder::CreateExprConstAnyScalar(PrimType primType, int8 val
     case PTY_i16:
     case PTY_i32:
     case PTY_i64:
-      return std::make_unique<FEIRExprConst>(static_cast<int64>(val), primType);
+      return std::make_unique<FEIRExprConst>(val, primType);
     case PTY_f128:
       // Not Implemented
       CHECK_FATAL(false, "Not Implemented");
@@ -361,6 +370,13 @@ UniqueFEIRStmt FEIRBuilder::CreateStmtDAssignAggField(UniqueFEIRVar dstVar, Uniq
   return stmt;
 }
 
+UniqueFEIRStmt FEIRBuilder::CreateStmtIAssign(UniqueFEIRType dstType, UniqueFEIRExpr dstExpr,
+                                              UniqueFEIRExpr srcExpr, FieldID fieldID /* optional parameters */) {
+  UniqueFEIRStmt stmt = std::make_unique<FEIRStmtIAssign>(
+      std::move(dstType), std::move(dstExpr), std::move(srcExpr), fieldID);
+  return stmt;
+}
+
 UniqueFEIRStmt FEIRBuilder::CreateStmtGoto(uint32 targetLabelIdx) {
   UniqueFEIRStmt stmt = std::make_unique<FEIRStmtGoto>(targetLabelIdx);
   CHECK_NULL_FATAL(stmt);
@@ -369,6 +385,12 @@ UniqueFEIRStmt FEIRBuilder::CreateStmtGoto(uint32 targetLabelIdx) {
 
 UniqueFEIRStmt FEIRBuilder::CreateStmtGoto(const std::string &labelName) {
   UniqueFEIRStmt stmt = std::make_unique<FEIRStmtGotoForC>(labelName);
+  CHECK_NULL_FATAL(stmt);
+  return stmt;
+}
+
+UniqueFEIRStmt FEIRBuilder::CreateStmtIGoto(UniqueFEIRExpr targetExpr) {
+  UniqueFEIRStmt stmt = std::make_unique<FEIRStmtIGoto>(std::move(targetExpr));
   CHECK_NULL_FATAL(stmt);
   return stmt;
 }
@@ -580,6 +602,30 @@ UniqueFEIRStmt FEIRBuilder::CreateStmtRetype(UniqueFEIRVar varDst, const UniqueF
 
 UniqueFEIRStmt FEIRBuilder::CreateStmtComment(const std::string &comment) {
   UniqueFEIRStmt stmt = std::make_unique<FEIRStmtPesudoComment>(comment);
+  return stmt;
+}
+
+UniqueFEIRExpr FEIRBuilder::ReadExprField(UniqueFEIRExpr expr, FieldID fieldID, UniqueFEIRType fieldType) {
+  FieldID baseID = expr->GetFieldID();
+  expr->SetFieldID(baseID + fieldID);
+  expr->SetFieldType(std::move(fieldType));
+  return expr;
+}
+
+UniqueFEIRStmt FEIRBuilder::AssginStmtField(UniqueFEIRExpr addrExpr, UniqueFEIRExpr srcExpr, FieldID fieldID) {
+  UniqueFEIRStmt stmt;
+  FieldID baseID = addrExpr->GetFieldID();
+  UniqueFEIRType addrType = addrExpr->GetType()->Clone();
+  if (addrExpr->GetKind() == kExprDRead) {
+    stmt = CreateStmtDAssignAggField(
+        static_cast<FEIRExprDRead*>(addrExpr.get())->GetVar()->Clone(), std::move(srcExpr), baseID + fieldID);
+  } else if (addrExpr->GetKind() == kExprIRead) {
+    auto ireadExpr = static_cast<FEIRExprIRead*>(addrExpr.get());
+    stmt = CreateStmtIAssign(ireadExpr->GetClonedPtrType(), ireadExpr->GetClonedOpnd(),
+        std::move(srcExpr), baseID + fieldID);
+  } else {
+    CHECK_FATAL(false, "unsupported expr in AssginStmtField");
+  }
   return stmt;
 }
 }  // namespace maple

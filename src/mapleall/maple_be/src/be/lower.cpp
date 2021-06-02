@@ -1303,9 +1303,6 @@ bool CGLowerer::LowerStructReturn(BlockNode &newBlk, StmtNode *stmt, StmtNode *n
                           regassign u64 %1 (regread u64 %%retval0)
                           regassign ptr %2 (addrof ptr $s)
                           iassign <* u64> 0 (regread ptr %2, regread u64 %1) */
-                if (CGOptions::GetInstance().GetOptimizeLevel() == CGOptions::kLevel0) {
-                  return false;
-                }
                 MIRSymbol *symbol = mirModule.CurFunction()->GetLocalOrGlobalSymbol(dnode_stmt->GetStIdx());
                 MIRStructType *structType = static_cast<MIRStructType*>(symbol->GetType());
                 uint32 size = structType->GetSize();

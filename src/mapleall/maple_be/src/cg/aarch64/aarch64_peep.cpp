@@ -2039,7 +2039,7 @@ void ComplexMemOperandAArch64::Run(BB &bb, Insn &insn) {
         aarch64CGFunc->GetOrCreateMemOpnd(AArch64MemOperand::kAddrModeLo12Li, memOpnd->GetSize(),
                                           &newBaseOpnd, nullptr, &offOpnd, stImmOpnd.GetSymbol());
 
-    nextInsn->SetMemOpnd(static_cast<MemOperand *>(&newMemOpnd));
+    nextInsn->SetMemOpnd(static_cast<MemOperand*>(&newMemOpnd));
     bb.RemoveInsn(insn);
     CHECK_FATAL(!CGOptions::IsLazyBinding() || cgFunc.GetCG()->IsLibcore(),
         "this pattern can't be found in this phase");

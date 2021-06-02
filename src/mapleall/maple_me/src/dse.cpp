@@ -96,10 +96,27 @@ bool DSE::HasNonDeletableExpr(const StmtNode &stmt) const {
     case OP_dassign: {
       auto &node = static_cast<const DassignNode&>(stmt);
       const MIRSymbol &sym = ssaTab.GetStmtMIRSymbol(stmt);
+      bool isInjectIV = (strncmp(sym.GetName().c_str(), "injected.iv", 11) == 0);
+      if (!isInjectIV) {
+        // check identify assignments
+        if (node.Opnd()->GetOpCode() == OP_dread) {
+          AddrofNode *dread = static_cast<AddrofNode *>(node.Opnd());
+          if (node.GetStIdx() == dread->GetStIdx() && node.GetFieldID() == dread->GetFieldID()) {
+            isInjectIV = true;
+          }
+        }
+      }
       return (sym.IsVolatile() || sym.IsTypeVolatile(node.GetFieldID()) ||
-              ExprNonDeletable(ToRef(node.GetRHS())));
+              ExprNonDeletable(ToRef(node.GetRHS())) || isInjectIV);
     }
     case OP_regassign: {
+      auto &rass = static_cast<const RegassignNode&>(stmt);
+      if (rass.Opnd()->GetOpCode() == OP_regread) {
+        RegreadNode *regread = static_cast<RegreadNode *>(rass.Opnd());
+        if (rass.GetRegIdx() == regread->GetRegIdx()) {
+          return true;
+        }
+      }
       return ExprNonDeletable(ToRef(stmt.Opnd(0)));
     }
     // possible to throw exception

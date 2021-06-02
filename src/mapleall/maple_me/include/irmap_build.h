@@ -45,7 +45,7 @@ class IRMapBuild {
   MeExpr *BuildLHSReg(const VersionSt &vst, AssignMeStmt &defMeStmt, const RegassignNode &regassign);
   void BuildChiList(MeStmt&, TypeOfMayDefList&, MapleMap<OStIdx, ChiMeNode*>&);
   void BuildMustDefList(MeStmt &meStmt, TypeOfMustDefList&, MapleVector<MustDefMeNode>&);
-  void BuildMuList(TypeOfMayUseList&, MapleMap<OStIdx, VarMeExpr*>&);
+  void BuildMuList(TypeOfMayUseList&, MapleMap<OStIdx, ScalarMeExpr*>&);
   void BuildPhiMeNode(BB&);
   void SetMeExprOpnds(MeExpr &meExpr, BaseNode &mirNode, bool atparm, bool noProp);
 

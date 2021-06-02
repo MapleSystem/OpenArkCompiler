@@ -19,6 +19,7 @@
 #include <array>
 
 namespace maplebe {
+bool IsBitSizeImmediate(maple::uint64 val, maple::uint32 bitLen, maple::uint32 nLowerZeroBits);
 bool IsBitmaskImmediate(maple::uint64 val, maple::uint32 bitLen);
 bool IsMoveWidableImmediate(maple::uint64 val, maple::uint32 bitLen);
 bool BetterUseMOVZ(maple::uint64 val);

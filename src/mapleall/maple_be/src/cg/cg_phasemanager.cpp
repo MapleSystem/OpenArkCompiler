@@ -37,6 +37,7 @@
 #include "label_creation.h"
 #include "offset_adjust.h"
 #include "proepilog.h"
+#include "ra_opt.h"
 
 namespace maplebe {
 #define JAVALANG (module.IsJavaModule())
@@ -132,6 +133,9 @@ void CgFuncPhaseManager::AddPhases(std::vector<std::string> &phases) {
       }
       if (CGOptions::DoPreSchedule()) {
         ADDPHASE("prescheduling");
+      }
+      if (CGOptions::DoPreLSRAOpt()) {
+        ADDPHASE("raopt");
       }
 
       ADDPHASE("regalloc");

@@ -222,6 +222,7 @@ class BB {
   void SetFirstMe(MeStmt *stmt);
   void SetLastMe(MeStmt *stmt);
   MeStmt *GetLastMe();
+  MeStmt *GetFirstMe();
   bool IsPredBB(const BB &bb) const {
     // if this is a pred of bb return true;
     // otherwise return false;

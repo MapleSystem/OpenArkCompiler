@@ -142,12 +142,12 @@ MeExpr *MeSSAUpdate::RenameExpr(MeExpr &meExpr, bool &changed) {
 
 void MeSSAUpdate::RenameStmts(BB &bb) {
   for (auto &stmt : bb.GetMeStmts()) {
-    MapleMap<OStIdx, VarMeExpr*> *muList = stmt.GetMuList();
+    auto *muList = stmt.GetMuList();
     if (muList != nullptr) {
       for (auto &mu : *muList) {
         auto it = renameStacks.find(mu.first);
         if (it != renameStacks.end()) {
-          mu.second = static_cast<VarMeExpr*>(it->second->top());
+          mu.second = it->second->top();
         }
       }
     }

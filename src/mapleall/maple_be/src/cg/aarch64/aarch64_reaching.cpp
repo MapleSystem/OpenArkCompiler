@@ -872,6 +872,10 @@ void AArch64ReachingDefinition::InitInfoForMemOperand(Insn &insn, Operand &opnd,
     return;
   }
   if ((mode & kRDMemAnalysis) && IsFrameReg(*base)) {
+    if (index != nullptr) {
+      SetAnalysisMode(kRDRegAnalysis);
+      return;
+    }
     CHECK_FATAL(index == nullptr, "Existing [x29 + index] Memory Address");
     ASSERT(memOpnd.GetOffsetImmediate(), "offset must be a immediate value");
     int32 offsetVal = memOpnd.GetOffsetImmediate()->GetOffsetValue();

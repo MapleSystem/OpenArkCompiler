@@ -120,10 +120,7 @@ RegMeExpr *IRMap::CreateRegMeExpr(MIRType &mirType) {
     return CreateRegMeExpr(mirType.GetPrimType());
   }
   if (mirType.GetPrimType() == PTY_ptr) {
-    MIRType *pointedType = static_cast<MIRPtrType &>(mirType).GetPointedType();
-    if (pointedType == nullptr || pointedType->GetKind() != kTypeFunction) {
-      return CreateRegMeExpr(mirType.GetPrimType());
-    }
+    return CreateRegMeExpr(mirType.GetPrimType());
   }
   MIRFunction *mirFunc = mirModule.CurFunction();
   PregIdx regIdx = mirFunc->GetPregTab()->CreatePreg(PTY_ref, &mirType);
@@ -581,11 +578,27 @@ MeExpr *IRMap::SimplifyOpMeExpr(OpMeExpr *opmeexpr) {
         ConstantFold cf(mirModule);
         MIRConst *tocvt =
           cf.FoldTypeCvtMIRConst(*static_cast<ConstMeExpr *>(opnd0)->GetConstVal(),
-                                 opnd0->GetPrimType(), cvtmeexpr->GetPrimType());
+                                 cvtmeexpr->GetOpndType(), cvtmeexpr->GetPrimType());
         if (tocvt) {
           return CreateConstMeExpr(cvtmeexpr->GetPrimType(), *tocvt);
         }
       }
+      // If typeA, typeB, and typeC{fieldId} are integer, and sizeof(typeA) == sizeof(typeB).
+      // Simplfy expr: cvt typeA typeB (iread typeB <* typeC> fieldId address)
+      // to: iread typeA <* typeC> fieldId address
+      if (opnd0->GetMeOp() == kMeOpIvar && cvtmeexpr->GetOpndType() == opnd0->GetPrimType() &&
+          IsPrimitiveInteger(opnd0->GetPrimType()) && IsPrimitiveInteger(cvtmeexpr->GetPrimType()) &&
+          GetPrimTypeSize(opnd0->GetPrimType()) == GetPrimTypeSize(cvtmeexpr->GetPrimType())) {
+        IvarMeExpr *ivar = static_cast<IvarMeExpr*>(opnd0);
+        auto resultPrimType = ivar->GetType()->GetPrimType();
+        if (IsPrimitiveInteger(resultPrimType)) {
+          IvarMeExpr newIvar(kInvalidExprID, *ivar);
+          newIvar.SetPtyp(cvtmeexpr->GetPrimType());
+          return HashMeExpr(newIvar);
+        }
+        return nullptr;
+      }
+
       if (opnd0->GetOp() == OP_cvt) {
         OpMeExpr *cvtopnd0 = static_cast<OpMeExpr *>(opnd0);
         // cvtopnd0 should have tha same type as cvtopnd0->GetOpnd(0) or cvtmeexpr,
@@ -601,7 +614,11 @@ MeExpr *IRMap::SimplifyOpMeExpr(OpMeExpr *opmeexpr) {
             if (cvtmeexpr->GetPrimType() == cvtopnd0->GetOpndType()) {
               return cvtopnd0->GetOpnd(0);
             } else {
-              return CreateMeExprTypeCvt(cvtmeexpr->GetPrimType(), cvtopnd0->GetOpndType(), *cvtopnd0->GetOpnd(0));
+              if (maple::IsUnsignedInteger(cvtopnd0->GetOpndType()) ||
+                  maple::GetPrimTypeSize(cvtopnd0->GetPrimType()) >= maple::GetPrimTypeSize(cvtmeexpr->GetPrimType())) {
+                return CreateMeExprTypeCvt(cvtmeexpr->GetPrimType(), cvtopnd0->GetOpndType(), *cvtopnd0->GetOpnd(0));
+              }
+              return nullptr;
             }
           }
         }

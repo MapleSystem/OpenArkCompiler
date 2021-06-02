@@ -242,10 +242,43 @@ class AArch64OpndProp : public OpndProp {
     return static_cast<uint32>(size);
   }
 
+  void SetContainImm() {
+    isContainImm = true;
+  }
+
+  bool IsContainImm() const {
+    return isContainImm;
+  }
+
+ protected:
+  bool isContainImm = false;
+
  private:
   Operand::OperandType opndType;
   RegProp regProp;
   uint8 size;
+};
+
+/*
+ * Operand which might include immediate value.
+ * function ptr returns whether a immediate is legal in specific target
+ */
+class AArch64ImmOpndProp : public AArch64OpndProp {
+ public:
+  AArch64ImmOpndProp(Operand::OperandType t, RegProp p, uint8 s, const std::function<bool(int64)> f)
+      : AArch64OpndProp(t, p, s),
+        validFunc(f) {
+    SetContainImm();
+  }
+  virtual ~AArch64ImmOpndProp() = default;
+
+  bool IsValidImmOpnd(int64 value) const {
+    CHECK_FATAL(validFunc, " Have not set valid function yet in AArch64ImmOpndProp");
+    return validFunc(value);
+  }
+
+ private:
+  std::function<bool(int64)> validFunc;
 };
 
 struct AArch64MD {
