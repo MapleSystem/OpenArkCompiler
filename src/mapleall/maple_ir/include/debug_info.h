@@ -1,5 +1,5 @@
 /*
- * Copyright (C) [2021] Futurewei Technologies, Inc. All rights reverved.
+ * Copyright (C) [2020-2021] Futurewei Technologies, Inc. All rights reverved.
  *
  * OpenArkCompiler is licensed under the Mulan Permissive Software License v2.
  * You can use this software according to the terms and conditions of the MulanPSL - 2.0.
@@ -184,8 +184,16 @@ class DBGExprLoc {
     simpLoc->AddOpnd(val);
   }
 
+  DBGExpr *GetSimpLoc() const {
+    return simpLoc;
+  }
+
   void *GetSymLoc() {
     return symLoc;
+  }
+
+  void SetSymLoc(void *loc) {
+    symLoc = loc;
   }
 
   void Dump();
@@ -487,6 +495,10 @@ class DBGAbbrevEntry {
     withChildren = val;
   }
 
+  MapleVector<uint32> &GetAttrPairs() {
+    return attrPairs;
+  }
+
  private:
   DwTag tag;
   uint32 abbrevId;
@@ -575,6 +587,10 @@ class DebugInfo {
     return idDieMap[id];
   }
 
+  DBGDie *GetDummyTypeDie() {
+    return dummyTypeDie;
+  }
+
   DBGDie *GetDie(const MIRFunction *func);
 
   void Init();
@@ -643,6 +659,22 @@ class DebugInfo {
 
   void AddStrps(uint32 val) {
     strps.insert(val);
+  }
+
+  MapleSet<uint32> &GetStrps() {
+    return strps;
+  }
+
+  uint32 GetDebugInfoLength() const {
+    return debugInfoLength;
+  }
+
+  MapleVector<DBGAbbrevEntry *> &GetAbbrevVec() {
+    return abbrevVec;
+  }
+
+  DBGDie * GetCompUnit() const {
+    return compUnit;
   }
 
   void SetTyidxDieIdMap(TyIdx tyIdx, const DBGDie *die) {

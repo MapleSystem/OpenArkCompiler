@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -15,6 +15,7 @@
 #include "label_creation.h"
 #include "cgfunc.h"
 #include "cg.h"
+#include "debug_info.h"
 
 namespace maplebe {
 using namespace maple;
@@ -36,6 +37,18 @@ void LabelCreation::CreateStartEndLabel() {
   cgFunc->SetEndLabel(*endLabel);
   cgFunc->GetFunction().GetBody()->InsertLast(endLabel);
   ASSERT(cgFunc->GetFunction().GetBody()->GetLast() == endLabel, "last stmt must be a endLabel");
+  MIRFunction *func = &cgFunc->GetFunction();
+  CG *cg = cgFunc->GetCG();
+  if (CGOptions::IsWithDwarf()) {
+    DebugInfo *di = cg->GetMIRModule()->GetDbgInfo();
+    DBGDie *fdie = di->GetDie(func);
+    fdie->SetAttr(DW_AT_low_pc, startLblIdx);
+    fdie->SetAttr(DW_AT_high_pc, endLblIdx);
+  }
+  /* add start/end labels into the static map table in class cg */
+  if (!cg->IsInFuncWrapLabels(func)) {
+    cg->SetFuncWrapLabels(func, std::make_pair(startLblIdx, endLblIdx));
+  }
 }
 
 AnalysisResult *CgDoCreateLabel::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {

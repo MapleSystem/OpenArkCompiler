@@ -495,6 +495,11 @@ class StringTable {
     return *stringTable[strIdx];
   }
 
+  const T &GetStringFromStrIdx(uint32 idx) const {
+    ASSERT(idx < stringTable.size(), "array index out of range");
+    return *stringTable[idx];
+  }
+
  private:
   std::vector<const T*> stringTable;  // index is uint32
   std::unordered_map<const T*, U, StrPtrHash, StrPtrEqual> stringTableMap;
