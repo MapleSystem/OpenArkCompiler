@@ -198,7 +198,7 @@ void SSAPre::UpdateInsertedPhiOccOpnd() {
 }
 
 void SSAPre::CodeMotion() {
-  std::set<MeStmt *> needRepairInjuringDefs; // for marking injuring defs that have been repaired
+  std::set<MeStmt *> needRepairInjuringDefs; // for marking injuring defs that need repair
 
   if (workCand->isSRCand) {  // pre-pass needed by strength reduction
     for (MeOccur *occ : allOccs) {
@@ -956,9 +956,6 @@ void SSAPre::Rename2() {
           OpMeExpr opmeexpr(*static_cast<OpMeExpr *>(exprY), -1);
           for (uint32 ii = 0; ii < varVecY.size(); ii++) {
             MeExpr *resolvedY = ResolveAllInjuringDefs(varVecY[ii]);
-            if (resolvedY != varVecY[ii]) {
-              SubstituteOpnd(&opmeexpr, varVecY[ii], resolvedY);
-            }
             if (!DefVarDominateOcc(resolvedY, *defX)) {
               alldom = false;
             }
@@ -1014,11 +1011,7 @@ void SSAPre::SetVarPhis(MeExpr *meExpr) {
 
   ScalarMeExpr *scalar = static_cast<ScalarMeExpr*>(meExpr);
   if (workCand->isSRCand) {
-    if (scalar->GetMeOp() == kMeOpVar) {
-      scalar = ResolveAllInjuringDefs(static_cast<VarMeExpr*>(scalar));
-    } else {
-      scalar = ResolveAllInjuringDefs(scalar);
-    }
+    scalar = ResolveAllInjuringDefs(scalar);
   }
   if (scalar->IsDefByPhi()) {
     MePhiNode *phiMeNode = scalar->GetMePhiDef();
