@@ -69,6 +69,14 @@ class SSATab : public AnalysisResult {
     return originalStTable.FindOrCreateSymbolOriginalSt(mirSt, puIdx, fld);
   }
 
+  OriginalSt *FindOrCreateExtraLevOriginalSt(OriginalSt *ost, TyIdx tyIdx, FieldID fld) {
+    return originalStTable.FindOrCreateExtraLevOriginalSt(ost, tyIdx, fld);
+  }
+
+  OriginalSt *FindOrCreateAddrofSymbolOriginalSt(OriginalSt *ost) {
+    return originalStTable.FindOrCreateAddrofSymbolOriginalSt(ost);
+  }
+
   const OriginalSt *GetOriginalStFromID(OStIdx id) const {
     return originalStTable.GetOriginalStFromID(id);
   }

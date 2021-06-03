@@ -615,5 +615,4 @@ void BB::EmitBB(SSATab &ssaTab, BlockNode &curblk, bool needAnotherPass) {
   stmtNodeList.set_first(bbFirstStmt);
   stmtNodeList.set_last(bbLastStmt);
 }
-
 }  // namespace maple

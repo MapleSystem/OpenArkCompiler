@@ -406,7 +406,7 @@ class CGFunc {
 
   void AddDIESymbolLocation(const MIRSymbol *sym, SymbolAlloc *loc);
 
-  virtual void DBGFixCallFrameLocationOffsets(){};
+  virtual void DBGFixCallFrameLocationOffsets() {};
 
   /* Get And Set private members */
   CG *GetCG() {
@@ -839,7 +839,7 @@ class CGFunc {
     return (mirModule.GetSrcLang() != kSrcLangC);
   }
 
-  MapleVector<DBGExprLoc *> &GetDbgCallFrameLocations() {
+  MapleVector<DBGExprLoc*> &GetDbgCallFrameLocations() {
     return dbgCallFrameLocations;
   }
 
@@ -871,7 +871,7 @@ class CGFunc {
   bool hasTakenLabel = false;
   uint32 frequency = 0;
   DebugInfo *debugInfo = nullptr;  /* debugging info */
-  MapleVector<DBGExprLoc *> dbgCallFrameLocations;
+  MapleVector<DBGExprLoc*> dbgCallFrameLocations;
   RegOperand *aggParamReg = nullptr;
   ReachingDefinition *reachingDef = nullptr;
 

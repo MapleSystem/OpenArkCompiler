@@ -19,6 +19,7 @@
 #include "mir_preg.h"
 #include "mir_function.h"
 #include "mpl_number.h"
+#include "class_hierarchy.h"
 
 // This file defines the data structure OriginalSt that represents a program
 // symbol occurring in the code of the program being optimized.
@@ -202,6 +203,35 @@ class OriginalSt {
     return GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx);
   }
 
+  OriginalSt *GetPrevLevelOst() const {
+    return prevLevOst;
+  }
+
+  void SetPrevLevelOst(OriginalSt *prevLevelOst) {
+    ASSERT(this->prevLevOst == nullptr || this->prevLevOst == prevLevelOst, "wrong prev-level-ost");
+    this->prevLevOst = prevLevelOst;
+  }
+
+  const MapleVector<OriginalSt*> &GetNextLevelOsts() const {
+    return nextLevOsts;
+  }
+
+  MapleVector<OriginalSt*> &GetNextLevelOsts() {
+    return nextLevOsts;
+  }
+
+  void AddNextLevelOst(OriginalSt *nextLevelOst, bool checkRedundant = false) {
+    ASSERT(nextLevelOst->GetPrevLevelOst() == this, "prev-level-ost of nextLevelOst should be this ost");
+    if (checkRedundant) {
+      for (auto *ost : nextLevOsts) {
+        if (ost->fieldID == nextLevelOst->fieldID) {
+          return;
+        }
+      }
+    }
+    nextLevOsts.push_back(nextLevelOst);
+  }
+
  private:
   enum OSTType {
     kUnkonwnOst,
@@ -222,7 +252,8 @@ class OriginalSt {
         isFormal(isFormal),
         ignoreRC(ignoreRC),
         symOrPreg(sysOrPreg),
-        puIdx(pIdx) {}
+        puIdx(pIdx),
+        nextLevOsts(alloc.Adapter()) {}
 
   OSTType ostType;
   OStIdx index;                       // index number in originalStVector
@@ -240,6 +271,8 @@ class OriginalSt {
   bool epreLocalRefVar = false;  // is a localrefvar temp created by epre phase
   SymOrPreg symOrPreg;
   PUIdx puIdx;
+  OriginalSt *prevLevOst = nullptr;
+  MapleVector<OriginalSt*> nextLevOsts;
 };
 
 class SymbolFieldPair {
@@ -336,6 +369,12 @@ class OriginalStTable {
   }
 
   void Dump();
+
+  OriginalSt *FindOrCreateAddrofSymbolOriginalSt(OriginalSt *ost);
+  OriginalSt *FindOrCreateExtraLevOriginalSt(OriginalSt *ost, TyIdx ptyidx, FieldID fld);
+  OriginalSt *FindOrCreateExtraLevSymOrRegOriginalSt(OriginalSt *ost, TyIdx tyIdx, FieldID fld,
+                                                     const KlassHierarchy *klassHierarchy = nullptr);
+  OriginalSt *FindExtraLevOriginalSt(const MapleVector<OriginalSt*> &nextLevelOsts, FieldID fld);
 
  private:
   MapleAllocator alloc;

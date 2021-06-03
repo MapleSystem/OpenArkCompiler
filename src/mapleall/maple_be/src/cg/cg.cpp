@@ -21,7 +21,7 @@ using namespace maple;
 #define JAVALANG (mirModule->IsJavaModule())
 
 CGFunc *CG::currentCGFunction = nullptr;
-std::map<MIRFunction *, std::pair<LabelIdx,LabelIdx>> CG::funcWrapLabels;
+std::map<MIRFunction*, std::pair<LabelIdx, LabelIdx>> CG::funcWrapLabels;
 
 CG::~CG() {
   if (emitter != nullptr) {

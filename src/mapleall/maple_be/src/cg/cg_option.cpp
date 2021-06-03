@@ -1440,7 +1440,21 @@ void CGOptions::SetDefaultOptions(const maple::MIRModule &mod) {
 
 void CGOptions::EnableO0() {
   optimizeLevel = kLevel0;
+  doEBO = false;
+  doCFGO = false;
+  doICO = false;
+  doPrePeephole = false;
+  doPeephole = false;
+  doStoreLoadOpt = false;
+  doGlobalOpt = false;
+  doPreLSRAOpt = false;
+  doLocalRefSpill = false;
+  doCalleeToSpill = false;
+  doSchedule = false;
+  doWriteRefFieldOpt = false;
   SetOption(kUseStackGuard);
+  ClearOption(kConstFold);
+  ClearOption(kProEpilogueOpt);
 }
 
 void CGOptions::EnableO1() {
@@ -1454,7 +1468,6 @@ void CGOptions::EnableO1() {
 
 void CGOptions::EnableO2() {
   optimizeLevel = kLevel2;
-#if TARGARM32
   doEBO = true;
   doCFGO = true;
   doICO = true;
@@ -1462,32 +1475,23 @@ void CGOptions::EnableO2() {
   doPeephole = true;
   doStoreLoadOpt = true;
   doGlobalOpt = true;
+  doPreSchedule = false;
+  doSchedule = true;
+  SetOption(kConstFold);
+  ClearOption(kUseStackGuard);
+#if TARGARM32
   doPreLSRAOpt = false;
   doLocalRefSpill = false;
   doCalleeToSpill = false;
-  doPreSchedule = false;
-  doSchedule = true;
   doWriteRefFieldOpt = false;
-  SetOption(kConstFold);
   ClearOption(kProEpilogueOpt);
 #else
-  doEBO = true;
-  doCFGO = true;
-  doICO = true;
-  doPrePeephole = true;
-  doPeephole = true;
-  doStoreLoadOpt = true;
-  doGlobalOpt = true;
   doPreLSRAOpt = true;
   doLocalRefSpill = true;
   doCalleeToSpill = true;
-  doPreSchedule = false;
-  doSchedule = true;
   doWriteRefFieldOpt = true;
-  SetOption(kConstFold);
   SetOption(kProEpilogueOpt);
 #endif
-  ClearOption(kUseStackGuard);
 }
 
 void CGOptions::SplitPhases(const std::string &str, std::unordered_set<std::string> &set) {
