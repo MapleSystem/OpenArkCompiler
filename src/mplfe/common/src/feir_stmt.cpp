@@ -428,12 +428,7 @@ std::list<StmtNode*> FEIRStmtJavaConstString::GenMIRStmtsImpl(MIRBuilder &mirBui
   if (literalValPtr == nullptr) {
     std::string localStrName = kLocalStringPrefix + std::to_string(fileIdx) + "_" + std::to_string(stringID);
     MIRType *typeString = FETypeManager::kFEIRTypeJavaString->GenerateMIRTypeAuto(kSrcLangJava);
-#ifndef USE_OPS
-    MIRSymbol *symbolLocal = SymbolBuilder::Instance().GetOrCreateLocalSymbol(*typeString, localStrName,
-                                                                              *mirBuilder.GetCurrentFunction());
-#else
     MIRSymbol *symbolLocal = mirBuilder.GetOrCreateLocalDecl(localStrName.c_str(), *typeString);
-#endif
     if (!FEOptions::GetInstance().IsAOT()) {
       MapleVector<BaseNode*> args(mirBuilder.GetCurrentFuncCodeMpAllocator()->Adapter());
       args.push_back(mirBuilder.CreateExprAddrof(0, *literalVal));
@@ -741,7 +736,6 @@ std::list<StmtNode*> FEIRStmtReturn::GenMIRStmtsImpl(MIRBuilder &mirBuilder) con
     mirStmt = mirBuilder.CreateStmtReturn(nullptr);
   } else {
     BaseNode *srcNode = expr->GenMIRNode(mirBuilder);
-#ifdef USE_OPS
     if (mirBuilder.GetCurrentFunction()->IsFirstArgReturn()) {
       MIRSymbol *firstArgRetSym = mirBuilder.GetCurrentFunction()->GetFormal(0);
       BaseNode *addrNode = mirBuilder.CreateDread(*firstArgRetSym, PTY_ptr);
@@ -751,9 +745,6 @@ std::list<StmtNode*> FEIRStmtReturn::GenMIRStmtsImpl(MIRBuilder &mirBuilder) con
     } else {
       mirStmt = mirBuilder.CreateStmtReturn(srcNode);
     }
-#else
-    mirStmt = mirBuilder.CreateStmtReturn(srcNode);
-#endif
   }
   ans.emplace_back(mirStmt);
   return ans;
@@ -822,13 +813,8 @@ FEIRStmtIGoto::FEIRStmtIGoto(UniqueFEIRExpr expr) : FEIRStmt(kStmtIGoto), target
 
 std::list<StmtNode*> FEIRStmtIGoto::GenMIRStmtsImpl(MIRBuilder &mirBuilder) const {
   std::list<StmtNode*> stmts;
-#ifndef USE_OPS
-  CHECK_FATAL(false, "Unsupported yet");
-  return stmts;
-#else
   stmts.emplace_back(mirBuilder.CreateStmtUnary(OP_igoto, targetExpr->GenMIRNode(mirBuilder)));
   return stmts;
-#endif
 }
 
 // ---------- FEIRStmtCondGotoForC ----------
@@ -1275,12 +1261,7 @@ void FEIRStmtArrayStore::GenMIRStmtsImplForCPart(MIRBuilder &mirBuilder, MIRType
     MIRType *ptrMIRStructType = typeStruct->GenerateMIRType(false);
     MIRStructType* mirStructType = static_cast<MIRStructType*>(ptrMIRStructType);
     // for no init, create the struct symbol
-#ifndef USE_OPS
-    (void)SymbolBuilder::Instance().GetOrCreateLocalSymbol(*mirStructType, arrayName,
-                                                           *mirBuilder.GetCurrentFunction());
-#else
     (void)mirBuilder.GetOrCreateLocalDecl(arrayName, *mirStructType);
-#endif
   }
 
   *mIRElemType = typeElem->GenerateMIRType(true);
@@ -2004,9 +1985,7 @@ std::list<StmtNode*> FEIRStmtIntrinsicCallAssign::GenMIRStmtsImpl(MIRBuilder &mi
                                                           type->GenerateMIRType(true)->GetTypeIndex());
   } else if (intrinsicId == INTRN_JAVA_POLYMORPHIC_CALL) {
     return GenMIRStmtsForInvokePolyMorphic(mirBuilder);
-  }
-#ifdef USE_OPS
-  else if (intrinsicId == INTRN_C_va_start || intrinsicId == INTRN_C_memcpy) {
+  } else if (intrinsicId == INTRN_C_va_start || intrinsicId == INTRN_C_memcpy) {
     MapleVector<BaseNode*> args(mirBuilder.GetCurrentFuncCodeMpAllocator()->Adapter());
     if (exprList != nullptr) {
       for (const auto &expr : *exprList) {
@@ -2028,7 +2007,6 @@ std::list<StmtNode*> FEIRStmtIntrinsicCallAssign::GenMIRStmtsImpl(MIRBuilder &mi
     }
     stmtCall = mirBuilder.CreateStmtIntrinsicCall(INTRN_C_memset, std::move(args), TyIdx(0));
   }
-#endif
   // other intrinsic call should be implemented
   ans.emplace_back(stmtCall);
   return ans;
@@ -2252,12 +2230,7 @@ std::unique_ptr<FEIRExpr> FEIRExprSizeOfType::CloneImpl() const {
 }
 
 BaseNode *FEIRExprSizeOfType::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
-#ifndef USE_OPS
-  CHECK_FATAL(false, "Unsupported in NO OPS");
-  return nullptr;
-#else
   return mirBuilder.CreateExprSizeoftype(*(feirType->GenerateMIRTypeAuto()));
-#endif
 }
 
 // ---------- FEIRExprDRead ----------
@@ -2366,6 +2339,9 @@ BaseNode *FEIRExprAddrofConstArray::GenMIRNodeImpl(MIRBuilder &mirBuilder) const
     MIRConst *cst = module.GetMemPool()->New<MIRIntConst>(array[i], *type);
     val->PushBack(cst);
   }
+  // This interface is only for string literal, 0 is added to the end of the string.
+  MIRConst *cst0 = module.GetMemPool()->New<MIRIntConst>(0, *type);
+  val->PushBack(cst0);
   arrayVar->SetKonst(val);
   BaseNode *nodeAddrof = mirBuilder.CreateExprAddrof(0, *arrayVar);
   return nodeAddrof;
@@ -3183,7 +3159,6 @@ FEIRExprIntrinsicop::FEIRExprIntrinsicop(std::unique_ptr<FEIRType> exprType, MIR
   paramType = std::move(argParamType);
 }
 
-
 std::unique_ptr<FEIRExpr> FEIRExprIntrinsicop::CloneImpl() const {
   if (op == OP_intrinsicop) {
     return std::make_unique<FEIRExprIntrinsicop>(type->Clone(), intrinsicID, opnds);
@@ -3453,12 +3428,7 @@ BaseNode *FEIRExprArrayStoreForC::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
     MIRType *ptrMIRStructType = typeNativeStruct->GenerateMIRTypeAuto();
     MIRStructType* mirStructType = static_cast<MIRStructType*>(ptrMIRStructType);
     // for no init, create the struct symbol
-#ifndef USE_OPS
-    (void)SymbolBuilder::Instance().GetOrCreateLocalSymbol(*mirStructType, arrayName,
-                                                           *mirBuilder.GetCurrentFunction());
-#else
     (void)mirBuilder.GetOrCreateLocalDecl(arrayName, *mirStructType);
-#endif
   }
   BaseNode *nodeAddrof = nullptr;
   if (exprArray->GetKind() == kExprIAddrof) {
@@ -3730,14 +3700,8 @@ void FEIRExprAtomic::ProcessAtomicExchange(MIRBuilder &mirBuilder, BlockNode &bl
 
 void FEIRExprAtomic::ProcessAtomicCompareExchange(MIRBuilder &mirBuilder, BlockNode &block, BaseNode &lockNode,
                                                   const MIRSymbol *valueVar) const {
-#ifndef USE_OPS
-  valueVar = SymbolBuilder::Instance().GetOrCreateLocalSymbol(*GlobalTables::GetTypeTable().GetUInt1(),
-                                                              FEUtils::GetSequentialName("valueVar"),
-                                                              *mirBuilder.GetCurrentFunction());
-#else
   valueVar = mirBuilder.GetOrCreateLocalDecl(FEUtils::GetSequentialName("valueVar").c_str(),
                                              *GlobalTables::GetTypeTable().GetUInt1());
-#endif
   StmtNode *retStmt = mirBuilder.CreateStmtDassign(*valueVar, 0, mirBuilder.GetConstUInt1(false));
   block.AddStatement(retStmt);
   BaseNode *expectNode = mirBuilder.CreateExprIread(*refType, *mirType, 0, valExpr1.get()->GenMIRNode(mirBuilder));

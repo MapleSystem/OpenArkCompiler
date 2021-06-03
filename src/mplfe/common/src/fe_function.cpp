@@ -429,11 +429,7 @@ bool FEFunction::UpdateFormal(const std::string &phaseName) {
   for (const std::unique_ptr<FEIRVar> &argVar : argVarList) {
     MIRSymbol *sym = argVar->GenerateMIRSymbol(FEManager::GetMIRBuilder());
     sym->SetStorageClass(kScFormal);
-#ifndef USE_OPS
-    mirFunction.AddFormal(sym);
-#else
     mirFunction.AddArgument(sym);
-#endif
     idx++;
   }
   return phaseResult.Finish();

@@ -92,6 +92,7 @@ class ASTParser {
   ASTExpr *ProcessExpr(MapleAllocator &allocator, const clang::Expr *expr);
   ASTExpr *ProcessExprInType(MapleAllocator &allocator, const clang::QualType &qualType);
   ASTBinaryOperatorExpr *AllocBinaryOperatorExpr(MapleAllocator &allocator, const clang::BinaryOperator &bo);
+  ASTExpr *ProcessExprCastExpr(MapleAllocator &allocator, const clang::CastExpr &expr);
 #define PROCESS_EXPR(CLASS) ProcessExpr##CLASS(MapleAllocator&, const clang::CLASS&)
   ASTExpr *PROCESS_EXPR(UnaryOperator);
   ASTExpr *PROCESS_EXPR(AddrLabelExpr);

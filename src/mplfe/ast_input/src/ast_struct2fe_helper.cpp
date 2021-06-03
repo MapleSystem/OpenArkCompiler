@@ -168,11 +168,9 @@ bool ASTFunc2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
   }
   SolveReturnAndArgTypes(allocator);
   FuncAttrs attrs = GetAttrs();
-#ifdef USE_OPS
   if (firstArgRet) {
     attrs.SetAttr(FUNCATTR_firstarg_return);
   }
-#endif
   bool isStatic = IsStatic();
   bool isVarg = IsVarg();
   CHECK_FATAL(retMIRType != nullptr, "function must have return type");
@@ -186,15 +184,6 @@ bool ASTFunc2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
   if (firstArgRet) {
     parmNames.insert(parmNames.begin(), "first_arg_return");
   }
-#ifndef USE_OPS
-  for (uint32 i = 0; i < parmNames.size(); ++i) {
-    MIRSymbol *sym = SymbolBuilder::Instance().GetOrCreateLocalSymbol(*argMIRTypes[i], parmNames[i], *mirFunc);
-    sym->SetStorageClass(kScFormal);
-    sym->SetSKind(kStVar);
-    mirFunc->AddFormal(sym);
-  }
-  mirMethodPair.first = mirFunc;
-#else
   for (uint32 i = 0; i < parmNames.size(); ++i) {
     MIRSymbol *sym = FEManager::GetMIRBuilder().GetOrCreateDeclInFunc(parmNames[i], *argMIRTypes[i], *mirFunc);
     sym->SetStorageClass(kScFormal);
@@ -202,7 +191,6 @@ bool ASTFunc2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
     mirFunc->AddArgument(sym);
   }
   mirMethodPair.first = mirFunc->GetStIdx();
-#endif
   mirMethodPair.second.first = mirFunc->GetMIRFuncType()->GetTypeIndex();
   mirMethodPair.second.second = attrs;
   mirFunc->SetFuncAttrs(attrs);

@@ -25,9 +25,7 @@
 #include "bc_compiler_component.h"
 #include "ark_annotation_processor.h"
 #include "dex_reader.h"
-#ifdef ENABLE_MPLFE_AST
 #include "ast_compiler_component.h"
-#endif // ~/ENABLE_MPLFE_AST
 #include "fe_errno.h"
 #include "mpl_timer.h"
 #include "mplfe_env.h"

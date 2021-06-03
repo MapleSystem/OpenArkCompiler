@@ -147,13 +147,8 @@ void RCSetter::SetAttrRCunowned(MIRFunction &mirFunction, const std::set<uint16>
   if (symTab == nullptr) {
     return;
   }
-#ifndef USE_OPS
-  for (uint32 i = 0; i < SymbolBuilder::Instance().GetSymbolTableSize(&mirFunction); ++i) {
-    MIRSymbol *symbol = SymbolBuilder::Instance().GetSymbolFromStIdx(i, &mirFunction);
-#else
   for (uint32 i = 0; i < mirFunction.GetSymTab()->GetSymbolTableSize(); ++i) {
     MIRSymbol *symbol = mirFunction.GetSymTab()->GetSymbolFromStIdx(i);
-#endif
     if (symbol == nullptr) {
       continue;
     }
@@ -170,13 +165,8 @@ void RCSetter::SetAttrRCunowned(MIRFunction &mirFunction, const std::set<uint16>
 void RCSetter::MarkRCUnownedForUnownedLocalFunctions() const {
   // mark all local variables unowned for @UnownedLocal functions.
   for (auto func : unownedLocalFuncs) {
-#ifndef USE_OPS
-    for (uint32 idx = 0; idx < SymbolBuilder::Instance().GetSymbolTableSize(func); idx++) {
-      MIRSymbol *sym = SymbolBuilder::Instance().GetSymbolFromStIdx(idx, func);
-#else
     for (uint32 idx = 0; idx < func->GetSymTab()->GetSymbolTableSize(); idx++) {
       MIRSymbol *sym = func->GetSymTab()->GetSymbolFromStIdx(idx);
-#endif
       if (sym == nullptr) {
         continue;
       }

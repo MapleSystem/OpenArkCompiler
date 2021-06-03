@@ -41,7 +41,9 @@ class FEUtils {
   static std::string GetSequentialName0(const std::string &prefix, uint32_t num);
   static std::string GetSequentialName(const std::string &prefix);
   static FieldID GetStructFieldID(MIRStructType *base, const std::string &fieldName);
+  static bool TraverseToNamedField(MIRStructType &structType, GStrIdx nameIdx, FieldID &fieldID);
   static MIRType *GetStructFieldType(MIRStructType *type, FieldID feildID);
+  static MIRConst *CreateImplicitConst(MIRType *type);
 
   static const std::string kBoolean;
   static const std::string kByte;
@@ -78,14 +80,7 @@ class FEUtils {
   }
 
   static inline void DeleteMempoolPtr(MemPool *memPoolPtr) {
-#ifndef USE_OPS
-    if (memPoolPtr != nullptr) {
-      delete memPoolPtr;
-      memPoolPtr = nullptr;
-    }
-#else
     memPoolCtrler.DeleteMemPool(memPoolPtr);
-#endif
   }
 
   static inline GStrIdx &GetBooleanIdx() {

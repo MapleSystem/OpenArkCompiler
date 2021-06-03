@@ -75,12 +75,10 @@ class FEOptions {
     return inputDexFiles;
   }
 
-#ifdef ENABLE_MPLFE_AST
   void AddInputASTFile(const std::string &fileName);
   const std::vector<std::string> &GetInputASTFiles() const {
     return inputASTFiles;
   }
-#endif // ~ENABLE_MPLFE_AST
 
   void AddInputMpltFileFromSys(const std::string &fileName) {
     inputMpltFilesFromSys.push_back(fileName);
@@ -403,9 +401,7 @@ class FEOptions {
   std::list<std::string> inputClassFiles;
   std::list<std::string> inputJarFiles;
   std::vector<std::string> inputDexFiles;
-#ifdef ENABLE_MPLFE_AST
   std::vector<std::string> inputASTFiles;
-#endif // ~/ENABLE_MPLFE_AST
   std::list<std::string> inputMpltFilesFromSys;
   std::list<std::string> inputMpltFilesFromApk;
   std::list<std::string> inputMpltFiles;

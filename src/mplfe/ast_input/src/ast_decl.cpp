@@ -61,7 +61,6 @@ MIRConst *ASTVar::Translate2MIRConstImpl() const {
 
 void ASTVar::GenerateInitStmt4StringLiteral(ASTExpr *initASTExpr, UniqueFEIRVar feirVar, UniqueFEIRExpr initFeirExpr,
                                             std::list<UniqueFEIRStmt> &stmts) {
-#ifdef USE_OPS
   if (!static_cast<ASTStringLiteral*>(initASTExpr)->IsArrayToPointerDecay()) {
     std::unique_ptr<std::list<UniqueFEIRExpr>> argExprList = std::make_unique<std::list<UniqueFEIRExpr>>();
     UniqueFEIRExpr dstExpr = FEIRBuilder::CreateExprAddrofVar(feirVar->Clone());
@@ -97,7 +96,6 @@ void ASTVar::GenerateInitStmt4StringLiteral(ASTExpr *initASTExpr, UniqueFEIRVar 
     }
     return;
   }
-#endif
 }
 
 void ASTVar::GenerateInitStmtImpl(std::list<UniqueFEIRStmt> &stmts) {

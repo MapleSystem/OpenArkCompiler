@@ -199,7 +199,6 @@ class FEInputMethodHelper {
     mirFunc->SetClassTyIdx(structType.GetTypeIndex());
   }
 
-
  protected:
   virtual bool ProcessDeclImpl(MapleAllocator &allocator);
   virtual void SolveReturnAndArgTypesImpl(MapleAllocator &allocator) = 0;

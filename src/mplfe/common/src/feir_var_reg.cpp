@@ -48,14 +48,7 @@ MIRSymbol *FEIRVarReg::GenerateLocalMIRSymbolImpl(MIRBuilder &builder) const {
   MPLFE_PARALLEL_FORBIDDEN();
   MIRType *mirType = type->GenerateMIRTypeAuto();
   std::string name = GetName(*mirType);
-#ifndef USE_OPS
-  MIRSymbol *ret = SymbolBuilder::Instance().GetOrCreateLocalSymbol(*mirType, name, *builder.GetCurrentFunction());
-  if (FEOptions::GetInstance().IsAOT()) {
-    ret->SetVregNo(regNum);
-  }
-#else
   MIRSymbol *ret = builder.GetOrCreateLocalDecl(name, *mirType);
-#endif
   return ret;
 }
 

@@ -53,7 +53,6 @@ void FEOptions::AddInputDexFile(const std::string &fileName) {
   }
 }
 
-#ifdef ENABLE_MPLFE_AST
 void FEOptions::AddInputASTFile(const std::string &fileName) {
   FEFileType::FileType type = FEFileType::GetInstance().GetFileTypeByMagicNumber(fileName);
   if (type == FEFileType::FileType::kAST) {
@@ -62,5 +61,4 @@ void FEOptions::AddInputASTFile(const std::string &fileName) {
     WARN(kLncWarn, "invalid input AST file %s...skipped", fileName.c_str());
   }
 }
-#endif // ~/ENABLE_MPLFE_AST
 }  // namespace maple

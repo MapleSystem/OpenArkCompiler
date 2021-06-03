@@ -195,6 +195,25 @@ std::string FEUtils::GetSequentialName(const std::string &prefix) {
   return name;
 }
 
+bool FEUtils::TraverseToNamedField(MIRStructType &structType, GStrIdx nameIdx, FieldID &fieldID) {
+  for (uint32 fieldIdx = 0; fieldIdx < structType.GetFieldsSize(); ++fieldIdx) {
+    ++fieldID;
+    TyIdx fieldTyIdx = structType.GetFieldsElemt(fieldIdx).second.first;
+    MIRType *fieldType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(fieldTyIdx);
+    ASSERT(fieldType != nullptr, "fieldType is null");
+    if (structType.GetFieldsElemt(fieldIdx).first == nameIdx) {
+      return true;
+    }
+    if (fieldType->IsStructType()) {
+      auto *subStructType = static_cast<MIRStructType *>(fieldType);
+      if (TraverseToNamedField(*subStructType, nameIdx, fieldID)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 FieldID FEUtils::GetStructFieldID(MIRStructType *base, const std::string &fieldName) {
   MIRStructType *type = base;
   std::vector<std::string> fieldNames = FEUtils::Split(fieldName, '.');
@@ -202,13 +221,9 @@ FieldID FEUtils::GetStructFieldID(MIRStructType *base, const std::string &fieldN
   FieldID fieldID = 0;
   for (const auto &f: fieldNames) {
     GStrIdx strIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(f);
-    uint32 tempFieldID = fieldID;
-    if (FEManager::GetMIRBuilder().TraverseToNamedFieldWithTypeAndMatchStyle(*type, strIdx, TyIdx(0), tempFieldID,
-        MIRBuilder::MatchStyle::kMatchAnyField)) {
-      fieldID = tempFieldID;
-      FieldID tmpID = tempFieldID;
-      FieldPair fieldPair = base->TraverseToFieldRef(tmpID);
-      type = static_cast<MIRStructType*>(GlobalTables::GetTypeTable().GetTypeFromTyIdx(fieldPair.second.first));
+    CHECK_FATAL(type->IsStructType(), "Must be struct type!");
+    if (TraverseToNamedField(*type, strIdx, fieldID)) {
+      type = static_cast<MIRStructType *>(base->GetFieldType(fieldID));
     }
   }
   return fieldID;
@@ -219,6 +234,88 @@ MIRType *FEUtils::GetStructFieldType(MIRStructType *type, FieldID fieldID) {
   FieldPair fieldPair = type->TraverseToFieldRef(tmpID);
   MIRType *fieldType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(fieldPair.second.first);
   return fieldType;
+}
+
+MIRConst *FEUtils::CreateImplicitConst(MIRType *type) {
+  switch (type->GetPrimType()) {
+    case PTY_u8: {
+      return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
+          0, *GlobalTables::GetTypeTable().GetPrimType(PTY_u8));
+    }
+    case PTY_u16: {
+      return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
+          0, *GlobalTables::GetTypeTable().GetPrimType(PTY_u16));
+    }
+    case PTY_u32: {
+      return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
+          0, *GlobalTables::GetTypeTable().GetPrimType(PTY_u32));
+    }
+    case PTY_u64: {
+      return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
+          0, *GlobalTables::GetTypeTable().GetPrimType(PTY_u64));
+    }
+    case PTY_i8: {
+      return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
+          0, *GlobalTables::GetTypeTable().GetPrimType(PTY_i8));
+    }
+    case PTY_i16: {
+      return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
+          0, *GlobalTables::GetTypeTable().GetPrimType(PTY_i16));
+    }
+    case PTY_i32: {
+      return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
+          0, *GlobalTables::GetTypeTable().GetPrimType(PTY_i32));
+    }
+    case PTY_i64: {
+      return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
+          0, *GlobalTables::GetTypeTable().GetPrimType(PTY_i64));
+    }
+    case PTY_f32: {
+      return FEManager::GetModule().GetMemPool()->New<MIRFloatConst>(
+          0, *GlobalTables::GetTypeTable().GetPrimType(PTY_f32));
+    }
+    case PTY_f64: {
+      return FEManager::GetModule().GetMemPool()->New<MIRDoubleConst>(
+          0, *GlobalTables::GetTypeTable().GetPrimType(PTY_f64));
+    }
+    case PTY_ptr: {
+      return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
+          0, *GlobalTables::GetTypeTable().GetPrimType(PTY_i64));
+    }
+    case PTY_agg: {
+      auto *aggConst = FEManager::GetModule().GetMemPool()->New<MIRAggConst>(FEManager::GetModule(), *type);
+      if (type->IsStructType()) {
+        auto structType = static_cast<MIRStructType*>(type);
+        FieldID fieldID = 0;
+        for (auto &f:structType->GetFields()) {
+          fieldID++;
+          auto fieldType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(f.second.first);
+          aggConst->AddItem(CreateImplicitConst(fieldType), fieldID);
+        }
+      } else if (type->GetKind() == kTypeArray) {
+        auto arrayType = static_cast<MIRArrayType*>(type);
+        MIRConst *elementConst;
+        if (arrayType->GetDim() > 1) {
+          uint32 subSizeArray[arrayType->GetDim()];
+          for (int dim = 1; dim < arrayType->GetDim(); ++dim) {
+            subSizeArray[dim - 1] = arrayType->GetSizeArrayItem(dim);
+          }
+          auto subArrayType = GlobalTables::GetTypeTable().GetOrCreateArrayType(*arrayType->GetElemType(),
+                                                                                arrayType->GetDim() - 1, subSizeArray);
+          elementConst = CreateImplicitConst(subArrayType);
+        } else {
+          elementConst = CreateImplicitConst(arrayType->GetElemType());
+        }
+        for (int i = 0; i < arrayType->GetSizeArrayItem(0); ++i) {
+          aggConst->AddItem(elementConst, 0);
+        }
+      }
+      return aggConst;
+    }
+    default: {
+      CHECK_FATAL(false, "Unsupported Primitive type: %d", type->GetPrimType());
+    }
+  }
 }
 
 // ---------- FELinkListNode ----------
