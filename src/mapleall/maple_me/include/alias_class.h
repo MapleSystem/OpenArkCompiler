@@ -20,7 +20,6 @@
 #include "ssa_tab.h"
 #include "union_find.h"
 #include "class_hierarchy.h"
-#include "alias_analysis_table.h"
 
 namespace maple {
 class AliasElem {
@@ -120,13 +119,6 @@ class AliasClass : public AnalysisResult {
 
   ~AliasClass() override = default;
 
-  AliasAnalysisTable *GetAliasAnalysisTable() {
-    if (aliasAnalysisTable == nullptr) {
-      aliasAnalysisTable = acMemPool.New<AliasAnalysisTable>(ssaTab, acAlloc, *klassHierarchy);
-    }
-    return aliasAnalysisTable;
-  }
-
   const AliasElem *FindAliasElem(const OriginalSt &ost) const {
     return osym2Elem.at(ost.GetIndex());
   }
@@ -175,6 +167,8 @@ class AliasClass : public AnalysisResult {
   void InsertMayDefUseCall(StmtNode &stmt, BBId bbid, bool hasSideEffect, bool hasNoPrivateDefEffect);
   void GenericInsertMayDefUse(StmtNode &stmt, BBId bbID);
 
+  static bool MayAliasBasicAA(const OriginalSt *ostA, const OriginalSt *ostB);
+
  protected:
   virtual bool InConstructorLikeFunc() const {
     return true;
@@ -197,7 +191,6 @@ class AliasClass : public AnalysisResult {
   bool SetNextLevNADSForPtrIntegerCopy(AliasElem &lhsAe, const AliasElem *rhsAe, BaseNode &rhs);
   void CreateMirroringAliasElems(const OriginalSt *ost1, OriginalSt *ost2);
   AliasElem *FindOrCreateDummyNADSAe();
-  bool IsPointedTo(OriginalSt &oSt);
   AliasElem &FindOrCreateAliasElemOfAddrofOSt(OriginalSt &oSt);
   AliasElem &FindOrCreateAliasElemOfAddrofZeroFieldIDOSt(OriginalSt &oSt);
   void CollectMayDefForMustDefs(const StmtNode &stmt, std::set<OriginalSt*> &mayDefOsts);
@@ -246,7 +239,6 @@ class AliasClass : public AnalysisResult {
   bool ignoreIPA;        // whether to ignore information provided by IPA
   bool calleeHasSideEffect;
   KlassHierarchy *klassHierarchy;
-  AliasAnalysisTable *aliasAnalysisTable = nullptr;
 };
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_ALIAS_CLASS_H

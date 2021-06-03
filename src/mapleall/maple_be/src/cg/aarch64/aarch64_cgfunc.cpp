@@ -107,7 +107,7 @@ MOperator PickLdStInsn(bool isLoad, uint32 bitSize, PrimType primType, AArch64is
   }
 
   /* __builtin_ffs(x) returns: 0 -> 0, 1 -> 1, 2 -> 2, 4 -> 3, 8 -> 4 */
-  if (IsPrimitiveInteger(primType)) {
+  if (IsPrimitiveInteger(primType) || primType == PTY_agg) {
     MOperator(*table)[kIntByteSizeDimension];
     if (isLoad) {
       table = (memOrd == AArch64isa::kMoAcquire) ? ldIsAcq : ldIs;
@@ -116,6 +116,12 @@ MOperator PickLdStInsn(bool isLoad, uint32 bitSize, PrimType primType, AArch64is
     }
 
     int32 signedUnsigned = IsUnsignedInteger(primType) ? 0 : 1;
+    if (primType == PTY_agg) {
+      CHECK_FATAL(bitSize >= k8BitSize, " unexpect agg size");
+      bitSize = RoundUp(bitSize, k8BitSize);
+      ASSERT((bitSize & (bitSize - 1)) == 0, "bitlen error");
+    }
+
     /* __builtin_ffs(x) returns: 8 -> 4, 16 -> 5, 32 -> 6, 64 -> 7 */
     uint32 size = static_cast<uint32>(__builtin_ffs(static_cast<int32>(bitSize))) - 4;
     ASSERT(size <= 3, "wrong bitSize");
@@ -734,7 +740,12 @@ RegOperand &AArch64CGFunc::SelectCopy(Operand &src, PrimType stype, PrimType dty
 bool AArch64CGFunc::IsImmediateOffsetOutOfRange(AArch64MemOperand &memOpnd, uint32 bitLen) {
   ASSERT(bitLen >= k8BitSize, "bitlen error");
   ASSERT(bitLen <= k64BitSize, "bitlen error");
+
+  if (bitLen >= k8BitSize) {
+    bitLen = RoundUp(bitLen, k8BitSize);
+  }
   ASSERT((bitLen & (bitLen - 1)) == 0, "bitlen error");
+
   AArch64MemOperand::AArch64AddressingMode mode = memOpnd.GetAddrMode();
   if ((mode == AArch64MemOperand::kAddrModeBOi) && memOpnd.IsIntactIndexed()) {
     int32 offsetValue = memOpnd.GetOffsetImmediate()->GetOffsetValue();
@@ -965,7 +976,7 @@ void AArch64CGFunc::SelectDassign(StIdx stIdx, FieldID fieldId, PrimType rhsPTyp
   }
 
   /* In bpl mode, a func symbol's type is represented as a MIRFuncType instead of a MIRPtrType (pointing to
-     MIRFuncType), so we allow `kTypeFunction` to appear here */
+   * MIRFuncType), so we allow `kTypeFunction` to appear here */
   ASSERT(((type->GetKind() == kTypeScalar) || (type->GetKind() == kTypePointer) || (type->GetKind() == kTypeFunction) ||
           (type->GetKind() == kTypeStruct) || (type->GetKind() == kTypeArray)), "NYI dassign type");
   PrimType ptyp = type->GetPrimType();
@@ -1642,7 +1653,6 @@ Operand *AArch64CGFunc::SelectDread(const BaseNode &parent, DreadNode &expr) {
   }
   MemOperand *memOpnd = nullptr;
   if (aggSize > k8ByteSize) {
-    CHECK_FATAL(false, "SelectDread: aggregate of wrong size  check IR");
     if (parent.op == OP_eval) {
       if (symbol->GetAttr(ATTR_volatile)) {
         /* Need to generate loads for the upper parts of the struct. */
@@ -1968,7 +1978,8 @@ Operand *AArch64CGFunc::SelectIread(const BaseNode &parent, IreadNode &expr) {
         destType = PTY_u64;
         break;
       default:
-        CHECK_FATAL(false, "SelectIRead: aggregate of wrong size  check IR");
+        destType = PTY_u64; // when eval agg . a way to round up
+        break;
       }
     }
   }
@@ -6833,7 +6844,7 @@ void AArch64CGFunc::AppendCall(const MIRSymbol &funcSymbol) {
 void AArch64CGFunc::DBGFixCallFrameLocationOffsets() {
   for (DBGExprLoc *el : GetDbgCallFrameLocations()) {
     if (el->GetSimpLoc()->GetDwOp() == DW_OP_fbreg) {
-      SymbolAlloc *symloc = static_cast<SymbolAlloc *>(el->GetSymLoc());
+      SymbolAlloc *symloc = static_cast<SymbolAlloc*>(el->GetSymLoc());
       int64_t offset = GetBaseOffset(*symloc) - GetDbgCallFrameOffset();
       el->SetFboffset(offset);
     }
@@ -7714,7 +7725,7 @@ void AArch64CGFunc::InsertJumpPad(Insn *insn) {
 
   BB *targetBB;
   BB *fallthruBB = bb->GetNext();
-  ASSERT(bb->NumSuccs() == 2, "if bb should have 2 successors");
+  ASSERT(bb->NumSuccs() == k2ByteSize, "if bb should have 2 successors");
   if (bb->GetSuccs().front() == fallthruBB) {
     targetBB = bb->GetSuccs().back();
   } else {

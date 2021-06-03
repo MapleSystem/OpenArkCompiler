@@ -1213,12 +1213,11 @@ void CGFunc::HandleFunction() {
 }
 
 void CGFunc::AddDIESymbolLocation(const MIRSymbol *sym, SymbolAlloc *loc) {
-  ASSERT(debugInfo, "");
+  ASSERT(debugInfo != nullptr, "debugInfo is null!");
   DBGDie *sdie = debugInfo->GetLocalDie(&func, sym->GetNameStrIdx());
-  if (!sdie) {
+  if (sdie == nullptr) {
     return;
   }
-  ASSERT(sdie, "");
 
   DBGExprLoc *exprloc = sdie->GetExprLoc();
   CHECK_FATAL(exprloc != nullptr, "exprloc is null in CGFunc::AddDIESymbolLocation");
@@ -1318,11 +1317,11 @@ void CGFunc::ClearLoopInfo() {
 }
 
 void CGFunc::PatchLongBranch() {
-  for (BB *bb = firstBB->GetNext(); bb; bb = bb->GetNext()) {
+  for (BB *bb = firstBB->GetNext(); bb != nullptr; bb = bb->GetNext()) {
     bb->SetInternalFlag1(bb->GetInternalFlag1() + bb->GetPrev()->GetInternalFlag1());
   }
-  BB *next;
-  for (BB *bb = firstBB; bb; bb = next) {
+  BB *next = nullptr;
+  for (BB *bb = firstBB; bb != nullptr; bb = next) {
     next = bb->GetNext();
     if (bb->GetKind() != BB::kBBIf && bb->GetKind() != BB::kBBGoto) {
       continue;
@@ -1332,7 +1331,7 @@ void CGFunc::PatchLongBranch() {
       insn = insn->GetPrev();
     }
     LabelIdx labidx = static_cast<LabelOperand&>(insn->GetOperand(insn->GetJumpTargetIdx())).GetLabelIndex();
-    BB *tbb = GetBBFromLab2BBMap(labidx);
+    BB *tbb = GetBBFromLab2BBMap(static_cast<int32>(labidx));
     if ((tbb->GetInternalFlag1() - bb->GetInternalFlag1()) < MaxCondBranchDistance()) {
       continue;
     }
@@ -1351,6 +1350,7 @@ AnalysisResult *CgDoHandleFunc::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResul
 }
 
 AnalysisResult *CgFixCFLocOsft::Run(CGFunc *cgFunc, CgFuncResultMgr *m) {
+  (void)m;
   if (cgFunc->GetCG()->GetCGOptions().WithDwarf()) {
     cgFunc->DBGFixCallFrameLocationOffsets();
   }

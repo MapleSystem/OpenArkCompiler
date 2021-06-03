@@ -53,6 +53,7 @@ constexpr uint32 k2ByteSize = 2;
 constexpr uint32 k3ByteSize = 3;
 constexpr uint32 k4ByteSize = 4;
 constexpr uint32 k8ByteSize = 8;
+constexpr uint32 k9ByteSize = 9;
 constexpr uint32 k12ByteSize = 12;
 constexpr uint32 k14ByteSize = 14;
 constexpr uint32 k15ByteSize = 15;

@@ -347,19 +347,16 @@ class CG {
   std::vector<int64> GetReferenceOffsets64(const BECommon &beCommon, MIRStructType &structType);
 
   static bool IsInFuncWrapLabels(MIRFunction *func) {
-    if (funcWrapLabels.find(func) != funcWrapLabels.end()) {
-      return true;
-    }
-    return false;
+    return funcWrapLabels.find(func) != funcWrapLabels.end();
   }
 
-  static void SetFuncWrapLabels(MIRFunction *func, std::pair<LabelIdx,LabelIdx> labels) {
+  static void SetFuncWrapLabels(MIRFunction *func, const std::pair<LabelIdx, LabelIdx> labels) {
     if (!IsInFuncWrapLabels(func)) {
       funcWrapLabels[func] = labels;
     }
   }
 
-  static std::map<MIRFunction *, std::pair<LabelIdx,LabelIdx>> &GetFuncWrapLabels() {
+  static std::map<MIRFunction*, std::pair<LabelIdx, LabelIdx>> &GetFuncWrapLabels() {
     return funcWrapLabels;
   }
 
@@ -378,7 +375,7 @@ class CG {
   MIRSymbol *dbgTraceEnter;
   MIRSymbol *dbgTraceExit;
   MIRSymbol *dbgFuncProfile;
-  static std::map<MIRFunction *, std::pair<LabelIdx,LabelIdx>> funcWrapLabels;
+  static std::map<MIRFunction *, std::pair<LabelIdx, LabelIdx>> funcWrapLabels;
 };  /* class CG */
 }  /* namespace maplebe */
 
