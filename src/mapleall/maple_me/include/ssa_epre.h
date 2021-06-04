@@ -52,15 +52,12 @@ class SSAEPre : public SSAPre {
   }
   // here starts methods related to strength reduction
   bool AllVarsSameVersion(const MeRealOcc &realocc1, const MeRealOcc &realocc2) const override;
-  VarMeExpr *ResolveAllInjuringDefs(VarMeExpr *varx) const override;
-  RegMeExpr *ResolveAllInjuringDefs(RegMeExpr *regx) const override;
+  ScalarMeExpr *ResolveAllInjuringDefs(ScalarMeExpr *regx) const override;
   MeExpr *ResolveAllInjuringDefs(MeExpr *x) const override {
     if (!workCand->isSRCand) {
       return x;
     }
-    return (x->GetMeOp() == kMeOpVar) ?
-        static_cast<MeExpr *>(ResolveAllInjuringDefs(static_cast<VarMeExpr *>(x))) :
-        static_cast<MeExpr *>(ResolveAllInjuringDefs(static_cast<RegMeExpr *>(x)));
+    return static_cast<MeExpr *>(ResolveAllInjuringDefs(static_cast<ScalarMeExpr *>(x)));
   }
   void SubstituteOpnd(MeExpr *x, MeExpr *oldopnd, MeExpr *newopnd) override;
   bool OpndInDefOcc(MeExpr *opnd, MeOccur *defocc, uint32 i);
