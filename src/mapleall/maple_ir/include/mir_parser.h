@@ -127,6 +127,7 @@ class MIRParser {
   bool ParseStmtIntrinsiccallwithtype(StmtNodePtr&, bool isAssigned);
   bool ParseStmtIntrinsiccallwithtype(StmtNodePtr&);
   bool ParseStmtIntrinsiccallwithtypeassigned(StmtNodePtr&);
+  bool ParseCallReturnPair(CallReturnPair&);
   bool ParseCallReturns(CallReturnVector&);
   bool ParseBinaryStmt(StmtNodePtr&, Opcode op);
   bool ParseBinaryStmtAssertGE(StmtNodePtr&);
@@ -149,6 +150,7 @@ class MIRParser {
   bool ParseUnaryStmtAssertNonNull(StmtNodePtr&);
   bool ParseStmtMarker(StmtNodePtr&);
   bool ParseStmtGosub(StmtNodePtr&);
+  bool ParseStmtAsm(StmtNodePtr&);
 
   // Expression Parser
   bool ParseExpression(BaseNodePtr &expr);

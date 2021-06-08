@@ -584,6 +584,37 @@ void BinaryMplExport::OutputBlockNode(BlockNode *block) {
         doneWithOpnds = true;
         break;
       }
+      case OP_asm: {
+        AsmNode *asmNode = static_cast<AsmNode *>(s);
+        WriteNum(asmNode->qualifiers);
+        string str(asmNode->asmString.c_str());
+        WriteAsciiStr(str);
+        // the outputs
+        size_t count = asmNode->asmOutputs.size();
+        WriteNum(count);
+        for (int32 i = 0; i < count; i++) {
+          OutputUsrStr(asmNode->outputConstraints[i]);
+        }
+        OutputReturnValues(&asmNode->asmOutputs);
+        // the clobber list
+        count = asmNode->clobberList.size();
+        WriteNum(count);
+        for (int32 i = 0; i < count; i++) {
+          OutputUsrStr(asmNode->clobberList[i]);
+        }
+        // the labels
+        count = asmNode->gotoLabels.size();
+        WriteNum(count);
+        for (int32 i = 0; i < count; i++) {
+          WriteNum(asmNode->gotoLabels[i]);
+        }
+        // the inputs
+        WriteNum(asmNode->NumOpnds());
+        for (int32 i = 0; i < asmNode->numOpnds; i++) {
+          OutputUsrStr(asmNode->inputConstraints[i]);
+        }
+        break;
+      }
       default:
         CHECK_FATAL(false, "Unhandled opcode %d", s->GetOpCode());
         break;
