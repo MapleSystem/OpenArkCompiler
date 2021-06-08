@@ -781,7 +781,7 @@ PreStmtWorkCand *MeStmtPre::CreateStmtRealOcc(MeStmt &meStmt, int seqStmt) {
     return wkCand;
   }
   // workCand not yet created; create a new one and add to workList
-  wkCand = ssaPreMemPool->New<PreStmtWorkCand>(ssaPreAllocator, workList.size(), meStmt, GetPUIdx());
+  wkCand = ssaPreMemPool->New<PreStmtWorkCand>(ssaPreAllocator, meStmt, GetPUIdx());
   wkCand->SetHasLocalOpnd(true);  // dummy
   workList.push_back(wkCand);
   wkCand->AddRealOccAsLast(*newOcc, GetPUIdx());

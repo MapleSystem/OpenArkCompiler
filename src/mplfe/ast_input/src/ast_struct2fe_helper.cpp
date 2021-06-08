@@ -143,7 +143,18 @@ bool ASTGlobalVar2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
   if (mirSymbol == nullptr) {
     return false;
   }
-  mirSymbol->SetAttrs(astVar.GetGenericAttrs().ConvertToTypeAttrs());
+  auto typeAttrs = astVar.GetGenericAttrs().ConvertToTypeAttrs();
+  // do not allow extern var override global var
+  if (mirSymbol->GetAttrs().GetAttrFlag() != 0 && typeAttrs.GetAttr(ATTR_extern)) {
+    return true;
+  }
+  if (typeAttrs.GetAttr(ATTR_extern)) {
+    mirSymbol->SetStorageClass(MIRStorageClass::kScExtern);
+    typeAttrs.ResetAttr(AttrKind::ATTR_extern);
+  } else {
+    mirSymbol->SetStorageClass(MIRStorageClass::kScGlobal);
+  }
+  mirSymbol->SetAttrs(typeAttrs);
   ASTExpr *initExpr = astVar.GetInitExpr();
   if (initExpr == nullptr) {
     return true;

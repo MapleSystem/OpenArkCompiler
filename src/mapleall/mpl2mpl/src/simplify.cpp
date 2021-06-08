@@ -22,16 +22,12 @@ constexpr char kFuncNamePrefixOfMathSqrt[] = "Ljava_2Flang_2FMath_3B_7Csqrt_7C_2
 constexpr char kFuncNamePrefixOfMathAbs[] = "Ljava_2Flang_2FMath_3B_7Cabs_7C";
 constexpr char kFuncNamePrefixOfMathMax[] = "Ljava_2Flang_2FMath_3B_7Cmax_7C";
 constexpr char kFuncNamePrefixOfMathMin[] = "Ljava_2Flang_2FMath_3B_7Cmin_7C";
-constexpr char kFuncNameOfMathSqrt[] = "sqrt";
 constexpr char kFuncNameOfMathAbs[] = "abs";
-constexpr char kFuncNameOfMathMax[] = "max";
-constexpr char kFuncNameOfMathMin[] = "min";
 } // namespace
 
 namespace maple {
 bool Simplify::IsMathSqrt(const std::string funcName) {
-  return (mirMod.IsCModule() && (strcmp(funcName.c_str(), kFuncNameOfMathSqrt) == 0)) ||
-         (mirMod.IsJavaModule() && (strcmp(funcName.c_str(), kFuncNamePrefixOfMathSqrt) == 0));
+  return (mirMod.IsJavaModule() && (strcmp(funcName.c_str(), kFuncNamePrefixOfMathSqrt) == 0));
 }
 
 bool Simplify::IsMathAbs(const std::string funcName) {
@@ -40,13 +36,11 @@ bool Simplify::IsMathAbs(const std::string funcName) {
 }
 
 bool Simplify::IsMathMax(const std::string funcName) {
-  return (mirMod.IsCModule() && (strcmp(funcName.c_str(), kFuncNameOfMathMax) == 0)) ||
-         (mirMod.IsJavaModule() && (strcmp(funcName.c_str(), kFuncNamePrefixOfMathMax) == 0));
+  return (mirMod.IsJavaModule() && (strcmp(funcName.c_str(), kFuncNamePrefixOfMathMax) == 0));
 }
 
 bool Simplify::IsMathMin(const std::string funcName) {
-  return (mirMod.IsCModule() && (strcmp(funcName.c_str(), kFuncNameOfMathMin) == 0)) ||
-         (mirMod.IsJavaModule() && (strcmp(funcName.c_str(), kFuncNamePrefixOfMathMin) == 0));
+  return (mirMod.IsJavaModule() && (strcmp(funcName.c_str(), kFuncNamePrefixOfMathMin) == 0));
 }
 
 bool Simplify::SimplifyMathMethod(const StmtNode &stmt, BlockNode &block) {

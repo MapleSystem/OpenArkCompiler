@@ -92,6 +92,7 @@ std::map<std::string, ASTParser::FuncPtrBuiltinFunc> ASTParser::InitBuiltinFuncP
   ans["__builtin_constant_p"] = &ASTParser::ParseBuiltinConstantP;
   ans["__builtin_signbit"] = &ASTParser::ParseBuiltinSignbit;
   ans["__builtin_isinf_sign"] = &ASTParser::ParseBuiltinIsinfsign;
+  ans["__builtin_huge_val"] = &ASTParser::ParseBuiltinHugeVal;
   return ans;
 }
 
@@ -152,5 +153,13 @@ ASTExpr *ASTParser::ParseBuiltinIsinfsign(MapleAllocator &allocator, const clang
     ASSERT(false, "Unsupported type passed to isinf");
   }
   return nullptr;
+}
+
+ASTExpr *ASTParser::ParseBuiltinHugeVal(MapleAllocator &allocator, const clang::CallExpr &expr,
+                                        std::stringstream &ss) const {
+  ASTFloatingLiteral *astFloatingLiteral = ASTDeclsBuilder::ASTExprBuilder<ASTFloatingLiteral>(allocator);
+  astFloatingLiteral->SetKind(F64);
+  astFloatingLiteral->SetVal(std::numeric_limits<double>::infinity());
+  return astFloatingLiteral;
 }
 } // namespace maple

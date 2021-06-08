@@ -346,6 +346,10 @@ class StImmOperand : public Operand {
     return offset;
   }
 
+  void SetOffset(int64 newOffset) {
+    offset = newOffset;
+  }
+
   int32 GetRelocs() const {
     return relocs;
   }

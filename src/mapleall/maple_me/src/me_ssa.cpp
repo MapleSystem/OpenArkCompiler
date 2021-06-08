@@ -150,15 +150,15 @@ void MeSSA::InsertIdentifyAssignments(IdentifyLoops *identloops) {
       MIRType *mirtype = GlobalTables::GetTypeTable().GetTypeFromTyIdx(ost->GetTyIdx());
       if (ost->IsSymbolOst()) {
         AddrofNode *dread = func->GetMirFunc()->GetCodeMempool()->New<AddrofNode>(OP_dread,
-                              mirtype->GetPrimType(), ost->GetMIRSymbol()->GetStIdx(), ost->GetFieldID());
+            mirtype->GetPrimType(), ost->GetMIRSymbol()->GetStIdx(), ost->GetFieldID());
         AddrofSSANode *ssadread = func->GetMirFunc()->GetCodeMempool()->New<AddrofSSANode>(*dread);
         ssadread->SetSSAVar(*ssatab->GetVersionStTable().GetZeroVersionSt(ost));
 
         DassignNode *dass = mirbuilder->CreateStmtDassign(*ost->GetMIRSymbol(), ost->GetFieldID(), ssadread);
         aloop->exitBB->PrependStmtNode(dass);
 
-        MayDefPartWithVersionSt *thessapart =
-            ssatab->GetStmtsSSAPart().GetSSAPartMp()->New<MayDefPartWithVersionSt>(&ssatab->GetStmtsSSAPart().GetSSAPartAlloc());
+        MayDefPartWithVersionSt *thessapart = ssatab->GetStmtsSSAPart().GetSSAPartMp()->New<MayDefPartWithVersionSt>(
+            &ssatab->GetStmtsSSAPart().GetSSAPartAlloc());
         ssatab->GetStmtsSSAPart().SetSSAPartOf(*dass, thessapart);
         thessapart->SetSSAVar(*ssatab->GetVersionStTable().GetZeroVersionSt(ost));
       } else {
@@ -177,7 +177,8 @@ void MeSSA::InsertIdentifyAssignments(IdentifyLoops *identloops) {
       ssatab->AddDefBB4Ost(ost->GetIndex(), aloop->exitBB->GetBBId());
     }
     if (eDebug) {
-      LogInfo::MapleLogger() << "****** Identity assignments inserted at loop exit BB " << aloop->exitBB->GetBBId() << std::endl;
+      LogInfo::MapleLogger() << "****** Identity assignments inserted at loop exit BB "
+                             << aloop->exitBB->GetBBId() << "\n";
     }
   }
 }

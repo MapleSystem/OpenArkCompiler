@@ -227,7 +227,7 @@ class AArch64CGFunc : public CGFunc {
   LabelOperand &GetOrCreateLabelOperand(LabelIdx labIdx) override;
   LabelOperand &GetOrCreateLabelOperand(BB &bb) override;
   LabelOperand &CreateFuncLabelOperand(const MIRSymbol &func);
-  uint32 GetAggCopySize(uint32 offset1, uint32 offset2, uint32 alignment);
+  uint32 GetAggCopySize(uint32 offset1, uint32 offset2, uint32 alignment) const;
 
   AArch64ImmOperand &CreateImmOperand(PrimType ptyp, int64 val) override {
     return CreateImmOperand(val, GetPrimTypeBitSize(ptyp), IsSignedInteger(ptyp));

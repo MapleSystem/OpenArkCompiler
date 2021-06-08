@@ -1267,10 +1267,15 @@ void CGFunc::DumpCGIR() const {
   FOR_ALL_BB_CONST(bb, this) {
     LogInfo::MapleLogger() << "=== BB " << " <" << bb->GetKindName();
     if (bb->GetLabIdx() != MIRLabelTable::GetDummyLabel()) {
-      LogInfo::MapleLogger() << "[labeled with " << bb->GetLabIdx() << "]";
+      LogInfo::MapleLogger() << "[labeled with " << bb->GetLabIdx();
+      LogInfo::MapleLogger() << " ==> @" << func.GetLabelName(bb->GetLabIdx()) << "]";
     }
 
     LogInfo::MapleLogger() << "> <" << bb->GetId() << "> ";
+    if (bb->GetLoop()) {
+      LogInfo::MapleLogger() << "[Loop level " << bb->GetLoop()->GetLoopLevel();
+      LogInfo::MapleLogger() << ", head BB " <<  bb->GetLoop()->GetHeader()->GetId() << "]";
+    }
     if (bb->IsCleanup()) {
       LogInfo::MapleLogger() << "[is_cleanup] ";
     }

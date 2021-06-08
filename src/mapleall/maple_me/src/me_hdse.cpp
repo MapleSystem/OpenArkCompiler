@@ -51,6 +51,20 @@
 //    up the CFG.
 
 namespace maple {
+// mark initExpr in whileinfo live
+void MeHDSE::ProcessWhileInfos() {
+  LfoFunction *lfoFunc = func.GetLfoFunc();
+  if (lfoFunc == nullptr) {
+    return;
+  }
+  MapleMap<LabelIdx, LfoWhileInfo *>::iterator it = lfoFunc->label2WhileInfo.begin();
+  for (; it != lfoFunc->label2WhileInfo.end(); it++) {
+    if (it->second->initExpr != nullptr && it->second->initExpr->GetMeOp() != maple::kMeOpConst) {
+      workList.push_front(it->second->initExpr);
+    }
+  }
+}
+
 void MeHDSE::BackwardSubstitution() {
   for (DassignMeStmt *dass : backSubsCands) {
     ScalarMeExpr *rhsscalar = static_cast<ScalarMeExpr *>(dass->GetRHS());

@@ -31,6 +31,9 @@ bool OriginalSt::Equal(const OriginalSt &ost) const {
 void OriginalSt::Dump() const {
   if (IsSymbolOst()) {
     LogInfo::MapleLogger() << (symOrPreg.mirSt->IsGlobal() ? "$" : "%") << symOrPreg.mirSt->GetName();
+    if (!offset.IsInvalid()) {
+      LogInfo::MapleLogger() << "{" << "offset:" << offset.val << "}";
+    }
     if (fieldID != 0) {
       LogInfo::MapleLogger() << "{" << fieldID << "}";
     }
@@ -75,6 +78,31 @@ OriginalSt *OriginalStTable::FindOrCreateSymbolOriginalSt(MIRSymbol &mirst, PUId
   CHECK_FATAL(it->second < originalStVector.size(),
               "index out of range in OriginalStTable::FindOrCreateSymbolOriginalSt");
   return originalStVector[it->second];
+}
+
+OriginalSt *OriginalStTable::CreateSymbolOriginalSt(MIRSymbol &mirSt, PUIdx puIdx, FieldID fld, const TyIdx &tyIdx,
+                                                    const OffsetType &offset) {
+  auto *ost = alloc.GetMemPool()->New<OriginalSt>(originalStVector.size(), mirSt, puIdx, fld, alloc);
+  ost->SetOffset(offset);
+  ost->SetTyIdx(tyIdx);
+  ost->SetIsFinal(mirSt.IsFinal());
+  ost->SetIsPrivate(mirSt.IsPrivate());
+  originalStVector.push_back(ost);
+  mirSt2Ost[SymbolFieldPair(mirSt.GetStIdx(), fld, offset)] = ost->GetIndex();
+  return ost;
+}
+
+std::pair<OriginalSt*, bool> OriginalStTable::FindOrCreateSymbolOriginalSt(MIRSymbol &mirst, PUIdx pidx,
+    FieldID fld, const TyIdx &tyIdx, const OffsetType &offset) {
+  auto it = mirSt2Ost.find(SymbolFieldPair(mirst.GetStIdx(), fld, offset));
+  if (it == mirSt2Ost.end()) {
+    // create a new OriginalSt
+    auto *newOst = CreateSymbolOriginalSt(mirst, pidx, fld, tyIdx, offset);
+    return std::make_pair(newOst, true);
+  }
+  CHECK_FATAL(it->second < originalStVector.size(),
+              "index out of range in OriginalStTable::FindOrCreateSymbolOriginalSt");
+  return std::make_pair(originalStVector[it->second], false);
 }
 
 OriginalSt *OriginalStTable::FindOrCreatePregOriginalSt(PregIdx regidx, PUIdx pidx) {

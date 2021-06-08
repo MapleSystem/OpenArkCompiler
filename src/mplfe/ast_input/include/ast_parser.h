@@ -39,7 +39,6 @@ class ASTParser {
   bool RetrieveFuncs(MapleAllocator &allocator);
   bool RetrieveGlobalVars(MapleAllocator &allocator);
 
-  bool ProcessGlobalEnums(MapleAllocator &allocator);
   bool ProcessGlobalTypeDef(MapleAllocator &allocator);
 
   const std::string &GetSourceFileName() const;
@@ -81,6 +80,7 @@ class ASTParser {
   ASTStmt *PROCESS_STMT(DeclStmt);
   ASTStmt *PROCESS_STMT(AtomicExpr);
   ASTStmt *PROCESS_STMT(GCCAsmStmt);
+  ASTStmt *PROCESS_STMT(OffsetOfExpr);
   bool HasDefault(const clang::Stmt &stmt);
 
   // ProcessExpr
@@ -172,6 +172,7 @@ ASTExpr *ParseBuiltinFunc(MapleAllocator &allocator, const clang::CallExpr &expr
   ASTExpr *PARSE_BUILTIIN_FUNC(ConstantP);
   ASTExpr *PARSE_BUILTIIN_FUNC(Signbit);
   ASTExpr *PARSE_BUILTIIN_FUNC(Isinfsign);
+  ASTExpr *PARSE_BUILTIIN_FUNC(HugeVal);
 
   static std::map<std::string, FuncPtrBuiltinFunc> builtingFuncPtrMap;
   uint32 fileIdx;

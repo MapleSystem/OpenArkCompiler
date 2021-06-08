@@ -166,6 +166,10 @@ class MIRAddrofConst : public MIRConst {
     return stIdx;
   }
 
+  void SetSymbolIndex(StIdx idx) {
+    stIdx = idx;
+  }
+
   FieldID GetFieldID() const {
     return fldID;
   }

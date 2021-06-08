@@ -71,7 +71,6 @@ PrimType LibAstFile::CvtPrimType(const clang::BuiltinType::Kind kind) const {
       return PTY_f64;
     case clang::BuiltinType::LongDouble:
     case clang::BuiltinType::Float128:
-      WARN(kLncWarn, "True Type is Float128, cvt double, but it is not exact");
       return PTY_f64;
     case clang::BuiltinType::NullPtr: // default 64-bit, need to update
       return PTY_a64;
@@ -117,7 +116,9 @@ MIRType *LibAstFile::CvtOtherType(const clang::QualType srcType) {
   } else if (srcType->isFunctionType()) {
     destType = CvtFunctionType(srcType);
   } else if (srcType->isEnumeralType()) {
-    destType = GlobalTables::GetTypeTable().GetInt32();
+    const clang::EnumType *enumTy = llvm::dyn_cast<clang::EnumType>(srcType);
+    clang::QualType qt = enumTy->getDecl()->getIntegerType();
+    destType = CvtType(qt);
   } else if (srcType->isAtomicType()) {
     const auto *atomicType = llvm::cast<clang::AtomicType>(srcType);
     destType = CvtType(atomicType->getValueType());
@@ -129,8 +130,11 @@ MIRType *LibAstFile::CvtOtherType(const clang::QualType srcType) {
 MIRType *LibAstFile::CvtRecordType(const clang::QualType srcType) {
   const auto *recordType = llvm::cast<clang::RecordType>(srcType);
   clang::RecordDecl *recordDecl = recordType->getDecl();
-  if (!recordDecl->isLambda() && recordDecl->isImplicit() && recordDeclSet.emplace(recordDecl).second == true) {
-    recordDecles.emplace_back(recordDecl);
+  if (!recordDecl->isLambda() && recordDeclSet.emplace(recordDecl).second == true) {
+    auto itor = std::find(recordDecles.begin(), recordDecles.end(), recordDecl);
+    if (itor == recordDecles.end()) {
+      recordDecles.emplace_back(recordDecl);
+    }
   }
   MIRStructType *type = nullptr;
   std::stringstream ss;

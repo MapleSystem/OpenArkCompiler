@@ -349,7 +349,7 @@ bool BackPropPattern::CheckAndGetOpnd(Insn &insn) {
 
   firstRegOpnd = &static_cast<RegOperand&>(firstOpnd);
   secondRegOpnd = &static_cast<RegOperand&>(secondOpnd);
-  if (firstRegOpnd->IsZeroRegister() || !secondRegOpnd->IsVirtualRegister()) {
+  if (firstRegOpnd->IsZeroRegister() || !firstRegOpnd->IsVirtualRegister() || !secondRegOpnd->IsVirtualRegister()) {
     return false;
   }
   firstRegNO = firstRegOpnd->GetRegisterNumber();

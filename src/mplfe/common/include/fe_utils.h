@@ -329,14 +329,19 @@ class AstLoopUtil {
   }
 
   ~AstLoopUtil() = default;
-  void PushLoop(const std::pair<std::string, std::string> &labelPair);
-  std::pair<std::string, std::string> GetCurrentLoop();
-  void PopCurrentLoop();
-  bool IsLoopLabelsEmpty () const;
+  void PushBreak(std::string labelPair);
+  std::string GetCurrentBreak();
+  void PopCurrentBreak();
+  bool IsBreakLabelsEmpty() const;
+  void PushContinue(std::string label);
+  std::string GetCurrentContinue();
+  bool IsContinueLabelsEmpty() const;
+  void PopCurrentContinue();
 
  private:
   AstLoopUtil() = default;
-  std::stack<std::pair<std::string, std::string>> loopLabels = std::stack<std::pair<std::string, std::string>>();
+  std::stack<std::string> loopLabels = std::stack<std::string>();
+  std::stack<std::string> continueLabels = std::stack<std::string>();
 };
 }  // namespace maple
 #endif  // MPLFE_INCLUDE_FE_UTILS_H

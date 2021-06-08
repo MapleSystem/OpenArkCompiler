@@ -1020,22 +1020,12 @@ std::list<StmtNode*> FEIRStmtSwitchForC::GenMIRStmtsImpl(MIRBuilder &mirBuilder)
   MIRModule &module = mirBuilder.GetMirModule();
   CaseVector *caseVec = module.CurFuncCodeMemPool()->New<CaseVector>(module.CurFuncCodeMemPoolAllocator()->Adapter());
   std::string endName = AstSwitchUtil::Instance().CreateEndOrExitLabelName();
-  std::string exitName = AstSwitchUtil::Instance().CreateEndOrExitLabelName();
-  AstSwitchUtil::Instance().MarkLabelUnUsed(endName);
-  AstSwitchUtil::Instance().MarkLabelUnUsed(exitName);
   LabelIdx swDefaultLabel = mirBuilder.GetOrCreateMIRLabel(endName);  // end label
-  AstSwitchUtil::Instance().PushNestedBreakLabels(exitName);  // exit label
   AstSwitchUtil::Instance().PushNestedCaseVectors(std::pair<CaseVector*, LabelIdx>(caseVec, swDefaultLabel));
   BaseNode *exprNode = expr->GenMIRNode(mirBuilder);
   BlockNode *tempBlock = module.CurFuncCodeMemPool()->New<BlockNode>();
   CaseVector &switchTable = *AstSwitchUtil::Instance().GetTopOfNestedCaseVectors().first;
   for (auto &sub : subStmts) {
-    if (sub.get()->GetKind() == FEIRNodeKind::kStmtBreak) {
-      AstSwitchUtil::Instance().MarkLabelUsed(exitName);
-      auto feirStmtBreak = static_cast<FEIRStmtBreak*>(sub.get());
-      feirStmtBreak->SetSwitchLabelName(exitName);
-      feirStmtBreak->SetIsFromSwitch(true);
-    }
     for (auto mirStmt : sub->GenMIRStmts(mirBuilder)) {
       tempBlock->AddStatement(mirStmt);
     }
@@ -1050,13 +1040,9 @@ std::list<StmtNode*> FEIRStmtSwitchForC::GenMIRStmtsImpl(MIRBuilder &mirBuilder)
     StmtNode *mirSwExitLabelStmt = mirBuilder.CreateStmtLabel(endLab);
     ans.push_back(mirSwExitLabelStmt);
   }
-
-  if (AstSwitchUtil::Instance().CheckLabelUsed(exitName)) {
-    LabelIdx exitLab = mirBuilder.GetOrCreateMIRLabel(exitName);
-    StmtNode *mirSwExitLabelStmt = mirBuilder.CreateStmtLabel(exitLab);
-    ans.push_back(mirSwExitLabelStmt);
-  }
-  AstSwitchUtil::Instance().PopNestedBreakLabels();
+  LabelIdx exitLab = mirBuilder.GetOrCreateMIRLabel(breakLabelName);
+  StmtNode *mirSwExitLabelStmt = mirBuilder.CreateStmtLabel(exitLab);
+  ans.push_back(mirSwExitLabelStmt);
   AstSwitchUtil::Instance().PopNestedCaseVectors();
   return ans;
 }
@@ -1074,7 +1060,7 @@ FEIRStmtCaseForC::FEIRStmtCaseForC(int64 label)
 void FEIRStmtCaseForC::AddCaseTag2CaseVec(int64 lCaseTag, int64 rCaseTag) {
   auto pLabel = std::make_unique<FEIRStmtPesudoLabel>(lCaseLabel);
   for (int64 csTag = lCaseTag; csTag <= rCaseTag; ++csTag) {
-    pesudoLabelMap.insert(std::pair<int32, FEIRStmtPesudoLabel*>(csTag, pLabel.get()));
+    pesudoLabelMap.insert(std::pair<int64, FEIRStmtPesudoLabel*>(csTag, pLabel.get()));
   }
 }
 
@@ -1093,13 +1079,6 @@ std::list<StmtNode*> FEIRStmtCaseForC::GenMIRStmtsImpl(MIRBuilder &mirBuilder) c
     }
   }
   for (auto &sub : subStmts) {
-    if (sub.get()->GetKind() == FEIRNodeKind::kStmtBreak) {
-      std::string switchBreakLabelName = AstSwitchUtil::Instance().GetTopOfBreakLabels();
-      AstSwitchUtil::Instance().MarkLabelUsed(switchBreakLabelName);
-      auto feirStmtBreak = static_cast<FEIRStmtBreak*>(sub.get());
-      feirStmtBreak->SetSwitchLabelName(switchBreakLabelName);
-      feirStmtBreak->SetIsFromSwitch(true);
-    }
     ans.splice(ans.end(), sub.get()->GenMIRStmts(mirBuilder));
   }
   return ans;
@@ -1119,13 +1098,6 @@ std::list<StmtNode*> FEIRStmtDefaultForC::GenMIRStmtsImpl(MIRBuilder &mirBuilder
   StmtNode *mirLabelStmt = mirBuilder.CreateStmtLabel(AstSwitchUtil::Instance().GetTopOfNestedCaseVectors().second);
   ans.emplace_back(mirLabelStmt);
   for (auto &sub : subStmts) {
-    if (sub.get()->GetKind() == FEIRNodeKind::kStmtBreak) {
-      std::string switchBreakLabelName = AstSwitchUtil::Instance().GetTopOfBreakLabels();
-      AstSwitchUtil::Instance().MarkLabelUsed(switchBreakLabelName);
-      auto feirStmtBreak = static_cast<FEIRStmtBreak*>(sub.get());
-      feirStmtBreak->SetSwitchLabelName(switchBreakLabelName);
-      feirStmtBreak->SetIsFromSwitch(true);
-    }
     ans.splice(ans.end(), sub.get()->GenMIRStmts(mirBuilder));
   }
   return ans;
@@ -2873,7 +2845,7 @@ BaseNode *FEIRExprBinary::GenMIRNodeNormal(MIRBuilder &mirBuilder) const {
 BaseNode *FEIRExprBinary::GenMIRNodeCompare(MIRBuilder &mirBuilder) const {
   BaseNode *nodeOpnd0 = opnd0->GenMIRNode(mirBuilder);
   BaseNode *nodeOpnd1 = opnd1->GenMIRNode(mirBuilder);
-  CHECK_FATAL(nodeOpnd0->GetPrimType() == nodeOpnd1->GetPrimType(), "primtype of opnds must be the same");
+  CheckPrimTypeEq(nodeOpnd0->GetPrimType(), nodeOpnd1->GetPrimType());
   MIRType *mirTypeSrc = GlobalTables::GetTypeTable().GetTypeFromTyIdx(
       TyIdx(static_cast<uint32>(nodeOpnd0->GetPrimType())));
   MIRType *mirTypeDst = GlobalTables::GetTypeTable().GetTypeFromTyIdx(TyIdx(static_cast<uint32>(type->GetPrimType())));
@@ -2884,7 +2856,7 @@ BaseNode *FEIRExprBinary::GenMIRNodeCompare(MIRBuilder &mirBuilder) const {
 BaseNode *FEIRExprBinary::GenMIRNodeCompareU1(MIRBuilder &mirBuilder) const {
   BaseNode *nodeOpnd0 = opnd0->GenMIRNode(mirBuilder);
   BaseNode *nodeOpnd1 = opnd1->GenMIRNode(mirBuilder);
-  CHECK_FATAL(nodeOpnd0->GetPrimType() == nodeOpnd1->GetPrimType(), "primtype of opnds must be the same");
+  CheckPrimTypeEq(nodeOpnd0->GetPrimType(), nodeOpnd1->GetPrimType());
   MIRType *mirTypeSrc = GlobalTables::GetTypeTable().GetTypeFromTyIdx(
       TyIdx(static_cast<uint32>(nodeOpnd0->GetPrimType())));
   // When the int32 is used to process Java, an error will be reported during the verification.
@@ -2952,7 +2924,7 @@ void FEIRExprBinary::SetExprTypeByOpNormal() {
     type->SetPrimType(PTY_ptr);
     return;
   }
-  CHECK_FATAL(primTypeOpnd0 == primTypeOpnd1, "primtype of opnds must be the same");
+  CheckPrimTypeEq(primTypeOpnd0, primTypeOpnd1);
   type->SetPrimType(primTypeOpnd0);
 }
 
@@ -2967,7 +2939,7 @@ void FEIRExprBinary::SetExprTypeByOpShift() {
 void FEIRExprBinary::SetExprTypeByOpLogic() {
   PrimType primTypeOpnd0 = opnd0->GetPrimType();
   PrimType primTypeOpnd1 = opnd1->GetPrimType();
-  CHECK_FATAL(primTypeOpnd0 == primTypeOpnd1, "primtype of opnds must be the same");
+  CheckPrimTypeEq(primTypeOpnd0, primTypeOpnd1);
   CHECK_FATAL(IsPrimitiveInteger(primTypeOpnd0), "logic's opnds must be integer");
   type->SetPrimType(primTypeOpnd0);
 }
@@ -2995,8 +2967,8 @@ FEIRExprTernary::FEIRExprTernary(Opcode argOp, std::unique_ptr<FEIRType> argType
   SetOpnd(std::move(argOpnd1), 1);
   SetOpnd(std::move(argOpnd2), 2);
   PrimType primType = type->GetPrimType();
-  CHECK_FATAL(primType == opnd1->GetPrimType(), "primtype of true opnd must be the same");
-  CHECK_FATAL(primType == opnd2->GetPrimType(), "primtype of false opnd must be the same");
+  CheckPrimTypeEq(primType, opnd1->GetPrimType());
+  CheckPrimTypeEq(primType, opnd2->GetPrimType());
 }
 
 std::unique_ptr<FEIRExpr> FEIRExprTernary::CloneImpl() const {
@@ -3070,7 +3042,7 @@ void FEIRExprTernary::SetOpnd(std::unique_ptr<FEIRExpr> argOpnd, uint32 idx) {
 void FEIRExprTernary::SetExprTypeByOp() {
   PrimType primTypeOpnd1 = opnd1->GetPrimType();
   PrimType primTypeOpnd2 = opnd2->GetPrimType();
-  CHECK_FATAL(primTypeOpnd1 == primTypeOpnd2, "primtype of opnds must be the same");
+  CheckPrimTypeEq(primTypeOpnd1, primTypeOpnd2);
   type->SetPrimType(primTypeOpnd1);
 }
 
@@ -4029,9 +4001,8 @@ std::list<StmtNode*> FEIRStmtDoWhile::GenMIRStmtsImpl(MIRBuilder &mirBuilder) co
 
 std::list<StmtNode*> FEIRStmtBreak::GenMIRStmtsImpl(MIRBuilder &mirBuilder) const {
   std::list<StmtNode*> stmts;
-  std::string labelName = isFromSwitch ? switchLabelName : loopLabelName;
-  CHECK_FATAL(!labelName.empty(), "labelName is null!");
-  LabelIdx labelIdx = mirBuilder.GetOrCreateMIRLabel(labelName);
+  CHECK_FATAL(!breakLabelName.empty(), "labelName is null!");
+  LabelIdx labelIdx = mirBuilder.GetOrCreateMIRLabel(breakLabelName);
   GotoNode *gotoNode = mirBuilder.CreateStmtGoto(OP_goto, labelIdx);
   stmts.emplace_back(gotoNode);
   return stmts;
