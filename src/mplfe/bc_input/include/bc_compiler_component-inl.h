@@ -173,13 +173,8 @@ bool BCCompilerComponent<T>::LoadOnDemandBCClass2FEClass(
       FEManager::GetTypeManager().SetMirImportedTypes(FETypeFlag::kSrcMplt);
       break;
   }
-#ifndef USE_OPS
-  for (uint32 i = 1; i < SymbolBuilder::Instance().GetSymbolTableSize(); ++i) {
-    MIRSymbol *symbol = SymbolBuilder::Instance().GetSymbolFromStIdx(i);
-#else
   for (uint32 i = 1; i < GlobalTables::GetGsymTable().GetSymbolTableSize(); ++i) {
     MIRSymbol *symbol = GlobalTables::GetGsymTable().GetSymbol(i);
-#endif
     if ((symbol != nullptr) && (symbol->GetSKind() == kStFunc)) {
       symbol->SetIsImportedDecl(true);
     }

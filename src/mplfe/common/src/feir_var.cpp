@@ -136,9 +136,6 @@ MIRSymbol *FEIRVar::GenerateLocalMIRSymbolImpl(MIRBuilder &builder) const {
   MPLFE_PARALLEL_FORBIDDEN();
   MIRType *mirType = type->GenerateMIRTypeAuto();
   std::string name = GetName(*mirType);
-#ifndef USE_OPS
-  return SymbolBuilder::Instance().GetOrCreateLocalSymbol(*mirType, name, *builder.GetCurrentFunction());
-#else
   MIRSymbol *mirSymbol = builder.GetOrCreateLocalDecl(name, *mirType);
   if (genAttrs.GetAttr(GenericAttrKind::GENATTR_static)) {
     auto attrs = TypeAttrs();
@@ -148,7 +145,6 @@ MIRSymbol *FEIRVar::GenerateLocalMIRSymbolImpl(MIRBuilder &builder) const {
     mirSymbol->SetKonst(mirConst);
   }
   return mirSymbol;
-#endif
 }
 
 MIRSymbol *FEIRVar::GenerateMIRSymbolImpl(MIRBuilder &builder) const {

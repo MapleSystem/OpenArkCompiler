@@ -88,11 +88,8 @@ void FEFileType::LoadDefault() {
   RegisterMagicNumber(kJar, kMagicZip);
   RegisterExtName(kDex, "dex");
   RegisterMagicNumber(kDex, kMagicDex);
-#ifdef ENABLE_MPLFE_AST
   RegisterExtName(kAST, "ast");
   RegisterMagicNumber(kAST, kMagicAST);
-#endif // ~/ENABLE_MPLFE_AST
-
 }
 
 void FEFileType::RegisterExtName(FileType argFileType, const std::string &extName) {

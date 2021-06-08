@@ -105,7 +105,6 @@ void MPLFECompiler::CheckInput() {
     }
   }
 
-#ifdef ENABLE_MPLFE_AST
   // check input ast files
   const std::vector<std::string> &inputASTNames = FEOptions::GetInstance().GetInputASTFiles();
   if (!inputASTNames.empty()) {
@@ -114,7 +113,6 @@ void MPLFECompiler::CheckInput() {
       firstInputName = inputASTNames[0];
     }
   }
-#endif // ~/ENABLE_MPLFE_AST
   CHECK_FATAL(nInput > 0, "Error occurs: no inputs. exit.");
 }
 
@@ -202,11 +200,7 @@ void MPLFECompiler::ExportMplFile() {
     if (srcLang == kSrcLangC) {
       emitStructureType = true;
     }
-#ifndef USE_OPS
-    module.OutputAsciiMpl("", emitStructureType);
-#else
     module.OutputAsciiMpl("", ".mpl", nullptr, emitStructureType, false);
-#endif
     timer.StopAndDumpTimeMS("Output mpl");
   }
 }
@@ -307,13 +301,11 @@ void MPLFECompiler::RegisterCompilerComponent() {
         std::make_unique<bc::BCCompilerComponent<bc::DexReader>>(module);
     RegisterCompilerComponent(std::move(bcCompilerComp));
   }
-#ifdef ENABLE_MPLFE_AST
   if (FEOptions::GetInstance().GetInputASTFiles().size() != 0) {
     srcLang = kSrcLangC;
     std::unique_ptr<MPLFECompilerComponent> astCompilerComp = std::make_unique<ASTCompilerComponent>(module);
     RegisterCompilerComponent(std::move(astCompilerComp));
   }
-#endif // ~/ENABLE_MPLFE_AST
   module.SetSrcLang(srcLang);
   FEManager::GetTypeManager().SetSrcLang(srcLang);
 }

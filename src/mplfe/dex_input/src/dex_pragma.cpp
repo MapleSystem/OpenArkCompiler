@@ -422,11 +422,7 @@ void DexBCMethodAnnotations::SetupFuncAttrWithPragma(MIRFunction &mirFunc, MIRPr
     mirFunc.SetAttr(attr);
     // update method attribute in structure type as well
     for (auto &mit : currStructType->GetMethods()) {
-#ifndef USE_OPS
-      if (mit.first->GetStIdx() == mirFunc.GetStIdx()) {
-#else
       if (mit.first == mirFunc.GetStIdx()) {
-#endif
         mit.second.second.SetAttr(attr);
         break;
       }

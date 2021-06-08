@@ -152,13 +152,8 @@ void FETypeManager::SetMirImportedTypes(FETypeFlag flag) {
 }
 
 void FETypeManager::UpdateNameFuncMapFromTypeTable() {
-#ifndef USE_OPS
-  for (uint32 i = 1; i < SymbolBuilder::Instance().GetSymbolTableSize(); i++) {
-    MIRSymbol *symbol = SymbolBuilder::Instance().GetSymbolFromStIdx(i);
-#else
   for (uint32 i = 1; i < GlobalTables::GetGsymTable().GetSymbolTableSize(); i++) {
     MIRSymbol *symbol = GlobalTables::GetGsymTable().GetSymbolFromStidx(i);
-#endif
     CHECK_FATAL(symbol, "Symbol is null");
     if (symbol->GetSKind() == kStFunc) {
       CHECK_FATAL(symbol->GetFunction(), "Function in symbol is null");
@@ -502,20 +497,6 @@ MIRFunction *FETypeManager::CreateFunction(const GStrIdx &nameIdx, const TyIdx &
   if (mirFunc != nullptr) {
     return mirFunc;
   }
-#ifndef USE_OPS
-  MIRSymbol *funcSymbol = SymbolBuilder::Instance().GetSymbolFromStrIdx(nameIdx);
-  if (funcSymbol == nullptr) {
-    funcSymbol = SymbolBuilder::Instance().CreateSymbol(TyIdx(), nameIdx, kStFunc, kScText);
-    SymbolBuilder::Instance().AddToStringSymbolMap(*funcSymbol);
-  } else {
-    mirFunc = funcSymbol->GetFunction();
-    if (mirFunc != nullptr) {
-      return mirFunc;
-    }
-    funcSymbol->SetStorageClass(kScText);
-    funcSymbol->SetSKind(kStFunc);
-  }
-#else
   MIRSymbol *funcSymbol = GlobalTables::GetGsymTable().CreateSymbol(kScopeGlobal);
   funcSymbol->SetNameStrIdx(nameIdx);
   bool added = GlobalTables::GetGsymTable().AddToStringSymbolMap(*funcSymbol);
@@ -528,15 +509,10 @@ MIRFunction *FETypeManager::CreateFunction(const GStrIdx &nameIdx, const TyIdx &
   }
   funcSymbol->SetStorageClass(kScText);
   funcSymbol->SetSKind(kStFunc);
-#endif
   MemPool *mpModule = module.GetMemPool();
   ASSERT(mpModule, "mem pool is nullptr");
   mirFunc = mpModule->New<MIRFunction>(&module, funcSymbol->GetStIdx());
-#ifndef USE_OPS
-  mirFunc->Init();
-#else
   mirFunc->AllocSymTab();
-#endif
   size_t idx = GlobalTables::GetFunctionTable().GetFuncTable().size();
   CHECK_FATAL(idx < UINT32_MAX, "PUIdx is out of range");
   mirFunc->SetPuidx(static_cast<uint32>(idx));
@@ -547,14 +523,8 @@ MIRFunction *FETypeManager::CreateFunction(const GStrIdx &nameIdx, const TyIdx &
     argsAttr.emplace_back(TypeAttrs());
   }
   mirFunc->SetBaseClassFuncNames(nameIdx);
-#ifndef USE_OPS
-  funcSymbol->SetTyIdx(GlobalTables::GetTypeTable().GetOrCreateFunctionType(module, retTypeIdx,
-                                                                            argsTypeIdx, argsAttr,
-                                                                            isVarg)->GetTypeIndex());
-#else
   funcSymbol->SetTyIdx(GlobalTables::GetTypeTable().GetOrCreateFunctionType(retTypeIdx, argsTypeIdx, argsAttr,
                                                                             isVarg)->GetTypeIndex());
-#endif
   funcSymbol->SetFunction(mirFunc);
   MIRFuncType *functype = static_cast<MIRFuncType*>(funcSymbol->GetType());
   mirFunc->SetMIRFuncType(functype);
@@ -749,7 +719,6 @@ void FETypeManager::InitFuncMCCGetOrInsertLiteral() {
   funcMCCGetOrInsertLiteral->SetAttr(FUNCATTR_noprivate_defeffect);
   nameMCCFuncMap[nameIdx] = funcMCCGetOrInsertLiteral;
 }
-
 
 MIRFunction *FETypeManager::GetMCCFunction(const std::string &funcName) const {
   GStrIdx funcNameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(funcName);

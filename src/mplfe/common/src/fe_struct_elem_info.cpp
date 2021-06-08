@@ -364,15 +364,9 @@ void FEStructMethodInfo::PrepareMethod() {
     for (const std::unique_ptr<FEIRVar> &argVar : argVarList) {
       MIRType *mirTy = argVar->GetType()->GenerateMIRTypeAuto();
       std::string name = argVar->GetName(*mirTy);
-#ifndef USE_OPS
-      MIRSymbol *sym = SymbolBuilder::Instance().GetOrCreateLocalSymbol(*mirTy, name, *mirFunc);
-      sym->SetStorageClass(kScFormal);
-      mirFunc->AddFormal(sym);
-#else
       MIRSymbol *sym = FEManager::GetMIRBuilder().GetOrCreateDeclInFunc(name, *mirTy, *mirFunc);
       sym->SetStorageClass(kScFormal);
       mirFunc->AddArgument(sym);
-#endif
     }
   }
   isPrepared = true;
@@ -394,15 +388,9 @@ bool FEStructMethodInfo::SearchStructMethodJava(MIRStructType &structType, MIRBu
     if (methodPair.second.second.GetAttr(FUNCATTR_static) != argIsStatic) {
       continue;
     }
-#ifndef USE_OPS
-    const MIRFunction *func = methodPair.first;
-    CHECK_NULL_FATAL(func);
-    if (func->GetNameStrIdx() == nameIdx) {
-#else
     const MIRSymbol *sym = GlobalTables::GetGsymTable().GetSymbolFromStidx(methodPair.first.Idx(), true);
     CHECK_NULL_FATAL(sym);
     if (sym->GetNameStrIdx() == nameIdx) {
-#endif
       isStatic = argIsStatic;
       if (isStatic) {
         methodNameIdx = nameIdx;

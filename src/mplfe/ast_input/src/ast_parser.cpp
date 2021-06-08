@@ -587,7 +587,10 @@ ASTValue *ASTParser::TranslateLValue2ASTValue(MapleAllocator &allocator, const c
     const clang::APValue::LValueBase &lvBase = result.Val.getLValueBase();
     if (lvBase.is<const clang::Expr*>()) {
       const clang::Expr *lvExpr = lvBase.get<const clang::Expr*>();
-      if (lvExpr == nullptr && expr->getStmtClass() == clang::Stmt::MemberExprClass) {
+      if (lvExpr == nullptr) {
+        return astValue;
+      }
+      if (expr->getStmtClass() == clang::Stmt::MemberExprClass) {
         // meaningless, just for Initialization
         astValue->pty = PTY_i32;
         astValue->val.i32 = 0;
@@ -926,9 +929,6 @@ ASTExpr *ASTParser::ProcessExprInitListExpr(MapleAllocator &allocator, const cla
   const clang::FieldDecl *fieldDecl = expr.getInitializedFieldInUnion();
   astInitListExpr->SetIsUnionInitListExpr(fieldDecl != nullptr);
   uint32 n = expr.getNumInits();
-  if (n == 0) {
-    return astInitListExpr;
-  }
   clang::Expr * const *le = expr.getInits();
   if (aggType->isRecordType()) {
     const auto *recordType = llvm::cast<clang::RecordType>(aggType);
@@ -937,20 +937,22 @@ ASTExpr *ASTParser::ProcessExprInitListExpr(MapleAllocator &allocator, const cla
     CHECK_FATAL(astDecl != nullptr && astDecl->GetDeclKind() == kASTStruct, "Undefined record type");
     uint i = 0;
     for (const auto field : static_cast<ASTStruct*>(astDecl)->GetFields()) {
-      if (field->IsAnonymousField()) {
-        astInitListExpr->SetFillerExprs(nullptr);
+      if (field->IsAnonymousField() && fieldDecl == nullptr) {
+        astInitListExpr->SetInitExprs(nullptr);
       } else {
         if (i < n) {
           const clang::Expr *eExpr = le[i];
           ASTExpr *astExpr = ProcessExpr(allocator, eExpr);
           CHECK_FATAL(astExpr != nullptr, "Invalid InitListExpr");
-          astInitListExpr->SetFillerExprs(astExpr);
+          astInitListExpr->SetInitExprs(astExpr);
           i++;
         }
       }
     }
   } else {
     if (expr.hasArrayFiller()) {
+      auto *astFilterExpr = ProcessExpr(allocator, expr.getArrayFiller());
+      astInitListExpr->SetArrayFiller(astFilterExpr);
       astInitListExpr->SetHasArrayFiller(true);
     }
     if (expr.isTransparent()) {
@@ -962,7 +964,7 @@ ASTExpr *ASTParser::ProcessExprInitListExpr(MapleAllocator &allocator, const cla
       if (astExpr == nullptr) {
         return nullptr;
       }
-      astInitListExpr->SetFillerExprs(astExpr);
+      astInitListExpr->SetInitExprs(astExpr);
     }
   }
   return astInitListExpr;
@@ -1027,7 +1029,6 @@ ASTExpr *ASTParser::ProcessExprStringLiteral(MapleAllocator &allocator, const cl
   for (size_t i = 0; i < expr.getLength(); ++i) {
     codeUnits.emplace_back(expr.getCodeUnit(i));
   }
-  codeUnits.emplace_back(0);
   astStringLiteral->SetCodeUnits(codeUnits);
   return astStringLiteral;
 }
@@ -1182,7 +1183,12 @@ ASTExpr *ASTParser::ProcessExprMemberExpr(MapleAllocator &allocator, const clang
   }
   astMemberExpr->SetBaseExpr(baseExpr);
   astMemberExpr->SetBaseType(astFile->CvtType(expr.getBase()->getType()));
-  astMemberExpr->SetMemberName(expr.getMemberDecl()->getNameAsString());
+  auto memberName = expr.getMemberDecl()->getNameAsString();
+  if (memberName.empty()) {
+    uint32 id = expr.getMemberDecl()->getLocation().getRawEncoding();
+    memberName = astFile->GetOrCreateMappedUnnamedName(id);
+  }
+  astMemberExpr->SetMemberName(memberName);
   astMemberExpr->SetMemberType(astFile->CvtType(expr.getMemberDecl()->getType()));
   astMemberExpr->SetIsArrow(expr.isArrow());
   return astMemberExpr;
@@ -1457,22 +1463,26 @@ ASTExpr *ASTParser::ProcessExprFloatingLiteral(MapleAllocator &allocator, const 
   return astFloatingLiteral;
 }
 
-ASTExpr *ASTParser::ProcessExprImplicitCastExpr(MapleAllocator &allocator, const clang::ImplicitCastExpr &expr) {
-  ASTImplicitCastExpr *astImplicitCastExpr = ASTDeclsBuilder::ASTExprBuilder<ASTImplicitCastExpr>(allocator);
-  CHECK_FATAL(astImplicitCastExpr != nullptr, "astImplicitCastExpr is nullptr");
+ASTExpr *ASTParser::ProcessExprCastExpr(MapleAllocator &allocator, const clang::CastExpr &expr) {
+  ASTCastExpr *astCastExpr = ASTDeclsBuilder::ASTExprBuilder<ASTCastExpr>(allocator);
+  CHECK_FATAL(astCastExpr != nullptr, "astCastExpr is nullptr");
+  MIRType *srcType = astFile->CvtType(expr.getSubExpr()->getType());
+  MIRType *toType = astFile->CvtType(expr.getType());
+  astCastExpr->SetSrcType(srcType);
+  astCastExpr->SetDstType(toType);
+
   switch (expr.getCastKind()) {
     case clang::CK_NoOp:
     case clang::CK_ToVoid:
-      break;
-    case clang::CK_ArrayToPointerDecay:
-      astImplicitCastExpr->SetIsArrayToPointerDecay(true);
-      break;
     case clang::CK_FunctionToPointerDecay:
     case clang::CK_LValueToRValue:
     case clang::CK_BitCast:
       break;
+    case clang::CK_ArrayToPointerDecay:
+      astCastExpr->SetIsArrayToPointerDecay(true);
+      break;
     case clang::CK_BuiltinFnToFnPtr:
-      astImplicitCastExpr->SetBuilinFunc(true);
+      astCastExpr->SetBuilinFunc(true);
       break;
     case clang::CK_NullToPointer:
     case clang::CK_IntegralToPointer:
@@ -1481,9 +1491,13 @@ ASTExpr *ASTParser::ProcessExprImplicitCastExpr(MapleAllocator &allocator, const
     case clang::CK_FloatingCast:
     case clang::CK_IntegralCast:
     case clang::CK_IntegralToBoolean:
-      astImplicitCastExpr->SetSrcType(astFile->CvtType(expr.getSubExpr()->getType()));
-      astImplicitCastExpr->SetDstType(astFile->CvtType(expr.getType()));
-      astImplicitCastExpr->SetNeededCvt(true);
+    case clang::CK_PointerToBoolean:
+    case clang::CK_FloatingToBoolean:
+    case clang::CK_PointerToIntegral:
+      astCastExpr->SetNeededCvt(true);
+      break;
+    case clang::CK_ToUnion:
+      astCastExpr->SetUnionCast(true);
       break;
     case clang::CK_IntegralRealToComplex:
     case clang::CK_FloatingRealToComplex:
@@ -1496,18 +1510,18 @@ ASTExpr *ASTParser::ProcessExprImplicitCastExpr(MapleAllocator &allocator, const
     case clang::CK_FloatingComplexToBoolean:
     case clang::CK_IntegralComplexToBoolean: {
       clang::QualType qualType = expr.getType().getCanonicalType();
-      astImplicitCastExpr->SetComplexType(astFile->CvtType(qualType));
+      astCastExpr->SetComplexType(astFile->CvtType(qualType));
       clang::QualType dstQualType = llvm::cast<clang::ComplexType>(qualType)->getElementType();
-      astImplicitCastExpr->SetDstType(astFile->CvtType(dstQualType));
-      astImplicitCastExpr->SetNeededCvt(true);
+      astCastExpr->SetDstType(astFile->CvtType(dstQualType));
+      astCastExpr->SetNeededCvt(true);
       if (expr.getCastKind() == clang::CK_IntegralRealToComplex ||
           expr.getCastKind() == clang::CK_FloatingRealToComplex) {
-        astImplicitCastExpr->SetComplexCastKind(true);
-        astImplicitCastExpr->SetSrcType(astFile->CvtType(expr.getSubExpr()->getType().getCanonicalType()));
+        astCastExpr->SetComplexCastKind(true);
+        astCastExpr->SetSrcType(astFile->CvtType(expr.getSubExpr()->getType().getCanonicalType()));
       } else {
         clang::QualType subQualType = expr.getSubExpr()->getType().getCanonicalType();
         clang::QualType srcQualType = llvm::cast<clang::ComplexType>(subQualType)->getElementType();
-        astImplicitCastExpr->SetSrcType(astFile->CvtType(srcQualType));
+        astCastExpr->SetSrcType(astFile->CvtType(srcQualType));
       }
       break;
     }
@@ -1519,13 +1533,24 @@ ASTExpr *ASTParser::ProcessExprImplicitCastExpr(MapleAllocator &allocator, const
   if (astExpr == nullptr) {
     return nullptr;
   }
-  astImplicitCastExpr->SetASTExpr(astExpr);
-  return astImplicitCastExpr;
+  astCastExpr->SetASTExpr(astExpr);
+  return astCastExpr;
+}
+
+ASTExpr *ASTParser::ProcessExprImplicitCastExpr(MapleAllocator &allocator, const clang::ImplicitCastExpr &expr) {
+  return ProcessExprCastExpr(allocator, expr);
 }
 
 ASTExpr *ASTParser::ProcessExprDeclRefExpr(MapleAllocator &allocator, const clang::DeclRefExpr &expr) {
   ASTDeclRefExpr *astRefExpr = ASTDeclsBuilder::ASTExprBuilder<ASTDeclRefExpr>(allocator);
   CHECK_FATAL(astRefExpr != nullptr, "astRefExpr is nullptr");
+  if (auto enumConst = llvm::dyn_cast<clang::EnumConstantDecl>(expr.getDecl())) {
+    const llvm::APSInt value = enumConst->getInitVal();
+    ASTIntegerLiteral *astIntegerLiteral = ASTDeclsBuilder::ASTExprBuilder<ASTIntegerLiteral>(allocator);
+    astIntegerLiteral->SetVal(value.getExtValue());
+    astIntegerLiteral->SetType(astFile->CvtType(expr.getType())->GetPrimType());
+    return astIntegerLiteral;
+  }
   switch (expr.getStmtClass()) {
     case clang::Stmt::DeclRefExprClass: {
       ASTDecl *astDecl = ASTDeclsBuilder::GetASTDecl(expr.getDecl()->getCanonicalDecl()->getID());
@@ -1678,40 +1703,7 @@ ASTDecl *ASTParser::GetAstDeclOfDeclRefExpr(MapleAllocator &allocator, const cla
 }
 
 ASTExpr *ASTParser::ProcessExprCStyleCastExpr(MapleAllocator &allocator, const clang::CStyleCastExpr &castExpr) {
-  if (castExpr.getCastKind() == clang::CK_FloatingRealToComplex ||
-      castExpr.getCastKind() == clang::CK_IntegralRealToComplex) {
-    auto astImplicitCastExpr = ASTDeclsBuilder::ASTExprBuilder<ASTImplicitCastExpr>(allocator);
-    astImplicitCastExpr->SetASTExpr(ProcessExpr(allocator, castExpr.getSubExpr()));
-    clang::QualType qualType = castExpr.getType().getCanonicalType();
-    astImplicitCastExpr->SetComplexType(astFile->CvtType(qualType));
-    clang::QualType dstQualType = llvm::cast<clang::ComplexType>(qualType)->getElementType();
-    astImplicitCastExpr->SetDstType(astFile->CvtType(dstQualType));
-    astImplicitCastExpr->SetNeededCvt(true);
-    astImplicitCastExpr->SetComplexCastKind(true);
-    astImplicitCastExpr->SetSrcType(astFile->CvtType(castExpr.getSubExpr()->getType().getCanonicalType()));
-    return astImplicitCastExpr;
-  }
-  ASTCStyleCastExpr *astCastExpr = ASTDeclsBuilder::ASTExprBuilder<ASTCStyleCastExpr>(allocator);
-  clang::QualType fType = castExpr.getSubExpr()->getType();
-  clang::QualType tType = castExpr.getType();
-  bool shouldCastArr = false;
-  if (fType->isPointerType() && tType->isPointerType()) {
-    const clang::Type *fromType = fType->getPointeeType().getTypePtrOrNull();
-    const clang::Type *toType = tType->getPointeeType().getTypePtrOrNull();
-    bool asFlag = fromType != nullptr && toType != nullptr;
-    CHECK_FATAL(asFlag, "ERROR:null pointer!");
-    auto *implicit = llvm::dyn_cast<clang::ImplicitCastExpr>(castExpr.getSubExpr());
-    if ((fromType->getTypeClass() == clang::Type::ConstantArray && toType->getTypeClass() == clang::Type::Builtin) ||
-        (implicit != nullptr && implicit->getCastKind() == clang::CK_ArrayToPointerDecay)) {
-      astCastExpr->SetDecl(GetAstDeclOfDeclRefExpr(allocator, *implicit));
-      shouldCastArr = true;
-    }
-  }
-  astCastExpr->SetSrcType(astFile->CvtType(fType));
-  astCastExpr->SetDestType(astFile->CvtType(tType));
-  astCastExpr->SetSubExpr(ProcessExpr(allocator, castExpr.getSubExpr()));
-  astCastExpr->SetCanCastArray(shouldCastArr);
-  return astCastExpr;
+  return ProcessExprCastExpr(allocator, castExpr);
 }
 
 ASTExpr *ASTParser::ProcessExprArrayInitLoopExpr(MapleAllocator &allocator,
@@ -2023,6 +2015,9 @@ ASTDecl *ASTParser::ProcessDeclFieldDecl(MapleAllocator &allocator, const clang:
     return nullptr;
   }
   if (decl.isBitField()) {
+    if (qualType->isEnumeralType()) {
+      fieldType = GlobalTables::GetTypeTable().GetUInt32();
+    }
     unsigned bitSize = decl.getBitWidthValue(*(astFile->GetContext()));
     MIRBitFieldType mirBFType(static_cast<uint8>(bitSize), fieldType->GetPrimType());
     auto bfTypeIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&mirBFType);

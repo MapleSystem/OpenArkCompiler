@@ -69,11 +69,7 @@ MIRSymbol *FEIRVarTypeScatter::GenerateLocalMIRSymbolImpl(MIRBuilder &builder) c
   MPLFE_PARALLEL_FORBIDDEN();
   MIRType *mirType = var->GetType()->GenerateMIRTypeAuto();
   std::string name = GetName(*mirType);
-#ifndef USE_OPS
-  return SymbolBuilder::Instance().GetOrCreateLocalSymbol(*mirType, name, *builder.GetCurrentFunction());
-#else
   return builder.GetOrCreateLocalDecl(name, *mirType);
-#endif
 }
 
 MIRSymbol *FEIRVarTypeScatter::GenerateMIRSymbolImpl(MIRBuilder &builder) const {

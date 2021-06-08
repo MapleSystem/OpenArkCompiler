@@ -128,7 +128,6 @@ class FETypeManager {
     return GetOrCreateClassOrInterfacePtrType(nameIdx, isInterface, typeFlag, isCreate);
   }
 
-
   uint32 GetTypeIDFromMplClassName(const std::string &mplClassName, int32 dexFileHashCode) const;
   MIRStructType *GetStructTypeFromName(const std::string &name);
   MIRStructType *GetStructTypeFromName(const GStrIdx &nameIdx);
