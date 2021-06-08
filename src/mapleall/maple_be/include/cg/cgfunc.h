@@ -259,6 +259,18 @@ class CGFunc {
   virtual Operand *CreateZeroOperand(PrimType primType) = 0;
 
   virtual bool IsFrameReg(const RegOperand &opnd) const = 0;
+
+  /* For Neon intrinsics */
+  virtual RegOperand *SelectVectorFromScalar(IntrinsicopNode &intrnNode) = 0;
+  virtual Operand *SelectVectorStore(IntrinsicopNode &intrnNode) = 0;
+  virtual RegOperand *SelectVectorMerge(IntrinsicopNode &intrnNode) = 0;
+  virtual RegOperand *SelectVectorGetHigh(IntrinsicopNode &intrnNode) = 0;
+  virtual RegOperand *SelectVectorGetLow(IntrinsicopNode &intrnNode) = 0;
+  virtual RegOperand *SelectVectorGetElement(IntrinsicopNode &intrnNode) = 0;
+  virtual RegOperand *SelectVectorPairwiseAdd(IntrinsicopNode &intrnNode) = 0;
+  virtual RegOperand *SelectVectorSetElement(IntrinsicopNode &intrnNode) = 0;
+  virtual RegOperand *SelectVectorReverse(IntrinsicopNode &intrnNode, uint32 size) = 0;
+
   /* For ebo issue. */
   virtual Operand *GetTrueOpnd() {
     return nullptr;
@@ -303,7 +315,7 @@ class CGFunc {
     if (size < k4ByteSize) {
       size = k4ByteSize;
     }
-    ASSERT(size == k4ByteSize || size == k8ByteSize, "check size");
+    ASSERT(size == k4ByteSize || size == k8ByteSize || size == k16ByteSize, "check size");
 #endif
     new (&vRegTable[vRegCount]) VirtualRegNode(regType, size);
     return vRegCount++;
@@ -331,6 +343,12 @@ class CGFunc {
         return kRegTyInt;
       case PTY_f32:
       case PTY_f64:
+      case PTY_v2u32:
+      case PTY_v4i32:
+      case PTY_v4u32:
+      case PTY_v16u8:
+      case PTY_v2u64:
+      case PTY_v8u16:
         return kRegTyFloat;
       default:
         ASSERT(false, "Unexpected pty");

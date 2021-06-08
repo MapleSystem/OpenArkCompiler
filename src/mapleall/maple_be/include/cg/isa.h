@@ -56,6 +56,7 @@ enum MopProperty : maple::uint8 {
   kPropIsUnCondBr,
   kPropIsCondBr,
   kPropHasLoop,
+  kPropIsVectorOp,
 };
 
 #define ISMOVE (1ULL << kPropIsMove)
@@ -82,6 +83,7 @@ enum MopProperty : maple::uint8 {
 #define ISUNCONDBRANCH (1ULL << kPropIsUnCondBr)
 #define ISCONDBRANCH (1ULL << kPropIsCondBr)
 #define HASLOOP (1ULL << kPropHasLoop)
+#define ISVECTOR (1ULL << kPropIsVectorOp)
 
 using regno_t = uint32_t;
 
