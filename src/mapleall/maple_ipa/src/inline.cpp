@@ -33,7 +33,6 @@ namespace maple {
 constexpr uint32 kHalfInsn = 1;
 constexpr uint32 kOneInsn = 2;
 constexpr uint32 kDoubleInsn = 4;
-constexpr uint32 kQuadrupleInsn = 8;
 constexpr uint32 kPentupleInsn = 10;
 
 static bool IsFinalMethod(const MIRFunction *mirFunc) {
@@ -990,20 +989,29 @@ FuncCostResultType MInline::GetFuncCost(const MIRFunction &func, const BaseNode 
     case OP_intrinsicop:
     case OP_intrinsicopwithtype: {
       const IntrinsicopNode &node = static_cast<const IntrinsicopNode&>(baseNode);
-      MIRIntrinsicID id = node.GetIntrinsic();
-      if (id == INTRN_JAVA_CONST_CLASS || id == INTRN_JAVA_ARRAY_LENGTH) {
+      switch(node.GetIntrinsic()) {
+      case INTRN_JAVA_CONST_CLASS:
+      case INTRN_JAVA_ARRAY_LENGTH:
         cost += kOneInsn;
-      } else if (id == INTRN_JAVA_MERGE) {
+        break;
+      case INTRN_JAVA_MERGE:
         cost += kHalfInsn;
-      } else if (id == INTRN_JAVA_INSTANCE_OF) {
+        break;
+      case INTRN_JAVA_INSTANCE_OF:
         cost += kPentupleInsn;
-      } else if (id == INTRN_MPL_READ_OVTABLE_ENTRY) {
+        break;
+      case INTRN_MPL_READ_OVTABLE_ENTRY:
         cost += kDoubleInsn;
-      } else if (id == INTRN_C_ctz32 || id == INTRN_C_clz32 || id == INTRN_C_constant_p) {
+        break;
+      case INTRN_C_ctz32:
+      case INTRN_C_clz32:
+      case INTRN_C_constant_p:
         cost += kOneInsn;
-      } else {
-        CHECK_FATAL(false, "[IMPOSSIBLE] %s", func.GetName().c_str());
-        cost += kQuadrupleInsn;
+        break;
+      default:
+        // Other intrinsics generate a call
+        cost += kPentupleInsn;
+        break;
       }
       break;
     }
