@@ -493,9 +493,8 @@ class MePhiOcc : public MeOccur {
 // each singly linked list repersents each bucket in workCandHashTable
 class PreWorkCand {
  public:
-  PreWorkCand(MapleAllocator &alloc, int32 idx, MeExpr *meExpr, PUIdx pIdx)
+  PreWorkCand(MapleAllocator &alloc, MeExpr *meExpr, PUIdx pIdx)
       : next(nullptr),
-        index(idx),
         realOccs(alloc.Adapter()),
         theMeExpr(meExpr),
         puIdx(pIdx),
@@ -621,7 +620,7 @@ class PreWorkCand {
  private:
   void InsertRealOccAt(MeRealOcc &occ, MapleVector<MeRealOcc*>::iterator it, PUIdx pIdx);
   PreWorkCand *next;
-  int32 index;
+  int32 index = 0;
   MapleVector<MeRealOcc*> realOccs;  // maintained in order of dt_preorder
   MeExpr *theMeExpr;                 // the expression of this workcand
   PUIdx puIdx;                       // if 0, its occ span multiple PUs; initial value must
@@ -637,8 +636,8 @@ class PreWorkCand {
 
 class PreStmtWorkCand : public PreWorkCand {
  public:
-  PreStmtWorkCand(MapleAllocator &alloc, int32 idx, MeStmt &meStmt, PUIdx pIdx)
-      : PreWorkCand(alloc, idx, nullptr, pIdx), theMeStmt(&meStmt), lhsIsFinal(false) {}
+  PreStmtWorkCand(MapleAllocator &alloc, MeStmt &meStmt, PUIdx pIdx)
+      : PreWorkCand(alloc, nullptr, pIdx), theMeStmt(&meStmt), lhsIsFinal(false) {}
 
   virtual ~PreStmtWorkCand() = default;
 

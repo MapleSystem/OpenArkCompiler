@@ -180,7 +180,7 @@ class AliasClass : public AnalysisResult {
   bool CallHasSideEffect(StmtNode *stmt) const;
   bool CallHasNoPrivateDefEffect(StmtNode *stmt) const;
   AliasElem *FindOrCreateAliasElem(OriginalSt &ost);
-  AliasElem *FindOrCreateExtraLevAliasElem(BaseNode &expr, TyIdx tyIdx, FieldID fieldId);
+  AliasElem *FindOrCreateExtraLevAliasElem(BaseNode &expr, const TyIdx &tyIdx, FieldID fieldId);
   AliasInfo CreateAliasElemsExpr(BaseNode &expr);
   void SetNotAllDefsSeenForMustDefs(const StmtNode &callas);
   void SetPtrOpndNextLevNADS(const BaseNode &opnd, AliasElem *aliasElem, bool hasNoPrivateDefEffect);
@@ -188,7 +188,7 @@ class AliasClass : public AnalysisResult {
                               bool hasNoPrivateDefEffect);
   void ApplyUnionForFieldsInAggCopy(const OriginalSt *lhsost, const OriginalSt *rhsost);
   void ApplyUnionForDassignCopy(AliasElem &lhsAe, AliasElem *rhsAe, BaseNode &rhs);
-  bool SetNextLevNADSForPtrIntegerCopy(AliasElem &lhsAe, const AliasElem *rhsAe, BaseNode &rhs);
+  bool SetNextLevNADSForEscapePtr(AliasElem &lhsAe, BaseNode &rhs);
   void CreateMirroringAliasElems(const OriginalSt *ost1, OriginalSt *ost2);
   AliasElem *FindOrCreateDummyNADSAe();
   AliasElem &FindOrCreateAliasElemOfAddrofOSt(OriginalSt &oSt);

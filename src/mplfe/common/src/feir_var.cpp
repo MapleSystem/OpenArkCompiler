@@ -98,7 +98,9 @@ MIRSymbol *FEIRVar::GenerateGlobalMIRSymbolImpl(MIRBuilder &builder) const {
   std::string name = GetName(*mirType);
   GStrIdx nameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(name);
   MIRSymbol *gSymbol = builder.GetOrCreateGlobalDecl(name, *mirType);
-  if (gSymbol->GetAttrs().GetAttrFlag() != 0) {
+  auto attrs = const_cast<GenericAttrs&>(genAttrs).ConvertToTypeAttrs();
+  // do not allow extern var override global var
+  if (gSymbol->GetAttrs().GetAttrFlag() != 0 && attrs.GetAttr(ATTR_extern)) {
     return  gSymbol;
   }
   // Set global var attr once
@@ -128,6 +130,12 @@ MIRSymbol *FEIRVar::GenerateGlobalMIRSymbolImpl(MIRBuilder &builder) const {
         }
       }
     }
+  }
+  if (attrs.GetAttr(ATTR_extern)) {
+    gSymbol->SetStorageClass(MIRStorageClass::kScExtern);
+    attrs.ResetAttr(AttrKind::ATTR_extern);
+  } else {
+    gSymbol->SetStorageClass(MIRStorageClass::kScGlobal);
   }
   return gSymbol;
 }

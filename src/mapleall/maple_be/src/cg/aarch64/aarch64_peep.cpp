@@ -1997,6 +1997,7 @@ void ComplexMemOperandAArch64::Run(BB &bb, Insn &insn) {
   if (thisMop != MOP_xadrpl12) {
     return;
   }
+
   MOperator nextMop = nextInsn->GetMachineOpcode();
   if (nextMop &&
       ((nextMop >= MOP_wldrsb && nextMop <= MOP_dldp) || (nextMop >= MOP_wstrb && nextMop <= MOP_dstp))) {
@@ -2034,6 +2035,16 @@ void ComplexMemOperandAArch64::Run(BB &bb, Insn &insn) {
     auto &stImmOpnd = static_cast<StImmOperand&>(insn.GetOperand(kInsnThirdOpnd));
     AArch64OfstOperand &offOpnd = aarch64CGFunc->GetOrCreateOfstOpnd(
         stImmOpnd.GetOffset() + memOpnd->GetOffsetImmediate()->GetOffsetValue(), k32BitSize);
+    if (cgFunc.GetMirModule().IsCModule()) {
+      Insn *prevInsn = insn.GetPrev();
+      MOperator prevMop = prevInsn->GetMachineOpcode();
+      if (prevMop != MOP_xadrp) {
+        return;
+      } else {
+        auto &prevStImmOpnd = static_cast<StImmOperand&>(prevInsn->GetOperand(kInsnSecondOpnd));
+        prevStImmOpnd.SetOffset(offOpnd.GetValue());
+      }
+    }
     auto &newBaseOpnd = static_cast<RegOperand&>(insn.GetOperand(kInsnSecondOpnd));
     AArch64MemOperand &newMemOpnd =
         aarch64CGFunc->GetOrCreateMemOpnd(AArch64MemOperand::kAddrModeLo12Li, memOpnd->GetSize(),

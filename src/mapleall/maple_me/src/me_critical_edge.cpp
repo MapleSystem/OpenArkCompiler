@@ -172,7 +172,7 @@ void MeDoSplitCEdge::BreakCriticalEdge(MeFunction &func, BB &pred, BB &succ) con
 
 AnalysisResult *MeDoSplitCEdge::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) {
   MeCFG *cfg = func->GetCfg();
-  if (cfg == NULL) {
+  if (cfg == nullptr) {
     cfg = static_cast<MeCFG *>(m->GetAnalysisResult(MeFuncPhase_MECFG, func));
   }
   std::vector<std::pair<BB*, BB*>> criticalEdge;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co., Ltd. All rights reserved.
+ * Copyright (c) [2021] Huawei Technologies Co., Ltd. All rights reserved.
  *
  * OpenArkCompiler is licensed under the Mulan Permissive Software License v2.
  * You can use this software according to the terms and conditions of the MulanPSL - 2.0.
@@ -22,7 +22,6 @@
 #include "me_phase.h"
 
 namespace maple {
-
 // describe characteristics of one IV
 class IVDesc {
  public:
@@ -33,8 +32,8 @@ class IVDesc {
 
  public:
   explicit IVDesc(OriginalSt *o) : ost(o) {
-    MIRType *mirtype = GlobalTables::GetTypeTable().GetTypeFromTyIdx(ost->GetTyIdx());
-    primType = mirtype->GetPrimType();
+    MIRType *mirType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(ost->GetTyIdx());
+    primType = mirType->GetPrimType();
   }
 };
 
@@ -54,8 +53,8 @@ class IVCanon {
   MeExpr *tripCount = nullptr;
 
  public:
-  explicit IVCanon(MemPool *m, MeFunction *f, Dominance *dom, LoopDesc *ldesc, uint32 id, LfoWhileInfo *winfo) :
-        mp(m), alloc(m), func(f), dominance(dom), ssatab(f->GetMeSSATab()),
+  IVCanon(MemPool *m, MeFunction *f, Dominance *dom, LoopDesc *ldesc, uint32 id, LfoWhileInfo *winfo)
+      : mp(m), alloc(m), func(f), dominance(dom), ssatab(f->GetMeSSATab()),
         aloop(ldesc), loopID(id), whileInfo(winfo), ivvec(alloc.Adapter()) {}
   bool ResolveExprValue(MeExpr *x, ScalarMeExpr *philhs);
   int32 ComputeIncrAmt(MeExpr *x, ScalarMeExpr *philhs, int32 *appearances);
@@ -72,7 +71,7 @@ class IVCanon {
 
 class DoLfoIVCanon : public MeFuncPhase {
  public:
-  DoLfoIVCanon(MePhaseID id) : MeFuncPhase(id) {}
+  explicit DoLfoIVCanon(MePhaseID id) : MeFuncPhase(id) {}
 
   ~DoLfoIVCanon() {}
 

@@ -302,11 +302,16 @@ class ASTSwitchStmt : public ASTStmt {
     return hasDefualt;
   }
 
+  void SetCondType(MIRType *type) {
+    condType = type;
+  }
+
  private:
   std::list<UniqueFEIRStmt> Emit2FEStmtImpl() const override;
-  ASTStmt *condStmt;
-  ASTExpr *condExpr;
-  ASTStmt *bodyStmt;
+  ASTStmt *condStmt = nullptr;
+  ASTExpr *condExpr = nullptr;
+  ASTStmt *bodyStmt = nullptr;
+  MIRType *condType = nullptr;
   bool hasDefualt = false;
 };
 
@@ -572,6 +577,15 @@ class ASTGCCAsmStmt : public ASTStmt {
   uint32 numOfClobbers = 0;
   std::vector<std::string> clobbers;
   // Not parsing asm label here, asm label info is enclosed in `Decl attr`
+};
+
+class ASTOffsetOfStmt : public ASTStmt {
+ public:
+  ASTOffsetOfStmt() : ASTStmt(kASTOffsetOfStmt) {}
+  ~ASTOffsetOfStmt() override = default;
+
+ private:
+  std::list<UniqueFEIRStmt> Emit2FEStmtImpl() const override;
 };
 }  // namespace maple
 #endif // MPLFE_AST_INPUT_INCLUDE_AST_STMT_H

@@ -15,17 +15,19 @@
 #include "feir_test_base.h"
 #include "mplfe_ut_environment.h"
 #include "fe_utils.h"
+#include "fe_manager.h"
 
 namespace maple {
 MemPool *FEIRTestBase::mp = nullptr;
 
 FEIRTestBase::FEIRTestBase()
     : allocator(mp),
-      mirBuilder(&MPLFEUTEnvironment::GetMIRModule()),
-      func(&MPLFEUTEnvironment::GetMIRModule(), StIdx(0, 0)) {
-  func.Init();
-  func.NewBody();
-  mirBuilder.SetCurrentFunction(func);
+      mirBuilder(&MPLFEUTEnvironment::GetMIRModule()) {
+  func = FEManager::GetTypeManager().GetMIRFunction("mock_func", false);
+  if (func == nullptr) {
+    func = FEManager::GetTypeManager().CreateFunction("mock_func", "void", std::vector<std::string>{}, false, false);
+  }
+  mirBuilder.SetCurrentFunction(*func);
 }
 
 void FEIRTestBase::SetUpTestCase() {

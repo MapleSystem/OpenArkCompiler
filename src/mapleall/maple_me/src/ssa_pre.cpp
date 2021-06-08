@@ -1293,7 +1293,6 @@ MeRealOcc *SSAPre::CreateRealOcc(MeStmt &meStmt, int seqStmt, MeExpr &meExpr, bo
   newOcc->SetIsLHS(isLHS);
   if (wkCand != nullptr) {
     if (isRebuilt) {
-      CHECK_FATAL(wkCand->GetIndex() >= reBuiltOccIndex, "new ssapre work candidate is found as old work candidate");
       // insert to realOccs in dt_preorder of the BBs and seq in each BB
       wkCand->AddRealOccSorted(*dom, *newOcc, GetPUIdx());
     } else {
@@ -1302,7 +1301,7 @@ MeRealOcc *SSAPre::CreateRealOcc(MeStmt &meStmt, int seqStmt, MeExpr &meExpr, bo
     return newOcc;
   }
   // workcand not yet created; create a new one and add to worklist
-  wkCand = ssaPreMemPool->New<PreWorkCand>(ssaPreAllocator, workList.size(), &meExpr, GetPUIdx());
+  wkCand = ssaPreMemPool->New<PreWorkCand>(ssaPreAllocator, &meExpr, GetPUIdx());
   wkCand->SetHasLocalOpnd(CheckIfAnyLocalOpnd(meExpr));
   if (EpreLocalRefVar() && wkCand->GetTheMeExpr()->GetMeOp() == kMeOpIvar) {
     // set wkCand->NeedLocalRefVar() flag
@@ -1613,6 +1612,7 @@ void SSAPre::ApplySSAPRE() {
       break;
     }
     workCand = workList.front();
+    workCand->SetIndex(static_cast<int32>(cnt));
     workList.pop_front();
     if (workCand->GetRealOccs().empty()) {
       continue;

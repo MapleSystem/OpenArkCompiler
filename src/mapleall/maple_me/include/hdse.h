@@ -95,7 +95,10 @@ class HDSE {
       RemoveNotRequiredStmtsInBB(*bb);
     }
   }
-
+  virtual bool IsLfo() {
+    return false;
+  }
+  virtual void ProcessWhileInfos() {}
  protected:
   MIRModule &mirModule;
   MapleVector<BB*> bbVec;

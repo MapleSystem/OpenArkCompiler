@@ -367,6 +367,10 @@ void HDSE::PropagateUseLive(MeExpr &meExpr) {
 
 bool HDSE::ExprHasSideEffect(const MeExpr &meExpr) const {
   Opcode op = meExpr.GetOp();
+  // in c language, OP_array has no side-effect
+  if (mirModule.IsCModule() && op == OP_array) {
+    return false;
+  }
   if (kOpcodeInfo.HasSideEffect(op)) {
     return true;
   }
@@ -387,6 +391,7 @@ bool HDSE::ExprNonDeletable(const MeExpr &meExpr) const {
   if (ExprHasSideEffect(meExpr)) {
     return true;
   }
+
   switch (meExpr.GetMeOp()) {
     case kMeOpReg: {
       auto &regMeExpr = static_cast<const RegMeExpr&>(meExpr);
@@ -612,6 +617,9 @@ void HDSE::MarkSpecialStmtRequired() {
         MarkStmtRequired(*pStmt);
       }
     }
+  }
+  if (IsLfo()) {
+    ProcessWhileInfos();
   }
 }
 

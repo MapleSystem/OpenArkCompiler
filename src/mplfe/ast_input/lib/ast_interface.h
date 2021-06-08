@@ -42,6 +42,7 @@ class LibAstFile {
   AstUnitDecl *GetAstUnitDecl();
   std::string GetMangledName(const clang::NamedDecl &decl);
   const std::string GetOrCreateMappedUnnamedName(uint32_t id);
+  const std::string GetOrCreateCompoundLiteralExprInitName(uint32_t id);
 
   void EmitTypeName(const clang::QualType qualType, std::stringstream &ss);
   void EmitTypeName(const clang::RecordType &qualType, std::stringstream &ss);
@@ -87,6 +88,7 @@ class LibAstFile {
   RecordDeclMap recordDeclMap;
   std::set<const clang::RecordDecl*> recordDeclSet;
   std::map<uint32_t, std::string> unnamedSymbolMap;
+  std::map<uint32_t, std::string> CompoundLiteralExprInitSymbolMap;
   MIRModule *module;
 
   MapleList<clang::Decl*> &recordDecles;

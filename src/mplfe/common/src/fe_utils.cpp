@@ -409,19 +409,35 @@ const std::string &AstSwitchUtil::GetTopOfBreakLabels() const {
   return nestedBreakLabels.top();
 }
 
-void AstLoopUtil::PushLoop(const std::pair<std::string, std::string> &labelPair) {
+void AstLoopUtil::PushBreak(std::string labelPair) {
   loopLabels.push(labelPair);
 }
 
-std::pair<std::string, std::string> AstLoopUtil::GetCurrentLoop(){
+std::string AstLoopUtil::GetCurrentBreak() {
   return loopLabels.top();
 }
 
-bool AstLoopUtil::IsLoopLabelsEmpty() const {
+bool AstLoopUtil::IsBreakLabelsEmpty() const {
   return loopLabels.empty();
 }
 
-void AstLoopUtil::PopCurrentLoop(){
+void AstLoopUtil::PopCurrentBreak() {
   loopLabels.pop();
+}
+
+void AstLoopUtil::PushContinue(std::string labelPair) {
+  continueLabels.push(labelPair);
+}
+
+std::string AstLoopUtil::GetCurrentContinue() {
+  return continueLabels.top();
+}
+
+bool AstLoopUtil::IsContinueLabelsEmpty() const {
+  return continueLabels.empty();
+}
+
+void AstLoopUtil::PopCurrentContinue() {
+  continueLabels.pop();
 }
 }  // namespace maple

@@ -184,6 +184,10 @@ class BaseNode : public BaseNodeT {
     return kOpcodeInfo.IsCondBr(GetOpCode());
   }
 
+  bool IsConstval() const {
+    return op == OP_constval;
+  }
+
   virtual bool Verify() const {
     return true;
   }

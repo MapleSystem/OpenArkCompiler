@@ -126,11 +126,18 @@ void ASTVar::GenerateInitStmtImpl(std::list<UniqueFEIRStmt> &stmts) {
   stmts.emplace_back(std::move(stmt));
 }
 
-// ---------- ASTLocalEnumDecl ----------
-void ASTLocalEnumDecl::GenerateInitStmtImpl(std::list<UniqueFEIRStmt> &stmts) {
-  for (auto var : vars) {
-    var->GenerateInitStmt(stmts);
-  }
+// ---------- ASTEnumConstant ----------
+void ASTEnumConstant::SetValue(int32 val) {
+  value = val;
+}
+
+int32 ASTEnumConstant::GetValue() const {
+  return value;
+}
+
+MIRConst *ASTEnumConstant::Translate2MIRConstImpl() const {
+  return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
+      value, *GlobalTables::GetTypeTable().GetPrimType(PTY_i32));
 }
 
 // ---------- ASTFunc ---------

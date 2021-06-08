@@ -31,7 +31,8 @@ enum DeclKind {
   kASTFunc,
   kASTStruct,
   kASTVar,
-  kASTLocalEnumDecl,
+  kASTEnumConstant,
+  kASTEnumDecl,
 };
 
 class ASTDecl {
@@ -210,24 +211,40 @@ class ASTVar : public ASTDecl {
   ASTExpr *initExpr = nullptr;
 };
 
-// only process local `EnumDecl` here
-class ASTLocalEnumDecl : public ASTDecl {
+class ASTEnumConstant : public ASTDecl {
  public:
-  ASTLocalEnumDecl(const std::string &srcFile, const std::string &nameIn, const std::vector<MIRType*> &typeDescIn,
+  ASTEnumConstant(const std::string &srcFile, const std::string &nameIn, const std::vector<MIRType*> &typeDescIn,
+         const GenericAttrs &genAttrsIn)
+      : ASTDecl(srcFile, nameIn, typeDescIn) {
+    genAttrs = genAttrsIn;
+    declKind = kASTEnumConstant;
+  }
+  ~ASTEnumConstant() = default;
+
+  void SetValue(int32 val);
+  int32 GetValue() const;
+ private:
+  MIRConst *Translate2MIRConstImpl() const override;
+  int32 value = 0;
+};
+
+// only process local `EnumDecl` here
+class ASTEnumDecl : public ASTDecl {
+ public:
+  ASTEnumDecl(const std::string &srcFile, const std::string &nameIn, const std::vector<MIRType*> &typeDescIn,
           const GenericAttrs &genAttrsIn)
       : ASTDecl(srcFile, nameIn, typeDescIn) {
     genAttrs = genAttrsIn;
-    declKind = kASTLocalEnumDecl;
+    declKind = kASTEnumDecl;
   }
-  ~ASTLocalEnumDecl() = default;
+  ~ASTEnumDecl() = default;
 
-  void PushConstantVar(ASTVar *var) {
-    vars.emplace_back(var);
+  void PushConstant(ASTEnumConstant *c) {
+    consts.emplace_back(c);
   }
 
  private:
-  void GenerateInitStmtImpl(std::list<UniqueFEIRStmt> &stmts) override;
-  std::list<ASTVar*> vars;
+  std::list<ASTEnumConstant*> consts;
 };
 }  // namespace maple
 #endif // MPLFE_AST_INPUT_INCLUDE_AST_DECL_H

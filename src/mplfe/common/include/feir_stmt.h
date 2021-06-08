@@ -333,6 +333,13 @@ class FEIRExpr {
     return CalculateDefs4AllUsesImpl(checkPoint, udChain);
   }
 
+  void CheckPrimTypeEq(PrimType type0, PrimType type1) const {
+    if ((type0 == PTY_u64 && type1 == PTY_ptr) || (type0 == PTY_ptr && type1 == PTY_u64)) {
+      return;
+    }
+    CHECK_FATAL(type0 == type1, "primtype of opnds must be the same");
+  }
+
  protected:
   virtual std::unique_ptr<FEIRExpr> CloneImpl() const = 0;
   virtual BaseNode *GenMIRNodeImpl(MIRBuilder &mirBuilder) const = 0;
@@ -517,7 +524,9 @@ class FEIRExprAddrofConstArray : public FEIRExpr {
   explicit FEIRExprAddrofConstArray(const std::vector<uint32> &arrayIn, MIRType *typeIn)
       : FEIRExpr(FEIRNodeKind::kExprAddrof,
                  FEIRTypeHelper::CreateTypeNative(*GlobalTables::GetTypeTable().GetPtrType())),
-        array(arrayIn), type(typeIn) {}
+        type(typeIn) {
+    std::copy(arrayIn.begin(), arrayIn.end(), std::back_inserter(array));
+  }
   ~FEIRExprAddrofConstArray() = default;
 
   uint32 GetStringLiteralSize() const {
@@ -1938,6 +1947,10 @@ class FEIRStmtSwitchForC : public FEIRStmt {
     hasDefault = argHasDefault;
   }
 
+  void SetBreakLabelName(std::string name) {
+    breakLabelName = std::move(name);
+  }
+
  protected:
   std::string DumpDotStringImpl() const override;
   void RegisterDFGNodes2CheckPointImpl(FEIRStmtCheckPoint &checkPoint) override;
@@ -1948,6 +1961,7 @@ class FEIRStmtSwitchForC : public FEIRStmt {
   UniqueFEIRExpr expr;
   bool hasDefault = true;
   std::list<UniqueFEIRStmt> subStmts;
+  std::string breakLabelName;
 };
 
 // ---------- FEIRStmtCaseForC ----------
@@ -1959,7 +1973,7 @@ class FEIRStmtCaseForC : public FEIRStmt {
   void AddFeirStmt(UniqueFEIRStmt stmt) {
     subStmts.emplace_back(std::move(stmt));
   }
-  const std::map<int32, FEIRStmtPesudoLabel*> &GetPesudoLabelMap() const {
+  const std::map<int64, FEIRStmtPesudoLabel*> &GetPesudoLabelMap() const {
     return pesudoLabelMap;
   }
 
@@ -1969,7 +1983,7 @@ class FEIRStmtCaseForC : public FEIRStmt {
 
  private:
   int64 lCaseLabel;
-  std::map<int32, FEIRStmtPesudoLabel*> pesudoLabelMap = std::map<int32, FEIRStmtPesudoLabel*>();
+  std::map<int64, FEIRStmtPesudoLabel*> pesudoLabelMap = std::map<int64, FEIRStmtPesudoLabel*>();
   std::list<UniqueFEIRStmt> subStmts;
 };
 
@@ -2484,16 +2498,8 @@ class FEIRStmtBreak : public FEIRStmt {
   FEIRStmtBreak(): FEIRStmt(FEIRNodeKind::kStmtBreak) {}
   ~FEIRStmtBreak() = default;
 
-  void SetLoopLabelName(std::string name){
-    loopLabelName = std::move(name);
-  }
-
-  void SetSwitchLabelName(std::string name){
-    switchLabelName = std::move(name);
-  }
-
-  void SetIsFromSwitch(bool fromSwitch) {
-    isFromSwitch = fromSwitch;
+  void SetBreakLabelName(std::string name) {
+    breakLabelName = std::move(name);
   }
 
  protected:
@@ -2503,9 +2509,7 @@ class FEIRStmtBreak : public FEIRStmt {
 
   std::list<StmtNode*> GenMIRStmtsImpl(MIRBuilder &mirBuilder) const override;
  private:
-  std::string loopLabelName;
-  std::string switchLabelName;
-  bool isFromSwitch = false;
+  std::string breakLabelName;
 };
 
 class FEIRStmtContinue : public FEIRStmt {
