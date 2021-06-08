@@ -228,7 +228,20 @@ void AArch64MemOperand::Emit(Emitter &emitter, const OpndProp *opndProp) const {
     AArch64OfstOperand *offset = GetOffsetImmediate();
     if (offset != nullptr) {
 #ifndef USE_32BIT_REF  /* can be load a ref here */
-      ASSERT(!IsOffsetMisaligned(md->GetOperandSize()), "should not be OffsetMisaligned");
+      /*
+       * Cortex-A57 Software Optimization Guide:
+       * The ARMv8-A architecture allows many types of load and store accesses to be arbitrarily aligned.
+       * The Cortex- A57 processor handles most unaligned accesses without performance penalties.
+       */
+      //ASSERT(!IsOffsetMisaligned(md->GetOperandSize()), "should not be OffsetMisaligned");
+#if DEBUG
+      if (IsOffsetMisaligned(md->GetOperandSize())) {
+        INFO(kLncInfo, "The Memory operand's offset is misaligned:", "");
+        LogInfo::MapleLogger() << "===";
+        Dump();
+        LogInfo::MapleLogger() << "===\n";
+      }
+#endif
 #endif  /* USE_32BIT_REF */
       if (IsPostIndexed()) {
         ASSERT(!IsSIMMOffsetOutOfRange(offset->GetOffsetValue(), md->Is64Bit(), isLDSTpair),
