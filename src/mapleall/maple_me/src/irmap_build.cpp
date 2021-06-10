@@ -408,6 +408,16 @@ MeExpr *IRMapBuild::BuildExpr(BaseNode &mirNode, bool atParm, bool noProp) {
     }
   }
 
+  if (op == OP_mul) {
+    OpMeExpr *opMeExpr = static_cast<OpMeExpr *>(meExpr); 
+    if (opMeExpr->GetOpnd(0)->GetMeOp() == kMeOpConst) {
+      // canonicalize constant operand to be operand 1
+      MeExpr *savedOpnd = opMeExpr->GetOpnd(0);
+      opMeExpr->SetOpnd(0, opMeExpr->GetOpnd(1));
+      opMeExpr->SetOpnd(1, savedOpnd);
+    }
+  }
+
   MeExpr *retMeExpr = irMap->HashMeExpr(*meExpr);
   delete meExpr;
 
