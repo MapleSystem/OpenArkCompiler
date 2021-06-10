@@ -30,9 +30,11 @@ enum OccType {
   kOccGcmalloc,
   kOccUse,     // for use appearances when candidate is dassign
   kOccMembar,  // for representing occurrence of memory barriers (use MeRealOcc)
+  kOccCompare, // for linear function test replacement (uses MeRealOcc)
 };
 
 class MePhiOcc;
+
 class MeOccur {
  public:
   MeOccur(OccType ty, int cId, MeOccur *df) : occTy(ty), classID(cId), mirBB(nullptr), def(df) {}
@@ -203,7 +205,7 @@ class MeRealOcc : public MeOccur {
   MeExpr *meExpr;     // the expr it's corresponding to
   MeExpr *savedExpr;  // the reall occ saved to, must be a VarMeExpr/RegMeExpr
   int seq;            // meStmt sequence number in the bb
-  size_t position;    // the position in the workCand->GetRealOccs() vector
+  size_t position;    // the position in the workCand->realOccs vector
   bool isReload;
   bool isSave;
   bool isLHS;
