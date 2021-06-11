@@ -92,7 +92,10 @@ ArgInfo AArch64MoveRegArgs::GetArgInfo(std::map<uint32, AArch64reg> &argsList, s
   argInfo.createTwoStores  = false;
   argInfo.isTwoRegParm = false;
 
-  if ((argInfo.symSize > k8ByteSize) && (argInfo.symSize <= k16ByteSize)) {
+  if (GetPrimTypeLanes(argInfo.mirTy->GetPrimType()) > 0) {
+    /* vector type */
+    argInfo.stkSize = argInfo.symSize;
+  } else if ((argInfo.symSize > k8ByteSize) && (argInfo.symSize <= k16ByteSize)) {
     argInfo.isTwoRegParm = true;
     if (numFpRegs[argIndex] > kOneRegister) {
       argInfo.symSize = argInfo.stkSize = fpSize[argIndex];

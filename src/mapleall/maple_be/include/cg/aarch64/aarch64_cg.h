@@ -146,6 +146,7 @@ class AArch64CG : public CG {
     kV64List
   };
   static std::array<std::array<const std::string, kAllRegNum>, kIntRegTypeNum> intRegNames;
+  static std::array<const std::string, kAllRegNum> vectorRegNames;
 
  private:
   const std::vector<std::string> &ehExclusiveNameVec;

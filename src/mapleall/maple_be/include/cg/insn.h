@@ -361,6 +361,10 @@ class Insn {
     return false;
   }
 
+  virtual bool IsVectorOp() const {
+    return false;
+  }
+
   virtual Operand *GetCallTargetOperand() const {
     return nullptr;
   }
