@@ -245,6 +245,22 @@ class ZeroCmpBranchesAArch64 : public PeepPattern {
 };
 
 /*
+ * Look for duplicate or overlapping zero or sign extensions.
+ * Examples:
+ *   sxth x1, x2   ====> sxth x1, x2
+ *   sxth x3, x1         mov  x3, x1
+ *
+ *   sxtb x1, x2   ====> sxtb x1, x2
+ *   sxth x3, x1         mov  x3, x1
+ */
+class ElimDuplicateExtensionAArch64 : public PeepPattern {
+ public:
+  explicit ElimDuplicateExtensionAArch64(CGFunc &cgFunc) : PeepPattern(cgFunc) {}
+  ~ElimDuplicateExtensionAArch64() override = default;
+  void Run(BB &bb, Insn &insn) override;
+};
+
+/*
  *  cmp  w0, #0
  *  cset w1, NE --> mov w1, w0
  *
@@ -674,6 +690,7 @@ class AArch64PrePeepHole : public PeepPatternMatch {
     kComplexMemOperandOptLSL,
     kComplexMemOperandOptLabel,
     kWriteFieldCallOpt,
+    kDuplicateExtensionOpt,
     kPeepholeOptsNum
   };
 };
