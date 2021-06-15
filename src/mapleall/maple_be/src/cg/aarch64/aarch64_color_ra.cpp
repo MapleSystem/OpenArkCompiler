@@ -1072,17 +1072,51 @@ void GraphColorRegAllocator::BuildInterferenceGraph() {
   std::vector<LiveRange*> fpLrVec;
   BuildInterferenceGraphSeparateIntFp(intLrVec, fpLrVec);
 
+  /*
+   * Once number of BB becomes larger for big functions, the checking for interferences
+   * takes significant long time. Taking advantage of unique bucket is one of strategies
+   * to avoid unnecessary computation
+   */
+  int lrSize = intLrVec.size();
+  std::vector<int32> uniqueBucketIdx(lrSize);
+  for (int i = 0; i < lrSize; i++) {
+    uint32 count = 0;
+    uint32 uniqueIdx;
+    LiveRange *lr =  intLrVec[i];
+    for (int j = 0; j < bbBuckets; j++) {
+      if (lr->GetBBMember()[j]) {
+        count++;
+        uniqueIdx = j;
+      }
+    }
+    if (count == 1) {
+      uniqueBucketIdx[i] = uniqueIdx;
+    } else {
+      /* LR spans multiple buckets */
+      ASSERT(count >= 1, "A live range can not be empty");
+      uniqueBucketIdx[i] = -1;
+    }
+  }
+
   for (auto it1 = intLrVec.begin(); it1 != intLrVec.end(); ++it1) {
     LiveRange *lr1 = *it1;
     CalculatePriority(*lr1);
+      int32 lr1UniqueBucketIdx = uniqueBucketIdx[std::distance(intLrVec.begin(), it1)];
     for (auto it2 = it1 + 1; it2 != intLrVec.end(); ++it2) {
       LiveRange *lr2 = *it2;
       if (lr1->GetRegNO() < lr2->GetRegNO()) {
-        CheckInterference(*lr1, *lr2);
+        int32 lr2UniqueBucketIdx = uniqueBucketIdx[std::distance(intLrVec.begin(), it2)];
+        if (lr1UniqueBucketIdx == -1 && lr2UniqueBucketIdx == -1) {
+          CheckInterference(*lr1, *lr2);
+        } else if ((lr1UniqueBucketIdx >= 0 && lr1->GetBBMember()[lr1UniqueBucketIdx] & lr2->GetBBMember()[lr1UniqueBucketIdx]) ||
+                   (lr2UniqueBucketIdx >= 0 && lr1->GetBBMember()[lr2UniqueBucketIdx] & lr2->GetBBMember()[lr2UniqueBucketIdx])) {
+          CheckInterference(*lr1, *lr2);
+        }
       }
     }
   }
 
+  // Might need to do same as to intLrVec
   for (auto it1 = fpLrVec.begin(); it1 != fpLrVec.end(); ++it1) {
     LiveRange *lr1 = *it1;
     CalculatePriority(*lr1);
