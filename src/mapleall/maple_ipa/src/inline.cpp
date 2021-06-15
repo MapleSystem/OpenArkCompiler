@@ -1379,6 +1379,7 @@ void MInline::MarkUnInlinableFunction() const {
     for (CGNode *node : (*it)->GetCGNodes()) {
       std::string name = node->GetMIRFunction()->GetName();
       if (node->IsMustNotBeInlined() ||
+          node->GetMIRFunction()->HasAsm() ||
           StringUtils::StartsWith(name, kDalvikSystemStr) ||
           StringUtils::StartsWith(name, kJavaLangThreadStr)) {
         node->SetMustNotBeInlined();
