@@ -164,7 +164,7 @@ class MeExpr {
     return 0;
   }
   virtual bool StrengthReducible() { return false; }
-  virtual int64 SRMultiplier() { return 1; }
+  virtual int64 SRMultiplier(OriginalSt *ost) { return 1; }
 
  protected:
   MeExpr *FindSymAppearance(OStIdx oidx);  // find the appearance of the symbol
@@ -867,7 +867,7 @@ class OpMeExpr : public MeExpr {
     return nullptr;
   }
   bool StrengthReducible() override;
-  int64 SRMultiplier() override;
+  int64 SRMultiplier(OriginalSt *ost) override;
 
  private:
   std::array<MeExpr*, kOperandNumTernary> opnds = { nullptr };  // kid
