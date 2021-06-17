@@ -583,7 +583,7 @@ void CGCFG::UnreachCodeAnalysis() {
     }
   }
   /* Don't remove unreach code if withDwarf is enabled. */
-  if (CGOptions::IsWithDwarf()) {
+  if (cgFunc->GetCG()->GetCGOptions().WithDwarf()) {
     return;
   }
   /* remove unreachable bb */
