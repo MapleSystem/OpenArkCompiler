@@ -830,7 +830,8 @@ AnalysisResult *MeDoDelegateRC::Run(MeFunction *func, MeFuncResultMgr *m, Module
   ASSERT(dom != nullptr, "dominance phase has problem");
   {
     // invoke hdse to update isLive only
-    MeHDSE hdse(*func, *dom, *func->GetIRMap(), DEBUGFUNC(func));
+    auto aliasClass = static_cast<AliasClass *>(m->GetAnalysisResult(MeFuncPhase_ALIASCLASS, func));
+    MeHDSE hdse(*func, *dom, *func->GetIRMap(), aliasClass, DEBUGFUNC(func));
     hdse.InvokeHDSEUpdateLive();
   }
   if (DEBUGFUNC(func)) {

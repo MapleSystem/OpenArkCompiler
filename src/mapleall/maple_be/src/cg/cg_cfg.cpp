@@ -389,6 +389,9 @@ void CGCFG::RemoveBB(BB &curBB, bool isGotoIf) {
   }
 
   for (BB *preBB : curBB.GetPreds()) {
+    if (preBB->GetKind() == BB::kBBIgoto) {
+      return;
+    }
     /*
      * If curBB is the target of its predecessor, change
      * the jump target.

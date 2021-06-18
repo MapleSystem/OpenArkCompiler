@@ -87,7 +87,7 @@ class ASTDecl {
 
   MIRConst *Translate2MIRConst() const;
 
-  std::string GenerateUniqueVarName();
+  std::string GenerateUniqueVarName() const;
 
  protected:
   virtual MIRConst *Translate2MIRConstImpl() const {
@@ -201,7 +201,8 @@ class ASTVar : public ASTDecl {
     return initExpr;
   }
 
-  std::unique_ptr<FEIRVar> Translate2FEIRVar();
+  std::unique_ptr<FEIRVar> Translate2FEIRVar() const;
+  MIRSymbol *Translate2MIRSymbol() const;
 
  private:
   MIRConst *Translate2MIRConstImpl() const override;

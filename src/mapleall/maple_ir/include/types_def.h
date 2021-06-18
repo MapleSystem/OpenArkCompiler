@@ -113,7 +113,6 @@ using OfstRegIdx = uint64;
 using LabelIDOrder = uint32;
 using PUIdx = uint32;
 using PregIdx = int32;
-using PregIdx16 = int16;
 using ExprIdx = int32;
 using FieldID = int32;
 

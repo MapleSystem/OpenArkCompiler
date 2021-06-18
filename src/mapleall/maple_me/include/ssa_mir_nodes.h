@@ -138,8 +138,8 @@ class MustDefNode {
   StmtNode *stmt = nullptr;
 };
 
-using TypeOfMayUseList = MapleVector<MayUseNode>;
-using TypeOfMayDefList = MapleList<MayDefNode>;
+using TypeOfMayUseList = MapleMap<OStIdx, MayUseNode>;
+using TypeOfMayDefList = MapleMap<OStIdx, MayDefNode>;
 using TypeOfMustDefList = MapleVector<MustDefNode>;
 class AccessSSANodes {
  public:
@@ -183,13 +183,13 @@ class AccessSSANodes {
 
   virtual void DumpMayDefNodes(const MIRModule&) const {
     for (const auto &mayDefNode : GetMayDefNodes()) {
-      mayDefNode.Dump();
+      mayDefNode.second.Dump();
     }
   }
 
   virtual void DumpMayUseNodes(const MIRModule&) const {
     for (const auto &mapItem : GetMayUseNodes()) {
-      mapItem.Dump();
+      mapItem.second.Dump();
     }
   }
 
@@ -199,24 +199,16 @@ class AccessSSANodes {
     }
   }
 
-  inline void InsertMayDefNode(VersionSt *vst, StmtNode *stmtNode) {
-    ASSERT(vst != nullptr, "null ptr check");
+  inline void InsertMayDefNode(MayDefNode mayDefNode) {
     auto &mayDefNodes = GetMayDefNodes();
-    MayDefNode mayDefNode(vst, stmtNode);
-    if (std::find(mayDefNodes.begin(), mayDefNodes.end(), mayDefNode) != mayDefNodes.end()) {
-      return;
-    }
-    mayDefNodes.emplace_back(mayDefNode);
+    OStIdx ostIdx = mayDefNode.GetOpnd()->GetOrigIdx();
+    (void)mayDefNodes.insert({ ostIdx, mayDefNode });
   }
 
-  inline void InsertMayUseNode(VersionSt *vst) {
-    ASSERT(vst != nullptr, "null ptr check");
+  inline void InsertMayUseNode(MayUseNode mayUseNode) {
     auto &mayUseNodes = GetMayUseNodes();
-    MayUseNode mayUseNode(vst);
-    if (std::find(mayUseNodes.begin(), mayUseNodes.end(), mayUseNode) != mayUseNodes.end()) {
-      return;
-    }
-    mayUseNodes.emplace_back(mayUseNode);
+    OStIdx ostIdx = mayUseNode.GetOpnd()->GetOrigIdx();
+    (void)mayUseNodes.insert( { ostIdx, mayUseNode });
   }
 
   virtual void InsertMustDefNode(VersionSt *sym, StmtNode *s) {

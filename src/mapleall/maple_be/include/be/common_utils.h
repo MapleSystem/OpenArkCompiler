@@ -32,6 +32,7 @@ constexpr uint32 kBaseOffsetAlignment = 3;
 constexpr uint32 k1FConst = 31;
 constexpr uint32 k0BitSize = 0;
 constexpr uint32 k1BitSize = 1;
+constexpr uint32 k2BitSize = 2;
 constexpr uint32 k4BitSize = 4;
 constexpr uint32 k6BitSize = 6;
 constexpr uint32 k8BitSize = 8;
@@ -125,6 +126,7 @@ constexpr int32 kMaxPimm32 = 16380;
 constexpr int32 kMaxPimm64 = 32760;
 
 constexpr int32 kMaxPimm[k4BitSize] = {kMaxPimm8, kMaxPimm16, kMaxPimm32, kMaxPimm64};
+constexpr int32 kMaxPairPimm[k2BitSize] = {k256BitSize, k512BitSize};
 
 constexpr int32 kMax12UnsignedImm = 4096;
 constexpr int32 kMax13UnsignedImm = 8192;

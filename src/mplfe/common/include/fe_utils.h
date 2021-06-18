@@ -41,7 +41,8 @@ class FEUtils {
   static std::string GetSequentialName0(const std::string &prefix, uint32_t num);
   static std::string GetSequentialName(const std::string &prefix);
   static FieldID GetStructFieldID(MIRStructType *base, const std::string &fieldName);
-  static bool TraverseToNamedField(MIRStructType &structType, GStrIdx nameIdx, FieldID &fieldID);
+  static bool TraverseToNamedField(MIRStructType &structType, GStrIdx nameIdx, FieldID &fieldID,
+                                   bool isTopLevel = true);
   static MIRType *GetStructFieldType(MIRStructType *type, FieldID feildID);
   static MIRConst *CreateImplicitConst(MIRType *type);
 

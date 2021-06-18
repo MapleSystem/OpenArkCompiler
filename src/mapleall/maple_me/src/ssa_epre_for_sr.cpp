@@ -279,7 +279,7 @@ MeExpr* SSAEPre::SRRepairInjuries(MeOccur *useocc,
     MePhiNode *scalarPhi = (defphiocc->GetRegPhi() ? defphiocc->GetRegPhi() : defphiocc->GetVarPhi());
     repairedTemp = scalarPhi->GetLHS();
   }
-  if (useexpr == nullptr) {
+  if (useexpr == nullptr || repairedTemp == nullptr) {
     return repairedTemp;
   }
   for (int32 i = 0; i < useexpr->GetNumOpnds(); i++) {

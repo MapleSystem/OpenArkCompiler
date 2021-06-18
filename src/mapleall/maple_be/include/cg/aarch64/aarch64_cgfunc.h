@@ -94,6 +94,7 @@ class AArch64CGFunc : public CGFunc {
   void SelectAsm(AsmNode &stmt) override;
   AArch64MemOperand *GenLargeAggFormalMemOpnd(const MIRSymbol &sym, uint32 alignUsed, int32 offset);
   AArch64MemOperand *FixLargeMemOpnd(MemOperand &memOpnd, uint32 align);
+  AArch64MemOperand *FixLargeMemOpnd(MOperator mOp, MemOperand &memOpnd, uint32 dSize, uint32 opndIdx);
   void SelectAggDassign(DassignNode &stmt) override;
   void SelectIassign(IassignNode &stmt) override;
   void SelectAggIassign(IassignNode &stmt, Operand &lhsAddrOpnd) override;
@@ -129,6 +130,7 @@ class AArch64CGFunc : public CGFunc {
   Operand *SelectIread(const BaseNode &parent, IreadNode &expr) override;
 
   Operand *SelectIntConst(MIRIntConst &intConst) override;
+  Operand *HandleFmovImm(PrimType stype, int64 val);
   Operand *SelectFloatConst(MIRFloatConst &floatConst) override;
   Operand *SelectDoubleConst(MIRDoubleConst &doubleConst) override;
   Operand *SelectStrConst(MIRStrConst &strConst) override;
@@ -137,6 +139,8 @@ class AArch64CGFunc : public CGFunc {
   void SelectAdd(Operand &resOpnd, Operand &o0, Operand &o1, PrimType primType) override;
   Operand *SelectAdd(BinaryNode &node, Operand &o0, Operand &o1, const BaseNode &parent) override;
   Operand &SelectCGArrayElemAdd(BinaryNode &node) override;
+  void SelectMadd(Operand &resOpnd, Operand &oM0, Operand &oM1, Operand &o1, PrimType primeType) override;
+  Operand *SelectMadd(BinaryNode &node, Operand &oM0, Operand &oM1, Operand &o1) override;
   Operand *SelectShift(BinaryNode &node, Operand &o0, Operand &o1) override;
   Operand *SelectSub(BinaryNode &node, Operand &o0, Operand &o1) override;
   void SelectSub(Operand &resOpnd, Operand &o0, Operand &o1, PrimType primType) override;
@@ -467,9 +471,10 @@ class AArch64CGFunc : public CGFunc {
 
   bool CheckIfSplitOffsetWithAdd(const AArch64MemOperand &memOpnd, uint32 bitLen);
   RegOperand *GetBaseRegForSplit(uint32 baseRegNum);
+
   AArch64MemOperand &SplitOffsetWithAddInstruction(const AArch64MemOperand &memOpnd, uint32 bitLen,
                                                    uint32 baseRegNum = AArch64reg::kRinvalid, bool isDest = false,
-                                                   Insn *insn = nullptr);
+                                                   Insn *insn = nullptr, bool forPair = false);
   AArch64MemOperand &CreateReplacementMemOperand(uint32 bitLen, RegOperand &baseReg, int32 offset);
 
   bool HasStackLoadStore();

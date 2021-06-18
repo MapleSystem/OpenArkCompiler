@@ -101,8 +101,15 @@ class ConstantFold : public FuncOptimizeImpl {
                                    const ConstvalNode &const1) const;
   ConstvalNode *FoldFPConstComparison(Opcode opcode, PrimType resultType, PrimType opndType, const ConstvalNode &const0,
                                       const ConstvalNode &const1) const;
+  bool ConstValueEqual(int64 leftValue, int64 rightValue) const;
+  bool ConstValueEqual(float leftValue, float rightValue) const;
+  bool ConstValueEqual(double leftValue, double rightValue) const;
+  template<typename T>
+  bool FullyEqual(T leftValue, T rightValue) const;
+  template<typename T>
+  int64 ComparisonResult(Opcode op, T *leftConst, T *rightConst) const;
   MIRIntConst *FoldFPConstComparisonMIRConst(Opcode opcode, PrimType resultType, PrimType opndType,
-                                             const MIRConst &const0, const MIRConst &const1) const;
+                                             const MIRConst &leftConst, const MIRConst &rightConst) const;
   ConstvalNode *FoldFPConstBinary(Opcode opcode, PrimType resultType, const ConstvalNode &const0,
                                   const ConstvalNode &const1) const;
   ConstvalNode *FoldConstUnary(Opcode opcode, PrimType resultType, ConstvalNode *constNode) const;

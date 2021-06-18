@@ -151,9 +151,12 @@ bool ASTGlobalVar2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
   if (typeAttrs.GetAttr(ATTR_extern)) {
     mirSymbol->SetStorageClass(MIRStorageClass::kScExtern);
     typeAttrs.ResetAttr(AttrKind::ATTR_extern);
+  } else if (typeAttrs.GetAttr(ATTR_static)) {
+    mirSymbol->SetStorageClass(MIRStorageClass::kScFstatic);
   } else {
     mirSymbol->SetStorageClass(MIRStorageClass::kScGlobal);
   }
+  typeAttrs.SetAlign(astVar.GetAlign());
   mirSymbol->SetAttrs(typeAttrs);
   ASTExpr *initExpr = astVar.GetInitExpr();
   if (initExpr == nullptr) {

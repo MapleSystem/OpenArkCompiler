@@ -38,9 +38,11 @@ PrimType LibAstFile::CvtPrimType(const clang::BuiltinType::Kind kind) const {
     case clang::BuiltinType::Bool:
       return PTY_u1;
     case clang::BuiltinType::Char_U:
+      return astContext->CharTy->isSignedIntegerType() ? PTY_i8 : PTY_u8;
     case clang::BuiltinType::UChar:
       return PTY_u8;
     case clang::BuiltinType::WChar_U:
+      return astContext->WCharTy->isSignedIntegerType() ? PTY_i16 : PTY_u16;
     case clang::BuiltinType::UShort:
       return PTY_u16;
     case clang::BuiltinType::UInt:
@@ -98,7 +100,16 @@ MIRType *LibAstFile::CvtType(const clang::QualType qualType) {
     if (mirPointeeType == nullptr) {
       return nullptr;
     }
-    return GlobalTables::GetTypeTable().GetOrCreatePointerType(*mirPointeeType);
+    TypeAttrs attrs;
+    // Get alignment from the pointee type
+    if (uint32 alignmentBits = astContext->getTypeAlignIfKnown(srcPteType)) {
+      if (alignmentBits > astContext->getTypeUnadjustedAlign(srcPteType)) {
+        attrs.SetAlign(alignmentBits / 8);
+      }
+    }
+    MIRType *poiterTy = GlobalTables::GetTypeTable().GetOrCreatePointerType(*mirPointeeType);
+    static_cast<MIRPtrType*>(poiterTy)->SetTypeAttrs(attrs);
+    return poiterTy;
   }
 
   return CvtOtherType(srcType);
@@ -190,6 +201,16 @@ MIRType *LibAstFile::CvtArrayType(const clang::QualType srcType) {
   if (srcType->isIncompleteArrayType()) {
     retType = GlobalTables::GetTypeTable().GetOrCreateArrayType(*retType, 1);
   }
+  TypeAttrs attrs = static_cast<MIRArrayType*>(retType)->GetTypeAttrs();
+  // Get alignment from the element type
+  if (uint32 alignmentBits = astContext->getTypeAlignIfKnown(
+      llvm::dyn_cast<clang::ArrayType>(srcType)->getElementType())) {
+    if (alignmentBits > astContext->getTypeUnadjustedAlign(
+        llvm::dyn_cast<clang::ArrayType>(srcType)->getElementType())) {
+      attrs.SetAlign(alignmentBits / 8);
+    }
+  }
+  static_cast<MIRArrayType*>(retType)->SetTypeAttrs(attrs);
   return retType;
 }
 

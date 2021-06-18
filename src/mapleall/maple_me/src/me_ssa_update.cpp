@@ -93,9 +93,8 @@ MeExpr *MeSSAUpdate::RenameExpr(MeExpr &meExpr, bool &changed) {
       MeExpr *newbase = RenameExpr(*ivarMeExpr.GetBase(), needRehash);
       if (needRehash) {
         changed = true;
-        IvarMeExpr newMeExpr(kInvalidExprID, ivarMeExpr.GetPrimType(), ivarMeExpr.GetTyIdx(), ivarMeExpr.GetFieldID());
+        IvarMeExpr newMeExpr(kInvalidExprID, ivarMeExpr);
         newMeExpr.SetBase(newbase);
-        newMeExpr.SetMuVal(ivarMeExpr.GetMu());
         return irMap.HashMeExpr(newMeExpr);
       }
       return &meExpr;

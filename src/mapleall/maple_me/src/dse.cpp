@@ -128,6 +128,13 @@ bool DSE::HasNonDeletableExpr(const StmtNode &stmt) const {
       return true;
     }
     case OP_iassign: {
+      auto *ssaPart = ssaTab.GetStmtsSSAPart().SSAPartOf(stmt);
+      auto &mayDefList = ssaPart->GetMayDefNodes();
+      for (auto &mayDefPair : mayDefList) {
+        if (mayDefPair.second.GetResult()->GetOst()->IsVolatile()) {
+          return true;
+        }
+      }
       auto &node = static_cast<const IassignNode&>(stmt);
       auto &ty = static_cast<const MIRPtrType&>(GetTypeFromTyIdx(node.GetTyIdx()));
       return (ty.IsPointedTypeVolatile(node.GetFieldID()) ||
@@ -260,7 +267,18 @@ void DSE::PropagateUseLive(const VersionSt &vst) {
     const MayDefNode *mayDef = vst.GetMayDef();
     ASSERT(mayDef->GetResult() == &vst, "MarkVst: wrong corresponding version st in maydef");
     const VersionSt *verSt = mayDef->GetOpnd();
-    MarkStmtRequired(ToRef(mayDef->GetStmt()), ToRef(dfBB));
+
+    auto defStmt = mayDef->GetStmt();
+    if (kOpcodeInfo.IsCallAssigned(defStmt->GetOpCode())) {
+      MapleVector<MustDefNode> &mustDefs = ssaTab.GetStmtMustDefNodes(*defStmt);
+      for (auto &node : mustDefs) {
+        if (aliasInfo->MayAlias(node.GetResult()->GetOst(), vst.GetOst())) {
+          AddToWorkList(node.GetResult());
+        }
+      }
+    }
+
+    MarkStmtRequired(ToRef(defStmt), ToRef(dfBB));
     AddToWorkList(verSt);
   } else {
     const MustDefNode *mustDef = vst.GetMustDef();
@@ -345,7 +363,7 @@ void DSE::MarkSingleUseLive(const BaseNode &mirNode) {
         auto *mayDefList = SSAGenericGetMayDefsFromVersionSt(ToRef(verSt), ssaTab.GetStmtsSSAPart());
         if (mayDefList != nullptr) {
           for (auto it = mayDefList->begin(); it != mayDefList->end(); ++it) {
-            AddToWorkList(it->GetResult());
+            AddToWorkList(it->second.GetResult());
           }
         }
       }
@@ -367,8 +385,8 @@ void DSE::MarkStmtUseLive(const StmtNode &stmt) {
   }
 
   if (kOpcodeInfo.HasSSAUse(stmt.GetOpCode())) {
-    for (auto &mayUse : ssaTab.GetStmtMayUseNodes(stmt)) {
-      AddToWorkList(mayUse.GetOpnd());
+    for (auto &mayUseItem : ssaTab.GetStmtMayUseNodes(stmt)) {
+      AddToWorkList(mayUseItem.second.GetOpnd());
     }
   }
 }

@@ -37,6 +37,24 @@ std::list<UniqueFEIRStmt> ASTStmtDummy::Emit2FEStmtImpl() const {
   return stmts;
 }
 
+void ASTStmt::UseCompareAsCondFEExpr(UniqueFEIRExpr &condFEExpr) const {
+  if (condFEExpr->GetKind() == kExprBinary) {
+    if (static_cast<FEIRExprBinary*>(condFEExpr.get())->IsComparative()) {
+      return;
+    }
+  }
+  if (condFEExpr->GetKind() == kExprConst) {
+    if (static_cast<FEIRExprConst*>(condFEExpr.get())->GetValue().u64 != 0) {
+      condFEExpr = FEIRBuilder::CreateExprConstI32(1);
+    } else {
+      condFEExpr = FEIRBuilder::CreateExprConstI32(0);
+    }
+  } else {
+    UniqueFEIRExpr zeroExpr = FEIRBuilder::CreateExprConstAnyScalar(condFEExpr->GetPrimType(), 0);
+    condFEExpr = FEIRBuilder::CreateExprBinary(OP_ne, std::move(condFEExpr), std::move(zeroExpr));
+  }
+}
+
 // ---------- ASTCompoundStmt ----------
 void ASTCompoundStmt::SetASTStmt(ASTStmt *astStmt) {
   astStmts.emplace_back(astStmt);
@@ -79,6 +97,7 @@ std::list<UniqueFEIRStmt> ASTIfStmt::Emit2FEStmtImpl() const {
     elseStmts = elseStmt->Emit2FEStmt();
   }
   UniqueFEIRExpr condFEExpr = condExpr->Emit2FEExpr(stmts);
+  UseCompareAsCondFEExpr(condFEExpr);
   UniqueFEIRStmt ifStmt;
   ifStmt = FEIRBuilder::CreateStmtIf(std::move(condFEExpr), thenStmts, elseStmts);
   ifStmt->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
@@ -122,6 +141,7 @@ std::list<UniqueFEIRStmt> ASTForStmt::Emit2FEStmtImpl() const {
     condFEExpr = condExpr->Emit2FEExpr(condStmts);
     bodyFEStmts.splice(bodyFEStmts.cend(), condStmts);
   }
+  UseCompareAsCondFEExpr(condFEExpr);
   UniqueFEIRStmt whileStmt = std::make_unique<FEIRStmtDoWhile>(OP_while, std::move(condFEExpr), std::move(bodyFEStmts));
   whileStmt->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
   stmts.emplace_back(std::move(whileStmt));
@@ -146,6 +166,7 @@ std::list<UniqueFEIRStmt> ASTWhileStmt::Emit2FEStmtImpl() const {
   (void)condExpr->Emit2FEExpr(condPreStmts);
   bodyFEStmts.emplace_back(std::move(labelBodyEndStmt));
   bodyFEStmts.splice(bodyFEStmts.end(), condPreStmts);
+  UseCompareAsCondFEExpr(condFEExpr);
   auto whileStmt = std::make_unique<FEIRStmtDoWhile>(OP_while, std::move(condFEExpr), std::move(bodyFEStmts));
   whileStmt->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
   stmts.splice(stmts.end(), condStmts);
@@ -172,6 +193,7 @@ std::list<UniqueFEIRStmt> ASTDoStmt::Emit2FEStmtImpl() const {
   std::list<UniqueFEIRStmt> condStmts;
   UniqueFEIRExpr condFEExpr = condExpr->Emit2FEExpr(condStmts);
   bodyFEStmts.splice(bodyFEStmts.end(), condStmts);
+  UseCompareAsCondFEExpr(condFEExpr);
   UniqueFEIRStmt whileStmt = std::make_unique<FEIRStmtDoWhile>(OP_dowhile, std::move(condFEExpr),
                                                                std::move(bodyFEStmts));
   whileStmt->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
@@ -550,13 +572,20 @@ std::list<UniqueFEIRStmt> ASTGCCAsmStmt::Emit2FEStmtImpl() const {
   std::list<UniqueFEIRStmt> stmts;
   std::vector<UniqueFEIRExpr> outputsExprs;
   std::vector<UniqueFEIRExpr> inputsExprs;
-  for (uint32 i = 0; i < numOfOutputs; ++i) {
+  std::unique_ptr<FEIRStmtGCCAsm> stmt = std::make_unique<FEIRStmtGCCAsm>(asmStr, isGoto, isVolatile);
+  stmt->SetOutputs(outputs);
+  for (uint32 i = 0; i < outputs.size(); ++i) {
     outputsExprs.emplace_back(exprs[i]->Emit2FEExpr(stmts));
   }
-  for (uint32 i = 0; i < numOfInputs; ++i) {
-    inputsExprs.emplace_back(exprs[i + numOfOutputs]->Emit2FEExpr(stmts));
+  stmt->SetOutputsExpr(outputsExprs);
+  stmt->SetInputs(inputs);
+  for (uint32 i = 0; i < inputs.size(); ++i) {
+    inputsExprs.emplace_back(exprs[i + outputs.size()]->Emit2FEExpr(stmts));
   }
-  // Translate asm info to FEIR and MIR.
+  stmt->SetInputsExpr(inputsExprs);
+  stmt->SetClobbers(clobbers);
+  stmt->SetLabels(labels);
+  stmts.emplace_back(std::move(stmt));
   return stmts;
 }
 

@@ -108,9 +108,9 @@ void FSAA::ProcessBB(BB *bb) {
         TypeOfMayDefList::iterator it = mayDefNodes->begin();
         // due to use of iterator, can do at most 1 erasion each iterator usage
         for (; it != mayDefNodes->end(); ++it) {
-          if ((*it).base == nullptr) {
+          if (it->second.base == nullptr) {
           } else {
-            BB *aliasedDefBB = (*it).base->GetDefBB();
+            BB *aliasedDefBB = it->second.base->GetDefBB();
             if (aliasedDefBB == nullptr) {
               hasErase = true;
             } else {
@@ -120,7 +120,7 @@ void FSAA::ProcessBB(BB *bb) {
           if (hasErase) {
             if (DEBUGFUNC(func)) {
               LogInfo::MapleLogger() << "FSAA deletes mayDef of ";
-              (*it).GetResult()->Dump();
+              it->second.GetResult()->Dump();
               LogInfo::MapleLogger() << " in BB " << bb->GetBBId() << " at:" << endl;
               itStmt->Dump();
             }

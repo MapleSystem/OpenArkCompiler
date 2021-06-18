@@ -226,6 +226,9 @@ bool ForwardPropPattern::CheckCondition(Insn &insn) {
   }
   Operand &firstOpnd = insn.GetOperand(kInsnFirstOpnd);
   Operand &secondOpnd = insn.GetOperand(kInsnSecondOpnd);
+  if (firstOpnd.GetSize() != secondOpnd.GetSize()) {
+    return false;
+  }
   RegOperand &firstRegOpnd = static_cast<RegOperand&>(firstOpnd);
   RegOperand &secondRegOpnd = static_cast<RegOperand&>(secondOpnd);
   uint32 firstRegNO = firstRegOpnd.GetRegisterNumber();
@@ -349,7 +352,9 @@ bool BackPropPattern::CheckAndGetOpnd(Insn &insn) {
   if (RegOperand::IsSameReg(firstOpnd, secondOpnd)) {
     return false;
   }
-
+  if (firstOpnd.GetSize() != secondOpnd.GetSize()) {
+    return false;
+  }
   firstRegOpnd = &static_cast<RegOperand&>(firstOpnd);
   secondRegOpnd = &static_cast<RegOperand&>(secondOpnd);
   if (firstRegOpnd->IsZeroRegister() || !firstRegOpnd->IsVirtualRegister() || !secondRegOpnd->IsVirtualRegister()) {
@@ -724,7 +729,10 @@ uint32 RedundantUxtPattern::GetInsnValidBit(Insn &insn) {
 
 uint32 RedundantUxtPattern::GetMaximumValidBit(Insn &insn, uint8 index, InsnSet &visitedInsn) const {
   InsnSet defInsnSet = cgFunc.GetRD()->FindDefForRegOpnd(insn, index);
-  ASSERT(!defInsnSet.empty(), "operand must be defined before used");
+  if (defInsnSet.empty()) {
+    /* disable opt when there is no def point. */
+    return k64BitSize;
+  }
 
   uint32 validBit = 0;
   uint32 nMaxValidBit = 0;

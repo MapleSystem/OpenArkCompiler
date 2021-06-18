@@ -23,7 +23,7 @@
 namespace mpldbg {
 using namespace maple;
 
-// https://sourceware.org/binutils/docs-2.28/as/Loc.html
+/* https://sourceware.org/binutils/docs-2.28/as/Loc.html */
 enum LocOpt { kBB, kProEnd, kEpiBeg, kIsStmt, kIsa, kDisc };
 
 enum DbgOpcode : uint8 {

@@ -520,8 +520,9 @@ void Prop::TraversalMeStmt(MeStmt &meStmt) {
       auto &ivarStmt = static_cast<IassignMeStmt&>(meStmt);
       ivarStmt.SetRHS(&PropMeExpr(utils::ToRef(ivarStmt.GetRHS()), subProped, false));
       if (ivarStmt.GetLHSVal()->GetBase()->GetMeOp() != kMeOpVar || config.propagateBase) {
-        MeExpr *propedExpr = &PropMeExpr(utils::ToRef(ivarStmt.GetLHSVal()->GetBase()), subProped, false);
-        if (propedExpr->GetOp() == OP_constval) {
+        auto *baseOfIvar = ivarStmt.GetLHSVal()->GetBase();
+        MeExpr *propedExpr = &PropMeExpr(utils::ToRef(baseOfIvar), subProped, false);
+        if (propedExpr == baseOfIvar || propedExpr->GetOp() == OP_constval) {
           subProped = false;
         } else {
           ivarStmt.GetLHSVal()->SetBase(propedExpr);

@@ -93,6 +93,64 @@ void Simplify::SimplifyCallAssigned(const StmtNode &stmt, BlockNode &block) {
   }
 }
 
+void Simplify::SplitAggCopy(StmtNode *stmt, BlockNode *block, MIRFunction *func) {
+  if (stmt->GetOpCode() == OP_dassign && stmt->Opnd(0)->GetOpCode() == OP_dread &&
+      stmt->Opnd(0)->GetPrimType() == PTY_agg) {
+    auto *dassign = static_cast<const DassignNode*>(stmt);
+    const auto &lhsStIdx = dassign->GetStIdx();
+    auto *dread = static_cast<DreadNode*>(stmt->Opnd(0));
+    const auto &rhsStIdx = dread->GetStIdx();
+
+    auto lhsSymbol = func->GetLocalOrGlobalSymbol(lhsStIdx);
+    auto lhsMIRType = lhsSymbol->GetType();
+    auto lhsFieldID = dassign->GetFieldID();
+    if (lhsFieldID != 0) {
+      CHECK_FATAL(lhsMIRType->IsStructType(), "only struct has non-zero fieldID");
+      lhsMIRType = static_cast<MIRStructType*>(lhsMIRType)->GetFieldType(lhsFieldID);
+    }
+
+    auto rhsSymbol = func->GetLocalOrGlobalSymbol(rhsStIdx);
+    auto rhsMIRType = rhsSymbol->GetType();
+    auto rhsFieldID = dread->GetFieldID();
+    if (rhsFieldID != 0) {
+      CHECK_FATAL(rhsMIRType->IsStructType(), "only struct has non-zero fieldID");
+      rhsMIRType = static_cast<MIRStructType*>(rhsMIRType)->GetFieldType(rhsFieldID);
+    }
+
+    if (!lhsSymbol->IsLocal() && !rhsSymbol->IsLocal()) {
+      return;
+    }
+
+    if (lhsMIRType != rhsMIRType) {
+      return;
+    }
+
+    if (lhsMIRType->IsStructType()) {
+      auto *structType = static_cast<MIRStructType*>(lhsMIRType);
+      constexpr uint32 upperLimitOfFieldNum = 10;
+      if (lhsMIRType->NumberOfFieldIDs() > upperLimitOfFieldNum) {
+        return;
+      }
+      auto mirBuiler = func->GetModule()->GetMIRBuilder();
+      for (uint id = 1; id <= lhsMIRType->NumberOfFieldIDs(); ++id) {
+        MIRType *fieldType = structType->GetFieldType(id);
+        if (fieldType->GetSize() == 0) {
+          continue; // field size is zero for empty struct/union;
+        }
+        if (fieldType->GetKind() == kTypeBitField && static_cast<MIRBitFieldType*>(fieldType)->GetFieldSize() == 0) {
+          continue; // bitfield size is zero
+        }
+        auto newRHS = mirBuiler->CreateDread(*rhsSymbol, fieldType->GetPrimType());
+        newRHS->SetFieldID(id + rhsFieldID);
+        auto newDassign = mirBuiler->CreateStmtDassign(lhsStIdx, lhsFieldID + id, newRHS);
+        newDassign->SetSrcPos(stmt->GetSrcPos());
+        block->InsertBefore(stmt, newDassign);
+      }
+      block->RemoveStmt(stmt);
+    }
+  }
+}
+
 void Simplify::ProcessFunc(MIRFunction *func) {
   if (func->IsEmpty()) {
     return;
@@ -133,6 +191,10 @@ void Simplify::ProcessFuncStmt(MIRFunction &func, StmtNode *stmt, BlockNode *blo
       }
       case OP_callassigned: {
         SimplifyCallAssigned(*stmt, *block);
+        break;
+      }
+      case OP_dassign: {
+        SplitAggCopy(stmt, block, &func);
         break;
       }
       default: {

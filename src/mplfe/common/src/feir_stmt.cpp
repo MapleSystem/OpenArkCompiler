@@ -1060,7 +1060,7 @@ FEIRStmtCaseForC::FEIRStmtCaseForC(int64 label)
 void FEIRStmtCaseForC::AddCaseTag2CaseVec(int64 lCaseTag, int64 rCaseTag) {
   auto pLabel = std::make_unique<FEIRStmtPesudoLabel>(lCaseLabel);
   for (int64 csTag = lCaseTag; csTag <= rCaseTag; ++csTag) {
-    pesudoLabelMap.insert(std::pair<int64, FEIRStmtPesudoLabel*>(csTag, pLabel.get()));
+    pesudoLabelMap.insert(std::pair<int64, std::unique_ptr<FEIRStmtPesudoLabel>>(csTag, std::move(pLabel)));
   }
 }
 
@@ -1068,7 +1068,7 @@ std::list<StmtNode*> FEIRStmtCaseForC::GenMIRStmtsImpl(MIRBuilder &mirBuilder) c
   std::list<StmtNode*> ans;
   CaseVector &caseVec = *AstSwitchUtil::Instance().GetTopOfNestedCaseVectors().first;
   StmtNode *mirLabelStmt = nullptr;
-  for (auto targetPair : GetPesudoLabelMap()) {
+  for (auto &targetPair : GetPesudoLabelMap()) {
     targetPair.second->GenerateLabelIdx(mirBuilder);
     caseVec.push_back(std::make_pair(targetPair.first, targetPair.second->GetMIRLabelIdx()));
   }
@@ -2229,12 +2229,20 @@ BaseNode *FEIRExprDRead::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
   MIRType *type = varSrc->GetType()->GenerateMIRTypeAuto();
   MIRSymbol *symbol = varSrc->GenerateMIRSymbol(mirBuilder);
   ASSERT(type != nullptr, "type is nullptr");
+  PrimType regType = GetRegPrimType(type->GetPrimType());
+  if (regType != type->GetPrimType()) {
+    type = GlobalTables::GetTypeTable().GetPrimType(regType);
+  }
   AddrofNode *node = mirBuilder.CreateExprDread(*type, *symbol);
   if (fieldID != 0) {
     CHECK_FATAL((type->GetKind() == MIRTypeKind::kTypeStruct || type->GetKind() == MIRTypeKind::kTypeUnion),
                 "If fieldID is not 0, then the variable must be a structure");
     CHECK_NULL_FATAL(fieldType);
     MIRType *fieldMIRType = fieldType->GenerateMIRTypeAuto();
+    PrimType regType = GetRegPrimType(fieldMIRType->GetPrimType());
+    if (regType != fieldMIRType->GetPrimType()) {
+      fieldMIRType = GlobalTables::GetTypeTable().GetPrimType(regType);
+    }
     node = mirBuilder.CreateExprDread(*fieldMIRType, fieldID, *symbol);
   }
   return node;
@@ -2379,8 +2387,8 @@ std::vector<FEIRVar*> FEIRExprAddrofVar::GetVarUsesImpl() const {
 
 // ---------- FEIRExprAddrofFunc ----------
 std::unique_ptr<FEIRExpr> FEIRExprAddrofFunc::CloneImpl() const {
-  CHECK_FATAL(false, "not support clone here");
-  return nullptr;
+  auto expr = std::make_unique<FEIRExprAddrofFunc>(funcAddr);
+  return expr;
 }
 
 BaseNode *FEIRExprAddrofFunc::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
@@ -4032,6 +4040,61 @@ std::list<StmtNode*> FEIRStmtAtomic::GenMIRStmtsImpl(MIRBuilder &mirBuilder) con
   for (auto &it : block->GetStmtNodes()) {
     stmts.emplace_back(&it);
   }
+  return stmts;
+}
+
+std::list<StmtNode*> FEIRStmtGCCAsm::GenMIRStmtsImpl(MIRBuilder &mirBuilder) const {
+  std::list<StmtNode*> stmts;
+  MemPool *mp = mirBuilder.GetCurrentFuncCodeMp();
+  AsmNode *asmNode = mp->New<AsmNode>(mirBuilder.GetCurrentFuncCodeMpAllocator());
+  asmNode->asmString = asmStr;
+  for (uint32 i = 0; i < outputs.size(); ++i) {
+    FieldID fieldID = 0;
+    MIRSymbol *sym = nullptr;
+    if (outputsExprs[i]->GetKind() == kExprDRead) {
+      FEIRExprDRead *dread = static_cast<FEIRExprDRead*>(outputsExprs[i].get());
+      fieldID = dread->GetFieldID();
+      sym = dread->GetVarUses().front()->GenerateMIRSymbol(mirBuilder);
+    } else if (outputsExprs[i]->GetKind() == kExprIRead) {
+      FEIRExprIRead *iread = static_cast<FEIRExprIRead*>(outputsExprs[i].get());
+      fieldID = iread->GetFieldID();
+      UniqueFEIRVar asmOut = FEIRBuilder::CreateVarNameForC(FEUtils::GetSequentialName("asm_out_"),
+                                                            iread->GetClonedRetType());
+      sym = asmOut->GenerateLocalMIRSymbol(mirBuilder);
+      UniqueFEIRExpr srcExpr = FEIRBuilder::CreateExprDRead(std::move(asmOut));
+      auto stmt = FEIRBuilder::CreateStmtIAssign(iread->GetClonedPtrType(), iread->GetClonedOpnd(),
+                                                 std::move(srcExpr), fieldID);
+      std::list<StmtNode*> node = stmt->GenMIRStmts(mirBuilder);
+      stmts.splice(stmts.end(), node);
+    } else {
+      CHECK_FATAL(false, "FEIRStmtGCCAsm NYI.");
+    }
+    CallReturnPair retPair(sym->GetStIdx(), RegFieldPair(fieldID, 0));
+    asmNode->asmOutputs.emplace_back(retPair);
+    UStrIdx strIdx = GlobalTables::GetUStrTable().GetOrCreateStrIdxFromName(outputs[i].second);
+    asmNode->outputConstraints.emplace_back(strIdx);
+  }
+  for (uint32 i = 0; i < inputs.size(); ++i) {
+    BaseNode *node = inputsExprs[i]->GenMIRNode(mirBuilder);
+    asmNode->PushOpnd(node);
+    UStrIdx strIdx = GlobalTables::GetUStrTable().GetOrCreateStrIdxFromName(inputs[i].second);
+    asmNode->inputConstraints.emplace_back(strIdx);
+  }
+  for (uint32 i = 0; i < clobbers.size(); ++i) {
+    UStrIdx strIdx = GlobalTables::GetUStrTable().GetOrCreateStrIdxFromName(clobbers[i]);
+    asmNode->clobberList.emplace_back(strIdx);
+  }
+  for (uint32 i = 0; i < labels.size(); ++i) {
+    LabelIdx label = mirBuilder.GetOrCreateMIRLabel(labels[i]);
+    asmNode->gotoLabels.emplace_back(label);
+  }
+  if (isVolatile) {
+    asmNode->SetQualifier(kASMvolatile);
+  }
+  if (isGoto) {
+    asmNode->SetQualifier(kASMgoto);
+  }
+  stmts.emplace_front(asmNode);
   return stmts;
 }
 }  // namespace maple

@@ -902,7 +902,9 @@ bool IsLegal(MeStmt &meStmt) {
     return false;
   }
   auto *opMeExpr = static_cast<OpMeExpr*>(meCmp);
-  CHECK_FATAL(opMeExpr->GetNumOpnds() == kNumOpnds, "must be");
+  if (opMeExpr->GetNumOpnds() != kNumOpnds) {
+    return false;
+  }
   if (opMeExpr->GetOp() != OP_ge && opMeExpr->GetOp() != OP_le &&
       opMeExpr->GetOp() != OP_lt && opMeExpr->GetOp() != OP_gt &&
       opMeExpr->GetOp() != OP_eq) {

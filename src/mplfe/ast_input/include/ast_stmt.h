@@ -51,6 +51,8 @@ class ASTStmt {
     return srcFileLineNum;
   }
 
+  void UseCompareAsCondFEExpr(UniqueFEIRExpr &condFEExpr) const;
+
  protected:
   virtual std::list<UniqueFEIRStmt> Emit2FEStmtImpl() const = 0;
   ASTStmtOp op;
@@ -384,7 +386,7 @@ class ASTDefaultStmt : public ASTStmt {
 
  private:
   std::list<UniqueFEIRStmt> Emit2FEStmtImpl() const override;
-  ASTStmt* child;
+  ASTStmt* child = nullptr;
 };
 
 class ASTNullStmt : public ASTStmt {
@@ -537,20 +539,8 @@ class ASTGCCAsmStmt : public ASTStmt {
   ASTGCCAsmStmt() : ASTStmt(kASTStmtGCCAsmStmt) {}
   ~ASTGCCAsmStmt() override = default;
 
-  void SetAsmStmts(const std::string &asmStr) {
-    asmStmts = asmStr;
-  }
-
-  void SetOutputsNum(uint32 num) {
-    numOfOutputs = num;
-  }
-
-  void SetInputsNum(uint32 num) {
-    numOfInputs = num;
-  }
-
-  void SetClobbersNum(uint32 num) {
-    numOfClobbers = num;
+  void SetAsmStr(const std::string &str) {
+    asmStr = str;
   }
 
   void InsertOutput(std::pair<std::string, std::string> &&output) {
@@ -565,18 +555,29 @@ class ASTGCCAsmStmt : public ASTStmt {
     clobbers.emplace_back(clobber);
   }
 
+  void InsertLabel(const std::string &label) {
+    labels.emplace_back(label);
+  }
+
+  void SetIsGoto(bool flag) {
+    isGoto = flag;
+  }
+
+  void SetIsVolatile(bool flag) {
+    isVolatile = flag;
+  }
+
  private:
   std::list<UniqueFEIRStmt> Emit2FEStmtImpl() const override;
   // Retrieving and parsing asm info in following order:
   // asm instructions, outputs [output name, constrain, expr], inputs [input name, constrain, expr], clobbers
-  std::string asmStmts;
-  uint32 numOfOutputs = 0;
+  std::string asmStr;
   std::vector<std::pair<std::string, std::string>> outputs;
-  uint32 numOfInputs = 0;
   std::vector<std::pair<std::string, std::string>> inputs;
-  uint32 numOfClobbers = 0;
   std::vector<std::string> clobbers;
-  // Not parsing asm label here, asm label info is enclosed in `Decl attr`
+  std::vector<std::string> labels;
+  bool isGoto = false;
+  bool isVolatile = false;
 };
 
 class ASTOffsetOfStmt : public ASTStmt {

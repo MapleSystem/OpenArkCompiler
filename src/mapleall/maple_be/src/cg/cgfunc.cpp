@@ -88,8 +88,23 @@ Operand *HandleConstStr16(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc
 }
 
 Operand *HandleAdd(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
-  return cgFunc.SelectAdd(static_cast<BinaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)),
-                          *cgFunc.HandleExpr(expr, *expr.Opnd(1)), parent);
+  (void)parent;
+  if (Globals::GetInstance()->GetOptimLevel() >= CGOptions::kLevel2 && expr.Opnd(0)->GetOpCode() == OP_mul &&
+      !IsPrimitiveFloat(expr.GetPrimType())) {
+    return cgFunc.SelectMadd(static_cast<BinaryNode&>(expr),
+                             *cgFunc.HandleExpr(*expr.Opnd(0), *expr.Opnd(0)->Opnd(0)),
+                             *cgFunc.HandleExpr(*expr.Opnd(0), *expr.Opnd(0)->Opnd(1)),
+                             *cgFunc.HandleExpr(expr, *expr.Opnd(1)));
+  } else if (Globals::GetInstance()->GetOptimLevel() >= CGOptions::kLevel2 && expr.Opnd(1)->GetOpCode() == OP_mul &&
+             !IsPrimitiveFloat(expr.GetPrimType())) {
+    return cgFunc.SelectMadd(static_cast<BinaryNode&>(expr),
+                             *cgFunc.HandleExpr(*expr.Opnd(1), *expr.Opnd(1)->Opnd(0)),
+                             *cgFunc.HandleExpr(*expr.Opnd(1), *expr.Opnd(1)->Opnd(1)),
+                             *cgFunc.HandleExpr(expr, *expr.Opnd(0)));
+  } else {
+    return cgFunc.SelectAdd(static_cast<BinaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)),
+                            *cgFunc.HandleExpr(expr, *expr.Opnd(1)), parent);
+  }
 }
 
 Operand *HandleCGArrayElemAdd(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
@@ -400,7 +415,7 @@ Operand *HandleIntrinOp(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) 
     case INTRN_vector_set_element_v4u32:
       return cgFunc.SelectVectorSetElement(intrinsicopNode);
     case INTRN_vector_reverse_v16u8:
-      return cgFunc.SelectVectorReverse(intrinsicopNode, 32);
+      return cgFunc.SelectVectorReverse(intrinsicopNode, k32BitSize);
     case INTRN_vector_and_v4i32:
     case INTRN_vector_and_v8u16:
       return cgFunc.SelectVectorAnd(intrinsicopNode);
@@ -901,13 +916,14 @@ bool CGFunc::CheckSkipMembarOp(StmtNode &stmt) {
 }
 
 void CGFunc::GenerateLoc(StmtNode *stmt, unsigned &lastSrcLoc, unsigned &lastMplLoc) {
-  // insert Insn for .loc before cg for the stmt
+  /* insert Insn for .loc before cg for the stmt */
   if (cg->GetCGOptions().WithLoc() && stmt->op != OP_label && stmt->op != OP_comment) {
-    // if original src file location info is availiable for this stmt,
-    // use it and skip mpl file location info for this stmt
+    /* if original src file location info is availiable for this stmt,
+     * use it and skip mpl file location info for this stmt
+     */
     unsigned newSrcLoc = cg->GetCGOptions().WithSrc() ? stmt->GetSrcPos().LineNum() : 0;
     if (newSrcLoc != 0 && newSrcLoc != lastSrcLoc) {
-      // .loc for original src file
+      /* .loc for original src file */
       unsigned fileid = stmt->GetSrcPos().FileNum();
       Operand *o0 = CreateDbgImmOperand(fileid);
       Operand *o1 = CreateDbgImmOperand(newSrcLoc);
@@ -915,7 +931,7 @@ void CGFunc::GenerateLoc(StmtNode *stmt, unsigned &lastSrcLoc, unsigned &lastMpl
       curBB->AppendInsn(loc);
       lastSrcLoc = newSrcLoc;
     }
-    // .loc for mpl file
+    /* .loc for mpl file */
     unsigned newMplLoc = cg->GetCGOptions().WithMpl() ? stmt->GetSrcPos().MplLineNum() : 0;
     if (newMplLoc != 0 && newMplLoc != lastMplLoc) {
       unsigned fileid = 1;

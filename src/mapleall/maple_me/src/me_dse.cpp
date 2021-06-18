@@ -65,7 +65,8 @@ AnalysisResult *MeDoDSE::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultM
   CHECK_NULL_FATAL(func);
   auto *postDom = static_cast<Dominance*>(m->GetAnalysisResult(MeFuncPhase_DOMINANCE, func));
   CHECK_NULL_FATAL(postDom);
-  MeDSE dse(*func, postDom, DEBUGFUNC(func));
+  auto *aliasClass = static_cast<AliasClass*>(m->GetAnalysisResult(MeFuncPhase_ALIASCLASS, func));
+  MeDSE dse(*func, postDom, aliasClass, DEBUGFUNC(func));
   dse.RunDSE();
   func->Verify();
   // cfg change , invalid results in MeFuncResultMgr
