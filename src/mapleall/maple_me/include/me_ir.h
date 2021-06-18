@@ -728,6 +728,7 @@ class AddroflabelMeExpr : public MeExpr {
     return true;
   }
   BaseNode &EmitExpr(SSATab&) override;
+  MeExpr *GetIdenticalExpr(MeExpr &expr, bool) const override;
 
   uint32 GetHashIndex() const override {
     constexpr uint32 shiftNum = 4;
