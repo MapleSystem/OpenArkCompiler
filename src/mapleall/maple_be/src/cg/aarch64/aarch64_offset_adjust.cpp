@@ -58,6 +58,14 @@ void AArch64FPLROffsetAdjustment::AdjustmentOffsetForOpnd(Insn &insn, AArch64CGF
           insn.SetOperand(i, newMemOpnd);
         }
       }
+      if (ofstOpnd->GetVary() == kNotVary) {
+        bool condition = aarchCGFunc.IsOperandImmValid(insn.GetMachineOpcode(), &memOpnd, i);
+        if (!condition) {
+          AArch64MemOperand &newMemOpnd = aarchCGFunc.SplitOffsetWithAddInstruction(
+              memOpnd, memOpnd.GetSize(), static_cast<AArch64reg>(R17), false, &insn);
+          insn.SetOperand(i, newMemOpnd);
+        }
+      }
     } else if (opnd.IsIntImmediate()) {
       AdjustmentOffsetForImmOpnd(insn, i, aarchCGFunc);
     }
@@ -75,16 +83,11 @@ void AArch64FPLROffsetAdjustment::AdjustmentOffsetForImmOpnd(Insn &insn, uint32 
     if (insn.GetMachineOpcode() >= MOP_xaddrri24 && insn.GetMachineOpcode() <= MOP_waddrri12) {
       PrimType destTy =
           static_cast<RegOperand &>(insn.GetOperand(kInsnFirstOpnd)).GetSize() == k64BitSize ? PTY_i64 : PTY_i32;
-      RegOperand *resOpnd = aarchCGFunc.GetBaseRegForSplit(static_cast<AArch64reg>(R17));
+      RegOperand *resOpnd = &static_cast<RegOperand&>(insn.GetOperand(kInsnFirstOpnd));
       AArch64ImmOperand &copyImmOpnd = aarchCGFunc.CreateImmOperand(
           immOpnd.GetValue(), immOpnd.GetSize(), immOpnd.IsSignedValue());
       aarchCGFunc.SelectAddAfterInsn(*resOpnd, insn.GetOperand(kInsnSecondOpnd), copyImmOpnd, destTy, false, insn);
-      insn.SetOperand(index, *resOpnd);
-      if (destTy == PTY_i64) {
-        insn.SetMOperator(MOP_xaddrrr);
-      } else {
-        insn.SetMOperator(MOP_waddrrr);
-      }
+      insn.GetBB()->RemoveInsn(insn);
     } else {
       CHECK_FATAL(false, "NIY");
     }

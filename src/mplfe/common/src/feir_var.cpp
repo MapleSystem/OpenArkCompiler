@@ -135,7 +135,9 @@ MIRSymbol *FEIRVar::GenerateGlobalMIRSymbolImpl(MIRBuilder &builder) const {
     gSymbol->SetStorageClass(MIRStorageClass::kScExtern);
     attrs.ResetAttr(AttrKind::ATTR_extern);
   } else {
-    gSymbol->SetStorageClass(MIRStorageClass::kScGlobal);
+    if (gSymbol->GetStorageClass() == MIRStorageClass::kScInvalid) {
+      gSymbol->SetStorageClass(MIRStorageClass::kScGlobal);
+    }
   }
   return gSymbol;
 }
@@ -150,7 +152,6 @@ MIRSymbol *FEIRVar::GenerateLocalMIRSymbolImpl(MIRBuilder &builder) const {
     attrs.SetAttr(ATTR_static);
     mirSymbol->SetAttrs(attrs);
     mirSymbol->SetStorageClass(MIRStorageClass::kScPstatic);
-    mirSymbol->SetKonst(mirConst);
   }
   return mirSymbol;
 }

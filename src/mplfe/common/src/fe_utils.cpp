@@ -195,18 +195,22 @@ std::string FEUtils::GetSequentialName(const std::string &prefix) {
   return name;
 }
 
-bool FEUtils::TraverseToNamedField(MIRStructType &structType, GStrIdx nameIdx, FieldID &fieldID) {
+bool FEUtils::TraverseToNamedField(MIRStructType &structType, GStrIdx nameIdx, FieldID &fieldID, bool isTopLevel) {
   for (uint32 fieldIdx = 0; fieldIdx < structType.GetFieldsSize(); ++fieldIdx) {
     ++fieldID;
     TyIdx fieldTyIdx = structType.GetFieldsElemt(fieldIdx).second.first;
     MIRType *fieldType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(fieldTyIdx);
     ASSERT(fieldType != nullptr, "fieldType is null");
-    if (structType.GetFieldsElemt(fieldIdx).first == nameIdx) {
+    if (isTopLevel && structType.GetFieldsElemt(fieldIdx).first == nameIdx) {
       return true;
     }
-    if (fieldType->IsStructType()) {
+    // The fields of an embedded structure array are assigned fieldIDs
+    if (fieldType->GetKind() == kTypeArray) {
+      fieldType = fieldType->EmbeddedStructType();
+    }
+    if (fieldType != nullptr && fieldType->IsStructType()) {
       auto *subStructType = static_cast<MIRStructType *>(fieldType);
-      if (TraverseToNamedField(*subStructType, nameIdx, fieldID)) {
+      if (TraverseToNamedField(*subStructType, nameIdx, fieldID, false)) {
         return true;
       }
     }
@@ -238,6 +242,10 @@ MIRType *FEUtils::GetStructFieldType(MIRStructType *type, FieldID fieldID) {
 
 MIRConst *FEUtils::CreateImplicitConst(MIRType *type) {
   switch (type->GetPrimType()) {
+    case PTY_u1: {
+      return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
+          0, *GlobalTables::GetTypeTable().GetPrimType(PTY_u1));
+    }
     case PTY_u8: {
       return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
           0, *GlobalTables::GetTypeTable().GetPrimType(PTY_u8));

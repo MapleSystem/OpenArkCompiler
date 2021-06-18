@@ -125,6 +125,7 @@ class IRMap : public AnalysisResult {
                                                          ScalarMeExpr *ret, TyIdx tyIdx = TyIdx());
   MeExpr *SimplifyOpMeExpr(OpMeExpr *opmeexpr);
   MeExpr *SimplifyMeExpr(MeExpr *x);
+  static void SimplifyIvar(IvarMeExpr *ivar);
 
   template <class T, typename... Arguments>
   T *NewInPool(Arguments&&... args) {

@@ -22,6 +22,7 @@
 #include "cgbb.h"
 #include "reg_alloc.h"
 #include "cfi.h"
+#include "dbg.h"
 #include "reaching.h"
 #include "cg_cfg.h"
 /* MapleIR headers. */
@@ -139,6 +140,7 @@ class CGFunc {
   virtual bool NeedCleanup() = 0;
   virtual void GenerateCleanupCodeForExtEpilog(BB &bb) = 0;
 
+  void GenerateLoc(StmtNode *stmt, unsigned &lastSrcLoc, unsigned &lastMplLoc);
   void GenerateInstruction();
   bool MemBarOpt(StmtNode &membar);
   void UpdateCallBBFrequency();
@@ -200,6 +202,8 @@ class CGFunc {
   virtual Operand *SelectStr16Const(MIRStr16Const &strConst) = 0;
   virtual void SelectAdd(Operand &resOpnd, Operand &opnd0, Operand &opnd1, PrimType primType) = 0;
   virtual Operand *SelectAdd(BinaryNode &node, Operand &opnd0, Operand &opnd1, const BaseNode &parent) = 0;
+  virtual void SelectMadd(Operand &resOpnd, Operand &opndM0, Operand &opndM1, Operand &opnd1, PrimType primType) = 0;
+  virtual Operand *SelectMadd(BinaryNode &node, Operand &opndM0, Operand &opndM1, Operand &opnd1) = 0;
   virtual Operand &SelectCGArrayElemAdd(BinaryNode &node) = 0;
   virtual Operand *SelectShift(BinaryNode &node, Operand &opnd0, Operand &opnd1) = 0;
   virtual void SelectMpy(Operand &resOpnd, Operand &opnd0, Operand &opnd1, PrimType primType) = 0;
@@ -406,6 +410,10 @@ class CGFunc {
 
   virtual void InsertJumpPad(Insn *) {
     return;
+  }
+
+  Operand *CreateDbgImmOperand(int64 val) {
+    return memPool->New<mpldbg::ImmOperand>(val);
   }
 
   uint32 NumBBs() const {

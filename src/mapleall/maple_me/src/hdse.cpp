@@ -181,6 +181,17 @@ void HDSE::MarkChiNodeRequired(ChiMeNode &chiNode) {
   chiNode.SetIsLive(true);
   workList.push_front(chiNode.GetRHS());
   MeStmt *meStmt = chiNode.GetBase();
+
+  // set MustDefNode live, which defines the chiNode.
+  auto *mustDefList = meStmt->GetMustDefList();
+  if (mustDefList != nullptr) {
+    for (auto &mustDef : *mustDefList) {
+      if (aliasInfo->MayAlias(mustDef.GetLHS()->GetOst(), chiNode.GetLHS()->GetOst())) {
+        mustDef.SetIsLive(true);
+      }
+    }
+  }
+
   MarkStmtRequired(*meStmt);
 }
 

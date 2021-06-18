@@ -332,7 +332,7 @@ void DriverRunner::ProcessCGPhase(const std::string &outputFile, const std::stri
     if (!cgOptions->SuppressFileInfo()) {
       cg->GetEmitter()->EmitFileInfo(actualInput);
     }
-    if (withDwarf) {
+    if (cgOptions->WithDwarf()) {
       cg->GetEmitter()->EmitDIHeader();
     }
     // Run the cg optimizations phases

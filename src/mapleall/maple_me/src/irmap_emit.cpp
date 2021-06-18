@@ -265,7 +265,17 @@ BaseNode &IvarMeExpr::EmitExpr(SSATab &ssaTab) {
   CHECK_NULL_FATAL(base);
   auto *ireadNode =
       ssaTab.GetModule().CurFunction()->GetCodeMempool()->New<IreadNode>(OP_iread, PrimType(GetPrimType()));
-  ireadNode->SetOpnd(&base->EmitExpr(ssaTab), 0);
+  if (offset == 0) {
+    ireadNode->SetOpnd(&base->EmitExpr(ssaTab), 0);
+  } else {
+    auto *mirType = GlobalTables::GetTypeTable().GetInt32();
+    auto *mirConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(offset, *mirType);
+    auto *codeMemPool = ssaTab.GetModule().CurFunction()->GetCodeMempool();
+    auto *constValNode = codeMemPool->New<ConstvalNode>(mirType->GetPrimType(), mirConst);
+    auto *newAddrNode =
+        codeMemPool->New<BinaryNode>(OP_add, base->GetPrimType(), &(base->EmitExpr(ssaTab)), constValNode);
+    ireadNode->SetOpnd(newAddrNode, 0);
+  }
   ireadNode->SetFieldID(fieldID);
   ireadNode->SetTyIdx(tyIdx);
   ASSERT(ireadNode->GetPrimType() != kPtyInvalid, "");
@@ -337,7 +347,17 @@ StmtNode &IassignMeStmt::EmitStmt(SSATab &ssaTab) {
   auto *iassignNode = ssaTab.GetModule().CurFunction()->GetCodeMempool()->New<IassignNode>();
   iassignNode->SetTyIdx(tyIdx);
   iassignNode->SetFieldID(lhsVar->GetFieldID());
-  iassignNode->SetAddrExpr(&lhsVar->GetBase()->EmitExpr(ssaTab));
+  if (lhsVar->GetOffset() == 0) {
+    iassignNode->SetAddrExpr(&lhsVar->GetBase()->EmitExpr(ssaTab));
+  } else {
+    auto *mirType = GlobalTables::GetTypeTable().GetInt32();
+    auto *mirConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(lhsVar->GetOffset(), *mirType);
+    auto *codeMemPool = ssaTab.GetModule().CurFunction()->GetCodeMempool();
+    auto *constValNode = codeMemPool->New<ConstvalNode>(mirType->GetPrimType(), mirConst);
+    auto *newAddrNode = codeMemPool->New<BinaryNode>(
+        OP_add, lhsVar->GetBase()->GetPrimType(), &(lhsVar->GetBase()->EmitExpr(ssaTab)), constValNode);
+    iassignNode->SetAddrExpr(newAddrNode);
+  }
   iassignNode->SetRHS(&rhs->EmitExpr(ssaTab));
   iassignNode->SetSrcPos(GetSrcPosition());
   return *iassignNode;

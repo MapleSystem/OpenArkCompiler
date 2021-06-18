@@ -209,6 +209,8 @@ UniqueFEIRExpr FEIRBuilder::CreateExprConstAnyScalar(PrimType primType, int64 va
     case PTY_i16:
     case PTY_i32:
     case PTY_i64:
+    case PTY_ptr:
+    case PTY_a64:
       return std::make_unique<FEIRExprConst>(val, primType);
     case PTY_f128:
       // Not Implemented
@@ -622,6 +624,10 @@ UniqueFEIRStmt FEIRBuilder::AssginStmtField(UniqueFEIRExpr addrExpr, UniqueFEIRE
   } else if (addrExpr->GetKind() == kExprIRead) {
     auto ireadExpr = static_cast<FEIRExprIRead*>(addrExpr.get());
     stmt = CreateStmtIAssign(ireadExpr->GetClonedPtrType(), ireadExpr->GetClonedOpnd(),
+        std::move(srcExpr), baseID + fieldID);
+  } else if (addrExpr->GetKind() == kExprIAddrof) {
+    auto iaddrofExpr = static_cast<FEIRExprIAddrof*>(addrExpr.get());
+    stmt = CreateStmtIAssign(iaddrofExpr->GetClonedPtrType(), iaddrofExpr->GetClonedOpnd(),
         std::move(srcExpr), baseID + fieldID);
   } else {
     CHECK_FATAL(false, "unsupported expr in AssginStmtField");

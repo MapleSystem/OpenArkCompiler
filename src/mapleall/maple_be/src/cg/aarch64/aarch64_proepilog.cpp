@@ -26,7 +26,6 @@ const std::set<std::string> kFrameWhiteListFunc {
 bool IsFuncNeedFrame(const std::string &funcName) {
   return kFrameWhiteListFunc.find(funcName) != kFrameWhiteListFunc.end();
 }
-constexpr uint32 k2BitSize = 2;
 constexpr int32 kSoeChckOffset = 8192;
 
 enum RegsPushPop : uint8 {
