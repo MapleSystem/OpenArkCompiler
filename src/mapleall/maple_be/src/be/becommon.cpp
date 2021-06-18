@@ -569,8 +569,18 @@ std::pair<int32, int32> BECommon::GetFieldOffset(MIRStructType &structType, Fiel
     if (structType.GetKind() != kTypeUnion) {
       if (fieldType->GetKind() == kTypeBitField) {
         uint32 fieldSize = static_cast<MIRBitFieldType*>(fieldType)->GetFieldSize();
-        /* is this field is crossing the align boundary of its base type? */
-        if ((allocedSizeInBits / (fieldAlign * 8u)) != ((allocedSizeInBits + fieldSize - 1u) / (fieldAlign * 8u))) {
+        /*
+         * Is this field is crossing the align boundary of its base type? Or,
+         * is field a zero-with bit field?
+         * Refer to C99 standard (§6.7.2.1) :
+         * > As a special case, a bit-field structure member with a width of 0 indicates that no further
+         * > bit-field is to be packed into the unit in which the previous bit-field, if any, was placed.
+         *
+         * We know that A zero-width bit field can cause the next field to be aligned on the next container
+         * boundary where the container is the same size as the underlying type of the bit field.
+         */
+        if (((allocedSizeInBits / (fieldAlign * 8u)) != ((allocedSizeInBits + fieldSize - 1u) / (fieldAlign * 8u))) ||
+            fieldSize == 0) {
           /*
            * the field is crossing the align boundary of its base type;
            * align alloced_size_in_bits to fieldAlign
@@ -581,13 +591,6 @@ std::pair<int32, int32> BECommon::GetFieldOffset(MIRStructType &structType, Fiel
         if (curFieldID == fieldID) {
           return std::pair<int32, int32>((allocedSizeInBits / (fieldAlign * 8u)) * fieldAlign,
                                          allocedSizeInBits % (fieldAlign * 8u));
-        } else if (fieldType->GetKind() == kTypeStruct) {
-          if ((curFieldID + GetStructFieldCount(fieldTyIdx)) >= fieldID) {
-            MIRStructType *subStructType = static_cast<MIRStructType*>(fieldType);
-            std::pair<int32, int32> result = GetFieldOffset(*subStructType, fieldID - curFieldID);
-            return std::pair<int32, int32>(result.first + allocedSize, result.second);
-          }
-          curFieldID += GetStructFieldCount(fieldTyIdx) + 1;
         } else {
           ++curFieldID;
         }

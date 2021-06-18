@@ -1090,7 +1090,6 @@ void AArch64Insn::Emit(const CG &cg, Emitter &emitter) const {
         }
         regOpnd->SetVecLanePosition(vecSpec->vecLane);
         regOpnd->SetVecLaneSize(vecSpec->vecLaneMax);
-
       }
     }
     opnds[seq[i]]->Emit(emitter, md->operand[seq[i]]);

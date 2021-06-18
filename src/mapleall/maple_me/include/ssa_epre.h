@@ -57,6 +57,9 @@ class SSAEPre : public SSAPre {
     if (!workCand->isSRCand) {
       return x;
     }
+    if (x->GetMeOp() != kMeOpVar && x->GetMeOp() != kMeOpReg) {
+      return x;
+    }
     return static_cast<MeExpr *>(ResolveAllInjuringDefs(static_cast<ScalarMeExpr *>(x)));
   }
   void SubstituteOpnd(MeExpr *x, MeExpr *oldopnd, MeExpr *newopnd) override;

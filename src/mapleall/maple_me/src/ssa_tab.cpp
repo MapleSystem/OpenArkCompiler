@@ -95,7 +95,7 @@ void SSATab::CreateSSAStmt(StmtNode &stmt, const BB *curbb) {
       theSSAPart->SetSSAVar(*versionStTable.GetZeroVersionSt(ost));
       // if the rhs may throw exception, we insert MayDef of the lhs var
       if (stmt.GetOpCode() == OP_maydassign) {
-        theSSAPart->InsertMayDefNode(theSSAPart->GetSSAVar(), &dNode);
+        theSSAPart->InsertMayDefNode(MayDefNode(theSSAPart->GetSSAVar(), &dNode));
       }
       return;
     }

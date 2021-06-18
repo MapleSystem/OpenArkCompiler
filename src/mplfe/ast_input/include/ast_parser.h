@@ -157,6 +157,7 @@ class ASTParser {
   ASTDecl *GetAstDeclOfDeclRefExpr(MapleAllocator &allocator, const clang::Expr &expr);
   void SetSourceFileInfo(clang::Decl *decl);
   uint32 GetSizeFromQualType(const clang::QualType qualType);
+  ASTExpr *GetTypeSizeFromQualType(MapleAllocator &allocator, const clang::QualType qualType);
   uint32_t GetAlignOfType(const clang::QualType currQualType, clang::UnaryExprOrTypeTrait exprKind);
   uint32_t GetAlignOfExpr(const clang::Expr &expr, clang::UnaryExprOrTypeTrait exprKind);
   ASTExpr *BuildExprToComputeSizeFromVLA(MapleAllocator &allocator, const clang::QualType &qualType);
@@ -173,6 +174,10 @@ ASTExpr *ParseBuiltinFunc(MapleAllocator &allocator, const clang::CallExpr &expr
   ASTExpr *PARSE_BUILTIIN_FUNC(Signbit);
   ASTExpr *PARSE_BUILTIIN_FUNC(Isinfsign);
   ASTExpr *PARSE_BUILTIIN_FUNC(HugeVal);
+  ASTExpr *PARSE_BUILTIIN_FUNC(Inff);
+  ASTExpr *PARSE_BUILTIIN_FUNC(Nanf);
+  ASTExpr *PARSE_BUILTIIN_FUNC(SignBitf);
+  ASTExpr *PARSE_BUILTIIN_FUNC(SignBitl);
 
   static std::map<std::string, FuncPtrBuiltinFunc> builtingFuncPtrMap;
   uint32 fileIdx;

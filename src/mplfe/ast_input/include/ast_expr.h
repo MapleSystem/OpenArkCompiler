@@ -76,6 +76,10 @@ class ASTExpr {
     value = val;
   }
 
+  bool IsConstantFolded() const {
+    return isConstantFolded;
+  }
+
   ASTValue *GetConstantValue() const {
     return GetConstantValueImpl();
   }
@@ -586,8 +590,8 @@ class ASTInitListExpr : public ASTExpr {
                              ASTInitListExpr *initList, std::list<UniqueFEIRStmt> &stmts) const;
   void ProcessDesignatedInitUpdater(std::variant<std::pair<UniqueFEIRVar, FieldID>, UniqueFEIRExpr> &base,
                                     ASTExpr *expr, std::list<UniqueFEIRStmt> &stmts) const;
-  void ProcessStringLiteralInitList(UniqueFEIRExpr addrOfCharArray, MIRArrayType *arrayType,
-                                    UniqueFEIRExpr addrofStringLiteral, std::list<UniqueFEIRStmt> &stmts) const;
+  void ProcessStringLiteralInitList(UniqueFEIRExpr addrOfCharArray, UniqueFEIRExpr addrOfStringLiteral,
+                                    uint32 stringLength, std::list<UniqueFEIRStmt> &stmts) const;
   MIRConst *GenerateMIRConstForArray() const;
   MIRConst *GenerateMIRConstForStruct() const;
   std::vector<ASTExpr*> initExprs;
@@ -721,6 +725,10 @@ class ASTStringLiteral : public ASTExpr {
     length = len;
   }
 
+  size_t GetLength() {
+    return length;
+  }
+
   void SetCodeUnits(std::vector<uint32> &units) {
     codeUnits = std::move(units);
   }
@@ -783,8 +791,8 @@ class ASTArraySubscriptExpr : public ASTExpr {
     isVLA = flag;
   }
 
-  void SetVLASizeExprs(std::vector<ASTExpr*> &exprs) {
-    vlaSizeExprs = exprs;
+  void SetVLASizeExpr(ASTExpr *expr) {
+    vlaSizeExpr = expr;
   }
 
  private:
@@ -796,7 +804,7 @@ class ASTArraySubscriptExpr : public ASTExpr {
   MIRType *arrayType = nullptr;
   ASTExpr *idxExpr = nullptr;
   bool isVLA = false;
-  std::vector<ASTExpr*> vlaSizeExprs;
+  ASTExpr *vlaSizeExpr = nullptr;
 };
 
 class ASTExprUnaryExprOrTypeTraitExpr : public ASTExpr {
@@ -868,19 +876,25 @@ class ASTMemberExpr : public ASTExpr {
     return isArrow;
   }
 
-  const ASTMemberExpr *FindFinalMember(const ASTMemberExpr *startExpr, std::list<std::string> &memberNames) const;
+  void SetFiledOffsetBits(uint64 offset) {
+    fieldOffsetBits = offset;
+  }
 
-  const ASTExpr *FindFinalBase() const;
-  int32 CalculateOffset(MIRStructType &baseStructType) const;
+  uint64 GetFieldOffsetBits() const {
+    return fieldOffsetBits;
+  }
 
  private:
   MIRConst *GenerateMIRConstImpl() const override;
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
+  const ASTMemberExpr *FindFinalMember(const ASTMemberExpr *startExpr, std::list<std::string> &memberNames) const;
+
   ASTExpr *baseExpr = nullptr;
   std::string memberName;
   MIRType *memberType = nullptr;
   MIRType *baseType = nullptr;
   bool isArrow = false;
+  uint64 fieldOffsetBits = 0;
 };
 
 class ASTDesignatedInitUpdateExpr : public ASTExpr {
@@ -1246,6 +1260,7 @@ class ASTConditionalOperator : public ASTExpr {
   ASTExpr *condExpr = nullptr;
   ASTExpr *trueExpr = nullptr;
   ASTExpr *falseExpr = nullptr;
+  std::string varName = FEUtils::GetSequentialName("levVar_");
 };
 
 class ASTArrayInitLoopExpr : public ASTExpr {

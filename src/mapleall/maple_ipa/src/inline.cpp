@@ -455,7 +455,7 @@ void MInline::ReplacePregs(BaseNode *baseNode, std::unordered_map<PregIdx, PregI
         CallReturnPair &callPair = (*retVec).at(i);
         if (callPair.second.IsReg()) {
           PregIdx oldIdx = callPair.second.GetPregIdx();
-          callPair.second.SetPregIdx(static_cast<PregIdx16>(GetNewPregIdx(oldIdx, pregOld2New)));
+          callPair.second.SetPregIdx(GetNewPregIdx(oldIdx, pregOld2New));
         }
       }
       break;
@@ -980,6 +980,16 @@ FuncCostResultType MInline::GetFuncCost(const MIRFunction &func, const BaseNode 
       cost += static_cast<uint32>(switchNode.GetSwitchTable().size() + 1);
       break;
     }
+    case OP_call:
+    case OP_callassigned: {
+      PUIdx puIdx = static_cast<const CallNode&>(baseNode).GetPUIdx();
+      MIRFunction *callee = GlobalTables::GetFunctionTable().GetFunctionFromPuidx(puIdx);
+      if (callee->GetName().find("setjmp") != std::string::npos) {
+        cost += smallFuncThreshold;
+        break;
+      }
+    }
+    [[clang::fallthrough]];
     case OP_customcallassigned:
     case OP_polymorphiccallassigned:
     case OP_customcall:
@@ -996,8 +1006,6 @@ FuncCostResultType MInline::GetFuncCost(const MIRFunction &func, const BaseNode 
     case OP_virtualcallassigned:
     case OP_superclasscallassigned:
     case OP_interfacecallassigned:
-    case OP_call:
-    case OP_callassigned:
     case OP_throw: {
       cost += kPentupleInsn;
       break;
@@ -1021,6 +1029,7 @@ FuncCostResultType MInline::GetFuncCost(const MIRFunction &func, const BaseNode 
           break;
         case INTRN_C_ctz32:
         case INTRN_C_clz32:
+        case INTRN_C_clz64:
         case INTRN_C_constant_p:
           cost += kOneInsn;
           break;
@@ -1071,6 +1080,10 @@ FuncCostResultType MInline::GetFuncCost(const MIRFunction &func, const BaseNode 
     }
     case OP_cvt: {
       cost += kHalfInsn;
+      break;
+    }
+    case OP_alloca: {
+      cost += smallFuncThreshold;
       break;
     }
     default: {

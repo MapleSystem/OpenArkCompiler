@@ -30,6 +30,7 @@ void GenericSSAPrint(const MIRModule &mod, const StmtNode &stmtNode, int32 inden
       mod.GetOut() << " ";
       CHECK_NULL_FATAL(ssaPart->GetSSAVar());
       ssaPart->GetSSAVar()->Dump();
+      LogInfo::MapleLogger() << "\n";
       ssaPart->DumpMayDefNodes(mod);
       return;
     }
@@ -37,6 +38,7 @@ void GenericSSAPrint(const MIRModule &mod, const StmtNode &stmtNode, int32 inden
       mod.GetOut() << "  ";
       CHECK_NULL_FATAL(ssaPart->GetSSAVar());
       ssaPart->GetSSAVar()->Dump();
+      LogInfo::MapleLogger() << "\n";
       return;
     }
     case OP_iassign: {

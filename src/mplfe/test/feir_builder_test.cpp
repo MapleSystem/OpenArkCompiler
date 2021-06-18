@@ -98,7 +98,7 @@ TEST_F(FEIRBuilderTest, CreateRetypeShort2Float) {
   ASSERT_EQ(mirStmts.size(), 1);
   mirStmts.front()->Dump();
   std::string dumpStr = GetBufferString();
-  std::string pattern = std::string("dassign %Reg0_F 0 (cvt f32 i16 (dread i16 %Reg0_S))");
+  std::string pattern = std::string("dassign %Reg0_F 0 (cvt f32 i16 (dread i32 %Reg0_S))");
   EXPECT_EQ(dumpStr.find(pattern), 0);
   RestoreCout();
 }
@@ -128,7 +128,7 @@ TEST_F(FEIRBuilderTest, CreateRetypeShort2Ref) {
   mirStmts.front()->Dump();
   std::string dumpStr = GetBufferString();
   EXPECT_EQ(dumpStr.find("dassign %Reg0_R"), 0);
-  EXPECT_EQ(dumpStr.find(" 0 (cvt ref i16 (dread i16 %Reg0_S))", 15) != std::string::npos, true);
+  EXPECT_EQ(dumpStr.find(" 0 (cvt ref i16 (dread i32 %Reg0_S))", 15) != std::string::npos, true);
   RestoreCout();
 }
 

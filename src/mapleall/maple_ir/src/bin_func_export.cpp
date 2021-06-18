@@ -592,25 +592,25 @@ void BinaryMplExport::OutputBlockNode(BlockNode *block) {
         // the outputs
         size_t count = asmNode->asmOutputs.size();
         WriteNum(count);
-        for (int32 i = 0; i < count; i++) {
+        for (size_t i = 0; i < count; i++) {
           OutputUsrStr(asmNode->outputConstraints[i]);
         }
         OutputReturnValues(&asmNode->asmOutputs);
         // the clobber list
         count = asmNode->clobberList.size();
         WriteNum(count);
-        for (int32 i = 0; i < count; i++) {
+        for (size_t i = 0; i < count; ++i) {
           OutputUsrStr(asmNode->clobberList[i]);
         }
         // the labels
         count = asmNode->gotoLabels.size();
         WriteNum(count);
-        for (int32 i = 0; i < count; i++) {
+        for (size_t i = 0; i < count; ++i) {
           WriteNum(asmNode->gotoLabels[i]);
         }
         // the inputs
         WriteNum(asmNode->NumOpnds());
-        for (int32 i = 0; i < asmNode->numOpnds; i++) {
+        for (int32 i = 0; i < asmNode->numOpnds; ++i) {
           OutputUsrStr(asmNode->inputConstraints[i]);
         }
         break;

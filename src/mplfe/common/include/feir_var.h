@@ -145,10 +145,6 @@ class FEIRVar {
     genAttrs = argGenericAttrs;
   }
 
-  void SetConst(MIRConst *argMirConst) {
-    mirConst = argMirConst;
-  }
-
  protected:
   virtual MIRSymbol *GenerateGlobalMIRSymbolImpl(MIRBuilder &builder) const;
   virtual MIRSymbol *GenerateLocalMIRSymbolImpl(MIRBuilder &builder) const;
@@ -165,7 +161,6 @@ class FEIRVar {
   UniqueFEIRType type;
   UniqueFEIRVarTrans trans;
   GenericAttrs genAttrs;
-  MIRConst *mirConst = nullptr;
 };
 
 using UniqueFEIRVar = std::unique_ptr<FEIRVar>;

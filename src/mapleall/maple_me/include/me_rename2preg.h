@@ -30,17 +30,20 @@ class SSARename2Preg {
         sym2reg_map(std::less<OStIdx>(), alloc.Adapter()),
         vstidx2reg_map(alloc.Adapter()),
         parm_used_vec(alloc.Adapter()),
-        reg_formal_vec(alloc.Adapter()) {}
+        reg_formal_vec(alloc.Adapter()),
+        ostDefedByChi(ssaTab->GetOriginalStTableSize(), false, alloc.Adapter()),
+        ostUsedByMu(ssaTab->GetOriginalStTableSize(), false, alloc.Adapter()),
+        ostUsedByDread(ssaTab->GetOriginalStTableSize(), false, alloc.Adapter()) {}
 
   void RunSelf();
   void PromoteEmptyFunction();
 
  private:
-  AliasElem *GetAliasElem(const OriginalSt *ost) {
+  const MapleSet<unsigned int> *GetAliasSet(const OriginalSt *ost) {
     if (ost->GetIndex() >= aliasclass->GetAliasElemCount()) {
       return nullptr;
     }
-    return aliasclass->FindAliasElem(*ost);
+    return aliasclass->FindAliasElem(*ost)->GetClassSet();
   }
 
   void Rename2PregStmt(MeStmt *);
@@ -54,6 +57,8 @@ class SSARename2Preg {
   void UpdateMirFunctionFormal();
   void SetupParmUsed(const VarMeExpr *);
   void Init();
+  void CollectUsedOst(MeExpr *meExpr);
+  void CollectDefUseInfoOfOst();
   std::string PhaseName() const {
     return "rename2preg";
   }
@@ -69,6 +74,9 @@ class SSARename2Preg {
   MapleVector<bool> parm_used_vec;                       // if parameter is not used, it's false, otherwise true
   // if the parameter got promoted, the nth of func->mirFunc->_formal is the nth of reg_formal_vec, otherwise nullptr;
   MapleVector<RegMeExpr *> reg_formal_vec;
+  MapleVector<bool> ostDefedByChi;
+  MapleVector<bool> ostUsedByMu;
+  MapleVector<bool> ostUsedByDread;
  public:
   uint32 rename2pregCount = 0;
 };

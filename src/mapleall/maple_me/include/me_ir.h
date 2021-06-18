@@ -881,15 +881,19 @@ class OpMeExpr : public MeExpr {
 
 class IvarMeExpr : public MeExpr {
  public:
+  IvarMeExpr(int32 exprid, PrimType t, TyIdx tidx, FieldID fid, Opcode op)
+      : MeExpr(exprid, kMeOpIvar, op, t, 1), tyIdx(tidx), fieldID(fid) {}
+
   IvarMeExpr(int32 exprid, PrimType t, TyIdx tidx, FieldID fid)
-      : MeExpr(exprid, kMeOpIvar, OP_iread, t, 1), tyIdx(tidx), fieldID(fid) {}
+      : IvarMeExpr(exprid, t, tidx, fid, OP_iread) {}
 
   IvarMeExpr(int32 exprid, const IvarMeExpr &ivarme)
-      : MeExpr(exprid, kMeOpIvar, OP_iread, ivarme.GetPrimType(), 1),
+      : MeExpr(exprid, kMeOpIvar, ivarme.op, ivarme.GetPrimType(), 1),
         defStmt(ivarme.defStmt),
         base(ivarme.base),
         tyIdx(ivarme.tyIdx),
         fieldID(ivarme.fieldID),
+        offset(ivarme.offset),
         volatileFromBaseSymbol(ivarme.volatileFromBaseSymbol) {
     mu = ivarme.mu;
   }
@@ -955,6 +959,14 @@ class IvarMeExpr : public MeExpr {
     fieldID = fieldIDVal;
   }
 
+  int32 GetOffset() const {
+    return offset;
+  }
+
+  void SetOffset(int32 val) {
+    offset = val;
+  }
+
   bool GetMaybeNull() const {
     return maybeNull;
   }
@@ -983,7 +995,8 @@ class IvarMeExpr : public MeExpr {
 
   uint32 GetHashIndex() const override {
     constexpr uint32 kIvarHashShift = 4;
-    return static_cast<uint32>(OP_iread) + fieldID + (static_cast<uint32>(base->GetExprID()) << kIvarHashShift);
+    return static_cast<uint32>(op) + fieldID + static_cast<uint32>(offset) +
+           (static_cast<uint32>(base->GetExprID()) << kIvarHashShift);
   }
 
   MIRType *GetType() const override {
@@ -1000,6 +1013,7 @@ class IvarMeExpr : public MeExpr {
   TyIdx tyIdx{ 0 };
   TyIdx inferredTyIdx{ 0 };  // may be a subclass of above tyIdx
   FieldID fieldID = 0;
+  int32 offset = 0;
   bool maybeNull = true;  // false if definitely not null
   bool volatileFromBaseSymbol = false;  // volatile due to its base symbol being volatile
   ScalarMeExpr *mu = nullptr;   // use of mu, only one for IvarMeExpr

@@ -618,11 +618,11 @@ AddrofNode *MIRBuilder::CreateExprDread(PregIdx pregID, PrimType pty) {
 IreadNode *MIRBuilder::CreateExprIread(const MIRType &returnType, const MIRType &ptrType, FieldID fieldID,
                                        BaseNode *addr) {
   TyIdx returnTypeIdx = returnType.GetTypeIndex();
-  CHECK(returnTypeIdx < GlobalTables::GetTypeTable().GetTypeTable().size(),
+  ASSERT(returnTypeIdx < GlobalTables::GetTypeTable().GetTypeTable().size(),
          "index out of range in MIRBuilder::CreateExprIread");
   ASSERT(fieldID != 0 || ptrType.GetPrimType() != PTY_agg,
          "Error: Fieldid should not be 0 when trying to iread a field from type ");
-  PrimType type = GetRegPrimType(returnType.GetPrimType());
+  PrimType type = GlobalTables::GetTypeTable().GetPrimTypeFromTyIdx(returnTypeIdx);
   return GetCurrentFuncCodeMp()->New<IreadNode>(OP_iread, type, ptrType.GetTypeIndex(), fieldID, addr);
 }
 

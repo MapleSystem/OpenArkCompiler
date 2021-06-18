@@ -279,7 +279,7 @@ class OriginalSt {
   size_t zeroVersionIndex = 0;            // same as versionsIndices[0]
   TyIdx tyIdx{ 0 };                        // type of this symbol at this level; 0 for unknown
   FieldID fieldID;                    // at each level of indirection
-  OffsetType offset;
+  OffsetType offset;                  // bit offset
   int8 indirectLev = 0;                   // level of indirection; -1 for address, 0 for itself
   bool isLocal;                       // get from defined stmt or use expr
   bool isFormal;  // it's from the formal parameters so the type must be kSymbolOst or kPregOst after rename2preg

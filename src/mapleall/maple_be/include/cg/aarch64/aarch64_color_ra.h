@@ -1094,12 +1094,12 @@ class GraphColorRegAllocator : public AArch64RegAllocator {
         fpSpillRegSet(alloc.Adapter()),
         intCalleeUsed(alloc.Adapter()),
         fpCalleeUsed(alloc.Adapter()) {
-    constexpr uint32 kNumInsnThreashold = 200000;
+    constexpr uint32 kNumInsnThreashold = 30000;
     numVregs = cgFunc.GetMaxVReg();
     lrVec.resize(numVregs);
     localRegVec.resize(cgFunc.NumBBs());
     bbRegInfo.resize(cgFunc.NumBBs());
-    if (CGOptions::DoMultiPassColorRA()) {
+    if (CGOptions::DoMultiPassColorRA() && cgFunc.GetMirModule().IsCModule()) {
       uint32 cnt = 0;
       FOR_ALL_BB(bb, &cgFunc) {
         FOR_BB_INSNS(insn, bb) {

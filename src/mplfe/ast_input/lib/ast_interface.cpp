@@ -328,12 +328,12 @@ void LibAstFile::EmitTypeName(const clang::RecordType &recoType, std::stringstre
       }
       nsStack.pop();
     }
-    const char *name = recoDecl->getName().data();
-    if (strcmp(name, "") == 0) {
+    auto nameStr = recoDecl->getName().str();
+    if (nameStr.empty()) {
       uint32_t id = recoType.getDecl()->getLocation().getRawEncoding();
-      name = GetOrCreateMappedUnnamedName(id).c_str();
+      nameStr = GetOrCreateMappedUnnamedName(id);
     }
-    ss << name;
+    ss << nameStr;
   } else {
     uint32_t id = recoType.getDecl()->getLocation().getRawEncoding();
     ss << GetOrCreateMappedUnnamedName(id);

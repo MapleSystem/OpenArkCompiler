@@ -17,13 +17,14 @@
 #include "bb.h"
 #include "irmap.h"
 #include "dominance.h"
+#include "alias_class.h"
 
 namespace maple {
 class MeIRMap;
 class HDSE {
  public:
   HDSE(MIRModule &mod, const MapleVector<BB*> &bbVec, BB &commonEntryBB, BB &commonExitBB,
-       Dominance &pDom, IRMap &map, bool enabledDebug = false, bool decouple = false)
+       Dominance &pDom, IRMap &map, const AliasClass *aliasClass, bool enabledDebug = false, bool decouple = false)
       : hdseDebug(enabledDebug),
         mirModule(mod),
         bbVec(bbVec),
@@ -31,6 +32,7 @@ class HDSE {
         commonExitBB(commonExitBB),
         postDom(pDom),
         irMap(map),
+        aliasInfo(aliasClass),
         bbRequired(bbVec.size(), false),
         decoupleStatic(decouple) {}
 
@@ -106,6 +108,7 @@ class HDSE {
   BB &commonExitBB;
   Dominance &postDom;
   IRMap &irMap;
+  const AliasClass *aliasInfo;
   std::vector<bool> bbRequired;
   std::vector<bool> exprLive;
   std::forward_list<MeExpr*> workList;

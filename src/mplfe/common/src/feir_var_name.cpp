@@ -41,7 +41,6 @@ std::unique_ptr<FEIRVar> FEIRVarName::CloneImpl() const {
   var->SetGlobal(isGlobal);
   GenericAttrs attrs = genAttrs;
   var->SetAttrs(attrs);
-  var->SetConst(mirConst);
   return var;
 }
 

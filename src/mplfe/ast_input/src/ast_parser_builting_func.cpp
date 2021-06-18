@@ -93,6 +93,10 @@ std::map<std::string, ASTParser::FuncPtrBuiltinFunc> ASTParser::InitBuiltinFuncP
   ans["__builtin_signbit"] = &ASTParser::ParseBuiltinSignbit;
   ans["__builtin_isinf_sign"] = &ASTParser::ParseBuiltinIsinfsign;
   ans["__builtin_huge_val"] = &ASTParser::ParseBuiltinHugeVal;
+  ans["__builtin_inff"] = &ASTParser::ParseBuiltinInff;
+  ans["__builtin_nanf"] = &ASTParser::ParseBuiltinNanf;
+  ans["__builtin_signbitf"] = &ASTParser::ParseBuiltinSignBitf;
+  ans["__builtin_signbitl"] = &ASTParser::ParseBuiltinSignBitl;
   return ans;
 }
 
@@ -161,5 +165,41 @@ ASTExpr *ASTParser::ParseBuiltinHugeVal(MapleAllocator &allocator, const clang::
   astFloatingLiteral->SetKind(F64);
   astFloatingLiteral->SetVal(std::numeric_limits<double>::infinity());
   return astFloatingLiteral;
+}
+
+ASTExpr *ASTParser::ParseBuiltinInff(MapleAllocator &allocator, const clang::CallExpr &expr,
+                                    std::stringstream &ss) const {
+  ASTFloatingLiteral *astFloatingLiteral = ASTDeclsBuilder::ASTExprBuilder<ASTFloatingLiteral>(allocator);
+  astFloatingLiteral->SetKind(F32);
+  astFloatingLiteral->SetVal(std::numeric_limits<float>::infinity());
+  return astFloatingLiteral;
+}
+
+ASTExpr *ASTParser::ParseBuiltinNanf(MapleAllocator &allocator, const clang::CallExpr &expr,
+                                     std::stringstream &ss) const {
+  ASTFloatingLiteral *astFloatingLiteral = ASTDeclsBuilder::ASTExprBuilder<ASTFloatingLiteral>(allocator);
+  astFloatingLiteral->SetKind(F32);
+  astFloatingLiteral->SetVal(nanf(""));
+  return astFloatingLiteral;
+}
+
+ASTExpr *ASTParser::ParseBuiltinSignBitf(MapleAllocator &allocator, const clang::CallExpr &expr,
+                                         std::stringstream &ss) const {
+  (void)allocator;
+  (void)expr;
+  ss.clear();
+  ss.str(std::string());
+  ss << "__signbitf";
+  return nullptr;
+}
+
+ASTExpr *ASTParser::ParseBuiltinSignBitl(MapleAllocator &allocator, const clang::CallExpr &expr,
+                                         std::stringstream &ss) const {
+  (void)allocator;
+  (void)expr;
+  ss.clear();
+  ss.str(std::string());
+  ss << "__signbitl";
+  return nullptr;
 }
 } // namespace maple

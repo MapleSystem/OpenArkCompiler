@@ -48,6 +48,9 @@ std::function<T()> OpGenerator(Opcode op, T p0, T p1) {
     case OP_div: {
       return [p0, p1]() { return p0 / p1; };
     }
+    case OP_rem: {
+      return [p0, p1]() { return static_cast<int64>(p0) % static_cast<int64>(p1); };
+    }
     case OP_shl: {
       return [p0, p1]() { return static_cast<int64>(p0) << static_cast<int64>(p1); };
     }
@@ -57,6 +60,9 @@ std::function<T()> OpGenerator(Opcode op, T p0, T p1) {
     }
     case OP_bior: {
       return [p0, p1]() { return static_cast<int64>(p0) | static_cast<int64>(p1); };
+    }
+    case OP_band: {
+      return [p0, p1]() { return static_cast<int64>(p0) & static_cast<int64>(p1); };
     }
     case OP_bxor: {
       return [p0, p1]() { return static_cast<int64>(p0) ^ static_cast<int64>(p1); };
