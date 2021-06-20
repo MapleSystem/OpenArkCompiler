@@ -31,6 +31,7 @@ enum FuncProp : uint32_t {
                                    // can only be printed at the beginning of a block
   kFuncPropNeverReturn = 1U << 4,  // the function when called never returns
   kFuncPropHasSetjmp = 1U << 5,    // the function contains call to setjmp
+  kFuncPropHasAsm = 1U << 6,       // the function has use of inline asm
 };
 }  // namespace
 
@@ -196,6 +197,14 @@ void MIRFunction::SetHasSetjmp() {
 
 bool MIRFunction::HasSetjmp() const {
   return flag & kFuncPropHasSetjmp;
+}
+
+void MIRFunction::SetHasAsm() {
+  flag |= kFuncPropHasAsm;
+}
+
+bool MIRFunction::HasAsm() const {
+  return flag & kFuncPropHasAsm;
 }
 
 void MIRFunction::SetAttrsFromSe(uint8 specialEffect) {
