@@ -92,6 +92,9 @@ AnalysisResult *MeDoSSAEPre::Run(MeFunction *func, MeFuncResultMgr *m, ModuleRes
   ssaPre.SetSpillAtCatch(MeOption::spillAtCatch);
   if (MeOption::strengthReduction && !func->GetMIRModule().IsJavaModule()) {
     ssaPre.strengthReduction = true;
+    if (MeOption::doLFTR) {
+      ssaPre.doLFTR = true;
+    }
   }
   if (func->GetHints() & kPlacementRCed) {
     ssaPre.SetPlacementRC(true);
@@ -122,10 +125,6 @@ AnalysisResult *MeDoSSAEPre::Run(MeFunction *func, MeFuncResultMgr *m, ModuleRes
     }
     hdse.hdseKeepRef = MeOption::dseKeepRef;
     hdse.DoHDSE();
-  }
-  if (DEBUGFUNC(func)) {
-    LogInfo::MapleLogger() << "\n============== EPRE =============" << "\n";
-    func->Dump(false);
   }
   ++puCount;
   return nullptr;

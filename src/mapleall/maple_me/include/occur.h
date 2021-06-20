@@ -30,9 +30,11 @@ enum OccType {
   kOccGcmalloc,
   kOccUse,     // for use appearances when candidate is dassign
   kOccMembar,  // for representing occurrence of memory barriers (use MeRealOcc)
+  kOccCompare, // for linear function test replacement (uses MeRealOcc)
 };
 
 class MePhiOcc;
+
 class MeOccur {
  public:
   MeOccur(OccType ty, int cId, MeOccur *df) : occTy(ty), classID(cId), mirBB(nullptr), def(df) {}
@@ -203,7 +205,7 @@ class MeRealOcc : public MeOccur {
   MeExpr *meExpr;     // the expr it's corresponding to
   MeExpr *savedExpr;  // the reall occ saved to, must be a VarMeExpr/RegMeExpr
   int seq;            // meStmt sequence number in the bb
-  size_t position;    // the position in the workCand->GetRealOccs() vector
+  size_t position;    // the position in the workCand->realOccs vector
   bool isReload;
   bool isSave;
   bool isLHS;
@@ -501,7 +503,8 @@ class PreWorkCand {
         hasLocalOpnd(false),
         redo2HandleCritEdges(false),
         needLocalRefVar(false),
-        isSRCand(false) {
+        isSRCand(false),
+        onlyInvariantOpnds(false) {
     ASSERT(pIdx != 0, "PreWorkCand: initial puIdx cannot be 0");
   }
 
@@ -631,6 +634,7 @@ class PreWorkCand {
   bool needLocalRefVar : 1;       // for the candidate, if necessary to introduce
  public:
   bool isSRCand : 1;                // is a strength reduction candidate
+  bool onlyInvariantOpnds : 1;      // all operands have only 1 SSA version
   // localrefvar in addition to the temp register to for saving the value
 };
 

@@ -140,6 +140,7 @@ class SSAPre {
   void GenerateSaveInsertedOcc(MeInsertedOcc &insertedOcc);
   void GenerateSavePhiOcc(MePhiOcc &phiOcc);
   void UpdateInsertedPhiOccOpnd();
+  virtual OpMeExpr *FormLFTRCompare(MeRealOcc *compOcc, MeExpr *regorvar) { return nullptr; }
   virtual void CodeMotion();
   // step 5 Finalize methods
   virtual void Finalize1();
@@ -187,6 +188,7 @@ class SSAPre {
     MeOccur *exitOcc = ssaPreMemPool->New<MeOccur>(kOccExit, 0, bb, nullptr);
     exitOccs.push_back(exitOcc);
   }
+  virtual void CreateCompOcc(MeStmt *meStmt, int seqStmt, OpMeExpr *comapre, bool isRebuilt) {}
 
   bool CheckIfAnyLocalOpnd(const MeExpr &meExpr) const;
   MeRealOcc *CreateRealOcc(MeStmt &meStmt, int32 seqStmt, MeExpr &meExpr, bool isRebuilt, bool isLHS = false);
@@ -200,7 +202,6 @@ class SSAPre {
   virtual bool IsLoopHeadBB(BBId) const {
     return false;
   }
-  virtual VarMeExpr *ResolveAllInjuringDefs(VarMeExpr *varx) const { return varx; }
   virtual RegMeExpr *ResolveAllInjuringDefs(RegMeExpr *regx) const { return regx; }
   virtual MeExpr *ResolveAllInjuringDefs(MeExpr *x) const { return x; }
   virtual void SubstituteOpnd(MeExpr *x, MeExpr *oldopnd, MeExpr *newopnd) {
@@ -271,6 +272,7 @@ class SSAPre {
   bool addedNewLocalRefVars = false;
  public:
   bool strengthReduction = false;
+  bool doLFTR = false;
 };
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_SSAPRE_H

@@ -409,6 +409,16 @@ MeExpr *IRMapBuild::BuildExpr(BaseNode &mirNode, bool atParm, bool noProp) {
     }
   }
 
+  if (op == OP_mul) {
+    OpMeExpr *opMeExpr = static_cast<OpMeExpr *>(meExpr); 
+    if (opMeExpr->GetOpnd(0)->GetMeOp() == kMeOpConst) {
+      // canonicalize constant operand to be operand 1
+      MeExpr *savedOpnd = opMeExpr->GetOpnd(0);
+      opMeExpr->SetOpnd(0, opMeExpr->GetOpnd(1));
+      opMeExpr->SetOpnd(1, savedOpnd);
+    }
+  }
+
   MeExpr *retMeExpr = irMap->HashMeExpr(*meExpr);
   delete meExpr;
 
@@ -530,6 +540,15 @@ MeStmt *IRMapBuild::BuildMeStmtWithNoSSAPart(StmtNode &stmt) {
   }
 }
 
+static bool IncDecAmountIsSmallInteger(MeExpr *x) {
+  if (x->GetMeOp() != kMeOpConst) {
+    return false;
+  }
+  ConstMeExpr *cMeExpr = static_cast<ConstMeExpr *>(x);
+  MIRIntConst *cnode = dynamic_cast<MIRIntConst *>(cMeExpr->GetConstVal());
+  return cnode && cnode->GetValue() < 0x1000;
+}
+
 MeStmt *IRMapBuild::BuildDassignMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart) {
   DassignMeStmt *meStmt = irMap->NewInPool<DassignMeStmt>(&stmt);
   DassignNode &dassiNode = static_cast<DassignNode&>(stmt);
@@ -540,10 +559,13 @@ MeStmt *IRMapBuild::BuildDassignMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart) 
   // determine isIncDecStmt
   if (meStmt->GetChiList()->empty()) {
     MeExpr *rhs = meStmt->GetRHS();
-    if (rhs->GetOp() == OP_add || rhs->GetOp() == OP_sub) {
+    OriginalSt *ost = varLHS->GetOst();
+    if (ost->GetType()->GetSize() >= 4 &&
+        (rhs->GetOp() == OP_add || rhs->GetOp() == OP_sub) && 
+        IsPrimitivePureScalar(rhs->GetPrimType())) {
       OpMeExpr *oprhs = static_cast<OpMeExpr *>(rhs);
-      if (oprhs->GetOpnd(0)->GetMeOp() == kMeOpVar && oprhs->GetOpnd(1)->GetMeOp() == kMeOpConst) {
-        meStmt->isIncDecStmt = varLHS->GetOst() == static_cast<VarMeExpr *>(oprhs->GetOpnd(0))->GetOst();
+      if (oprhs->GetOpnd(0)->GetMeOp() == kMeOpVar && IncDecAmountIsSmallInteger(oprhs->GetOpnd(1))) {
+        meStmt->isIncDecStmt = ost == static_cast<VarMeExpr *>(oprhs->GetOpnd(0))->GetOst();
       }
     }
   }
