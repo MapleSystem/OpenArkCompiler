@@ -394,7 +394,7 @@ MeExpr &Prop::PropReg(RegMeExpr &regMeExpr, bool atParm) const {
   return regMeExpr;
 }
 
-MeExpr &Prop::PropIvar(IvarMeExpr &ivarMeExpr) const {
+MeExpr &Prop::PropIvar(IvarMeExpr &ivarMeExpr) {
   IassignMeStmt *defStmt = ivarMeExpr.GetDefStmt();
   if (defStmt == nullptr || ivarMeExpr.IsVolatile()) {
     return ivarMeExpr;
@@ -402,6 +402,21 @@ MeExpr &Prop::PropIvar(IvarMeExpr &ivarMeExpr) const {
   MeExpr &rhs = utils::ToRef(defStmt->GetRHS());
   if (rhs.GetDepth() <= kPropTreeLevel && Propagatable(rhs, utils::ToRef(defStmt->GetBB()), false)) {
     return rhs;
+  }
+  if (mirModule.IsCModule() && ivarMeExpr.GetPrimType() != PTY_agg) {
+    auto *tmpReg = irMap.CreateRegMeExpr(ivarMeExpr);
+
+    // create new verstStack for new RegMeExpr
+    ASSERT(vstLiveStackVec.size() == tmpReg->GetOstIdx(), "there is prev created ost not tracked");
+    auto *verstStack = propMapAlloc.GetMemPool()->New<MapleStack<MeExpr *>>(propMapAlloc.Adapter());
+    verstStack->push(tmpReg);
+    vstLiveStackVec.push_back(verstStack);
+
+    auto newRHS = CheckTruncation(&ivarMeExpr, &rhs);
+    auto *regassign = irMap.CreateAssignMeStmt(*tmpReg, *newRHS, *defStmt->GetBB());
+    defStmt->SetRHS(tmpReg);
+    defStmt->GetBB()->InsertMeStmtBefore(defStmt, regassign);
+    return *tmpReg;
   }
   return ivarMeExpr;
 }
@@ -505,8 +520,9 @@ void Prop::TraversalMeStmt(MeStmt &meStmt) {
       auto &ivarStmt = static_cast<IassignMeStmt&>(meStmt);
       ivarStmt.SetRHS(&PropMeExpr(utils::ToRef(ivarStmt.GetRHS()), subProped, false));
       if (ivarStmt.GetLHSVal()->GetBase()->GetMeOp() != kMeOpVar || config.propagateBase) {
-        MeExpr *propedExpr = &PropMeExpr(utils::ToRef(ivarStmt.GetLHSVal()->GetBase()), subProped, false);
-        if (propedExpr->GetOp() == OP_constval) {
+        auto *baseOfIvar = ivarStmt.GetLHSVal()->GetBase();
+        MeExpr *propedExpr = &PropMeExpr(utils::ToRef(baseOfIvar), subProped, false);
+        if (propedExpr == baseOfIvar || propedExpr->GetOp() == OP_constval) {
           subProped = false;
         } else {
           ivarStmt.GetLHSVal()->SetBase(propedExpr);

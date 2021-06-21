@@ -37,7 +37,7 @@ struct RegFieldPair {
  public:
   RegFieldPair() = default;
 
-  RegFieldPair(FieldID fidx, PregIdx16 pidx) : fieldID(fidx), pregIdx(pidx) {}
+  RegFieldPair(FieldID fidx, PregIdx pidx) : fieldID(fidx), pregIdx(pidx) {}
 
   bool IsReg() const {
     return pregIdx > 0;
@@ -47,7 +47,7 @@ struct RegFieldPair {
     return fieldID;
   }
 
-  PregIdx16 GetPregIdx() const {
+  PregIdx GetPregIdx() const {
     return pregIdx;
   }
 
@@ -55,13 +55,13 @@ struct RegFieldPair {
     fieldID = fld;
   }
 
-  void SetPregIdx(PregIdx16 idx) {
+  void SetPregIdx(PregIdx idx) {
     pregIdx = idx;
   }
 
  private:
   FieldID fieldID = 0;
-  PregIdx16 pregIdx = 0;
+  PregIdx pregIdx = 0;
 };
 
 using CallReturnPair = std::pair<StIdx, RegFieldPair>;
@@ -182,6 +182,10 @@ class BaseNode : public BaseNodeT {
 
   bool IsCondBr() const {
     return kOpcodeInfo.IsCondBr(GetOpCode());
+  }
+
+  bool IsConstval() const {
+    return op == OP_constval;
   }
 
   virtual bool Verify() const {
@@ -3164,6 +3168,45 @@ class CommentNode : public StmtNode {
 
  private:
   MapleString comment;
+};
+
+enum AsmQualifierKind : unsigned {  // they are alreadgy Maple IR keywords
+ kASMvolatile,
+ kASMinline,
+ kASMgoto,
+};
+
+class AsmNode : public NaryStmtNode {
+ public:
+  explicit AsmNode(MapleAllocator *alloc)
+      : NaryStmtNode(*alloc, OP_asm),
+        asmString(alloc->GetMemPool()), inputConstraints(alloc->Adapter()),
+        asmOutputs(alloc->Adapter()), outputConstraints(alloc->Adapter()),
+        clobberList(alloc->Adapter()), gotoLabels(alloc->Adapter()), qualifiers(0) {}
+
+  AsmNode(const AsmNode &node) = delete;
+  AsmNode &operator=(const AsmNode &node) = delete;
+  virtual ~AsmNode() = default;
+
+  void SetQualifier(AsmQualifierKind x) {
+    qualifiers |= (1U << static_cast<uint32>(x));
+  }
+
+  bool GetQualifier(AsmQualifierKind x) const {
+    return (qualifiers & (1U << static_cast<uint32>(x))) != 0;
+  }
+
+  void DumpOutputs(int32 indent, std::string &uStr) const;
+  void DumpInputOperands(int32 indent, std::string &uStr) const;
+  void Dump(int32 indent) const override;
+
+  MapleString asmString;
+  MapleVector<UStrIdx> inputConstraints;  // length is numOpnds
+  CallReturnVector asmOutputs;
+  MapleVector<UStrIdx> outputConstraints; // length is returnValues.size()
+  MapleVector<UStrIdx> clobberList;
+  MapleVector<LabelIdx> gotoLabels;
+  uint32 qualifiers;
 };
 
 void DumpCallReturns(const MIRModule &mod, CallReturnVector nrets, int32 indent);

@@ -56,9 +56,7 @@ class MPLFEOptions : public maple::MapleDriverOptionBase {
   bool ProcessInClass(const mapleOption::Option &opt);
   bool ProcessInJar(const mapleOption::Option &opt);
   bool ProcessInDex(const mapleOption::Option &opt);
-#ifdef ENABLE_MPLFE_AST
   bool ProcessInAST(const mapleOption::Option &opt);
-#endif // ~/ENABLE_MPLFE_AST
   bool ProcessInputMplt(const mapleOption::Option &opt);
   bool ProcessInputMpltFromSys(const mapleOption::Option &opt);
   bool ProcessInputMpltFromApk(const mapleOption::Option &opt);

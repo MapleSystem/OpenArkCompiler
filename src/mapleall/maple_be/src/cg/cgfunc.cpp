@@ -88,8 +88,23 @@ Operand *HandleConstStr16(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc
 }
 
 Operand *HandleAdd(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
-  return cgFunc.SelectAdd(static_cast<BinaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)),
-                          *cgFunc.HandleExpr(expr, *expr.Opnd(1)), parent);
+  (void)parent;
+  if (Globals::GetInstance()->GetOptimLevel() >= CGOptions::kLevel2 && expr.Opnd(0)->GetOpCode() == OP_mul &&
+      !IsPrimitiveFloat(expr.GetPrimType())) {
+    return cgFunc.SelectMadd(static_cast<BinaryNode&>(expr),
+                             *cgFunc.HandleExpr(*expr.Opnd(0), *expr.Opnd(0)->Opnd(0)),
+                             *cgFunc.HandleExpr(*expr.Opnd(0), *expr.Opnd(0)->Opnd(1)),
+                             *cgFunc.HandleExpr(expr, *expr.Opnd(1)));
+  } else if (Globals::GetInstance()->GetOptimLevel() >= CGOptions::kLevel2 && expr.Opnd(1)->GetOpCode() == OP_mul &&
+             !IsPrimitiveFloat(expr.GetPrimType())) {
+    return cgFunc.SelectMadd(static_cast<BinaryNode&>(expr),
+                             *cgFunc.HandleExpr(*expr.Opnd(1), *expr.Opnd(1)->Opnd(0)),
+                             *cgFunc.HandleExpr(*expr.Opnd(1), *expr.Opnd(1)->Opnd(1)),
+                             *cgFunc.HandleExpr(expr, *expr.Opnd(0)));
+  } else {
+    return cgFunc.SelectAdd(static_cast<BinaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)),
+                            *cgFunc.HandleExpr(expr, *expr.Opnd(1)), parent);
+  }
 }
 
 Operand *HandleCGArrayElemAdd(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
@@ -375,6 +390,52 @@ Operand *HandleIntrinOp(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) 
     case INTRN_C_ctz32:
     case INTRN_C_ctz64:
       return cgFunc.SelectCctz(intrinsicopNode);
+    case INTRN_vector_from_scalar_v4i32:
+    case INTRN_vector_from_scalar_v16u8:
+      return cgFunc.SelectVectorFromScalar(intrinsicopNode);
+    case INTRN_vector_merge_v16u8:
+    case INTRN_vector_merge_v8u16:
+      return cgFunc.SelectVectorMerge(intrinsicopNode);
+    case INTRN_vector_store_v4i32:
+    case INTRN_vector_store_v16u8:
+      return cgFunc.SelectVectorStore(intrinsicopNode);
+    case INTRN_vector_get_high_v2u64:
+      return cgFunc.SelectVectorGetHigh(intrinsicopNode);
+    case INTRN_vector_get_low_v2u64:
+      return cgFunc.SelectVectorGetLow(intrinsicopNode);
+    case INTRN_vector_get_element_v2u32:
+    case INTRN_vector_get_element_v8u16:
+    case INTRN_vector_get_element_v4u32:
+      return cgFunc.SelectVectorGetElement(intrinsicopNode);
+    case INTRN_vector_pairwise_add_v8u16:
+    case INTRN_vector_pairwise_add_v4u32:
+      return cgFunc.SelectVectorPairwiseAdd(intrinsicopNode);
+    case INTRN_vector_set_element_v8i16:
+    case INTRN_vector_set_element_v8u16:
+    case INTRN_vector_set_element_v4u32:
+      return cgFunc.SelectVectorSetElement(intrinsicopNode);
+    case INTRN_vector_reverse_v16u8:
+      return cgFunc.SelectVectorReverse(intrinsicopNode, k32BitSize);
+    case INTRN_vector_and_v4i32:
+    case INTRN_vector_and_v8u16:
+      return cgFunc.SelectVectorAnd(intrinsicopNode);
+    case INTRN_vector_sum_v8u16:
+      return cgFunc.SelectVectorSum(intrinsicopNode);
+    case INTRN_vector_eq_v8u16:
+      return cgFunc.SelectVectorCompare(intrinsicopNode, CGFunc::v_eq);
+#if 0    /* Not yet added in FE */
+    case INTRN_vector_ge_v8u16:
+      return cgFunc.SelectVectorCompare(intrinsicopNode, CGFunc::v_ge);
+    case INTRN_vector_gt_v8u16:
+      return cgFunc.SelectVectorCompare(intrinsicopNode, CGFunc::v_gt);
+    case INTRN_vector_lt_v8u16:
+      return cgFunc.SelectVectorCompare(intrinsicopNode, CGFunc::v_lt);
+#endif
+    case INTRN_vector_shl_v8u16:
+      return cgFunc.SelectVectorULeftShift(intrinsicopNode);
+    case INTRN_vector_table_lookup_v8u16:
+    case INTRN_vector_table_lookup_v16u8:
+      return cgFunc.SelectVectorTableLookup(intrinsicopNode);
     default:
       ASSERT(false, "Should not reach here.");
       return nullptr;
@@ -710,6 +771,10 @@ void HandleAssertNull(StmtNode &stmt, CGFunc &cgFunc) {
   cgFunc.SelectAssertNull(cgAssertNode);
 }
 
+void HandleAsm(StmtNode &stmt, CGFunc &cgFunc) {
+  cgFunc.SelectAsm(static_cast<AsmNode&>(stmt));
+}
+
 using HandleStmtFactory = FunctionFactory<Opcode, void, StmtNode&, CGFunc&>;
 void InitHandleStmtFactory() {
   RegisterFactoryFunction<HandleStmtFactory>(OP_label, HandleLabel);
@@ -736,6 +801,7 @@ void InitHandleStmtFactory() {
   RegisterFactoryFunction<HandleStmtFactory>(OP_comment, HandleComment);
   RegisterFactoryFunction<HandleStmtFactory>(OP_catch, HandleCatchOp);
   RegisterFactoryFunction<HandleStmtFactory>(OP_assertnonnull, HandleAssertNull);
+  RegisterFactoryFunction<HandleStmtFactory>(OP_asm, HandleAsm);
 }
 
 CGFunc::CGFunc(MIRModule &mod, CG &cg, MIRFunction &mirFunc, BECommon &beCommon, MemPool &memPool,
@@ -849,6 +915,35 @@ bool CGFunc::CheckSkipMembarOp(StmtNode &stmt) {
   return false;
 }
 
+void CGFunc::GenerateLoc(StmtNode *stmt, unsigned &lastSrcLoc, unsigned &lastMplLoc) {
+  /* insert Insn for .loc before cg for the stmt */
+  if (cg->GetCGOptions().WithLoc() && stmt->op != OP_label && stmt->op != OP_comment) {
+    /* if original src file location info is availiable for this stmt,
+     * use it and skip mpl file location info for this stmt
+     */
+    unsigned newSrcLoc = cg->GetCGOptions().WithSrc() ? stmt->GetSrcPos().LineNum() : 0;
+    if (newSrcLoc != 0 && newSrcLoc != lastSrcLoc) {
+      /* .loc for original src file */
+      unsigned fileid = stmt->GetSrcPos().FileNum();
+      Operand *o0 = CreateDbgImmOperand(fileid);
+      Operand *o1 = CreateDbgImmOperand(newSrcLoc);
+      Insn &loc = cg->BuildInstruction<mpldbg::DbgInsn>(mpldbg::OP_DBG_loc, *o0, *o1);
+      curBB->AppendInsn(loc);
+      lastSrcLoc = newSrcLoc;
+    }
+    /* .loc for mpl file */
+    unsigned newMplLoc = cg->GetCGOptions().WithMpl() ? stmt->GetSrcPos().MplLineNum() : 0;
+    if (newMplLoc != 0 && newMplLoc != lastMplLoc) {
+      unsigned fileid = 1;
+      Operand *o0 = CreateDbgImmOperand(fileid);
+      Operand *o1 = CreateDbgImmOperand(newMplLoc);
+      Insn &loc = cg->BuildInstruction<mpldbg::DbgInsn>(mpldbg::OP_DBG_loc, *o0, *o1);
+      curBB->AppendInsn(loc);
+      lastMplLoc = newMplLoc;
+    }
+  }
+}
+
 void CGFunc::GenerateInstruction() {
   InitHandleExprFactory();
   InitHandleStmtFactory();
@@ -856,7 +951,12 @@ void CGFunc::GenerateInstruction() {
 
   /* First Pass: Creates the doubly-linked list of BBs (next,prev) */
   volReleaseInsn = nullptr;
+  unsigned lastSrcLoc = 0;
+  unsigned lastMplLoc = 0;
   for (StmtNode *stmt = secondStmt; stmt != nullptr; stmt = stmt->GetNext()) {
+    /* insert Insn for .loc before cg for the stmt */
+    GenerateLoc(stmt, lastSrcLoc, lastMplLoc);
+
     isVolLoad = false;
     if (CheckSkipMembarOp(*stmt)) {
       continue;
@@ -1267,10 +1367,15 @@ void CGFunc::DumpCGIR() const {
   FOR_ALL_BB_CONST(bb, this) {
     LogInfo::MapleLogger() << "=== BB " << " <" << bb->GetKindName();
     if (bb->GetLabIdx() != MIRLabelTable::GetDummyLabel()) {
-      LogInfo::MapleLogger() << "[labeled with " << bb->GetLabIdx() << "]";
+      LogInfo::MapleLogger() << "[labeled with " << bb->GetLabIdx();
+      LogInfo::MapleLogger() << " ==> @" << func.GetLabelName(bb->GetLabIdx()) << "]";
     }
 
     LogInfo::MapleLogger() << "> <" << bb->GetId() << "> ";
+    if (bb->GetLoop()) {
+      LogInfo::MapleLogger() << "[Loop level " << bb->GetLoop()->GetLoopLevel();
+      LogInfo::MapleLogger() << ", head BB " <<  bb->GetLoop()->GetHeader()->GetId() << "]";
+    }
     if (bb->IsCleanup()) {
       LogInfo::MapleLogger() << "[is_cleanup] ";
     }

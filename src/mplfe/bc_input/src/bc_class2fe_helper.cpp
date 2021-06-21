@@ -234,11 +234,7 @@ bool BCClassMethod2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
   elemInfo->SetFromDex();
   mirFunc = FEManager::GetTypeManager().CreateFunction(methodNameIdx, mirReturnType->GetTypeIndex(),
                                                        argsTypeIdx, isVarg, isStatic);
-#ifndef USE_OPS
-  mirMethodPair.first = mirFunc;
-#else
   mirMethodPair.first = mirFunc->GetStIdx();
-#endif
   mirMethodPair.second.first = mirFunc->GetMIRFuncType()->GetTypeIndex();
   mirMethodPair.second.second = attrs;
   mirFunc->SetFuncAttrs(attrs);

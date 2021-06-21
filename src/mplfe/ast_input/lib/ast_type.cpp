@@ -38,9 +38,11 @@ PrimType LibAstFile::CvtPrimType(const clang::BuiltinType::Kind kind) const {
     case clang::BuiltinType::Bool:
       return PTY_u1;
     case clang::BuiltinType::Char_U:
+      return astContext->CharTy->isSignedIntegerType() ? PTY_i8 : PTY_u8;
     case clang::BuiltinType::UChar:
       return PTY_u8;
     case clang::BuiltinType::WChar_U:
+      return astContext->WCharTy->isSignedIntegerType() ? PTY_i16 : PTY_u16;
     case clang::BuiltinType::UShort:
       return PTY_u16;
     case clang::BuiltinType::UInt:
@@ -71,7 +73,6 @@ PrimType LibAstFile::CvtPrimType(const clang::BuiltinType::Kind kind) const {
       return PTY_f64;
     case clang::BuiltinType::LongDouble:
     case clang::BuiltinType::Float128:
-      WARN(kLncWarn, "True Type is Float128, cvt double, but it is not exact");
       return PTY_f64;
     case clang::BuiltinType::NullPtr: // default 64-bit, need to update
       return PTY_a64;
@@ -99,7 +100,16 @@ MIRType *LibAstFile::CvtType(const clang::QualType qualType) {
     if (mirPointeeType == nullptr) {
       return nullptr;
     }
-    return GlobalTables::GetTypeTable().GetOrCreatePointerType(*mirPointeeType);
+    TypeAttrs attrs;
+    // Get alignment from the pointee type
+    if (uint32 alignmentBits = astContext->getTypeAlignIfKnown(srcPteType)) {
+      if (alignmentBits > astContext->getTypeUnadjustedAlign(srcPteType)) {
+        attrs.SetAlign(alignmentBits / 8);
+      }
+    }
+    MIRType *poiterTy = GlobalTables::GetTypeTable().GetOrCreatePointerType(*mirPointeeType);
+    static_cast<MIRPtrType*>(poiterTy)->SetTypeAttrs(attrs);
+    return poiterTy;
   }
 
   return CvtOtherType(srcType);
@@ -117,7 +127,9 @@ MIRType *LibAstFile::CvtOtherType(const clang::QualType srcType) {
   } else if (srcType->isFunctionType()) {
     destType = CvtFunctionType(srcType);
   } else if (srcType->isEnumeralType()) {
-    destType = GlobalTables::GetTypeTable().GetInt32();
+    const clang::EnumType *enumTy = llvm::dyn_cast<clang::EnumType>(srcType);
+    clang::QualType qt = enumTy->getDecl()->getIntegerType();
+    destType = CvtType(qt);
   } else if (srcType->isAtomicType()) {
     const auto *atomicType = llvm::cast<clang::AtomicType>(srcType);
     destType = CvtType(atomicType->getValueType());
@@ -129,8 +141,11 @@ MIRType *LibAstFile::CvtOtherType(const clang::QualType srcType) {
 MIRType *LibAstFile::CvtRecordType(const clang::QualType srcType) {
   const auto *recordType = llvm::cast<clang::RecordType>(srcType);
   clang::RecordDecl *recordDecl = recordType->getDecl();
-  if (!recordDecl->isLambda() && recordDecl->isImplicit() && recordDeclSet.emplace(recordDecl).second == true) {
-    recordDecles.emplace_back(recordDecl);
+  if (!recordDecl->isLambda() && recordDeclSet.emplace(recordDecl).second == true) {
+    auto itor = std::find(recordDecles.begin(), recordDecles.end(), recordDecl);
+    if (itor == recordDecles.end()) {
+      recordDecles.emplace_back(recordDecl);
+    }
   }
   MIRStructType *type = nullptr;
   std::stringstream ss;
@@ -186,6 +201,16 @@ MIRType *LibAstFile::CvtArrayType(const clang::QualType srcType) {
   if (srcType->isIncompleteArrayType()) {
     retType = GlobalTables::GetTypeTable().GetOrCreateArrayType(*retType, 1);
   }
+  TypeAttrs attrs = static_cast<MIRArrayType*>(retType)->GetTypeAttrs();
+  // Get alignment from the element type
+  if (uint32 alignmentBits = astContext->getTypeAlignIfKnown(
+      llvm::dyn_cast<clang::ArrayType>(srcType)->getElementType())) {
+    if (alignmentBits > astContext->getTypeUnadjustedAlign(
+        llvm::dyn_cast<clang::ArrayType>(srcType)->getElementType())) {
+      attrs.SetAlign(alignmentBits / 8);
+    }
+  }
+  static_cast<MIRArrayType*>(retType)->SetTypeAttrs(attrs);
   return retType;
 }
 
@@ -215,13 +240,8 @@ MIRType *LibAstFile::CvtFunctionType(const clang::QualType srcType) {
       attrsVec.push_back(genAttrs.ConvertToTypeAttrs());
     }
   }
-#ifndef USE_OPS
-  MIRType *mirFuncType = GlobalTables::GetTypeTable().GetOrCreateFunctionType(FEManager::GetModule(),
-      retType->GetTypeIndex(), argsVec, attrsVec);
-#else
   MIRType *mirFuncType = GlobalTables::GetTypeTable().GetOrCreateFunctionType(
       retType->GetTypeIndex(), argsVec, attrsVec);
-#endif
   return GlobalTables::GetTypeTable().GetOrCreatePointerType(*mirFuncType);
 }
 

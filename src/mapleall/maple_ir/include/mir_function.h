@@ -390,6 +390,9 @@ class MIRFunction {
   void SetHasSetjmp();
   bool HasSetjmp() const;
 
+  void SetHasAsm();
+  bool HasAsm() const;
+
   void SetReturnStruct(const MIRType *retType);
 
   bool IsEmpty() const;

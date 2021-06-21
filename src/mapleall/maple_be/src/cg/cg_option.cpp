@@ -65,7 +65,7 @@ bool CGOptions::doCFGO = false;
 bool CGOptions::doICO = false;
 bool CGOptions::doStoreLoadOpt = false;
 bool CGOptions::doGlobalOpt = false;
-bool CGOptions::doMultiPassColorRA = false;
+bool CGOptions::doMultiPassColorRA = true;
 bool CGOptions::doPrePeephole = false;
 bool CGOptions::doPeephole = false;
 bool CGOptions::doSchedule = false;
@@ -80,7 +80,6 @@ bool CGOptions::insertYieldPoint = false;
 bool CGOptions::mapleLinker = false;
 bool CGOptions::printFunction = false;
 bool CGOptions::nativeOpt = false;
-bool CGOptions::withDwarf = false;
 bool CGOptions::lazyBinding = false;
 bool CGOptions::hotFix = false;
 bool CGOptions::debugSched = false;
@@ -1143,7 +1142,6 @@ bool CGOptions::SolveOptions(const std::vector<Option> &opts, bool isDebug) {
         SetOption(kWithDwarf);
         SetParserOption(kWithDbgInfo);
         ClearOption(kSuppressFileInfo);
-        EnableWithDwarf();
         break;
       case kDebugUseSrc:
         SetOption(kDebugFriendly);
@@ -1372,12 +1370,20 @@ bool CGOptions::SolveOptions(const std::vector<Option> &opts, bool isDebug) {
         break;
     }
   }
-  // override some options when dwarf is generated
+  /* override some options when loc, dwarf is generated */
+  if (WithLoc()) {
+    DisableSchedule();
+    SetOption(kWithMpl);
+  }
   if (WithDwarf()) {
     DisableEBO();
     DisableCFGO();
     DisableICO();
-    SetOption(CGOptions::kDebugFriendly);
+    DisableSchedule();
+    SetOption(kDebugFriendly);
+    SetOption(kWithMpl);
+    SetOption(kWithLoc);
+    ClearOption(kSuppressFileInfo);
   }
   return true;
 }

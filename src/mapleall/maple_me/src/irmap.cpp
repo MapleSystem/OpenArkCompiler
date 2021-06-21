@@ -193,6 +193,51 @@ IvarMeExpr *IRMap::BuildLHSIvar(MeExpr &baseAddr, PrimType primType, const TyIdx
   return meDef;
 }
 
+static std::pair<MeExpr*, OffsetType> SimplifyBaseAddressOfIvar(MeExpr *base) {
+  if (base->GetOp() == OP_add || base->GetOp() == OP_sub) {
+    auto offsetNode = base->GetOpnd(1);
+    if (offsetNode->GetOp() == OP_constval) {
+      // get offset value
+      auto *mirConst = static_cast<ConstMeExpr*>(offsetNode)->GetConstVal();
+      CHECK_FATAL(mirConst->GetKind() == kConstInt, "must be integer const");
+      auto offsetInByte = static_cast<MIRIntConst*>(mirConst)->GetValue();
+      OffsetType offset(kOffsetUnknown);
+      offset.Set(base->GetOp() == OP_add ? offsetInByte : -offsetInByte);
+      if (offset.IsInvalid()) {
+        return std::make_pair(base, offset);
+      }
+
+      const auto &baseNodeAndOffset = SimplifyBaseAddressOfIvar(base->GetOpnd(0));
+      auto newOffset = offset + baseNodeAndOffset.second;
+      if (newOffset.IsInvalid()) {
+        return std::make_pair(base->GetOpnd(0), offset);
+      }
+      return std::make_pair(baseNodeAndOffset.first, newOffset);
+    }
+  }
+  return std::make_pair(base, OffsetType::InvalidOffset());
+}
+
+void IRMap::SimplifyIvar(IvarMeExpr *ivar) {
+  const auto &newBaseAndOffset = SimplifyBaseAddressOfIvar(ivar->GetBase());
+  if (newBaseAndOffset.second.IsInvalid()) {
+    return;
+  }
+
+  auto newOffset = newBaseAndOffset.second + ivar->GetOffset();
+  if (newOffset.IsInvalid()) {
+    return;
+  }
+
+  ivar->SetBase(newBaseAndOffset.first);
+  if (newOffset.val != 0) {
+    ivar->SetOp(OP_ireadoff);
+  } else {
+    ivar->SetOp(OP_iread);
+  }
+  ivar->SetOffset(newOffset.val);
+}
+
 IvarMeExpr *IRMap::BuildLHSIvar(MeExpr &baseAddr, IassignMeStmt &iassignMeStmt, FieldID fieldID) {
   MIRType *ptrMIRType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(iassignMeStmt.GetTyIdx());
   auto *realMIRType = static_cast<MIRPtrType*>(ptrMIRType);
@@ -203,8 +248,13 @@ IvarMeExpr *IRMap::BuildLHSIvar(MeExpr &baseAddr, IassignMeStmt &iassignMeStmt, 
     ty = realMIRType->GetPointedType();
   }
   auto *meDef = New<IvarMeExpr>(exprID++, ty->GetPrimType(), iassignMeStmt.GetTyIdx(), fieldID);
+  if (iassignMeStmt.GetLHSVal() != nullptr && iassignMeStmt.GetLHSVal()->GetOffset() != 0) {
+    meDef->SetOp(OP_ireadoff);
+    meDef->SetOffset(iassignMeStmt.GetLHSVal()->GetOffset());
+  }
   meDef->SetBase(&baseAddr);
   meDef->SetDefStmt(&iassignMeStmt);
+  SimplifyIvar(meDef);
   PutToBucket(meDef->GetHashIndex() % mapHashLength, *meDef);
   return meDef;
 }
@@ -399,7 +449,9 @@ bool IRMap::ReplaceMeExprStmt(MeStmt &meStmt, const MeExpr &meExpr, MeExpr &repe
       }
       if (curOpndReplaced) {
         ASSERT_NOT_NULL(newBase);
-        ivarStmt.SetLHSVal(BuildLHSIvar(*newBase, ivarStmt, ivarStmt.GetLHSVal()->GetFieldID()));
+        auto *newLHS = BuildLHSIvar(*newBase, ivarStmt, ivarStmt.GetLHSVal()->GetFieldID());
+        newLHS->SetVolatileFromBaseSymbol(ivarStmt.GetLHSVal()->GetVolatileFromBaseSymbol());
+        ivarStmt.SetLHSVal(newLHS);
       }
     } else {
       curOpndReplaced = ReplaceMeExprStmtOpnd(i, meStmt, meExpr, repexpr);

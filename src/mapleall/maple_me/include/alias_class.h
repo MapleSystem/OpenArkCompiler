@@ -91,9 +91,11 @@ class AliasInfo {
  public:
   AliasElem *ae;
   FieldID fieldID; // corresponds to fieldID in OP-addrof/OP_iaddrof
+  OffsetType offset; // corresponds to offset of array-element and offset from add/sub
 
-  AliasInfo() : ae(nullptr), fieldID(0) {}
-  AliasInfo(AliasElem *ae0, FieldID fld) : ae(ae0), fieldID(fld) {}
+  AliasInfo() : ae(nullptr), fieldID(0), offset(kOffsetUnknown) {}
+  AliasInfo(AliasElem *ae0, FieldID fld) : ae(ae0), fieldID(fld), offset(kOffsetUnknown) {}
+  AliasInfo(AliasElem *ae0, FieldID fld, OffsetType offset) : ae(ae0), fieldID(fld), offset(offset) {}
   ~AliasInfo() {}
 };
 
@@ -168,7 +170,9 @@ class AliasClass : public AnalysisResult {
   void GenericInsertMayDefUse(StmtNode &stmt, BBId bbID);
 
   static bool MayAliasBasicAA(const OriginalSt *ostA, const OriginalSt *ostB);
+  bool MayAlias(const OriginalSt *ostA, const OriginalSt *ostB) const;
 
+  static OffsetType OffsetInBitOfArrayElement(const ArrayNode *arrayNode);
  protected:
   virtual bool InConstructorLikeFunc() const {
     return true;
@@ -180,7 +184,7 @@ class AliasClass : public AnalysisResult {
   bool CallHasSideEffect(StmtNode *stmt) const;
   bool CallHasNoPrivateDefEffect(StmtNode *stmt) const;
   AliasElem *FindOrCreateAliasElem(OriginalSt &ost);
-  AliasElem *FindOrCreateExtraLevAliasElem(BaseNode &expr, TyIdx tyIdx, FieldID fieldId);
+  AliasElem *FindOrCreateExtraLevAliasElem(BaseNode &expr, const TyIdx &tyIdx, FieldID fieldId);
   AliasInfo CreateAliasElemsExpr(BaseNode &expr);
   void SetNotAllDefsSeenForMustDefs(const StmtNode &callas);
   void SetPtrOpndNextLevNADS(const BaseNode &opnd, AliasElem *aliasElem, bool hasNoPrivateDefEffect);
@@ -188,11 +192,10 @@ class AliasClass : public AnalysisResult {
                               bool hasNoPrivateDefEffect);
   void ApplyUnionForFieldsInAggCopy(const OriginalSt *lhsost, const OriginalSt *rhsost);
   void ApplyUnionForDassignCopy(AliasElem &lhsAe, AliasElem *rhsAe, BaseNode &rhs);
-  bool SetNextLevNADSForPtrIntegerCopy(AliasElem &lhsAe, const AliasElem *rhsAe, BaseNode &rhs);
+  bool SetNextLevNADSForEscapePtr(AliasElem &lhsAe, BaseNode &rhs);
   void CreateMirroringAliasElems(const OriginalSt *ost1, OriginalSt *ost2);
   AliasElem *FindOrCreateDummyNADSAe();
   AliasElem &FindOrCreateAliasElemOfAddrofOSt(OriginalSt &oSt);
-  AliasElem &FindOrCreateAliasElemOfAddrofZeroFieldIDOSt(OriginalSt &oSt);
   void CollectMayDefForMustDefs(const StmtNode &stmt, std::set<OriginalSt*> &mayDefOsts);
   void CollectMayUseForNextLevel(const OriginalSt *ost, std::set<OriginalSt*> &mayUseOsts,
                                  const StmtNode &stmt, bool isFirstOpnd);

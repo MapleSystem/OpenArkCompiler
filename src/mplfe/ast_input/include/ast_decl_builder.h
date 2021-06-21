@@ -46,15 +46,26 @@ class ASTDeclsBuilder {
     return static_cast<ASTVar*>(declesTable[id]);
   }
 
-  static ASTLocalEnumDecl *ASTLocalEnumDeclBuilder(MapleAllocator &allocator, const std::string &srcFile,
+  static ASTEnumConstant *ASTEnumConstBuilder(MapleAllocator &allocator, const std::string &srcFile,
+      const std::string &varName, const std::vector<MIRType*> &desc,
+      const GenericAttrs &genAttrsIn, int64 id = INT64_MAX) {
+    if (id == INT64_MAX) {
+      return allocator.GetMemPool()->New<ASTEnumConstant>(srcFile, varName, desc, genAttrsIn);
+    } else if (declesTable[id] == nullptr) {
+      declesTable[id] = allocator.GetMemPool()->New<ASTEnumConstant>(srcFile, varName, desc, genAttrsIn);
+    }
+    return static_cast<ASTEnumConstant*>(declesTable[id]);
+  }
+
+  static ASTEnumDecl *ASTLocalEnumDeclBuilder(MapleAllocator &allocator, const std::string &srcFile,
       const std::string &varName, const std::vector<MIRType*> &desc, const GenericAttrs &genAttrsIn,
       int64 id = INT64_MAX) {
     if (id == INT64_MAX) {
-      return allocator.GetMemPool()->New<ASTLocalEnumDecl>(srcFile, varName, desc, genAttrsIn);
+      return allocator.GetMemPool()->New<ASTEnumDecl>(srcFile, varName, desc, genAttrsIn);
     } else if (declesTable[id] == nullptr) {
-      declesTable[id] = allocator.GetMemPool()->New<ASTLocalEnumDecl>(srcFile, varName, desc, genAttrsIn);
+      declesTable[id] = allocator.GetMemPool()->New<ASTEnumDecl>(srcFile, varName, desc, genAttrsIn);
     }
-    return static_cast<ASTLocalEnumDecl*>(declesTable[id]);
+    return static_cast<ASTEnumDecl*>(declesTable[id]);
   }
 
   static ASTFunc *ASTFuncBuilder(MapleAllocator &allocator, const std::string &srcFile, const std::string &nameIn,

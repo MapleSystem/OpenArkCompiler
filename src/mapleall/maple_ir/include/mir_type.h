@@ -40,6 +40,7 @@ extern bool VerifyPrimType(PrimType primType1, PrimType primType2);       // ver
 extern uint32 GetPrimTypeSize(PrimType primType);                         // answer in bytes; 0 if unknown
 extern uint32 GetPrimTypeP2Size(PrimType primType);                       // answer in bytes in power-of-two.
 extern PrimType GetSignedPrimType(PrimType pty);                          // return signed version
+extern uint32 GetPrimTypeLanes(PrimType pty);                             // lane size if vector
 extern const char *GetPrimTypeName(PrimType primType);
 extern const char *GetPrimTypeJavaName(PrimType primType);
 
@@ -414,6 +415,77 @@ class GenericAttrs {
 #if MIR_FEATURE_FULL
 constexpr size_t kShiftNumOfTypeKind = 8;
 constexpr size_t kShiftNumOfNameStrIdx = 6;
+constexpr int32 kOffsetUnknown = INT_MAX;
+constexpr int32 kOffsetMax = (INT_MAX - 1);
+constexpr int32 kOffsetMin = INT_MIN;
+struct OffsetType {
+  explicit OffsetType(int64 offset) {
+    Set(offset);
+  }
+
+  OffsetType(const OffsetType &other) : val(other.val) {}
+
+  ~OffsetType() = default;
+
+  void Set(int64 offsetVal) {
+    val = (offsetVal >= kOffsetMin && offsetVal <= kOffsetMax) ? static_cast<int32>(offsetVal)
+                                                               : kOffsetUnknown;
+  }
+
+  bool IsInvalid() const {
+    return val == kOffsetUnknown;
+  }
+
+  OffsetType operator=(const OffsetType &other) {
+    val = other.val;
+    return other;
+  }
+
+  OffsetType operator+(int64 offset) const {
+    if (this->IsInvalid() || OffsetType(offset).IsInvalid()) {
+      return InvalidOffset();
+    }
+    return OffsetType(val + offset);
+  }
+
+  OffsetType operator+(OffsetType other) const {
+    return other + val;
+  }
+
+  void operator+=(int64 offset) {
+    if (this->IsInvalid() || OffsetType(offset).IsInvalid()) {
+      val = kOffsetUnknown;
+      return;
+    }
+    Set(offset + val);
+  }
+
+  void operator+=(OffsetType other) {
+    this->operator+=(other.val);
+  }
+
+  OffsetType operator-() const {
+    return OffsetType(-val);
+  }
+
+  bool operator<(OffsetType other) const {
+    return val < other.val;
+  }
+
+  bool operator==(OffsetType other) const {
+    return val == other.val;
+  }
+
+  bool operator!=(OffsetType other) const {
+    return val != other.val;
+  }
+
+  static OffsetType InvalidOffset() {
+    return OffsetType(kOffsetUnknown);
+  }
+
+  int32 val = kOffsetUnknown;
+};
 
 class MIRStructType; // circular dependency exists, no other choice
 
@@ -550,6 +622,11 @@ class MIRType {
   virtual size_t NumberOfFieldIDs() const { return 0; }
   // return any struct type directly embedded in this type
   virtual MIRStructType *EmbeddedStructType() { return nullptr; }
+
+  virtual int64 GetBitOffsetFromBaseAddr(FieldID fieldID) {
+    (void)fieldID;
+    return 0;
+  }
 
  protected:
   MIRTypeKind typeKind;
@@ -704,6 +781,12 @@ class MIRArrayType : public MIRType {
     return hIdx % kTypeHashLength;
   }
 
+  int64 GetBitOffsetFromBaseAddr(FieldID fieldID) override {
+    (void)fieldID;
+    return kOffsetUnknown;
+  }
+  int64 GetBitOffsetFromArrayAddress(const std::vector<int64> &indexArray);
+
   std::string GetMplTypeName() const override;
   std::string GetCompactMplTypeName() const override;
   bool HasFields() const override;
@@ -759,6 +842,13 @@ class MIRFarrayType : public MIRType {
   bool HasFields() const override;
   size_t NumberOfFieldIDs() const override;
   MIRStructType *EmbeddedStructType() override;
+
+  int64 GetBitOffsetFromBaseAddr(FieldID fieldID) override {
+    (void)fieldID;
+    return kOffsetUnknown;
+  }
+
+  int64 GetBitOffsetFromArrayAddress(int64 arrayIndex);
 
  private:
   TyIdx elemTyIdx;
@@ -1131,6 +1221,8 @@ class MIRStructType : public MIRType {
   std::string GetCompactMplTypeName() const override;
   FieldPair TraverseToField(FieldID fieldID) const ;
 
+  int64 GetBitOffsetFromBaseAddr(FieldID fieldID) override;
+
  protected:
   FieldVector fields{};
   std::vector<TyIdx> fieldInferredTyIdx{};
@@ -1155,6 +1247,8 @@ class MIRStructType : public MIRType {
   FieldPair TraverseToField(GStrIdx fieldStrIdx) const ;
   bool HasVolatileFieldInFields(const FieldVector &fieldsOfStruct) const;
   bool HasTypeParamInFields(const FieldVector &fieldsOfStruct) const;
+  int64 GetBitOffsetFromUnionBaseAddr(FieldID fieldID);
+  int64 GetBitOffsetFromStructBaseAddr(FieldID fieldID);
 };
 
 // java array type, must not be nested inside another aggregate

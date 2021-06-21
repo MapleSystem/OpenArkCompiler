@@ -228,11 +228,7 @@ void FEInputStructHelper::ProcessStaticFields() {
   uint32 i = 0;
   FieldVector::iterator it;
   for (it = mirStructType->GetStaticFields().begin(); it != mirStructType->GetStaticFields().end(); ++i, ++it) {
-#ifndef USE_OPS
-    StIdx stIdx = SymbolBuilder::Instance().GetStIdxFromStrIdx(it->first);
-#else
     StIdx stIdx = GlobalTables::GetGsymTable().GetStIdxFromStrIdx(it->first);
-#endif
     const std::string &fieldName = GlobalTables::GetStrTable().GetStringFromStrIdx(it->first);
     MIRConst *cst = nullptr;
     MIRType *type = GlobalTables::GetTypeTable().GetTypeFromTyIdx(it->second.first);
@@ -252,11 +248,7 @@ void FEInputStructHelper::ProcessStaticFields() {
         cst = alloc.GetMemPool()->New<MIRAddrofConst>(expr->GetStIdx(), expr->GetFieldID(), *ptrType);
       }
     }
-#ifndef USE_OPS
-    MIRSymbol *fieldVar = SymbolBuilder::Instance().GetSymbolFromStIdx(stIdx.Idx());
-#else
     MIRSymbol *fieldVar = GlobalTables::GetGsymTable().GetSymbolFromStidx(stIdx.Idx());
-#endif
     if (fieldVar == nullptr) {
       fieldVar = FEManager::GetMIRBuilder().GetOrCreateGlobalDecl(fieldName, *type);
       fieldVar->SetAttrs(it->second.second.ConvertToTypeAttrs());

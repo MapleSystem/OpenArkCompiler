@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co., Ltd. All rights reserved.
+ * Copyright (c) [2021] Huawei Technologies Co., Ltd. All rights reserved.
  *
  * OpenArkCompiler is licensed under the Mulan Permissive Software License v2.
  * You can use this software according to the terms and conditions of the MulanPSL - 2.0.
@@ -69,7 +69,7 @@ AnalysisResult *DoLfoInjectIV::Run(MeFunction *func, MeFuncResultMgr *m, ModuleR
 
     // initialize IV to 0 at loop entry
     DassignNode *dass = mirbuilder->CreateStmtDassign(st->GetStIdx(), 0, mirbuilder->CreateIntConst(0, PTY_i64));
-    StmtNode *laststmt = entrybb->IsEmpty() ? NULL : &entrybb->GetLast();
+    StmtNode *laststmt = entrybb->IsEmpty() ? nullptr : &entrybb->GetLast();
     if (laststmt &&
         (laststmt->op == OP_brfalse || laststmt->op == OP_brtrue || laststmt->op == OP_goto ||
          laststmt->op == OP_igoto || laststmt->op == OP_switch)) {

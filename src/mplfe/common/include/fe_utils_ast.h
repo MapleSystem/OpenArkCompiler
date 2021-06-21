@@ -37,29 +37,57 @@ template <class T>
 std::function<T()> OpGenerator(Opcode op, T p0, T p1) {
   switch (op) {
     case OP_add: {
-       return [&]() { return p0 + p1; };
+       return [p0, p1]() { return p0 + p1; };
     }
     case OP_sub: {
-      return [&]() { return p0 - p1; };
+      return [p0, p1]() { return p0 - p1; };
     }
     case OP_mul: {
-      return [&]() { return p0 * p1; };
+      return [p0, p1]() { return p0 * p1; };
     }
     case OP_div: {
-      return [&]() { return p0 / p1; };
+      return [p0, p1]() { return p0 / p1; };
+    }
+    case OP_rem: {
+      return [p0, p1]() { return static_cast<int64>(p0) % static_cast<int64>(p1); };
     }
     case OP_shl: {
-      return [&]() { return static_cast<int64>(p0) << static_cast<int64>(p1); };
+      return [p0, p1]() { return static_cast<int64>(p0) << static_cast<int64>(p1); };
     }
     case OP_lshr:
     case OP_ashr: {
-      return [&]() { return static_cast<int64>(p0) >> static_cast<int64>(p1); };
+      return [p0, p1]() { return static_cast<int64>(p0) >> static_cast<int64>(p1); };
     }
     case OP_bior: {
-      return [&]() { return static_cast<int64>(p0) | static_cast<int64>(p1); };
+      return [p0, p1]() { return static_cast<int64>(p0) | static_cast<int64>(p1); };
+    }
+    case OP_band: {
+      return [p0, p1]() { return static_cast<int64>(p0) & static_cast<int64>(p1); };
     }
     case OP_bxor: {
-      return [&]() { return static_cast<int64>(p0) ^ static_cast<int64>(p1); };
+      return [p0, p1]() { return static_cast<int64>(p0) ^ static_cast<int64>(p1); };
+    }
+    case OP_land: {
+      return [p0, p1]() {
+        if (!p0) {
+          return static_cast<int32>(0);
+        } else if (!p1) {
+          return static_cast<int32>(0);
+        } else {
+          return static_cast<int32>(1);
+        }
+      };
+    }
+    case OP_lior: {
+      return [p0, p1]() {
+        if (p0) {
+          return static_cast<int32>(1);
+        } else if (p1) {
+          return static_cast<int32>(1);
+        } else {
+          return static_cast<int32>(0);
+        }
+      };
     }
     default: {
       return nullptr;

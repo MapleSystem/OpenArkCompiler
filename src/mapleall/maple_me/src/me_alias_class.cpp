@@ -62,12 +62,6 @@ void MeAliasClass::DoAliasAnalysis() {
     } else {
       UnionForNotAllDefsSeenCLang();
     }
-    if (mirModule.IsCModule()) {
-      ApplyUnionForStorageOverlaps();
-    }
-  }
-  if (!mirModule.IsJavaModule()) {
-    UnionForAggAndFields();
   }
   // TBAA
   if (!MeOption::noTBAA && mirModule.IsJavaModule()) {

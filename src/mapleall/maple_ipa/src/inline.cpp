@@ -33,7 +33,6 @@ namespace maple {
 constexpr uint32 kHalfInsn = 1;
 constexpr uint32 kOneInsn = 2;
 constexpr uint32 kDoubleInsn = 4;
-constexpr uint32 kQuadrupleInsn = 8;
 constexpr uint32 kPentupleInsn = 10;
 
 static bool IsFinalMethod(const MIRFunction *mirFunc) {
@@ -456,7 +455,7 @@ void MInline::ReplacePregs(BaseNode *baseNode, std::unordered_map<PregIdx, PregI
         CallReturnPair &callPair = (*retVec).at(i);
         if (callPair.second.IsReg()) {
           PregIdx oldIdx = callPair.second.GetPregIdx();
-          callPair.second.SetPregIdx(static_cast<PregIdx16>(GetNewPregIdx(oldIdx, pregOld2New)));
+          callPair.second.SetPregIdx(GetNewPregIdx(oldIdx, pregOld2New));
         }
       }
       break;
@@ -641,6 +640,22 @@ void MInline::ConvertPStaticToFStatic(MIRFunction &func) const {
       bool success = GlobalTables::GetGsymTable().AddToStringSymbolMap(*newSym);
       CHECK_FATAL(success, "Found repeated global symbols!");
       oldStIdx2New[i] = newSym->GetStIdx().FullIdx();
+      // If a pstatic symbol `foo` is initialized by address of another pstatic symbol `bar`, we need update the stIdx
+      // of foo's initial value. Example code:
+      //   static int bar = 42;
+      //   static int *foo = &bar;
+      if ((newSym->GetSKind() == kStConst || newSym->GetSKind() == kStVar) && newSym->GetKonst() != nullptr &&
+        newSym->GetKonst()->GetKind() == kConstAddrof) {
+        auto *addrofConst = static_cast<MIRAddrofConst*>(newSym->GetKonst());
+        StIdx valueStIdx = addrofConst->GetSymbolIndex();
+        if (!valueStIdx.IsGlobal()) {
+          MIRSymbol *valueSym = func.GetSymbolTabItem(valueStIdx.Idx());
+          if (valueSym->GetStorageClass() == kScPstatic) {
+            valueStIdx.SetFullIdx(oldStIdx2New[valueStIdx.Idx()]);
+            addrofConst->SetSymbolIndex(valueStIdx);
+          }
+        }
+      }
     } else {
       StIdx newStIdx(oldStIdx);
       newStIdx.SetIdx(oldStIdx.Idx() - pstaticNum);
@@ -965,6 +980,16 @@ FuncCostResultType MInline::GetFuncCost(const MIRFunction &func, const BaseNode 
       cost += static_cast<uint32>(switchNode.GetSwitchTable().size() + 1);
       break;
     }
+    case OP_call:
+    case OP_callassigned: {
+      PUIdx puIdx = static_cast<const CallNode&>(baseNode).GetPUIdx();
+      MIRFunction *callee = GlobalTables::GetFunctionTable().GetFunctionFromPuidx(puIdx);
+      if (callee->GetName().find("setjmp") != std::string::npos) {
+        cost += smallFuncThreshold;
+        break;
+      }
+    }
+    [[clang::fallthrough]];
     case OP_customcallassigned:
     case OP_polymorphiccallassigned:
     case OP_customcall:
@@ -981,8 +1006,6 @@ FuncCostResultType MInline::GetFuncCost(const MIRFunction &func, const BaseNode 
     case OP_virtualcallassigned:
     case OP_superclasscallassigned:
     case OP_interfacecallassigned:
-    case OP_call:
-    case OP_callassigned:
     case OP_throw: {
       cost += kPentupleInsn;
       break;
@@ -990,20 +1013,30 @@ FuncCostResultType MInline::GetFuncCost(const MIRFunction &func, const BaseNode 
     case OP_intrinsicop:
     case OP_intrinsicopwithtype: {
       const IntrinsicopNode &node = static_cast<const IntrinsicopNode&>(baseNode);
-      MIRIntrinsicID id = node.GetIntrinsic();
-      if (id == INTRN_JAVA_CONST_CLASS || id == INTRN_JAVA_ARRAY_LENGTH) {
-        cost += kOneInsn;
-      } else if (id == INTRN_JAVA_MERGE) {
-        cost += kHalfInsn;
-      } else if (id == INTRN_JAVA_INSTANCE_OF) {
-        cost += kPentupleInsn;
-      } else if (id == INTRN_MPL_READ_OVTABLE_ENTRY) {
-        cost += kDoubleInsn;
-      } else if (id == INTRN_C_ctz32 || id == INTRN_C_clz32 || id == INTRN_C_constant_p) {
-        cost += kOneInsn;
-      } else {
-        CHECK_FATAL(false, "[IMPOSSIBLE] %s", func.GetName().c_str());
-        cost += kQuadrupleInsn;
+      switch(node.GetIntrinsic()) {
+        case INTRN_JAVA_CONST_CLASS:
+        case INTRN_JAVA_ARRAY_LENGTH:
+          cost += kOneInsn;
+          break;
+        case INTRN_JAVA_MERGE:
+          cost += kHalfInsn;
+          break;
+        case INTRN_JAVA_INSTANCE_OF:
+          cost += kPentupleInsn;
+          break;
+        case INTRN_MPL_READ_OVTABLE_ENTRY:
+          cost += kDoubleInsn;
+          break;
+        case INTRN_C_ctz32:
+        case INTRN_C_clz32:
+        case INTRN_C_clz64:
+        case INTRN_C_constant_p:
+          cost += kOneInsn;
+          break;
+        default:
+          // Other intrinsics generate a call
+          cost += kPentupleInsn;
+          break;
       }
       break;
     }
@@ -1047,6 +1080,10 @@ FuncCostResultType MInline::GetFuncCost(const MIRFunction &func, const BaseNode 
     }
     case OP_cvt: {
       cost += kHalfInsn;
+      break;
+    }
+    case OP_alloca: {
+      cost += smallFuncThreshold;
       break;
     }
     default: {
@@ -1355,6 +1392,7 @@ void MInline::MarkUnInlinableFunction() const {
     for (CGNode *node : (*it)->GetCGNodes()) {
       std::string name = node->GetMIRFunction()->GetName();
       if (node->IsMustNotBeInlined() ||
+          node->GetMIRFunction()->HasAsm() ||
           StringUtils::StartsWith(name, kDalvikSystemStr) ||
           StringUtils::StartsWith(name, kJavaLangThreadStr)) {
         node->SetMustNotBeInlined();

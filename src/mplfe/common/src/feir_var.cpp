@@ -98,7 +98,9 @@ MIRSymbol *FEIRVar::GenerateGlobalMIRSymbolImpl(MIRBuilder &builder) const {
   std::string name = GetName(*mirType);
   GStrIdx nameIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(name);
   MIRSymbol *gSymbol = builder.GetOrCreateGlobalDecl(name, *mirType);
-  if (gSymbol->GetAttrs().GetAttrFlag() != 0) {
+  auto attrs = const_cast<GenericAttrs&>(genAttrs).ConvertToTypeAttrs();
+  // do not allow extern var override global var
+  if (gSymbol->GetAttrs().GetAttrFlag() != 0 && attrs.GetAttr(ATTR_extern)) {
     return  gSymbol;
   }
   // Set global var attr once
@@ -129,6 +131,14 @@ MIRSymbol *FEIRVar::GenerateGlobalMIRSymbolImpl(MIRBuilder &builder) const {
       }
     }
   }
+  if (attrs.GetAttr(ATTR_extern)) {
+    gSymbol->SetStorageClass(MIRStorageClass::kScExtern);
+    attrs.ResetAttr(AttrKind::ATTR_extern);
+  } else {
+    if (gSymbol->GetStorageClass() == MIRStorageClass::kScInvalid) {
+      gSymbol->SetStorageClass(MIRStorageClass::kScGlobal);
+    }
+  }
   return gSymbol;
 }
 
@@ -136,19 +146,14 @@ MIRSymbol *FEIRVar::GenerateLocalMIRSymbolImpl(MIRBuilder &builder) const {
   MPLFE_PARALLEL_FORBIDDEN();
   MIRType *mirType = type->GenerateMIRTypeAuto();
   std::string name = GetName(*mirType);
-#ifndef USE_OPS
-  return SymbolBuilder::Instance().GetOrCreateLocalSymbol(*mirType, name, *builder.GetCurrentFunction());
-#else
   MIRSymbol *mirSymbol = builder.GetOrCreateLocalDecl(name, *mirType);
   if (genAttrs.GetAttr(GenericAttrKind::GENATTR_static)) {
     auto attrs = TypeAttrs();
     attrs.SetAttr(ATTR_static);
     mirSymbol->SetAttrs(attrs);
     mirSymbol->SetStorageClass(MIRStorageClass::kScPstatic);
-    mirSymbol->SetKonst(mirConst);
   }
   return mirSymbol;
-#endif
 }
 
 MIRSymbol *FEIRVar::GenerateMIRSymbolImpl(MIRBuilder &builder) const {

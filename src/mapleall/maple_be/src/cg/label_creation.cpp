@@ -39,7 +39,7 @@ void LabelCreation::CreateStartEndLabel() {
   ASSERT(cgFunc->GetFunction().GetBody()->GetLast() == endLabel, "last stmt must be a endLabel");
   MIRFunction *func = &cgFunc->GetFunction();
   CG *cg = cgFunc->GetCG();
-  if (CGOptions::IsWithDwarf()) {
+  if (cg->GetCGOptions().WithDwarf()) {
     DebugInfo *di = cg->GetMIRModule()->GetDbgInfo();
     DBGDie *fdie = di->GetDie(func);
     fdie->SetAttr(DW_AT_low_pc, startLblIdx);

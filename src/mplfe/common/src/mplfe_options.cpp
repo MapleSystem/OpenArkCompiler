@@ -32,9 +32,7 @@ enum OptionIndex : uint32 {
   kInClass,
   kInJar,
   kInDex,
-#ifdef ENABLE_MPLFE_AST
   kInAST,
-#endif // ~/ENABLE_MPLFE_AST
   // output control options
   kOutputPath,
   kOutputName,
@@ -116,12 +114,10 @@ const Descriptor kUsage[] = {
     kBuildTypeAll, kArgCheckPolicyRequired,
     "  --in-dex file1.dex,file2.dex\n"
     "                         : input dex files", "mplfe", {} },
-#ifdef ENABLE_MPLFE_AST
   { kInAST, 0, "", "in-ast",
     kBuildTypeAll, kArgCheckPolicyRequired,
     "  --in-ast file1.ast,file2.ast\n"
     "                         : input ast files", "mplfe", {} },
-#endif // ~/ENABLE_MPLFE_AST
 
   // output control options
   { kUnknown, 0, "", "",
@@ -304,10 +300,8 @@ bool MPLFEOptions::InitFactory() {
                                                 &MPLFEOptions::ProcessInJar);
   RegisterFactoryFunction<OptionProcessFactory>(kInDex,
                                                 &MPLFEOptions::ProcessInDex);
-#ifdef ENABLE_MPLFE_AST
   RegisterFactoryFunction<OptionProcessFactory>(kInAST,
                                                 &MPLFEOptions::ProcessInAST);
-#endif // ~/ENABLE_MPLFE_AST
 
   // output control options
   RegisterFactoryFunction<OptionProcessFactory>(kOutputPath,
@@ -467,7 +461,6 @@ bool MPLFEOptions::ProcessInDex(const Option &opt) {
   return true;
 }
 
-#ifdef ENABLE_MPLFE_AST
 bool MPLFEOptions::ProcessInAST(const Option &opt) {
   std::list<std::string> listFiles = SplitByComma(opt.Args());
   for (const std::string &fileName : listFiles) {
@@ -475,7 +468,6 @@ bool MPLFEOptions::ProcessInAST(const Option &opt) {
   }
   return true;
 }
-#endif // ~/ENABLE_MPLFE_AST
 
 bool MPLFEOptions::ProcessInputMplt(const Option &opt) {
   std::list<std::string> listFiles = SplitByComma(opt.Args());
@@ -673,12 +665,10 @@ void MPLFEOptions::ProcessInputFiles(const std::vector<std::string> &inputs) {
         FE_INFO_LEVEL(FEOptions::kDumpLevelInfoDetail, "DEX file detected: %s", inputName.c_str());
         FEOptions::GetInstance().AddInputDexFile(inputName);
         break;
-#ifdef ENABLE_MPLFE_AST
       case FEFileType::kAST:
         FE_INFO_LEVEL(FEOptions::kDumpLevelInfoDetail, "AST file detected: %s", inputName.c_str());
         FEOptions::GetInstance().AddInputASTFile(inputName);
         break;
-#endif // ~/ENABLE_MPLFE_AST
       default:
         WARN(kLncErr, "unsupported file format (%s)", inputName.c_str());
         break;

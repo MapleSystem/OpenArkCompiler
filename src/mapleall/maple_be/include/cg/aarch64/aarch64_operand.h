@@ -89,6 +89,22 @@ class AArch64RegOperand : public RegOperand {
     return memPool.Clone<AArch64RegOperand>(*this);
   }
 
+  void SetVecLanePosition(int32 pos) {
+    vecLane = pos;
+  }
+
+  int32 GetVecLanePosition() const {
+    return vecLane;
+  }
+
+  void SetVecLaneSize(uint32 size) {
+    vecLaneSize = size;
+  }
+
+  uint32 GetVecLaneSize() const {
+    return vecLaneSize;
+  }
+
   bool operator==(const AArch64RegOperand &opnd) const;
 
   bool operator<(const AArch64RegOperand &opnd) const;
@@ -110,8 +126,11 @@ class AArch64RegOperand : public RegOperand {
  private:
   static AArch64RegOperand zero64;
   static AArch64RegOperand zero32;
+
   bool isRefField = false;
   uint32 flag;
+  int16 vecLane = -1;     /* -1 for whole reg, 0 to 15 to specify each lane one at a time */
+  uint16 vecLaneSize = 0; /* Number of lanes */
 };
 
 /*
@@ -344,6 +363,10 @@ class StImmOperand : public Operand {
 
   int64 GetOffset() const {
     return offset;
+  }
+
+  void SetOffset(int64 newOffset) {
+    offset = newOffset;
   }
 
   int32 GetRelocs() const {
@@ -664,26 +687,38 @@ class AArch64MemOperand : public MemOperand {
   /* Returns N where alignment == 2^N */
   static int32 GetImmediateOffsetAlignment(uint32 dSize) {
     ASSERT(dSize >= k8BitSize, "error val:dSize");
-    ASSERT(dSize <= k64BitSize, "error val:dSize");
+    ASSERT(dSize <= k128BitSize, "error val:dSize");
     ASSERT((dSize & (dSize - 1)) == 0, "error val:dSize");
     /* dSize==8: 0, dSize==16 : 1, dSize==32: 2, dSize==64: 3 */
     return __builtin_ctz(dSize) - kBaseOffsetAlignment;
   }
 
   static int32 GetMaxPIMM(uint32 dSize) {
+    dSize = dSize > k64BitSize ? k64BitSize : dSize;
     ASSERT(dSize >= k8BitSize, "error val:dSize");
-    ASSERT(dSize <= k64BitSize, "error val:dSize");
+    ASSERT(dSize <= k128BitSize, "error val:dSize");
     ASSERT((dSize & (dSize - 1)) == 0, "error val:dSize");
     int32 alignment = GetImmediateOffsetAlignment(dSize);
     /* alignment is between kAlignmentOf8Bit and kAlignmentOf64Bit */
     ASSERT(alignment >= kOffsetAlignmentOf8Bit, "error val:alignment");
     ASSERT(alignment <= kOffsetAlignmentOf64Bit, "error val:alignment");
-    return (kMaxPimms[alignment]);
+    return (kMaxPimm[alignment]);
+  }
+
+  static int32 GetMaxPairPIMM(uint32 dSize) {
+    ASSERT(dSize >= k32BitSize, "error val:dSize");
+    ASSERT(dSize <= k64BitSize, "error val:dSize");
+    ASSERT((dSize & (dSize - 1)) == 0, "error val:dSize");
+    int32 alignment = GetImmediateOffsetAlignment(dSize);
+    /* alignment is between kAlignmentOf8Bit and kAlignmentOf64Bit */
+    ASSERT(alignment >= kOffsetAlignmentOf32Bit, "error val:alignment");
+    ASSERT(alignment <= kOffsetAlignmentOf64Bit, "error val:alignment");
+    return (kMaxPairPimm[alignment - k2BitSize]);
   }
 
   bool IsOffsetMisaligned(uint32 dSize) const {
     ASSERT(dSize >= k8BitSize, "error val:dSize");
-    ASSERT(dSize <= k64BitSize, "error val:dSize");
+    ASSERT(dSize <= k128BitSize, "error val:dSize");
     ASSERT((dSize & (dSize - 1)) == 0, "error val:dSize");
     if (dSize == k8BitSize || addrMode != kAddrModeBOi) {
       return false;
@@ -705,7 +740,7 @@ class AArch64MemOperand : public MemOperand {
 
   static bool IsPIMMOffsetOutOfRange(int32 offset, uint32 dSize) {
     ASSERT(dSize >= k8BitSize, "error val:dSize");
-    ASSERT(dSize <= k64BitSize, "error val:dSize");
+    ASSERT(dSize <= k128BitSize, "error val:dSize");
     ASSERT((dSize & (dSize - 1)) == 0, "error val:dSize");
     return (offset < 0 || offset > GetMaxPIMM(dSize));
   }
@@ -811,8 +846,6 @@ class AArch64MemOperand : public MemOperand {
 
   static constexpr int32 kLdpStp64SimmLowerBound = -512;  /* multiple of 8 */
   static constexpr int32 kLdpStp64SimmUpperBound = 504;
-
-  static const int32 kMaxPimms[4];
 
   AArch64AddressingMode addrMode;
 

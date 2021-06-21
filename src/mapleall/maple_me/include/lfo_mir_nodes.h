@@ -31,7 +31,7 @@ class LfoParentPart {
     while (dParent && dParent != this) {
       dParent = dParent->parent;
     }
-    return dParent != NULL;
+    return dParent != nullptr;
   }
 };
 

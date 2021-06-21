@@ -22,6 +22,7 @@
 #include "cgbb.h"
 #include "reg_alloc.h"
 #include "cfi.h"
+#include "dbg.h"
 #include "reaching.h"
 #include "cg_cfg.h"
 /* MapleIR headers. */
@@ -84,6 +85,13 @@ class CGFunc {
     kShiftLright
   };
 
+  enum V_CND {
+    v_eq,
+    v_ge,
+    v_gt,
+    v_lt
+  };
+
   CGFunc(MIRModule &mod, CG &cg, MIRFunction &mirFunc, BECommon &beCommon, MemPool &memPool,
          MapleAllocator &mallocator, uint32 funcId);
   virtual ~CGFunc();
@@ -132,6 +140,7 @@ class CGFunc {
   virtual bool NeedCleanup() = 0;
   virtual void GenerateCleanupCodeForExtEpilog(BB &bb) = 0;
 
+  void GenerateLoc(StmtNode *stmt, unsigned &lastSrcLoc, unsigned &lastMplLoc);
   void GenerateInstruction();
   bool MemBarOpt(StmtNode &membar);
   void UpdateCallBBFrequency();
@@ -159,6 +168,7 @@ class CGFunc {
   virtual void SelectDassign(DassignNode &stmt, Operand &opnd0) = 0;
   virtual void SelectRegassign(RegassignNode &stmt, Operand &opnd0) = 0;
   virtual void SelectAssertNull(UnaryStmtNode &stmt) = 0;
+  virtual void SelectAsm(AsmNode &node) = 0;
   virtual void SelectAggDassign(DassignNode &stmt) = 0;
   virtual void SelectIassign(IassignNode &stmt) = 0;
   virtual void SelectAggIassign(IassignNode &stmt, Operand &lhsAddrOpnd) = 0;
@@ -192,6 +202,8 @@ class CGFunc {
   virtual Operand *SelectStr16Const(MIRStr16Const &strConst) = 0;
   virtual void SelectAdd(Operand &resOpnd, Operand &opnd0, Operand &opnd1, PrimType primType) = 0;
   virtual Operand *SelectAdd(BinaryNode &node, Operand &opnd0, Operand &opnd1, const BaseNode &parent) = 0;
+  virtual void SelectMadd(Operand &resOpnd, Operand &opndM0, Operand &opndM1, Operand &opnd1, PrimType primType) = 0;
+  virtual Operand *SelectMadd(BinaryNode &node, Operand &opndM0, Operand &opndM1, Operand &opnd1) = 0;
   virtual Operand &SelectCGArrayElemAdd(BinaryNode &node) = 0;
   virtual Operand *SelectShift(BinaryNode &node, Operand &opnd0, Operand &opnd1) = 0;
   virtual void SelectMpy(Operand &resOpnd, Operand &opnd0, Operand &opnd1, PrimType primType) = 0;
@@ -259,6 +271,23 @@ class CGFunc {
   virtual Operand *CreateZeroOperand(PrimType primType) = 0;
 
   virtual bool IsFrameReg(const RegOperand &opnd) const = 0;
+
+  /* For Neon intrinsics */
+  virtual RegOperand *SelectVectorFromScalar(IntrinsicopNode &intrnNode) = 0;
+  virtual Operand *SelectVectorStore(IntrinsicopNode &intrnNode) = 0;
+  virtual RegOperand *SelectVectorMerge(IntrinsicopNode &intrnNode) = 0;
+  virtual RegOperand *SelectVectorGetHigh(IntrinsicopNode &intrnNode) = 0;
+  virtual RegOperand *SelectVectorGetLow(IntrinsicopNode &intrnNode) = 0;
+  virtual RegOperand *SelectVectorGetElement(IntrinsicopNode &intrnNode) = 0;
+  virtual RegOperand *SelectVectorPairwiseAdd(IntrinsicopNode &intrnNode) = 0;
+  virtual RegOperand *SelectVectorSetElement(IntrinsicopNode &intrnNode) = 0;
+  virtual RegOperand *SelectVectorReverse(IntrinsicopNode &intrnNode, uint32 size) = 0;
+  virtual RegOperand *SelectVectorAnd(IntrinsicopNode &intrnNode) = 0;
+  virtual RegOperand *SelectVectorSum(IntrinsicopNode &intrnNode) = 0;
+  virtual RegOperand *SelectVectorCompare(IntrinsicopNode &intrnNode, V_CND cc) = 0;
+  virtual RegOperand *SelectVectorULeftShift(IntrinsicopNode &intrnNode) = 0;
+  virtual RegOperand *SelectVectorTableLookup(IntrinsicopNode &intrnNode) = 0;
+
   /* For ebo issue. */
   virtual Operand *GetTrueOpnd() {
     return nullptr;
@@ -303,7 +332,7 @@ class CGFunc {
     if (size < k4ByteSize) {
       size = k4ByteSize;
     }
-    ASSERT(size == k4ByteSize || size == k8ByteSize, "check size");
+    ASSERT(size == k4ByteSize || size == k8ByteSize || size == k16ByteSize, "check size");
 #endif
     new (&vRegTable[vRegCount]) VirtualRegNode(regType, size);
     return vRegCount++;
@@ -331,6 +360,23 @@ class CGFunc {
         return kRegTyInt;
       case PTY_f32:
       case PTY_f64:
+      case PTY_v2i32:
+      case PTY_v2u32:
+      case PTY_v2i64:
+      case PTY_v2u64:
+      case PTY_v2f32:
+      case PTY_v2f64:
+      case PTY_v4i16:
+      case PTY_v4u16:
+      case PTY_v4i32:
+      case PTY_v4u32:
+      case PTY_v4f32:
+      case PTY_v8i8:
+      case PTY_v8u8:
+      case PTY_v8i16:
+      case PTY_v8u16:
+      case PTY_v16i8:
+      case PTY_v16u8:
         return kRegTyFloat;
       default:
         ASSERT(false, "Unexpected pty");
@@ -364,6 +410,10 @@ class CGFunc {
 
   virtual void InsertJumpPad(Insn *) {
     return;
+  }
+
+  Operand *CreateDbgImmOperand(int64 val) {
+    return memPool->New<mpldbg::ImmOperand>(val);
   }
 
   uint32 NumBBs() const {

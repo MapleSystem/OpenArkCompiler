@@ -585,7 +585,7 @@ AddrofNode *MIRBuilder::CreateExprDread(const MIRType &type, FieldID fieldID, co
   auto *node = GetCurrentFuncCodeMp()->New<AddrofNode>(OP_dread, kPtyInvalid, symbol.GetStIdx(), fieldID);
   CHECK(type.GetTypeIndex() < GlobalTables::GetTypeTable().GetTypeTable().size(),
         "index out of range in MIRBuilder::CreateExprDread");
-  node->SetPrimType(GlobalTables::GetTypeTable().GetPrimTypeFromTyIdx(type.GetTypeIndex()));
+  node->SetPrimType(GetRegPrimType(type.GetPrimType()));
   return node;
 }
 

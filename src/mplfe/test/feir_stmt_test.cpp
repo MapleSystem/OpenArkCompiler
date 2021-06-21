@@ -26,11 +26,9 @@
 #include "feir_builder.h"
 #include "mplfe_ut_regx.h"
 #include "fe_utils_java.h"
-
 #define private public
 #include "dex_op.h"
 #undef private
-#endif
 
 namespace maple {
 class FEIRStmtTest : public FEIRTestBase {
@@ -250,7 +248,7 @@ TEST_F(FEIRStmtTest, FEIRExprBinary_lshr) {
   RedirectCout();
   baseNode->Dump();
   std::string dumpStr = GetBufferString();
-  std::string pattern = std::string("lshr i32 \\(dread i32 %Reg0_I, dread i8 %Reg1_B\\)") + MPLFEUTRegx::Any();
+  std::string pattern = std::string("lshr i32 \\(dread i32 %Reg0_I, dread i32 %Reg1_B\\)") + MPLFEUTRegx::Any();
   EXPECT_EQ(MPLFEUTRegx::Match(dumpStr, pattern), true);
   RestoreCout();
 }
@@ -288,7 +286,7 @@ TEST_F(FEIRStmtTest, FEIRExprTernary_add) {
   baseNode->Dump();
   std::string dumpStr = GetBufferString();
   std::string pattern =
-      std::string("select i32 \\(dread u1 %Reg0_Z, dread i32 %Reg1_I, dread i32 %Reg2_I\\)") + MPLFEUTRegx::Any();
+      std::string("select i32 \\(dread u32 %Reg0_Z, dread i32 %Reg1_I, dread i32 %Reg2_I\\)") + MPLFEUTRegx::Any();
   EXPECT_EQ(MPLFEUTRegx::Match(dumpStr, pattern), true);
   RestoreCout();
   std::vector<FEIRVar*> varUses = expr2->GetVarUses();
@@ -326,7 +324,7 @@ TEST_F(FEIRStmtTest, FEIRStmtIf) {
   RedirectCout();
   baseNodes.front()->Dump();
   std::string pattern =
-      "if (dread u1 %Reg0_Z) {\n"\
+      "if (dread u32 %Reg0_Z) {\n"\
       "  dassign %Reg0_I 0 (dread i32 %Reg1_I)\n"\
       "}\n"\
       "else {\n"\

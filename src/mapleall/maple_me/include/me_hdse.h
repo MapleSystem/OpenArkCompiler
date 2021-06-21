@@ -25,15 +25,21 @@
 namespace maple {
 class MeHDSE : public HDSE {
  public:
-  MeHDSE(MeFunction &f, Dominance &pDom, IRMap &map, bool enabledDebug)
+  MeHDSE(MeFunction &f, Dominance &pDom, IRMap &map, const AliasClass *aliasClass, bool enabledDebug)
       : HDSE(f.GetMIRModule(), f.GetCfg()->GetAllBBs(), *f.GetCfg()->GetCommonEntryBB(), *f.GetCfg()->GetCommonExitBB(),
-             pDom, map, enabledDebug, MeOption::decoupleStatic) {}
+             pDom, map, aliasClass, enabledDebug, MeOption::decoupleStatic), func(f) {}
 
   virtual ~MeHDSE() = default;
   void BackwardSubstitution();
   std::string PhaseName() const {
     return "hdse";
   }
+ private:
+  bool IsLfo() {
+    return func.IsLfo();
+  }
+  void ProcessWhileInfos();
+  MeFunction &func;
 };
 
 class MeDoHDSE : public MeFuncPhase {

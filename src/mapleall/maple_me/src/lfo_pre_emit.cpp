@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co., Ltd. All rights reserved.
+ * Copyright (c) [2021] Huawei Technologies Co., Ltd. All rights reserved.
  *
  * OpenArkCompiler is licensed under the Mulan Permissive Software License v2.
  * You can use this software according to the terms and conditions of the MulanPSL - 2.0.
@@ -281,7 +281,7 @@ StmtNode* LfoPreEmitter::EmitLfoStmt(MeStmt *mestmt, LfoParentPart *parent) {
     case OP_goto: {
       GotoMeStmt *gotoStmt = static_cast<GotoMeStmt *>(mestmt);
       if (lfoFunc->LabelCreatedByLfo(gotoStmt->GetOffset())) {
-        return NULL;
+        return nullptr;
       }
       LfoGotoNode *gto = codeMP->New<LfoGotoNode>(OP_goto, parent);
       gto->SetOffset(gotoStmt->GetOffset());

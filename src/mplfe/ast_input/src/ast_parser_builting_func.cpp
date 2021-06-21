@@ -50,16 +50,11 @@ UniqueFEIRExpr ASTCallExpr::EmitBuiltinCtz(std::list<UniqueFEIRStmt> &stmts) con
   for (auto arg : args) {
     argOpnds.push_back(arg->Emit2FEExpr(stmts));
   }
-#ifndef USE_OPS
-  CHECK_FATAL(false, "implemention in ops branch");
-  return nullptr;
-#else
   if (mirType->GetSize() == 4) {
     // 32 bit
     return std::make_unique<FEIRExprIntrinsicopForC>(std::move(feTy), INTRN_C_ctz32, argOpnds);
   }
   return std::make_unique<FEIRExprIntrinsicopForC>(std::move(feTy), INTRN_C_ctz32, argOpnds);
-#endif
 }
 
 UniqueFEIRExpr ASTCallExpr::EmitBuiltinClz(std::list<UniqueFEIRStmt> &stmts) const {
@@ -68,16 +63,11 @@ UniqueFEIRExpr ASTCallExpr::EmitBuiltinClz(std::list<UniqueFEIRStmt> &stmts) con
   for (auto arg : args) {
     argOpnds.push_back(arg->Emit2FEExpr(stmts));
   }
-#ifndef USE_OPS
-  CHECK_FATAL(false, "implemention in ops branch");
-  return nullptr;
-#else
   if (mirType->GetSize() == 4) {
     // 32 bit
     return std::make_unique<FEIRExprIntrinsicopForC>(std::move(feTy), INTRN_C_clz32, argOpnds);
   }
   return std::make_unique<FEIRExprIntrinsicopForC>(std::move(feTy), INTRN_C_clz64, argOpnds);
-#endif
 }
 
 UniqueFEIRExpr ASTCallExpr::EmitBuiltinAlloca(std::list<UniqueFEIRStmt> &stmts) const {
@@ -92,6 +82,7 @@ UniqueFEIRExpr ASTCallExpr::EmitBuiltinExpect(std::list<UniqueFEIRStmt> &stmts) 
   std::list<std::unique_ptr<FEIRExpr>> argExprsIn;
   argExprsIn.push_back(std::move(arg1Expr));
   auto stmt = std::make_unique<FEIRStmtNary>(OP_eval, std::move(argExprsIn));
+  stmts.emplace_back(std::move(stmt));
   return args[0]->Emit2FEExpr(stmts);
 }
 
@@ -101,6 +92,11 @@ std::map<std::string, ASTParser::FuncPtrBuiltinFunc> ASTParser::InitBuiltinFuncP
   ans["__builtin_constant_p"] = &ASTParser::ParseBuiltinConstantP;
   ans["__builtin_signbit"] = &ASTParser::ParseBuiltinSignbit;
   ans["__builtin_isinf_sign"] = &ASTParser::ParseBuiltinIsinfsign;
+  ans["__builtin_huge_val"] = &ASTParser::ParseBuiltinHugeVal;
+  ans["__builtin_inff"] = &ASTParser::ParseBuiltinInff;
+  ans["__builtin_nanf"] = &ASTParser::ParseBuiltinNanf;
+  ans["__builtin_signbitf"] = &ASTParser::ParseBuiltinSignBitf;
+  ans["__builtin_signbitl"] = &ASTParser::ParseBuiltinSignBitl;
   return ans;
 }
 
@@ -160,6 +156,50 @@ ASTExpr *ASTParser::ParseBuiltinIsinfsign(MapleAllocator &allocator, const clang
   } else {
     ASSERT(false, "Unsupported type passed to isinf");
   }
+  return nullptr;
+}
+
+ASTExpr *ASTParser::ParseBuiltinHugeVal(MapleAllocator &allocator, const clang::CallExpr &expr,
+                                        std::stringstream &ss) const {
+  ASTFloatingLiteral *astFloatingLiteral = ASTDeclsBuilder::ASTExprBuilder<ASTFloatingLiteral>(allocator);
+  astFloatingLiteral->SetKind(F64);
+  astFloatingLiteral->SetVal(std::numeric_limits<double>::infinity());
+  return astFloatingLiteral;
+}
+
+ASTExpr *ASTParser::ParseBuiltinInff(MapleAllocator &allocator, const clang::CallExpr &expr,
+                                    std::stringstream &ss) const {
+  ASTFloatingLiteral *astFloatingLiteral = ASTDeclsBuilder::ASTExprBuilder<ASTFloatingLiteral>(allocator);
+  astFloatingLiteral->SetKind(F32);
+  astFloatingLiteral->SetVal(std::numeric_limits<float>::infinity());
+  return astFloatingLiteral;
+}
+
+ASTExpr *ASTParser::ParseBuiltinNanf(MapleAllocator &allocator, const clang::CallExpr &expr,
+                                     std::stringstream &ss) const {
+  ASTFloatingLiteral *astFloatingLiteral = ASTDeclsBuilder::ASTExprBuilder<ASTFloatingLiteral>(allocator);
+  astFloatingLiteral->SetKind(F32);
+  astFloatingLiteral->SetVal(nanf(""));
+  return astFloatingLiteral;
+}
+
+ASTExpr *ASTParser::ParseBuiltinSignBitf(MapleAllocator &allocator, const clang::CallExpr &expr,
+                                         std::stringstream &ss) const {
+  (void)allocator;
+  (void)expr;
+  ss.clear();
+  ss.str(std::string());
+  ss << "__signbitf";
+  return nullptr;
+}
+
+ASTExpr *ASTParser::ParseBuiltinSignBitl(MapleAllocator &allocator, const clang::CallExpr &expr,
+                                         std::stringstream &ss) const {
+  (void)allocator;
+  (void)expr;
+  ss.clear();
+  ss.str(std::string());
+  ss << "__signbitl";
   return nullptr;
 }
 } // namespace maple

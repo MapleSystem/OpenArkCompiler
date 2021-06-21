@@ -124,6 +124,7 @@ class AArch64Insn : public Insn {
   }
   bool IsMemAccessBar() const override;
   bool IsMemAccess() const override;
+  bool IsVectorOp() const final;
 
   Operand *GetCallTargetOperand() const override {
     ASSERT(IsCall(), "should be call");
@@ -182,6 +183,46 @@ class AArch64Insn : public Insn {
   void EmitCompareAndSwapInt(Emitter &emitter) const;
   void EmitStringIndexOf(Emitter &emitter) const;
   void EmitCounter(const CG&, Emitter&) const;
+};
+
+struct VectorRegSpec {
+  VectorRegSpec() : vecLane(-1), vecLaneMax(0), compositeOpnds(0) {}
+
+  int16 vecLane;         /* -1 for whole reg, 0 to 15 to specify individual lane */
+  uint16 vecLaneMax;     /* Maximum number of lanes for this vregister */
+  uint16 compositeOpnds; /* Number of enclosed operands within this composite operand */
+};
+
+class AArch64VectorInsn : public AArch64Insn {
+ public:
+  AArch64VectorInsn(MemPool &memPool, MOperator opc)
+      : AArch64Insn(memPool, opc),
+        regSpecList(localAlloc.Adapter()) {
+    regSpecList.clear();
+  }
+
+  ~AArch64VectorInsn() override = default;
+
+  void ClearRegSpecList() {
+    regSpecList.clear();
+  }
+
+  VectorRegSpec *GetAndRemoveRegSpecFromList() {
+    if (regSpecList.size() == 0) {
+      VectorRegSpec *vecSpec = CG::GetCurCGFuncNoConst()->GetMemoryPool()->New<VectorRegSpec>();
+      return vecSpec;
+    }
+    VectorRegSpec *ret = regSpecList.back();
+    regSpecList.pop_back();
+    return ret;
+  }
+
+  void PushRegSpecEntry(VectorRegSpec *v) {
+    regSpecList.emplace(regSpecList.begin(), v); /* add at front  */
+  }
+
+ private:
+  MapleVector<VectorRegSpec*> regSpecList;
 };
 
 class AArch64cleancallInsn : public AArch64Insn {

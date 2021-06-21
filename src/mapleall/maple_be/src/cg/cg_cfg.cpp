@@ -389,6 +389,9 @@ void CGCFG::RemoveBB(BB &curBB, bool isGotoIf) {
   }
 
   for (BB *preBB : curBB.GetPreds()) {
+    if (preBB->GetKind() == BB::kBBIgoto) {
+      return;
+    }
     /*
      * If curBB is the target of its predecessor, change
      * the jump target.
@@ -583,7 +586,7 @@ void CGCFG::UnreachCodeAnalysis() {
     }
   }
   /* Don't remove unreach code if withDwarf is enabled. */
-  if (CGOptions::IsWithDwarf()) {
+  if (cgFunc->GetCG()->GetCGOptions().WithDwarf()) {
     return;
   }
   /* remove unreachable bb */

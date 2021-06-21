@@ -22,16 +22,12 @@ constexpr char kFuncNamePrefixOfMathSqrt[] = "Ljava_2Flang_2FMath_3B_7Csqrt_7C_2
 constexpr char kFuncNamePrefixOfMathAbs[] = "Ljava_2Flang_2FMath_3B_7Cabs_7C";
 constexpr char kFuncNamePrefixOfMathMax[] = "Ljava_2Flang_2FMath_3B_7Cmax_7C";
 constexpr char kFuncNamePrefixOfMathMin[] = "Ljava_2Flang_2FMath_3B_7Cmin_7C";
-constexpr char kFuncNameOfMathSqrt[] = "sqrt";
 constexpr char kFuncNameOfMathAbs[] = "abs";
-constexpr char kFuncNameOfMathMax[] = "max";
-constexpr char kFuncNameOfMathMin[] = "min";
 } // namespace
 
 namespace maple {
 bool Simplify::IsMathSqrt(const std::string funcName) {
-  return (mirMod.IsCModule() && (strcmp(funcName.c_str(), kFuncNameOfMathSqrt) == 0)) ||
-         (mirMod.IsJavaModule() && (strcmp(funcName.c_str(), kFuncNamePrefixOfMathSqrt) == 0));
+  return (mirMod.IsJavaModule() && (strcmp(funcName.c_str(), kFuncNamePrefixOfMathSqrt) == 0));
 }
 
 bool Simplify::IsMathAbs(const std::string funcName) {
@@ -40,13 +36,11 @@ bool Simplify::IsMathAbs(const std::string funcName) {
 }
 
 bool Simplify::IsMathMax(const std::string funcName) {
-  return (mirMod.IsCModule() && (strcmp(funcName.c_str(), kFuncNameOfMathMax) == 0)) ||
-         (mirMod.IsJavaModule() && (strcmp(funcName.c_str(), kFuncNamePrefixOfMathMax) == 0));
+  return (mirMod.IsJavaModule() && (strcmp(funcName.c_str(), kFuncNamePrefixOfMathMax) == 0));
 }
 
 bool Simplify::IsMathMin(const std::string funcName) {
-  return (mirMod.IsCModule() && (strcmp(funcName.c_str(), kFuncNameOfMathMin) == 0)) ||
-         (mirMod.IsJavaModule() && (strcmp(funcName.c_str(), kFuncNamePrefixOfMathMin) == 0));
+  return (mirMod.IsJavaModule() && (strcmp(funcName.c_str(), kFuncNamePrefixOfMathMin) == 0));
 }
 
 bool Simplify::SimplifyMathMethod(const StmtNode &stmt, BlockNode &block) {
@@ -99,6 +93,64 @@ void Simplify::SimplifyCallAssigned(const StmtNode &stmt, BlockNode &block) {
   }
 }
 
+void Simplify::SplitAggCopy(StmtNode *stmt, BlockNode *block, MIRFunction *func) {
+  if (stmt->GetOpCode() == OP_dassign && stmt->Opnd(0)->GetOpCode() == OP_dread &&
+      stmt->Opnd(0)->GetPrimType() == PTY_agg) {
+    auto *dassign = static_cast<const DassignNode*>(stmt);
+    const auto &lhsStIdx = dassign->GetStIdx();
+    auto *dread = static_cast<DreadNode*>(stmt->Opnd(0));
+    const auto &rhsStIdx = dread->GetStIdx();
+
+    auto lhsSymbol = func->GetLocalOrGlobalSymbol(lhsStIdx);
+    auto lhsMIRType = lhsSymbol->GetType();
+    auto lhsFieldID = dassign->GetFieldID();
+    if (lhsFieldID != 0) {
+      CHECK_FATAL(lhsMIRType->IsStructType(), "only struct has non-zero fieldID");
+      lhsMIRType = static_cast<MIRStructType*>(lhsMIRType)->GetFieldType(lhsFieldID);
+    }
+
+    auto rhsSymbol = func->GetLocalOrGlobalSymbol(rhsStIdx);
+    auto rhsMIRType = rhsSymbol->GetType();
+    auto rhsFieldID = dread->GetFieldID();
+    if (rhsFieldID != 0) {
+      CHECK_FATAL(rhsMIRType->IsStructType(), "only struct has non-zero fieldID");
+      rhsMIRType = static_cast<MIRStructType*>(rhsMIRType)->GetFieldType(rhsFieldID);
+    }
+
+    if (!lhsSymbol->IsLocal() && !rhsSymbol->IsLocal()) {
+      return;
+    }
+
+    if (lhsMIRType != rhsMIRType) {
+      return;
+    }
+
+    if (lhsMIRType->IsStructType()) {
+      auto *structType = static_cast<MIRStructType*>(lhsMIRType);
+      constexpr uint32 upperLimitOfFieldNum = 10;
+      if (lhsMIRType->NumberOfFieldIDs() > upperLimitOfFieldNum) {
+        return;
+      }
+      auto mirBuiler = func->GetModule()->GetMIRBuilder();
+      for (uint id = 1; id <= lhsMIRType->NumberOfFieldIDs(); ++id) {
+        MIRType *fieldType = structType->GetFieldType(id);
+        if (fieldType->GetSize() == 0) {
+          continue; // field size is zero for empty struct/union;
+        }
+        if (fieldType->GetKind() == kTypeBitField && static_cast<MIRBitFieldType*>(fieldType)->GetFieldSize() == 0) {
+          continue; // bitfield size is zero
+        }
+        auto newRHS = mirBuiler->CreateDread(*rhsSymbol, fieldType->GetPrimType());
+        newRHS->SetFieldID(id + rhsFieldID);
+        auto newDassign = mirBuiler->CreateStmtDassign(lhsStIdx, lhsFieldID + id, newRHS);
+        newDassign->SetSrcPos(stmt->GetSrcPos());
+        block->InsertBefore(stmt, newDassign);
+      }
+      block->RemoveStmt(stmt);
+    }
+  }
+}
+
 void Simplify::ProcessFunc(MIRFunction *func) {
   if (func->IsEmpty()) {
     return;
@@ -139,6 +191,10 @@ void Simplify::ProcessFuncStmt(MIRFunction &func, StmtNode *stmt, BlockNode *blo
       }
       case OP_callassigned: {
         SimplifyCallAssigned(*stmt, *block);
+        break;
+      }
+      case OP_dassign: {
+        SplitAggCopy(stmt, block, &func);
         break;
       }
       default: {

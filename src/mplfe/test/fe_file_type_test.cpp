@@ -20,6 +20,7 @@ namespace maple {
 TEST(FEFileType, GetFileTypeByExtName) {
   EXPECT_EQ(FEFileType::GetInstance().GetFileTypeByExtName("jar"), FEFileType::FileType::kJar);
   EXPECT_EQ(FEFileType::GetInstance().GetFileTypeByExtName("class"), FEFileType::FileType::kClass);
+  EXPECT_EQ(FEFileType::GetInstance().GetFileTypeByExtName("dex"), FEFileType::FileType::kDex);
   EXPECT_EQ(FEFileType::GetInstance().GetFileTypeByExtName(""), FEFileType::FileType::kUnknownType);
   EXPECT_EQ(FEFileType::GetInstance().GetFileTypeByExtName("txt"), FEFileType::FileType::kUnknownType);
 }

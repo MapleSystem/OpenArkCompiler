@@ -166,6 +166,7 @@ constexpr uint32 kLiteralLow12 = kMemLow12;
 constexpr uint32 kPreInc = 0x20;
 constexpr uint32 kPostInc = 0x40;
 constexpr uint32 kLoadLiteral = 0x80;
+constexpr uint32 kVector = 0x100;
 
 class RegProp {
  public:
@@ -240,6 +241,10 @@ class AArch64OpndProp : public OpndProp {
 
   uint32 GetOperandSize() const {
     return static_cast<uint32>(size);
+  }
+
+  bool IsVectorOperand() const {
+    return regProp.GetDefUse() & kVector;
   }
 
   void SetContainImm() {
@@ -394,6 +399,10 @@ struct AArch64MD {
 
   bool IsPartDef() const {
     return properties & ISPARTDEF;
+  }
+
+  bool IsVectorOp() const {
+    return properties & ISVECTOR;
   }
 
   LatencyType GetLatencyType() const {
