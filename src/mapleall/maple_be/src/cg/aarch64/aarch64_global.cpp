@@ -357,7 +357,7 @@ bool BackPropPattern::CheckAndGetOpnd(Insn &insn) {
   }
   firstRegOpnd = &static_cast<RegOperand&>(firstOpnd);
   secondRegOpnd = &static_cast<RegOperand&>(secondOpnd);
-  if (firstRegOpnd->IsZeroRegister() || !firstRegOpnd->IsVirtualRegister() || !secondRegOpnd->IsVirtualRegister()) {
+  if (firstRegOpnd->IsZeroRegister() || !secondRegOpnd->IsVirtualRegister()) {
     return false;
   }
   firstRegNO = firstRegOpnd->GetRegisterNumber();
@@ -445,9 +445,12 @@ bool BackPropPattern::CheckCondition(Insn &insn) {
   if (!CheckAndGetOpnd(insn)) {
     return false;
   }
+#ifdef DestOpndHasUseInsnsNeeded
+  /* Unless there is a reason that dest can not live out the current BB */
   if (!DestOpndHasUseInsns(insn)) {
     return false;
   }
+#endif
   /* first register must not be live out to eh_succs */
   if (DestOpndLiveOutToEHSuccs(insn)) {
     return false;
