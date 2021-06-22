@@ -37,12 +37,10 @@ class MeDoLoopCanon : public MeFuncPhase {
   void Convert(MeFunction &func, BB &bb, BB &pred, MapleMap<Key, bool> &swapSuccs);
   bool NeedConvert(MeFunction *func, BB &bb, BB &pred, MapleAllocator &alloc, MapleMap<Key, bool> &swapSuccs) const;
   void FindHeadBBs(MeFunction &func, Dominance &dom, const BB *bb);
-  bool IsDoWhileLoop(MeFunction &func, const LoopDesc &loop) const;
   void Merge(MeFunction &func);
   void AddPreheader(MeFunction &func);
   void InsertNewExitBB(MeFunction &func, LoopDesc &loop);
   void InsertExitBB(MeFunction &func, LoopDesc &loop);
-  void SplitCondGotBB(MeFunction &func, LoopDesc &loop);
   void ExecuteLoopCanon(MeFunction &func, MeFuncResultMgr &m, Dominance &dom);
   void ExecuteLoopNormalization(MeFunction &func,  MeFuncResultMgr *m, Dominance &dom);
   void UpdateTheOffsetOfStmtWhenTargetBBIsChange(MeFunction &func, BB &curBB, const BB &oldSuccBB, BB &newSuccBB) const;

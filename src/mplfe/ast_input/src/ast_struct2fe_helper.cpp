@@ -146,6 +146,12 @@ bool ASTGlobalVar2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
   auto typeAttrs = astVar.GetGenericAttrs().ConvertToTypeAttrs();
   // do not allow extern var override global var
   if (mirSymbol->GetAttrs().GetAttrFlag() != 0 && typeAttrs.GetAttr(ATTR_extern)) {
+    ASTExpr *initExpr = astVar.GetInitExpr();
+    if (initExpr == nullptr) {
+      return true;
+    }
+    MIRConst *cst = initExpr->GenerateMIRConst();
+    mirSymbol->SetKonst(cst);
     return true;
   }
   if (typeAttrs.GetAttr(ATTR_extern)) {

@@ -219,6 +219,7 @@ AnalysisResult *MeDoSplitCEdge::Run(MeFunction *func, MeFuncResultMgr *m, Module
       func->GetCfg()->DumpToFile("cfgafterbreak");
     }
     m->InvalidAnalysisResult(MeFuncPhase_DOMINANCE, func);
+    m->InvalidAnalysisResult(MeFuncPhase_MELOOP, func);
   }
   return nullptr;
 }

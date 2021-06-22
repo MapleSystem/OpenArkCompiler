@@ -820,7 +820,7 @@ CRNode *LoopScalarAnalysisResult::GetOrCreateCRNode(MeExpr &expr) {
           MeExpr *rhs = varExpr->GetDefStmt()->GetRHS();
           switch (rhs->GetMeOp()) {
             case kMeOpConst: {
-              return GetOrCreateLoopInvariantCR(expr);
+              return GetOrCreateLoopInvariantCR(*rhs);
             }
             case kMeOpVar: {
               return GetOrCreateCRNode(*rhs);

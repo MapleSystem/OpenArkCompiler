@@ -787,8 +787,8 @@ class AArch64MemOperand : public MemOperand {
     return addrMode == kAddrModeBOrX;
   }
 
-  void setExtend(ExtendInfo flag) {
-    extend = flag;
+  void UpdateExtend(ExtendInfo flag) {
+    extend = flag | (1 << ShiftAmount());
   }
 
   bool SignedExtend() const {

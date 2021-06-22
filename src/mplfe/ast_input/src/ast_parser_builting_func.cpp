@@ -30,18 +30,135 @@
 #include "mpl_logging.h"
 
 namespace maple {
-std::map<std::string, ASTCallExpr::FuncPtrBuiltinFunc> ASTCallExpr::InitBuiltinFuncPtrMap() {
-  std::map<std::string, FuncPtrBuiltinFunc> ans;
+std::unordered_map<std::string, ASTCallExpr::FuncPtrBuiltinFunc> ASTCallExpr::InitBuiltinFuncPtrMap() {
+  std::unordered_map<std::string, FuncPtrBuiltinFunc> ans;
   ans["alloca"] = &ASTCallExpr::EmitBuiltinAlloca;
   ans["__builtin_ctz"] = &ASTCallExpr::EmitBuiltinCtz;
   ans["__builtin_clz"] = &ASTCallExpr::EmitBuiltinClz;
   ans["__builtin_alloca"] = &ASTCallExpr::EmitBuiltinAlloca;
   ans["__builtin_expect"] = &ASTCallExpr::EmitBuiltinExpect;
+  ans["__builtin_va_start"] = &ASTCallExpr::EmitBuiltinVaStart;
+  ans["__builtin_va_end"] = &ASTCallExpr::EmitBuiltinVaEnd;
+  ans["__builtin_va_copy"] = &ASTCallExpr::EmitBuiltinVaCopy;
+  ans["__builtin_prefetch"] = &ASTCallExpr::EmitBuiltinPrefetch;
+  // vector builtinfunc
+#define DEF_MIR_INTRINSIC(STR, NAME, INTRN_CLASS, RETURN_TYPE, ...)                                \
+  ans["__builtin_mpl_"#STR] = &ASTCallExpr::EmitBuiltin##STR;
+#include "intrinsic_vector.def"
+#undef DEF_MIR_INTRINSIC
+
   return ans;
 }
 
+UniqueFEIRExpr ASTCallExpr::ProcessBuiltinFunc(std::list<UniqueFEIRStmt> &stmts, bool &isFinish) const {
+  // process a kind of builtinFunc
+  std::string prefix = "__builtin_mpl_vector_load";
+  if (funcName.compare(0, prefix.size(), prefix) == 0) {
+    auto argExpr = args[0]->Emit2FEExpr(stmts);
+    UniqueFEIRType type = FEIRTypeHelper::CreateTypeNative(*mirType);
+    isFinish = true;
+    return FEIRBuilder::CreateExprIRead(std::move(type), argExpr->GetType()->Clone(), std::move(argExpr));
+  }
+  prefix = "__builtin_mpl_vector_store";
+  if (funcName.compare(0, prefix.size(), prefix) == 0) {
+    auto arg1Expr = args[0]->Emit2FEExpr(stmts);
+    auto arg2Expr = args[1]->Emit2FEExpr(stmts);
+    UniqueFEIRType type = FEIRTypeHelper::CreateTypeNative(*mirType);
+    auto stmt = FEIRBuilder::CreateStmtIAssign(arg1Expr->GetType()->Clone(), std::move(arg1Expr), std::move(arg2Expr));
+    stmt->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
+    stmts.emplace_back(std::move(stmt));
+    isFinish = true;
+    return nullptr;
+  }
+  // process a single builtinFunc
+  auto ptrFunc = builtingFuncPtrMap.find(funcName);
+  if (ptrFunc != builtingFuncPtrMap.end()) {
+    isFinish = true;
+    return EmitBuiltinFunc(stmts);
+  }
+  isFinish = false;
+  prefix = "__builtin";
+  if (funcName.compare(0, prefix.size(), prefix) == 0) {
+    WARN(kLncWarn, "BuiltinFunc (%s) has not been implemented, line: %d", funcName.c_str(), GetSrcFileLineNum());
+  }
+  return nullptr;
+}
+
 UniqueFEIRExpr ASTCallExpr::EmitBuiltinFunc(std::list<UniqueFEIRStmt> &stmts) const {
-    return (this->*(builtingFuncPtrMap[funcName]))(stmts);
+  return (this->*(builtingFuncPtrMap[funcName]))(stmts);
+}
+
+#define DEF_MIR_INTRINSIC(STR, NAME, INTRN_CLASS, RETURN_TYPE, ...)                                \
+UniqueFEIRExpr ASTCallExpr::EmitBuiltin##STR(std::list<UniqueFEIRStmt> &stmts) const {             \
+  auto feType = FEIRTypeHelper::CreateTypeNative(*mirType);                                        \
+  std::vector<std::unique_ptr<FEIRExpr>> argOpnds;                                                 \
+  for (auto arg : args) {                                                                          \
+    argOpnds.push_back(arg->Emit2FEExpr(stmts));                                                   \
+  }                                                                                                \
+  return std::make_unique<FEIRExprIntrinsicopForC>(std::move(feType), INTRN_##STR, argOpnds);      \
+}
+#include "intrinsic_vector.def"
+#undef DEF_MIR_INTRINSIC
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinVaStart(std::list<UniqueFEIRStmt> &stmts) const {
+  // args
+  auto exprArgList = std::make_unique<std::list<UniqueFEIRExpr>>();
+  for (auto arg : args) {
+    UniqueFEIRExpr expr = arg->Emit2FEExpr(stmts);
+    exprArgList->emplace_back(std::move(expr));
+  }
+  // addrof va_list instead of dread va_list
+  exprArgList->front()->SetAddrof(true);
+  std::unique_ptr<FEIRStmtIntrinsicCallAssign> stmt = std::make_unique<FEIRStmtIntrinsicCallAssign>(
+      INTRN_C_va_start, nullptr /* type */, nullptr /* retVar */, std::move(exprArgList));
+  stmt->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
+  stmts.emplace_back(std::move(stmt));
+  return nullptr;
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinVaEnd(std::list<UniqueFEIRStmt> &stmts) const {
+  // args
+  ASSERT(args.size() == 1, "va_end expects 1 arguments");
+  std::list<UniqueFEIRExpr> exprArgList;
+  for (auto arg : args) {
+    UniqueFEIRExpr expr = arg->Emit2FEExpr(stmts);
+    // addrof va_list instead of dread va_list
+    expr->SetAddrof(true);
+    exprArgList.emplace_back(std::move(expr));
+  }
+  auto stmt = std::make_unique<FEIRStmtNary>(OP_eval, std::move(exprArgList));
+  stmt->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
+  stmts.emplace_back(std::move(stmt));
+  return nullptr;
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinVaCopy(std::list<UniqueFEIRStmt> &stmts) const {
+  // args
+  auto exprArgList = std::make_unique<std::list<UniqueFEIRExpr>>();
+  UniqueFEIRType vaListType;
+  for (auto arg : args) {
+    UniqueFEIRExpr expr = arg->Emit2FEExpr(stmts);
+    // addrof va_list instead of dread va_list
+    expr->SetAddrof(true);
+    vaListType = expr->GetType()->Clone();
+    exprArgList->emplace_back(std::move(expr));
+  }
+  // Add the size of the va_list structure as the size to memcpy.
+  UniqueFEIRExpr sizeExpr = FEIRBuilder::CreateExprConstI32(vaListType->GenerateMIRTypeAuto()->GetSize());
+  exprArgList->emplace_back(std::move(sizeExpr));
+  std::unique_ptr<FEIRStmtIntrinsicCallAssign> stmt = std::make_unique<FEIRStmtIntrinsicCallAssign>(
+      INTRN_C_memcpy, nullptr /* type */, nullptr /* retVar */, std::move(exprArgList));
+  stmt->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
+  stmts.emplace_back(std::move(stmt));
+  return nullptr;
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinPrefetch(std::list<UniqueFEIRStmt> &stmts) const {
+  // __builtin_prefetch is not supported, only parsing args including stmts
+  for (int32 i = 0; i <= args.size() - 1; ++i) {
+    (void)args[i]->Emit2FEExpr(stmts);
+  }
+  return nullptr;
 }
 
 UniqueFEIRExpr ASTCallExpr::EmitBuiltinCtz(std::list<UniqueFEIRStmt> &stmts) const {
@@ -82,6 +199,7 @@ UniqueFEIRExpr ASTCallExpr::EmitBuiltinExpect(std::list<UniqueFEIRStmt> &stmts) 
   std::list<std::unique_ptr<FEIRExpr>> argExprsIn;
   argExprsIn.push_back(std::move(arg1Expr));
   auto stmt = std::make_unique<FEIRStmtNary>(OP_eval, std::move(argExprsIn));
+  stmt->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
   stmts.emplace_back(std::move(stmt));
   return args[0]->Emit2FEExpr(stmts);
 }

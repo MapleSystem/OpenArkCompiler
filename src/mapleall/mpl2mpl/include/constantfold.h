@@ -125,6 +125,8 @@ class ConstantFold : public FuncOptimizeImpl {
   std::pair<BaseNode*, int64> DispatchFold(BaseNode *node);
   BaseNode *PairToExpr(PrimType resultType, const std::pair<BaseNode*, int64> &pair) const;
   BaseNode *SimplifyDoubleCompare(CompareNode &node) const;
+  CompareNode *FoldConstComparisonReverse(Opcode opcode, PrimType resultType, PrimType opndType,
+                                          BaseNode &l, BaseNode &r);
   MIRModule *mirModule;
 };
 

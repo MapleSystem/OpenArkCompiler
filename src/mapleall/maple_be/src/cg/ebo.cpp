@@ -913,7 +913,8 @@ void Ebo::RemoveUnusedInsns(BB &bb, bool normal) {
       goto insn_is_needed;
     }
 
-    if ((resNum == 0) || IsGlobalNeeded(*insn) || insn->IsStore() || insn->IsDecoupleStaticOp() || insn->IsPartDef()) {
+    if ((resNum == 0) || IsGlobalNeeded(*insn) || insn->IsStore() ||
+        insn->IsDecoupleStaticOp() || insn->IsPartDef()) {
       goto insn_is_needed;
     }
 

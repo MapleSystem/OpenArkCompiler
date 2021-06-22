@@ -205,7 +205,7 @@ void OptimizePattern::ReplaceAllUsedOpndWithNewOpnd(const InsnSet &useInsnSet, u
           CHECK_FATAL(newMem != nullptr, "null ptr check");
           newMem->SetIndexRegister(*static_cast<RegOperand*>(&newOpnd));
           if (static_cast<RegOperand&>(newOpnd).GetValidBitsNum() != index->GetValidBitsNum()) {
-            static_cast<AArch64MemOperand*>(newMem)->setExtend(AArch64MemOperand::kSignExtend);
+            static_cast<AArch64MemOperand*>(newMem)->UpdateExtend(AArch64MemOperand::kSignExtend);
           }
           useInsn->SetOperand(i, *newMem);
           if (updateInfo) {
@@ -300,7 +300,7 @@ void ForwardPropPattern::Optimize(Insn &insn) {
           CHECK_FATAL(newMem != nullptr, "null ptr check");
           newMem->SetIndexRegister(static_cast<RegOperand&>(secondOpnd));
           if (static_cast<RegOperand&>(secondOpnd).GetValidBitsNum() != index->GetValidBitsNum()) {
-            static_cast<AArch64MemOperand*>(newMem)->setExtend(AArch64MemOperand::kSignExtend);
+            static_cast<AArch64MemOperand*>(newMem)->UpdateExtend(AArch64MemOperand::kSignExtend);
           }
           useInsn->SetOperand(i, *newMem);
           cgFunc.GetRD()->InitGenUse(*useInsn->GetBB(), false);

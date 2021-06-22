@@ -860,24 +860,24 @@ void SSAPre::Rename1() {
         ScalarMeExpr *scalarOpnd1 = dynamic_cast<ScalarMeExpr *>(workCand->GetTheMeExpr()->GetOpnd(1));
         ScalarMeExpr *compareOpnd0 = dynamic_cast<ScalarMeExpr *>(realOcc->GetMeExpr()->GetOpnd(0));
         ScalarMeExpr *compareOpnd1 = dynamic_cast<ScalarMeExpr *>(realOcc->GetMeExpr()->GetOpnd(1));
-        // set compareOpnd to be the scalar operand that is common to 
+        // set compareOpnd to be the scalar operand that is common to
         // workCand->theMeExpr and realOcc->meExpr
         ScalarMeExpr *compareOpnd = nullptr;
         uint32 scalarOpndNo = 0;
-        if (scalarOpnd0) {
-          if (compareOpnd0 && scalarOpnd0->GetOst() == compareOpnd0->GetOst()) {
+        if (scalarOpnd0 != nullptr) {
+          if (compareOpnd0 != nullptr && scalarOpnd0->GetOst() == compareOpnd0->GetOst()) {
             compareOpnd = compareOpnd0;
             scalarOpndNo = 0;
-          } else if (compareOpnd1 && scalarOpnd0->GetOst() == compareOpnd1->GetOst()) {
+          } else if (compareOpnd1 != nullptr && scalarOpnd0->GetOst() == compareOpnd1->GetOst()) {
             compareOpnd = compareOpnd1;
             scalarOpndNo = 0;
           }
         }
-        if (scalarOpnd1) {
-          if (compareOpnd0 && scalarOpnd1->GetOst() == compareOpnd0->GetOst()) {
+        if (scalarOpnd1 != nullptr) {
+          if (compareOpnd0 != nullptr && scalarOpnd1->GetOst() == compareOpnd0->GetOst()) {
             compareOpnd = compareOpnd0;
             scalarOpndNo = 1;
-          } else if (compareOpnd1 && scalarOpnd1->GetOst() == compareOpnd1->GetOst()) {
+          } else if (compareOpnd1 != nullptr && scalarOpnd1->GetOst() == compareOpnd1->GetOst()) {
             compareOpnd = compareOpnd1;
             scalarOpndNo = 1;
           }
@@ -899,8 +899,7 @@ void SSAPre::Rename1() {
         }
         // top of stack is a PHI occurrence
         ASSERT(topOccur->GetOccType() == kOccPhiocc, "invalid kOccPhiocc");
-        if (DefVarDominateOcc(compareOpnd, *topOccur) /*  ||
-            (resolvedCompareOpnd && DefVarDominateOcc(resolvedCompareOpnd, *topOccur))*/) {
+        if (DefVarDominateOcc(compareOpnd, *topOccur)) {
           realOcc->SetClassID(topOccur->GetClassID());
           realOcc->SetDef(topOccur);
         }

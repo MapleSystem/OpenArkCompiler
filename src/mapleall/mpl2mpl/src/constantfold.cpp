@@ -885,6 +885,43 @@ ConstvalNode *ConstantFold::FoldConstComparison(Opcode opcode, PrimType resultTy
   return returnValue;
 }
 
+CompareNode *ConstantFold::FoldConstComparisonReverse(Opcode opcode, PrimType resultType, PrimType opndType,
+                                                      BaseNode &l, BaseNode &r) {
+  CompareNode *result = nullptr;
+  Opcode op = opcode;
+  switch (opcode) {
+    case OP_gt: {
+      op = OP_lt;
+      break;
+    }
+    case OP_lt: {
+      op = OP_gt;
+      break;
+    }
+    case OP_ge: {
+      op = OP_le;
+      break;
+    }
+    case OP_le: {
+      op = OP_ge;
+      break;
+    }
+    case OP_eq: {
+      break;
+    }
+    case OP_ne: {
+      break;
+    }
+    default:
+      ASSERT(false, "Unknown opcode for FoldConstComparisonReverse");
+      break;
+  }
+
+  result = mirModule->CurFuncCodeMemPool()->New<CompareNode>(
+      Opcode(op), PrimType(resultType), PrimType(opndType), &r, &l);
+  return result;
+}
+
 ConstvalNode *ConstantFold::FoldConstBinary(Opcode opcode, PrimType resultType, const ConstvalNode &const0,
                                             const ConstvalNode &const1) const {
   ConstvalNode *returnValue = nullptr;
@@ -1776,9 +1813,16 @@ std::pair<BaseNode*, int64> ConstantFold::FoldCompare(CompareNode *node) {
   std::pair<BaseNode*, int64> rp = DispatchFold(node->Opnd(1));
   ConstvalNode *lConst = safe_cast<ConstvalNode>(lp.first);
   ConstvalNode *rConst = safe_cast<ConstvalNode>(rp.first);
+  Opcode opcode = node->GetOpCode();
   if (lConst != nullptr && rConst != nullptr && !IsPrimitiveDynType(node->GetOpndType())) {
     result = FoldConstComparison(node->GetOpCode(), node->GetPrimType(), node->GetOpndType(),
                                  *lConst, *rConst);
+  } else if (lConst != nullptr && rConst == nullptr && opcode != OP_cmp &&
+             lConst->GetConstVal()->GetKind() == kConstInt) {
+    BaseNode *l = lp.first;
+    BaseNode *r = PairToExpr(node->Opnd(1)->GetPrimType(), rp);
+    result = FoldConstComparisonReverse(opcode, node->GetPrimType(), node->GetOpndType(),
+                                        *l, *r);
   } else {
     BaseNode *l = PairToExpr(node->Opnd(0)->GetPrimType(), lp);
     BaseNode *r = PairToExpr(node->Opnd(1)->GetPrimType(), rp);

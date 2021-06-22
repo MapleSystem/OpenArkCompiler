@@ -293,8 +293,7 @@ class FEIRExpr {
   }
 
   void SetType(std::unique_ptr<FEIRType> argType) {
-    CHECK_NULL_FATAL(argType);
-    type = std::move(argType);
+    SetTypeImpl(std::move(argType));
   }
 
   FEIRNodeKind GetKind() const {
@@ -350,6 +349,11 @@ class FEIRExpr {
   virtual void RegisterDFGNodes2CheckPointImpl(FEIRStmtCheckPoint &checkPoint) {}
   virtual bool CalculateDefs4AllUsesImpl(FEIRStmtCheckPoint &checkPoint, FEIRUseDefChain &udChain) {
     return true;
+  }
+
+  virtual void SetTypeImpl(std::unique_ptr<FEIRType> argType) {
+    ASSERT_NOT_NULL(argType);
+    type = std::move(argType);
   }
 
   virtual PrimType GetPrimTypeImpl() const {
@@ -486,6 +490,7 @@ class FEIRExprDRead : public FEIRExpr {
   BaseNode *GenMIRNodeImpl(MIRBuilder &mirBuilder) const override;
   std::vector<FEIRVar*> GetVarUsesImpl() const override;
   PrimType GetPrimTypeImpl() const override;
+  void SetTypeImpl(std::unique_ptr<FEIRType> argType) override;
   FEIRType *GetTypeImpl() const override;
   const FEIRType &GetTypeRefImpl() const override;
 

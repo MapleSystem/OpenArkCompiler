@@ -30,16 +30,23 @@ constexpr uint32 kMaxCost = 100;
 constexpr uint8 unrollTimes[3] = { 8, 4, 2 }; // unrollTimes
 class LoopUnrolling {
  public:
+  enum ReturnKindOfFullyUnroll {
+    kCanFullyUnroll,
+    kCanNotSplitCondGoto,
+    kCanNotFullyUnroll,
+  };
+
   LoopUnrolling(MeFunction &f, MeFuncResultMgr &m, LoopDesc &l, MeIRMap &map, MemPool &pool, Dominance *d)
       : func(&f), cfg(f.GetCfg()), mgr(&m), loop(&l), irMap(&map), memPool(&pool), mpAllocator(&pool), dom(d),
         cands((std::less<OStIdx>(), mpAllocator.Adapter())), lastNew2OldBB(mpAllocator.Adapter()),
         profValid(func->IsIRProfValid()) {}
   ~LoopUnrolling() = default;
-  bool LoopFullyUnroll(int64 tripCount);
+  ReturnKindOfFullyUnroll LoopFullyUnroll(int64 tripCount);
   bool LoopPartialUnrollWithConst(uint32 tripCount);
   void LoopPartialUnrollWithVar(CR &cr, CRNode &varNode, uint32 i);
 
  private:
+  bool SplitCondGotoBB();
   VarMeExpr *CreateIndVarOrTripCountWithName(const std::string &name);
   void RemoveCondGoto();
   void BuildChiList(const BB &bb, MeStmt &newStmt, const MapleMap<OStIdx, ChiMeNode*> &oldChilist,

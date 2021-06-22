@@ -1559,7 +1559,9 @@ ASTExpr *ASTParser::ProcessExprCastExpr(MapleAllocator &allocator, const clang::
     case clang::CK_ToVoid:
     case clang::CK_FunctionToPointerDecay:
     case clang::CK_LValueToRValue:
+      break;
     case clang::CK_BitCast:
+      astCastExpr->SetBitCast(true);
       break;
     case clang::CK_ArrayToPointerDecay:
       astCastExpr->SetIsArrayToPointerDecay(true);
@@ -1713,8 +1715,7 @@ ASTExpr *ASTParser::ProcessExprBinaryOperator(MapleAllocator &allocator, const c
   }
   if ((leftMirType->GetPrimType() != astBinOpExpr->GetRetType()->GetPrimType() ||
        rightMirType->GetPrimType() != astBinOpExpr->GetRetType()->GetPrimType())
-      && (clang::BinaryOperator::isAdditiveOp(clangOpCode) || clang::BinaryOperator::isMultiplicativeOp(clangOpCode))
-      && !boType->isPointerType() && !lhsType->isPointerType() && !rhsType->isPointerType()) {
+      && (clang::BinaryOperator::isAdditiveOp(clangOpCode) || clang::BinaryOperator::isMultiplicativeOp(clangOpCode))) {
     astBinOpExpr->SetCvtNeeded(true);
   }
   // ptr +/-
@@ -1951,7 +1952,6 @@ bool ASTParser::PreProcessAST() {
     ASTDecl *astDecl = ProcessDecl##CLASS##Decl(allocator, llvm::cast<clang::CLASS##Decl>(decl));  \
     if (astDecl != nullptr) {                                                                      \
       astDecl->SetDeclPos(astFile->GetDeclPosInfo(decl));                                          \
-      astDecl->SetAlign(astFile->GetMaxAlign(decl));                                               \
       astDecl->SetGlobal(decl.isDefinedOutsideFunctionOrMethod());                                 \
     }                                                                                              \
     return astDecl;                                                                                \
@@ -2077,6 +2077,10 @@ ASTDecl *ASTParser::ProcessDeclFunctionDecl(MapleAllocator &allocator, const cla
   }
   GenericAttrs attrs;
   astFile->CollectFuncAttrs(funcDecl, attrs, kPublic);
+  // one element vector type in rettype
+  if (LibAstFile::isOneElementVector(qualType)) {
+    attrs.SetAttr(GENATTR_oneelem_simd);
+  }
   astFunc = ASTDeclsBuilder::ASTFuncBuilder(
       allocator, fileName, funcName, typeDescIn, attrs, parmNamesIn, funcDecl.getID());
   CHECK_FATAL(astFunc != nullptr, "astFunc is nullptr");
@@ -2118,6 +2122,10 @@ ASTDecl *ASTParser::ProcessDeclFieldDecl(MapleAllocator &allocator, const clang:
   }
   GenericAttrs attrs;
   astFile->CollectAttrs(decl, attrs, kPublic);
+  // one elem vector type
+  if (LibAstFile::isOneElementVector(qualType)) {
+    attrs.SetAttr(GENATTR_oneelem_simd);
+  }
   auto fieldDecl = ASTDeclsBuilder::ASTFieldBuilder(
       allocator, fileName, fieldName, std::vector<MIRType*>{fieldType}, attrs, decl.getID(), isAnonymousField);
   clang::CharUnits alignment = astFile->GetContext()->getDeclAlign(&decl);
@@ -2144,6 +2152,10 @@ ASTDecl *ASTParser::ProcessDeclVarDecl(MapleAllocator &allocator, const clang::V
   }
   GenericAttrs attrs;
   astFile->CollectAttrs(varDecl, attrs, kPublic);
+  // one elem vector type
+  if (LibAstFile::isOneElementVector(qualType)) {
+    attrs.SetAttr(GENATTR_oneelem_simd);
+  }
   astVar = ASTDeclsBuilder::ASTVarBuilder(
       allocator, fileName, varName, std::vector<MIRType*>{varType}, attrs, varDecl.getID());
 
@@ -2195,6 +2207,9 @@ ASTDecl *ASTParser::ProcessDeclParmVarDecl(MapleAllocator &allocator, const clan
   }
   GenericAttrs attrs;
   astFile->CollectAttrs(parmVarDecl, attrs, kPublic);
+  if (LibAstFile::isOneElementVector(parmQualType)) {
+    attrs.SetAttr(GENATTR_oneelem_simd);
+  }
   parmVar = ASTDeclsBuilder::ASTVarBuilder(
       allocator, fileName, parmName, std::vector<MIRType*>{paramType}, attrs, parmVarDecl.getID());
   parmVar->SetIsParam(true);

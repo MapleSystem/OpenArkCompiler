@@ -189,6 +189,10 @@ class ASTCastExpr : public ASTExpr {
     isUnoinCast = flag;
   }
 
+  void SetBitCast(bool flag) {
+    isBitCast = flag;
+  }
+
  protected:
   ASTValue *GetConstantValueImpl() const override;
   MIRConst *GenerateMIRConstImpl() const override;
@@ -208,6 +212,7 @@ class ASTCastExpr : public ASTExpr {
   MIRType *src = nullptr;
   MIRType *dst = nullptr;
   bool isNeededCvt = false;
+  bool isBitCast = false;
   MIRType *complexType = nullptr;
   bool imageZero = false;
   bool isArrayToPointerDecay = false;
@@ -1037,23 +1042,34 @@ class ASTCallExpr : public ASTExpr {
   }
 
   std::string CvtBuiltInFuncName(std::string builtInName) const;
+  UniqueFEIRExpr ProcessBuiltinFunc(std::list<UniqueFEIRStmt> &stmts, bool &isFinish) const;
   std::unique_ptr<FEIRStmtAssign> GenCallStmt() const;
   void AddArgsExpr(std::unique_ptr<FEIRStmtAssign> &callStmt, std::list<UniqueFEIRStmt> &stmts) const;
   UniqueFEIRExpr AddRetExpr(std::unique_ptr<FEIRStmtAssign> &callStmt, std::list<UniqueFEIRStmt> &stmts) const;
 
  private:
   using FuncPtrBuiltinFunc = UniqueFEIRExpr (ASTCallExpr::*)(std::list<UniqueFEIRStmt> &stmts) const;
-  static std::map<std::string, FuncPtrBuiltinFunc> InitBuiltinFuncPtrMap();
+  static std::unordered_map<std::string, FuncPtrBuiltinFunc> InitBuiltinFuncPtrMap();
   UniqueFEIRExpr EmitBuiltinFunc(std::list<UniqueFEIRStmt> &stmts) const;
 #define EMIT_BUILTIIN_FUNC(FUNC) EmitBuiltin##FUNC(std::list<UniqueFEIRStmt> &stmts) const
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Ctz);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Clz);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Alloca);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Expect);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(VaStart);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(VaEnd);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(VaCopy);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Prefetch);
+
+// vector builtinfunc
+#define DEF_MIR_INTRINSIC(STR, NAME, INTRN_CLASS, RETURN_TYPE, ...)         \
+UniqueFEIRExpr EmitBuiltin##STR(std::list<UniqueFEIRStmt> &stmts) const;
+#include "intrinsic_vector.def"
+#undef DEF_MIR_INTRINSIC
 
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 
-  static std::map<std::string, FuncPtrBuiltinFunc> builtingFuncPtrMap;
+  static std::unordered_map<std::string, FuncPtrBuiltinFunc> builtingFuncPtrMap;
   std::vector<ASTExpr*> args;
   ASTExpr *calleeExpr = nullptr;
   MIRType *retType = nullptr;

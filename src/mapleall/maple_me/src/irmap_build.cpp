@@ -410,7 +410,7 @@ MeExpr *IRMapBuild::BuildExpr(BaseNode &mirNode, bool atParm, bool noProp) {
   }
 
   if (op == OP_mul) {
-    OpMeExpr *opMeExpr = static_cast<OpMeExpr *>(meExpr); 
+    OpMeExpr *opMeExpr = static_cast<OpMeExpr *>(meExpr);
     if (opMeExpr->GetOpnd(0)->GetMeOp() == kMeOpConst) {
       // canonicalize constant operand to be operand 1
       MeExpr *savedOpnd = opMeExpr->GetOpnd(0);
@@ -546,7 +546,7 @@ static bool IncDecAmountIsSmallInteger(MeExpr *x) {
   }
   ConstMeExpr *cMeExpr = static_cast<ConstMeExpr *>(x);
   MIRIntConst *cnode = dynamic_cast<MIRIntConst *>(cMeExpr->GetConstVal());
-  return cnode && cnode->GetValue() < 0x1000;
+  return cnode != nullptr && cnode->GetValue() < 0x1000;
 }
 
 MeStmt *IRMapBuild::BuildDassignMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart) {
@@ -561,7 +561,7 @@ MeStmt *IRMapBuild::BuildDassignMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart) 
     MeExpr *rhs = meStmt->GetRHS();
     OriginalSt *ost = varLHS->GetOst();
     if (ost->GetType()->GetSize() >= 4 &&
-        (rhs->GetOp() == OP_add || rhs->GetOp() == OP_sub) && 
+        (rhs->GetOp() == OP_add || rhs->GetOp() == OP_sub) &&
         IsPrimitivePureScalar(rhs->GetPrimType())) {
       OpMeExpr *oprhs = static_cast<OpMeExpr *>(rhs);
       if (oprhs->GetOpnd(0)->GetMeOp() == kMeOpVar && IncDecAmountIsSmallInteger(oprhs->GetOpnd(1))) {

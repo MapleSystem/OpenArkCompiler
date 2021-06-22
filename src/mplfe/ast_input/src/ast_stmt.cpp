@@ -330,28 +330,14 @@ std::list<UniqueFEIRStmt> ASTDeclStmt::Emit2FEStmtImpl() const {
 }
 
 // ---------- ASTCallExprStmt ----------
-std::map<std::string, ASTCallExprStmt::FuncPtrBuiltinFunc> ASTCallExprStmt::funcPtrMap =
-    ASTCallExprStmt::InitFuncPtrMap();
-
-std::map<std::string, ASTCallExprStmt::FuncPtrBuiltinFunc> ASTCallExprStmt::InitFuncPtrMap() {
-  std::map<std::string, FuncPtrBuiltinFunc> ans;
-  ans["__builtin_va_start"] = &ASTCallExprStmt::ProcessBuiltinVaStart;
-  ans["__builtin_va_end"] = &ASTCallExprStmt::ProcessBuiltinVaEnd;
-  ans["__builtin_va_copy"] = &ASTCallExprStmt::ProcessBuiltinVaCopy;
-  ans["__builtin_prefetch"] = &ASTCallExprStmt::ProcessBuiltinPrefetch;
-  return ans;
-}
-
 std::list<UniqueFEIRStmt> ASTCallExprStmt::Emit2FEStmtImpl() const {
   std::list<UniqueFEIRStmt> stmts;
   ASTCallExpr *callExpr = static_cast<ASTCallExpr*>(exprs.front());
   if (!callExpr->IsIcall()) {
-    if (callExpr->GetCalleeExpr() != nullptr && callExpr->GetCalleeExpr()->GetASTOp() == kASTOpCast &&
-        static_cast<ASTCastExpr*>(callExpr->GetCalleeExpr())->IsBuilinFunc()) {
-      auto ptrFunc = funcPtrMap.find(callExpr->GetFuncName());
-      if (ptrFunc != funcPtrMap.end()) {
-        return (this->*(ptrFunc->second))();
-      }
+    bool isFinish = false;
+    (void)callExpr->ProcessBuiltinFunc(stmts, isFinish);
+    if (isFinish) {
+      return stmts;
     }
   }
   std::unique_ptr<FEIRStmtAssign> callStmt = callExpr->GenCallStmt();
@@ -362,79 +348,6 @@ std::list<UniqueFEIRStmt> ASTCallExprStmt::Emit2FEStmtImpl() const {
     callStmt->SetVar(std::move(var));
   }
   stmts.emplace_back(std::move(callStmt));
-  return stmts;
-}
-
-std::list<UniqueFEIRStmt> ASTCallExprStmt::ProcessBuiltinVaStart() const {
-  std::list<UniqueFEIRStmt> stmts;
-  ASTCallExpr *callExpr = static_cast<ASTCallExpr*>(exprs.front());
-  // args
-  std::vector<ASTExpr*> argsExprs = callExpr->GetArgsExpr();
-  auto exprArgList = std::make_unique<std::list<UniqueFEIRExpr>>();
-  for (int32 i = argsExprs.size() - 1; i >= 0; --i) {
-    UniqueFEIRExpr expr = argsExprs[i]->Emit2FEExpr(stmts);
-    exprArgList->push_front(std::move(expr));
-  }
-  // addrof va_list instead of dread va_list
-  exprArgList->front()->SetAddrof(true);
-  std::unique_ptr<FEIRStmtIntrinsicCallAssign> stmt = std::make_unique<FEIRStmtIntrinsicCallAssign>(
-      INTRN_C_va_start, nullptr /* type */, nullptr /* retVar */, std::move(exprArgList));
-  stmt->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
-  stmts.emplace_back(std::move(stmt));
-  return stmts;
-}
-
-std::list<UniqueFEIRStmt> ASTCallExprStmt::ProcessBuiltinVaEnd() const {
-  std::list<UniqueFEIRStmt> stmts;
-  ASTCallExpr *callExpr = static_cast<ASTCallExpr*>(exprs.front());
-  // args
-  std::vector<ASTExpr*> argsExprs = callExpr->GetArgsExpr();
-  ASSERT(argsExprs.size() == 1, "va_end expects 2 arguments");
-  std::list<UniqueFEIRExpr> exprArgList;
-  for (int32 i = argsExprs.size() - 1; i >= 0; --i) {
-    UniqueFEIRExpr expr = argsExprs[i]->Emit2FEExpr(stmts);
-    // addrof va_list instead of dread va_list
-    expr->SetAddrof(true);
-    exprArgList.push_front(std::move(expr));
-  }
-  auto stmt = std::make_unique<FEIRStmtNary>(OP_eval, std::move(exprArgList));
-  stmt->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
-  stmts.emplace_back(std::move(stmt));
-  return stmts;
-}
-
-std::list<UniqueFEIRStmt> ASTCallExprStmt::ProcessBuiltinVaCopy() const {
-  std::list<UniqueFEIRStmt> stmts;
-  ASTCallExpr *callExpr = static_cast<ASTCallExpr*>(exprs.front());
-  // args
-  std::vector<ASTExpr*> argsExprs = callExpr->GetArgsExpr();
-  auto exprArgList = std::make_unique<std::list<UniqueFEIRExpr>>();
-  UniqueFEIRType vaListType;
-  for (int32 i = argsExprs.size() - 1; i >= 0; --i) {
-    UniqueFEIRExpr expr = argsExprs[i]->Emit2FEExpr(stmts);
-    // addrof va_list instead of dread va_list
-    expr->SetAddrof(true);
-    vaListType = expr->GetType()->Clone();
-    exprArgList->push_front(std::move(expr));
-  }
-  // Add the size of the va_list structure as the size to memcpy.
-  UniqueFEIRExpr sizeExpr = FEIRBuilder::CreateExprConstI32(vaListType->GenerateMIRTypeAuto()->GetSize());
-  exprArgList->emplace_back(std::move(sizeExpr));
-  std::unique_ptr<FEIRStmtIntrinsicCallAssign> stmt = std::make_unique<FEIRStmtIntrinsicCallAssign>(
-      INTRN_C_memcpy, nullptr /* type */, nullptr /* retVar */, std::move(exprArgList));
-  stmt->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
-  stmts.emplace_back(std::move(stmt));
-  return stmts;
-}
-
-std::list<UniqueFEIRStmt> ASTCallExprStmt::ProcessBuiltinPrefetch() const {
-  // __builtin_prefetch is not supported, only parsing args including stmts
-  std::list<UniqueFEIRStmt> stmts;
-  ASTCallExpr *callExpr = static_cast<ASTCallExpr*>(exprs.front());
-  std::vector<ASTExpr*> argsExprs = callExpr->GetArgsExpr();
-  for (int32 i = 0; i <= argsExprs.size() - 1; ++i) {
-    (void)argsExprs[i]->Emit2FEExpr(stmts);
-  }
   return stmts;
 }
 

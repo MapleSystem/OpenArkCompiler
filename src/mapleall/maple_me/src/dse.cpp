@@ -359,14 +359,6 @@ void DSE::MarkSingleUseLive(const BaseNode &mirNode) {
       const VersionSt *verSt = ireadSSANode.GetSSAVar();
       CHECK_FATAL(verSt != nullptr, "DSE::MarkSingleUseLive: iread has no mayUse opnd");
       AddToWorkList(verSt);
-      if (!verSt->IsInitVersion()) {
-        auto *mayDefList = SSAGenericGetMayDefsFromVersionSt(ToRef(verSt), ssaTab.GetStmtsSSAPart());
-        if (mayDefList != nullptr) {
-          for (auto it = mayDefList->begin(); it != mayDefList->end(); ++it) {
-            AddToWorkList(it->second.GetResult());
-          }
-        }
-      }
       MarkSingleUseLive(ToRef(mirNode.Opnd(0)));
       break;
     }

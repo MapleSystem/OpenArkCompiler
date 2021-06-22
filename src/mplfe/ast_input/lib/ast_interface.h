@@ -49,12 +49,13 @@ class LibAstFile {
   void EmitQualifierName(const clang::QualType qualType, std::stringstream &ss);
 
   void CollectBaseEltTypeAndSizesFromConstArrayDecl(const clang::QualType &qualType, MIRType *&elemType,
-                                                    std::vector<uint32_t> &operands);
+                                                    TypeAttrs &elemAttr, std::vector<uint32_t> &operands);
 
-  void CollectBaseEltTypeAndDimFromVariaArrayDecl(const clang::QualType &qualType, MIRType *&elemType, uint8_t &dim);
+  void CollectBaseEltTypeAndDimFromVariaArrayDecl(const clang::QualType &qualType, MIRType *&elemType,
+                                                  TypeAttrs &elemAttr, uint8_t &dim);
 
   void CollectBaseEltTypeAndDimFromDependentSizedArrayDecl(const clang::QualType qualType, MIRType *&elemType,
-                                                           std::vector<uint32_t> &operands);
+                                                           TypeAttrs &elemAttr, std::vector<uint32_t> &operands);
 
   void GetCVRAttrs(uint32_t qualifiers, GenericAttrs &genAttrs);
   void GetSClassAttrs(const clang::StorageClass storageClass, GenericAttrs &genAttrs) const;
@@ -72,6 +73,9 @@ class LibAstFile {
   MIRType *CvtRecordType(const clang::QualType srcType);
   MIRType *CvtFieldType(const clang::NamedDecl &decl);
   MIRType *CvtComplexType(const clang::QualType srcType);
+  MIRType *CvtVectorType(const clang::QualType srcType);
+  static bool isOneElementVector(clang::QualType qualType);
+  static bool isOneElementVector(const clang::Type &type);
 
   const clang::ASTContext *GetContext() {
     return astContext;

@@ -118,6 +118,11 @@ MIRConst *ASTExpr::GenerateMIRConstImpl() const {
 }
 
 UniqueFEIRExpr ASTExpr::CreateZeroExprCompare(UniqueFEIRExpr feExpr, Opcode op) const {
+  if (feExpr->GetKind() == kExprBinary) {
+    if (static_cast<FEIRExprBinary*>(feExpr.get())->IsComparative()) {
+      return feExpr->Clone();
+    }
+  }
   UniqueFEIRExpr zeroConstExpr = (feExpr->GetPrimType() == PTY_ptr) ?
       FEIRBuilder::CreateExprConstPtrNull() :
       FEIRBuilder::CreateExprConstAnyScalar(feExpr->GetPrimType(), 0);
@@ -186,7 +191,7 @@ std::string ASTCallExpr::CvtBuiltInFuncName(std::string builtInName) const {
   }
 }
 
-std::map<std::string, ASTCallExpr::FuncPtrBuiltinFunc> ASTCallExpr::builtingFuncPtrMap =
+std::unordered_map<std::string, ASTCallExpr::FuncPtrBuiltinFunc> ASTCallExpr::builtingFuncPtrMap =
      ASTCallExpr::InitBuiltinFuncPtrMap();
 
 void ASTCallExpr::AddArgsExpr(std::unique_ptr<FEIRStmtAssign> &callStmt, std::list<UniqueFEIRStmt> &stmts) const {
@@ -254,9 +259,10 @@ std::unique_ptr<FEIRStmtAssign> ASTCallExpr::GenCallStmt() const {
 
 UniqueFEIRExpr ASTCallExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   if (!isIcall) {
-    auto ptrFunc = builtingFuncPtrMap.find(funcName);
-    if (ptrFunc != builtingFuncPtrMap.end()) {
-      return EmitBuiltinFunc(stmts);
+    bool isFinish = false;
+    UniqueFEIRExpr buitinExpr = ProcessBuiltinFunc(stmts, isFinish);
+    if (isFinish) {
+      return buitinExpr;
     }
   }
   std::unique_ptr<FEIRStmtAssign> callStmt = GenCallStmt();
@@ -456,6 +462,19 @@ UniqueFEIRExpr ASTCastExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) co
   UniqueFEIRExpr subExpr = childExpr->Emit2FEExpr(stmts);
   if (isUnoinCast && dst->GetKind() == kTypeUnion) {
     return subExpr;
+  }
+  if (isBitCast) {
+    if (src->GetPrimType() == dst->GetPrimType() && src->IsScalarType()) {
+      // This case may show up when casting from a 1-element vector to its scalar type.
+      return subExpr;
+    }
+    UniqueFEIRType dstType = std::make_unique<FEIRTypeNative>(*dst);
+    if (dst->GetKind() == kTypePointer) {
+      subExpr->SetType(std::move(dstType));
+      return subExpr;
+    } else {
+      return std::make_unique<FEIRExprTypeCvt>(std::move(dstType), OP_retype, std::move(subExpr));
+    }
   }
   if (complexType == nullptr) {
     if (IsNeededCvt(subExpr)) {

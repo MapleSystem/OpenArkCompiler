@@ -539,15 +539,6 @@ void HDSE::MarkSingleUseLive(MeExpr &meExpr) {
       MarkSingleUseLive(*base);
       ScalarMeExpr *mu = static_cast<IvarMeExpr&>(meExpr).GetMu();
       workList.push_front(mu);
-      if (mu->GetDefBy() != kDefByNo) {
-        MapleMap<OStIdx, ChiMeNode *> *chiList = GenericGetChiListFromVarMeExpr(*mu);
-        if (chiList != nullptr) {
-          MapleMap<OStIdx, ChiMeNode *>::iterator it = chiList->begin();
-          for (; it != chiList->end(); ++it) {
-            MarkChiNodeRequired(*it->second);
-          }
-        }
-      }
       break;
     }
     default:

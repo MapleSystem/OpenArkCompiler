@@ -191,6 +191,7 @@ void LoopUnrolling::CopyAndInsertStmt(BB &bb, std::vector<MeStmt*> &meStmts) {
 
 void LoopUnrolling::ComputeCodeSize(const MeStmt &meStmt, uint32 &cost) {
   switch (meStmt.GetOp()) {
+    case OP_igoto:
     case OP_switch: {
       canUnroll = false;
       break;
@@ -233,8 +234,8 @@ void LoopUnrolling::ComputeCodeSize(const MeStmt &meStmt, uint32 &cost) {
       if (MeDoLoopUnrolling::enableDebug) {
         LogInfo::MapleLogger() << "consider this op :"<< meStmt.GetOp() << "\n";
       }
-      CHECK_FATAL(false, "not support");
       canUnroll = false;
+      ASSERT(false, "not support");
       break;
   }
 }
@@ -585,7 +586,45 @@ void LoopUnrolling::RemoveCondGoto() {
   cfg->DeleteBasicBlock(*loop->latch);
 }
 
-bool LoopUnrolling::LoopFullyUnroll(int64 tripCount) {
+bool LoopUnrolling::SplitCondGotoBB() {
+  auto *exitBB = func->GetCfg()->GetBBFromID(loop->inloopBB2exitBBs.begin()->first);
+  auto *exitedBB = *(loop->inloopBB2exitBBs.begin()->second->begin());
+  MeStmt *lastStmt = exitBB->GetLastMe();
+  if (lastStmt->GetOp() == OP_igoto || lastStmt->GetOp() == OP_switch) {
+    return false;
+  }
+  if (lastStmt->GetOp() != OP_brfalse && lastStmt->GetOp() != OP_brtrue) {
+    return false;
+  }
+  bool notOnlyHasBrStmt = true;
+  for (auto &stmt : exitBB->GetMeStmts()) {
+    if (&stmt != exitBB->GetLastMe()) {
+      notOnlyHasBrStmt = false;
+      break;
+    }
+  }
+  if (notOnlyHasBrStmt) {
+    return true;
+  }
+  BB *newCondGotoBB = func->GetCfg()->NewBasicBlock();
+  newCondGotoBB->SetKind(kBBCondGoto);
+  newCondGotoBB->SetAttributes(kBBAttrIsInLoop);
+  exitBB->SetKind(kBBFallthru);
+  loop->loopBBs.insert(newCondGotoBB->GetBBId());
+  loop->InsertInloopBB2exitBBs(*newCondGotoBB, *exitedBB);
+  loop->inloopBB2exitBBs.erase(exitBB->GetBBId());
+
+  for (auto *bb : exitBB->GetSucc()) {
+    bb->ReplacePred(exitBB, newCondGotoBB);
+  }
+
+  exitBB->AddSucc(*newCondGotoBB);
+  exitBB->RemoveMeStmt(lastStmt);
+  newCondGotoBB->InsertMeStmtLastBr(lastStmt);
+  return true;
+}
+
+LoopUnrolling::ReturnKindOfFullyUnroll LoopUnrolling::LoopFullyUnroll(int64 tripCount) {
   uint32 costResult = 0;
   for (auto bbId : loop->loopBBs) {
     BB *bb = cfg->GetBBFromID(bbId);
@@ -593,13 +632,16 @@ bool LoopUnrolling::LoopFullyUnroll(int64 tripCount) {
       uint32 cost = 0;
       ComputeCodeSize(meStmt, cost);
       if (canUnroll == false) {
-        return false;
+        return kCanNotFullyUnroll;
       }
       costResult += cost;
       if (costResult * tripCount > kMaxCost) {
-        return false;
+        return kCanNotFullyUnroll;
       }
     }
+  }
+  if (!SplitCondGotoBB()) {
+    return kCanNotSplitCondGoto;
   }
   replicatedLoopNum = tripCount;
   for (int64 i = 0; i < tripCount; ++i) {
@@ -613,7 +655,7 @@ bool LoopUnrolling::LoopFullyUnroll(int64 tripCount) {
   dom = static_cast<Dominance*>(mgr->GetAnalysisResult(MeFuncPhase_DOMINANCE, func));
   MeSSAUpdate ssaUpdate(*func, *func->GetMeSSATab(), *dom, cands, *memPool);
   ssaUpdate.Run();
-  return true;
+  return kCanFullyUnroll;
 }
 
 void LoopUnrolling::ResetFrequency(BB &newCondGotoBB, BB &exitingBB, const BB &exitedBB, uint32 headFreq) {
@@ -745,14 +787,15 @@ bool LoopUnrolling::LoopPartialUnrollWithConst(uint32 tripCount) {
     return false;
   }
   uint32 unrollTime = unrollTimes[index];
-  if (MeDoLoopUnrolling::enableDebug) {
-    LogInfo::MapleLogger() << "Unrolltime: " << unrollTime << "\n";
-  }
   if (tripCount / unrollTime < 1) {
     return false;
   }
   uint32 remainder = (tripCount + kLoopBodyNum) % unrollTime;
+  if (!SplitCondGotoBB()) {
+    return false;
+  }
   if (MeDoLoopUnrolling::enableDebug) {
+    LogInfo::MapleLogger() << "Unrolltime: " << unrollTime << "\n";
     LogInfo::MapleLogger() << "Remainder: " << remainder << "\n";
   }
   if (remainder == 0) {
@@ -1076,6 +1119,9 @@ void LoopUnrolling::LoopPartialUnrollWithVar(CR &cr, CRNode &varNode, uint32 j) 
     profValid ? cfg->DumpToFile("cfgIncludeFreqInfobeforeLoopPartialWithVarUnrolling", false, true) :
                 cfg->DumpToFile("cfgbeforeLoopPartialWithVarUnrolling");
   }
+  if (!SplitCondGotoBB()) {
+    return;
+  }
   uint32 unrollTime = unrollTimes[index];
   if (MeDoLoopUnrolling::enableDebug) {
     LogInfo::MapleLogger() << "unrolltime: " << unrollTime << "\n";
@@ -1176,7 +1222,6 @@ bool MeDoLoopUnrolling::IsCanonicalAndOnlyOneExitLoop(MeFunction &func, LoopDesc
   if (loop.latch->GetPred().size() != 1 || loop.latch->GetPred(0) != exitBB) {
     return false;
   }
-  CHECK_FATAL(exitBB->GetLastMe() == &(exitBB->GetMeStmts().front()), "exit bb only has condgoto stmt");
   return true;
 }
 
@@ -1198,7 +1243,11 @@ void MeDoLoopUnrolling::ExcuteLoopUnrollingWithConst(uint32 tripCount, MeFunctio
                            func.GetCfg()->DumpToFile("cfgbeforLoopUnrolling");
   }
   // fully unroll
-  if (loopUnrolling.LoopFullyUnroll(tripCount)) {
+  LoopUnrolling::ReturnKindOfFullyUnroll returnKind = loopUnrolling.LoopFullyUnroll(tripCount);
+  if (returnKind == LoopUnrolling::kCanNotSplitCondGoto) {
+    return;
+  }
+  if (returnKind == LoopUnrolling::kCanFullyUnroll) {
     if (enableDebug) {
       LogInfo::MapleLogger() << "fully unrolling" << "\n";
     }

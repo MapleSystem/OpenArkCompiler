@@ -41,6 +41,18 @@ MOperator extInsnPairTable[AArch64Ebo::ExtTableSize][4][2] = {
   {{MOP_wldr, MOP_wldr},    {MOP_wldrh, MOP_wldrh},   {MOP_wldrb, MOP_wldrb},   {MOP_undef, MOP_undef}}    /* ZXTW */
 };
 
+MOperator AArch64Ebo::ExtLoadSwitchBitSize(MOperator lowMop) {
+  switch (lowMop) {
+    case MOP_wldrsb :
+      return MOP_xldrsb;
+    case MOP_wldrsh :
+      return MOP_xldrsh;
+    default:
+      break;
+  }
+  return lowMop;
+}
+
 bool AArch64Ebo::IsFmov(const Insn &insn) const {
   return ((MOP_xvmovsr <= insn.GetMachineOpcode()) && (insn.GetMachineOpcode() <= MOP_xvmovrd));
 }
@@ -646,7 +658,12 @@ bool AArch64Ebo::CombineExtensionAndLoad(Insn *insn, const MapleVector<OpndInfo*
         if ((prevOpndInfo != nullptr) && prevOpndInfo->refCount > 1) {
           return false;
         }
-        prevInsn->SetMOP(extInsnPairTable[rowIndex][i][1]);
+        MOperator newPreMop = extInsnPairTable[rowIndex][i][1];
+        if (is64bits && idx <= SXTW && idx >= SXTB) {
+          newPreMop = ExtLoadSwitchBitSize(newPreMop);
+          prevInsn->GetOperand(kInsnFirstOpnd).SetSize(k64BitSize);
+        }
+        prevInsn->SetMOP(newPreMop);
         MOperator movOp = is64bits ? MOP_xmovrr : MOP_wmovrr;
         if (insn->GetMachineOpcode() == MOP_wandrri12 || insn->GetMachineOpcode() == MOP_xandrri13) {
           Insn &newInsn = cgFunc->GetCG()->BuildInstruction<AArch64Insn>(movOp, insn->GetOperand(kInsnFirstOpnd),

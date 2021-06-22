@@ -404,10 +404,14 @@ DEFINE_MOP(MOP_xblr, {mopdReg64IS,mopdLISTS},ISCALL|CANTHROW,kLtBranch,"blr","0"
 /* AARCH64 LOADS */
 /* MOP_wldrsb --- Load Register Signed Byte */
 DEFINE_MOP(MOP_wldrsb, {mopdReg32ID,mopdMem8S},ISLOAD|CANTHROW,kLtLoad1,"ldrsb","0,1",1)
+/* MOP_xldrsb --- Load Register Signed Byte */
+DEFINE_MOP(MOP_xldrsb, {mopdReg64ID,mopdMem8S},ISLOAD|CANTHROW,kLtLoad1,"ldrsb","0,1",1)
 /* MOP_wldrb */
 DEFINE_MOP(MOP_wldrb, {mopdReg32ID,mopdMem8S},ISLOAD|CANTHROW,kLtLoad1,"ldrb","0,1",1)
 /* MOP_wldrsh  --- Load Register Signed Halfword */
 DEFINE_MOP(MOP_wldrsh, {mopdReg32ID,mopdMem16S},ISLOAD|CANTHROW,kLtLoad1,"ldrsh","0,1",1)
+/* MOP_xldrsh  --- Load Register Signed Halfword */
+DEFINE_MOP(MOP_xldrsh, {mopdReg64ID,mopdMem16S},ISLOAD|CANTHROW,kLtLoad1,"ldrsh","0,1",1)
 /* MOP_wldrh */
 DEFINE_MOP(MOP_wldrh, {mopdReg32ID, mopdMem16S},ISLOAD|CANTHROW,kLtLoad1,"ldrh","0,1",1)
 /* MOP_wldr */

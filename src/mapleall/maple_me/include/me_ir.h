@@ -164,7 +164,10 @@ class MeExpr {
     return 0;
   }
   virtual bool StrengthReducible() { return false; }
-  virtual int64 SRMultiplier(OriginalSt *ost) { return 1; }
+  virtual int64 SRMultiplier(OriginalSt *ost) {
+    (void)ost;
+    return 1;
+  }
 
  protected:
   MeExpr *FindSymAppearance(OStIdx oidx);  // find the appearance of the symbol

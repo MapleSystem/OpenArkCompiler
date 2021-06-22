@@ -2267,6 +2267,14 @@ PrimType FEIRExprDRead::GetPrimTypeImpl() const {
   return primType;
 }
 
+void FEIRExprDRead::SetTypeImpl(std::unique_ptr<FEIRType> argType) {
+  if (fieldID != 0) {
+    fieldType = std::move(argType);
+  } else {
+    type = std::move(argType);
+  }
+}
+
 FEIRType *FEIRExprDRead::GetTypeImpl() const {
   if (fieldID != 0) {
     CHECK_NULL_FATAL(fieldType);

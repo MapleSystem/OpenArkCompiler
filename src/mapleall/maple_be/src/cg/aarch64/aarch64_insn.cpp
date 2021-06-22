@@ -1158,12 +1158,14 @@ uint8 AArch64Insn::GetLoadStoreSize() const {
   case MOP_wldarb:
   case MOP_wldrb:
   case MOP_wldrsb:
+  case MOP_xldrsb:
   case MOP_wstrb:
   case MOP_wstlrb:
     return k1ByteSize;
   case MOP_wldrh:
   case MOP_wldarh:
   case MOP_wldrsh:
+  case MOP_xldrsh:
   case MOP_wstrh:
   case MOP_wstlrh:
     return k2ByteSize;

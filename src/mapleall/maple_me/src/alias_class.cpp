@@ -216,6 +216,31 @@ OffsetType AliasClass::OffsetInBitOfArrayElement(const ArrayNode *arrayNode) {
   }
 }
 
+OriginalSt *AliasClass::FindOrCreateExtraLevOst(SSATab *ssaTab, OriginalSt *prevLevOst, const TyIdx &tyIdx,
+    FieldID fld, OffsetType offset) {
+  // create exact virtual-var for iread (array (addrof %array, i32 index))
+  if (!offset.IsInvalid()) {
+    auto mirType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx);
+    ASSERT(mirType->IsMIRPtrType(), "must be pointer type");
+    auto elemTypeIndex = static_cast<MIRPtrType*>(mirType)->GetPointedTyIdx();
+    const auto &ostPair = ssaTab->GetOriginalStTable().FindOrCreateSymbolOriginalSt(*prevLevOst->GetMIRSymbol(),
+        prevLevOst->GetPuIdx(), 0, elemTypeIndex, offset);
+    auto *newOst = ostPair.first;
+    newOst->SetPrevLevelOst(prevLevOst);
+    if (ostPair.second) {
+      prevLevOst->AddNextLevelOst(newOst, true);
+    }
+    return newOst;
+  }
+
+  const TyIdx &tyIdxOfBaseOst = prevLevOst->GetTyIdx();
+  if (ssaTab->GetModule().IsCModule() && tyIdxOfBaseOst != tyIdx) {
+    return ssaTab->FindOrCreateExtraLevOriginalSt(prevLevOst, tyIdx, 0);
+  }
+
+  return ssaTab->FindOrCreateExtraLevOriginalSt(prevLevOst, tyIdx, fld);
+}
+
 AliasElem *AliasClass::FindOrCreateExtraLevAliasElem(BaseNode &baseAddress, const TyIdx &tyIdx, FieldID fieldId) {
   auto *baseAddr = RemoveTypeConvertionIfExist(&baseAddress);
   AliasInfo aliasInfoOfBaseAddress = CreateAliasElemsExpr(*baseAddr);
@@ -226,37 +251,9 @@ AliasElem *AliasClass::FindOrCreateExtraLevAliasElem(BaseNode &baseAddress, cons
     return FindOrCreateDummyNADSAe();
   }
 
-  auto *ostOfBaseAddress = aliasInfoOfBaseAddress.ae->GetOst();
-  const OffsetType &offset = aliasInfoOfBaseAddress.offset;
-  // create exact virtual-var for iread (array (addrof %array, i32 index))
-  if (!offset.IsInvalid()) {
-    auto mirType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx);
-    ASSERT(mirType->IsMIRPtrType(), "must be pointer type");
-    auto elemTypeIndex = static_cast<MIRPtrType*>(mirType)->GetPointedTyIdx();
-    const auto &ostPair =
-        ssaTab.GetOriginalStTable().FindOrCreateSymbolOriginalSt(*ostOfBaseAddress->GetMIRSymbol(),
-            ostOfBaseAddress->GetPuIdx(), 0, elemTypeIndex, offset);
-    auto *newOst = ostPair.first;
-    newOst->SetPrevLevelOst(ostOfBaseAddress);
-    if (ostPair.second) {
-      ostOfBaseAddress->AddNextLevelOst(newOst, true);
-    }
-    if (newOst->GetIndex() == osym2Elem.size()) {
-      osym2Elem.push_back(nullptr);
-      ssaTab.GetVersionStTable().CreateZeroVersionSt(newOst);
-    }
-    return FindOrCreateAliasElem(*newOst);
-  }
+  auto newOst = FindOrCreateExtraLevOst(&ssaTab, aliasInfoOfBaseAddress.ae->GetOst(), tyIdx,
+      aliasInfoOfBaseAddress.fieldID + fieldId, aliasInfoOfBaseAddress.offset);
 
-  auto *typeOfBaseOst = ostOfBaseAddress->GetType();
-  const TyIdx &tyIdxOfBaseOst = typeOfBaseOst->GetTypeIndex();
-  OriginalSt *newOst = nullptr;
-  if (mirModule.IsCModule() && tyIdxOfBaseOst != tyIdx) {
-    newOst = ssaTab.FindOrCreateExtraLevOriginalSt(ostOfBaseAddress, tyIdxOfBaseOst, 0);
-  } else {
-    newOst = ssaTab.FindOrCreateExtraLevOriginalSt(ostOfBaseAddress,
-        aliasInfoOfBaseAddress.fieldID ? tyIdxOfBaseOst : tyIdx, fieldId + aliasInfoOfBaseAddress.fieldID);
-  }
   CHECK_FATAL(newOst != nullptr, "null ptr check");
   if (newOst->GetIndex() == osym2Elem.size()) {
     osym2Elem.push_back(nullptr);

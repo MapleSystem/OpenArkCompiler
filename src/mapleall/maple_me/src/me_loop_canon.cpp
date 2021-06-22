@@ -477,62 +477,6 @@ void MeDoLoopCanon::InsertExitBB(MeFunction &func, LoopDesc &loop) {
   InsertNewExitBB(func, loop);
 }
 
-void MeDoLoopCanon::SplitCondGotBB(MeFunction &func, LoopDesc &loop) {
-  MeCFG *cfg = func.GetCfg();
-  auto exitBB = cfg->GetBBFromID(loop.inloopBB2exitBBs.begin()->first);
-  StmtNode *lastStmt = &(exitBB->GetStmtNodes().back());
-  if (lastStmt->GetOpCode() != OP_brfalse && lastStmt->GetOpCode() != OP_brtrue && lastStmt->GetOpCode() != OP_switch) {
-    CHECK_FATAL(false, "must be OP_brfalse, OP_brtrue or OP_switch");
-  }
-  bool notOnlyHasBrStmt = true;
-  for (auto &stmt : exitBB->GetStmtNodes()) {
-    if (&stmt != &exitBB->GetLast()) {
-      notOnlyHasBrStmt = false;
-      break;
-    }
-  }
-  if (notOnlyHasBrStmt) {
-    return;
-  }
-  BB *newFallthru = cfg->NewBasicBlock();
-  newFallthru->SetKind(kBBFallthru);
-  newFallthru->SetAttributes(kBBAttrIsInLoop);
-  func.GetCfg()->CloneBasicBlock(*newFallthru, *exitBB);
-  newFallthru->RemoveLastStmt();
-  for (auto &stmt : exitBB->GetStmtNodes()) {
-    if (&stmt != &exitBB->GetLast()) {
-      exitBB->RemoveStmtNode(&stmt);
-    }
-  }
-  auto label = exitBB->GetBBLabel();
-  if (label != 0) {
-    newFallthru->SetBBLabel(label);
-    cfg->SetLabelBBAt(label, newFallthru);
-    exitBB->SetBBLabel(0);
-  }
-  while (exitBB->GetPred().size() > 0) {
-    auto *pred = exitBB->GetPred(0);
-    pred->ReplaceSucc(exitBB, newFallthru);
-  }
-  exitBB->RemoveAllPred();
-  newFallthru->AddSucc(*exitBB);
-}
-
-bool MeDoLoopCanon::IsDoWhileLoop(MeFunction &func, const LoopDesc &loop) const {
-  for (auto succ : loop.head->GetSucc()) {
-    if (!loop.Has(*succ)) {
-      return false;
-    }
-  }
-  auto exitBB = func.GetCfg()->GetBBFromID(loop.inloopBB2exitBBs.begin()->first);
-  for (auto pred : exitBB->GetPred()) {
-    if (!loop.Has(*pred)) {
-      return false;
-    }
-  }
-  return true;
-}
-
 void MeDoLoopCanon::ExecuteLoopNormalization(MeFunction &func,  MeFuncResultMgr *m, Dominance &dom) {
   if (DEBUGFUNC(&func)) {
     LogInfo::MapleLogger() << "-----------------Dump mefunction before loop normalization----------\n";
@@ -563,11 +507,6 @@ void MeDoLoopCanon::ExecuteLoopNormalization(MeFunction &func,  MeFuncResultMgr 
       CHECK_FATAL(loop->inloopBB2exitBBs.size() == 0, "must be zero");
       InsertExitBB(func, *loop);
       loop->SetIsCanonicalLoop(true);
-      cfgchanged = true;
-    }
-    if (loop->inloopBB2exitBBs.size() == 1 && loop->inloopBB2exitBBs.begin()->second->size() == 1 &&
-        IsDoWhileLoop(func, *loop)) {
-      SplitCondGotBB(func, *loop);
       cfgchanged = true;
     }
   }

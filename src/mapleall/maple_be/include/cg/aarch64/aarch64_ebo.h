@@ -76,6 +76,7 @@ class AArch64Ebo : public Ebo {
   /* The number of elements in callerSaveRegTable must less then 45. */
   static constexpr int32 kMaxCallerSaveReg = 45;
   bool IsZeroRegister(const Operand &opnd) const;
+  MOperator ExtLoadSwitchBitSize(MOperator lowMop);
   bool CheckCondCode(const CondOperand &cond) const;
   bool SimplifyBothConst(BB &bb, Insn &insn, const AArch64ImmOperand &immOperand0, const AArch64ImmOperand &immOperand1,
                          uint32 opndSize);
