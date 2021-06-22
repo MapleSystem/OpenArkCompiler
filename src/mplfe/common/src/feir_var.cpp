@@ -147,12 +147,12 @@ MIRSymbol *FEIRVar::GenerateLocalMIRSymbolImpl(MIRBuilder &builder) const {
   MIRType *mirType = type->GenerateMIRTypeAuto();
   std::string name = GetName(*mirType);
   MIRSymbol *mirSymbol = builder.GetOrCreateLocalDecl(name, *mirType);
-  if (genAttrs.GetAttr(GenericAttrKind::GENATTR_static)) {
-    auto attrs = TypeAttrs();
-    attrs.SetAttr(ATTR_static);
-    mirSymbol->SetAttrs(attrs);
+  auto attrs = const_cast<GenericAttrs&>(genAttrs).ConvertToTypeAttrs();
+  if (attrs.GetAttr(ATTR_static)) {
+    attrs.ResetAttr(ATTR_static);
     mirSymbol->SetStorageClass(MIRStorageClass::kScPstatic);
   }
+  mirSymbol->SetAttrs(attrs);
   return mirSymbol;
 }
 

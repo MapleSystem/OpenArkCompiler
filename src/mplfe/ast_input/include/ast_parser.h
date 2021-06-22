@@ -175,9 +175,12 @@ ASTExpr *ParseBuiltinFunc(MapleAllocator &allocator, const clang::CallExpr &expr
   ASTExpr *PARSE_BUILTIIN_FUNC(Isinfsign);
   ASTExpr *PARSE_BUILTIIN_FUNC(HugeVal);
   ASTExpr *PARSE_BUILTIIN_FUNC(Inff);
+  ASTExpr *PARSE_BUILTIIN_FUNC(Infl);
   ASTExpr *PARSE_BUILTIIN_FUNC(Nanf);
   ASTExpr *PARSE_BUILTIIN_FUNC(SignBitf);
   ASTExpr *PARSE_BUILTIIN_FUNC(SignBitl);
+  ASTExpr *PARSE_BUILTIIN_FUNC(Trap);
+  ASTExpr *PARSE_BUILTIIN_FUNC(IsUnordered);
 
   static std::map<std::string, FuncPtrBuiltinFunc> builtingFuncPtrMap;
   uint32 fileIdx;

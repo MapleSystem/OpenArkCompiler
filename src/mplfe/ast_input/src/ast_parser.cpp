@@ -1991,7 +1991,7 @@ ASTDecl *ASTParser::ProcessDeclRecordDecl(MapleAllocator &allocator, const clang
     return nullptr;
   }
   GenericAttrs attrs;
-  astFile->CollectAttrs(recDecl, attrs, kPublic);
+  astFile->CollectAttrs(recDecl, attrs, kNone);
   std::string structName = recName.str();
   if (structName.empty() || !ASTUtil::IsValidName(structName)) {
     uint32 id = qType->getAs<clang::RecordType>()->getDecl()->getLocation().getRawEncoding();
@@ -2121,7 +2121,7 @@ ASTDecl *ASTParser::ProcessDeclFieldDecl(MapleAllocator &allocator, const clang:
     fieldType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(bfTypeIdx);
   }
   GenericAttrs attrs;
-  astFile->CollectAttrs(decl, attrs, kPublic);
+  astFile->CollectAttrs(decl, attrs, kNone);
   // one elem vector type
   if (LibAstFile::isOneElementVector(qualType)) {
     attrs.SetAttr(GENATTR_oneelem_simd);
@@ -2151,7 +2151,7 @@ ASTDecl *ASTParser::ProcessDeclVarDecl(MapleAllocator &allocator, const clang::V
     return nullptr;
   }
   GenericAttrs attrs;
-  astFile->CollectAttrs(varDecl, attrs, kPublic);
+  astFile->CollectAttrs(varDecl, attrs, kNone);
   // one elem vector type
   if (LibAstFile::isOneElementVector(qualType)) {
     attrs.SetAttr(GENATTR_oneelem_simd);
@@ -2206,7 +2206,7 @@ ASTDecl *ASTParser::ProcessDeclParmVarDecl(MapleAllocator &allocator, const clan
     return nullptr;
   }
   GenericAttrs attrs;
-  astFile->CollectAttrs(parmVarDecl, attrs, kPublic);
+  astFile->CollectAttrs(parmVarDecl, attrs, kNone);
   if (LibAstFile::isOneElementVector(parmQualType)) {
     attrs.SetAttr(GENATTR_oneelem_simd);
   }
@@ -2222,7 +2222,7 @@ ASTDecl *ASTParser::ProcessDeclEnumDecl(MapleAllocator &allocator, const clang::
     return localEnumDecl;
   }
   GenericAttrs attrs;
-  astFile->CollectAttrs(*clang::dyn_cast<const clang:: NamedDecl>(&enumDecl), attrs, kPublic);
+  astFile->CollectAttrs(*clang::dyn_cast<const clang:: NamedDecl>(&enumDecl), attrs, kNone);
   const std::string &enumName = clang::dyn_cast<const clang:: NamedDecl>(&enumDecl)->getNameAsString();
   localEnumDecl = ASTDeclsBuilder::ASTLocalEnumDeclBuilder(allocator, fileName, enumName,
       std::vector<MIRType*>{}, attrs, enumDecl.getID());
@@ -2253,7 +2253,7 @@ ASTDecl *ASTParser::ProcessDeclEnumConstantDecl(MapleAllocator &allocator, const
     return astConst;
   }
   GenericAttrs attrs;
-  astFile->CollectAttrs(*clang::dyn_cast<clang::NamedDecl>(&decl), attrs, kPublic);
+  astFile->CollectAttrs(*clang::dyn_cast<clang::NamedDecl>(&decl), attrs, kNone);
   const std::string &varName = clang::dyn_cast<clang::NamedDecl>(&decl)->getNameAsString();
   MIRType *mirType = astFile->CvtType(clang::dyn_cast<clang::ValueDecl>(&decl)->getType());
   astConst = ASTDeclsBuilder::ASTEnumConstBuilder(

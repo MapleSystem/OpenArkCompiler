@@ -1050,16 +1050,51 @@ class ASTCallExpr : public ASTExpr {
  private:
   using FuncPtrBuiltinFunc = UniqueFEIRExpr (ASTCallExpr::*)(std::list<UniqueFEIRStmt> &stmts) const;
   static std::unordered_map<std::string, FuncPtrBuiltinFunc> InitBuiltinFuncPtrMap();
+  UniqueFEIRExpr CreateIntrinsicopForC(std::list<UniqueFEIRStmt> &stmts, MIRIntrinsicID argIntrinsicID) const;
+  UniqueFEIRExpr CreateBinaryExpr(std::list<UniqueFEIRStmt> &stmts, Opcode op) const;
   UniqueFEIRExpr EmitBuiltinFunc(std::list<UniqueFEIRStmt> &stmts) const;
 #define EMIT_BUILTIIN_FUNC(FUNC) EmitBuiltin##FUNC(std::list<UniqueFEIRStmt> &stmts) const
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Ctz);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Ctzl);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Clz);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Clzl);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Alloca);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Expect);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(VaStart);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(VaEnd);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(VaCopy);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Prefetch);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Unreachable);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Abs);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(ACos);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(ACosf);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(ASin);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(ASinf);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(ATan);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(ATanf);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Cos);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Cosf);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Cosh);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Coshf);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Sin);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Sinf);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Sinh);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Sinhf);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Exp);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Expf);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Ffs);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Fmax);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Fmin);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Log);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Logf);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Log10);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Log10f);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Isunordered);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Isless);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Islessequal);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Isgreater);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Isgreaterequal);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Islessgreater);
 
 // vector builtinfunc
 #define DEF_MIR_INTRINSIC(STR, NAME, INTRN_CLASS, RETURN_TYPE, ...)         \
