@@ -130,7 +130,7 @@ class AArch64CGFunc : public CGFunc {
   Operand *SelectIread(const BaseNode &parent, IreadNode &expr) override;
 
   Operand *SelectIntConst(MIRIntConst &intConst) override;
-  Operand *HandleFmovImm(PrimType stype, int64 val);
+  uint64 HandleFmovImm(PrimType stype, int64 val, Operand **result);
   Operand *SelectFloatConst(MIRFloatConst &floatConst) override;
   Operand *SelectDoubleConst(MIRDoubleConst &doubleConst) override;
   Operand *SelectStrConst(MIRStrConst &strConst) override;

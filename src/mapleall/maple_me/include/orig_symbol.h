@@ -296,11 +296,12 @@ class OriginalSt {
 
 class SymbolFieldPair {
  public:
-  SymbolFieldPair(const StIdx &stIdx, FieldID fld, const OffsetType &offset = OffsetType(kOffsetUnknown))
-      : stIdx(stIdx), fldIDAndOffset((static_cast<int64>(offset.val) << 32) + fld) {}
+  SymbolFieldPair(const StIdx &stIdx, FieldID fld, const TyIdx &tyIdx,
+                  const OffsetType &offset = OffsetType(kOffsetUnknown))
+      : stIdx(stIdx), fldIDAndOffset((static_cast<int64>(offset.val) << 32) + fld), tyIdx(tyIdx) {}
   ~SymbolFieldPair() = default;
   bool operator==(const SymbolFieldPair& pairA) const {
-    return (pairA.stIdx == stIdx) && (pairA.fldIDAndOffset == fldIDAndOffset);
+    return (pairA.stIdx == stIdx) && (pairA.fldIDAndOffset == fldIDAndOffset) && (tyIdx == pairA.tyIdx);
   }
 
   const StIdx &GetStIdx() const {
@@ -314,6 +315,7 @@ class SymbolFieldPair {
  private:
   StIdx stIdx;
   int64 fldIDAndOffset;
+  TyIdx tyIdx;
 };
 
 struct HashSymbolFieldPair {
@@ -395,10 +397,13 @@ class OriginalStTable {
   void Dump();
 
   OriginalSt *FindOrCreateAddrofSymbolOriginalSt(OriginalSt *ost);
-  OriginalSt *FindOrCreateExtraLevOriginalSt(OriginalSt *ost, TyIdx ptyidx, FieldID fld);
+  OriginalSt *FindOrCreateExtraLevOriginalSt(OriginalSt *ost, TyIdx ptyidx, FieldID fld,
+                                             const OffsetType &offset = OffsetType(kOffsetUnknown));
   OriginalSt *FindOrCreateExtraLevSymOrRegOriginalSt(OriginalSt *ost, TyIdx tyIdx, FieldID fld,
+                                                     const OffsetType &offset = OffsetType(kOffsetUnknown),
                                                      const KlassHierarchy *klassHierarchy = nullptr);
-  OriginalSt *FindExtraLevOriginalSt(const MapleVector<OriginalSt*> &nextLevelOsts, FieldID fld);
+  OriginalSt *FindExtraLevOriginalSt(const MapleVector<OriginalSt*> &nextLevelOsts, MIRType *type, FieldID fld,
+                                     const OffsetType &offset = OffsetType(kOffsetUnknown));
 
  private:
   MapleAllocator alloc;

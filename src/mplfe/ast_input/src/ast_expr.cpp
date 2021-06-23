@@ -29,13 +29,17 @@ const uint32 kOneByte = 8;
 // ---------- ASTValue ----------
 MIRConst *ASTValue::Translate2MIRConst() const {
   switch (pty) {
-    case PTY_i32: {
+    case PTY_i8:
+    case PTY_i16:
+    case PTY_i32:
+    case PTY_i64:
+    case PTY_u1:
+    case PTY_u8:
+    case PTY_u16:
+    case PTY_u32:
+    case PTY_u64: {
       return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
-          val.i32, *GlobalTables::GetTypeTable().GetPrimType(PTY_i32));
-    }
-    case PTY_i64: {
-      return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
-          val.i64, *GlobalTables::GetTypeTable().GetPrimType(PTY_i64));
+          val.i64, *GlobalTables::GetTypeTable().GetPrimType(pty));
     }
     case PTY_f32: {
       return FEManager::GetModule().GetMemPool()->New<MIRFloatConst>(
@@ -497,31 +501,6 @@ void ASTUnaryOperatorExpr::SetUOExpr(ASTExpr *astExpr) {
 
 void ASTUnaryOperatorExpr::SetSubType(MIRType *type) {
   subType = type;
-}
-
-MIRConst *ASTUOMinusExpr::GenerateMIRConstImpl() const {
-  auto unsignedConst = GetUOExpr()->GenerateMIRConst();
-  switch (unsignedConst->GetKind()) {
-    case kConstInt: {
-      auto value = static_cast<MIRIntConst*>(unsignedConst)->GetValue();
-      return FEManager::GetModule().GetMemPool()->New<MIRIntConst>(
-          value*(-1), *GlobalTables::GetTypeTable().GetPrimType(PTY_i64)); // -1 is neg
-    }
-    case kConstFloatConst: {
-      auto value = static_cast<MIRFloatConst*>(unsignedConst)->GetValue();
-      return FEManager::GetModule().GetMemPool()->New<MIRFloatConst>(
-        value*(-1.0f), *GlobalTables::GetTypeTable().GetPrimType(PTY_f32)); // -1.0f is neg
-    }
-    case kConstDoubleConst: {
-      auto value = static_cast<MIRDoubleConst*>(unsignedConst)->GetValue();
-      return FEManager::GetModule().GetMemPool()->New<MIRDoubleConst>(
-        value*(-1.0), *GlobalTables::GetTypeTable().GetPrimType(PTY_f64)); // -1.0 is neg
-    }
-    default: {
-      CHECK_FATAL(false, "Unsupported yet");
-      return nullptr;
-    }
-  }
 }
 
 UniqueFEIRExpr ASTUOMinusExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
@@ -1417,6 +1396,9 @@ MIRConst *ASTBinaryOperatorExpr::GenerateMIRConstImpl() const {
     }
   }
   if (leftConst->GetKind() == rightConst->GetKind()) {
+    if (isConstantFolded) {
+      return value->Translate2MIRConst();
+    }
     switch (leftConst->GetKind()) {
       case kConstInt: {
         return MIRConstGenerator(FEManager::GetModule().GetMemPool(), static_cast<MIRIntConst*>(leftConst),

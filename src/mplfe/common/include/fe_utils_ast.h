@@ -34,7 +34,7 @@ class FEUtilAST {
 };
 
 template <class T>
-std::function<T()> OpGenerator(Opcode op, T p0, T p1) {
+std::function<T()> OpGenerator(Opcode op, T p0, T p1, bool isSigned) {
   switch (op) {
     case OP_add: {
        return [p0, p1]() { return p0 + p1; };
@@ -46,26 +46,54 @@ std::function<T()> OpGenerator(Opcode op, T p0, T p1) {
       return [p0, p1]() { return p0 * p1; };
     }
     case OP_div: {
-      return [p0, p1]() { return p0 / p1; };
+      if (isSigned) {
+        return [p0, p1]() { return static_cast<int64>(p0) / static_cast<int64>(p1); };
+      } else {
+        return [p0, p1]() { return static_cast<uint64>(p0) / static_cast<uint64>(p1); };
+      }
     }
     case OP_rem: {
-      return [p0, p1]() { return static_cast<int64>(p0) % static_cast<int64>(p1); };
+      if (isSigned) {
+        return [p0, p1]() { return static_cast<int64>(p0) % static_cast<int64>(p1); };
+      } else {
+        return [p0, p1]() { return static_cast<uint64>(p0) % static_cast<uint64>(p1); };
+      }
     }
     case OP_shl: {
-      return [p0, p1]() { return static_cast<int64>(p0) << static_cast<int64>(p1); };
+      if (isSigned) {
+        return [p0, p1]() { return static_cast<int64>(p0) << static_cast<int64>(p1); };
+      } else {
+        return [p0, p1]() { return static_cast<uint64>(p0) << static_cast<uint64>(p1); };
+      }
     }
     case OP_lshr:
     case OP_ashr: {
-      return [p0, p1]() { return static_cast<int64>(p0) >> static_cast<int64>(p1); };
+      if (isSigned) {
+        return [p0, p1]() { return static_cast<int64>(p0) >> static_cast<int64>(p1); };
+      } else {
+        return [p0, p1]() { return static_cast<uint64>(p0) >> static_cast<uint64>(p1); };
+      }
     }
     case OP_bior: {
-      return [p0, p1]() { return static_cast<int64>(p0) | static_cast<int64>(p1); };
+      if (isSigned) {
+        return [p0, p1]() { return static_cast<int64>(p0) | static_cast<int64>(p1); };
+      } else {
+        return [p0, p1]() { return static_cast<uint64>(p0) | static_cast<uint64>(p1); };
+      }
     }
     case OP_band: {
-      return [p0, p1]() { return static_cast<int64>(p0) & static_cast<int64>(p1); };
+      if (isSigned) {
+        return [p0, p1]() { return static_cast<int64>(p0) & static_cast<int64>(p1); };
+      } else {
+        return [p0, p1]() { return static_cast<uint64>(p0) & static_cast<uint64>(p1); };
+      }
     }
     case OP_bxor: {
-      return [p0, p1]() { return static_cast<int64>(p0) ^ static_cast<int64>(p1); };
+      if (isSigned) {
+        return [p0, p1]() { return static_cast<int64>(p0) ^ static_cast<int64>(p1); };
+      } else {
+        return [p0, p1]() { return static_cast<uint64>(p0) ^ static_cast<uint64>(p1); };
+      }
     }
     case OP_land: {
       return [p0, p1]() {
@@ -98,7 +126,8 @@ std::function<T()> OpGenerator(Opcode op, T p0, T p1) {
 
 template <class T>
 T *MIRConstGenerator(MemPool *mp, T *konst0, T *konst1, Opcode op) {
-  return mp->New<T>(OpGenerator(op, konst0->GetValue(), konst1->GetValue())(), konst0->GetType());
+  bool isSigned = IsSignedInteger(konst0->GetType().GetPrimType()) && IsSignedInteger(konst1->GetType().GetPrimType());
+  return mp->New<T>(OpGenerator(op, konst0->GetValue(), konst1->GetValue(), isSigned)(), konst0->GetType());
 }
 }  // namespace maple
 #endif  // MPLFE_INCLUDE_FE_UTILS_AST_H

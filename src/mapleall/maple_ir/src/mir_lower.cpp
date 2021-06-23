@@ -517,6 +517,10 @@ BaseNode *MIRLower::LowerCArray(ArrayNode *array) {
       BaseNode *newResNode = mirModule.CurFuncCodeMemPool()->New<BinaryNode>(OP_add);
       newResNode->SetPrimType(array->GetPrimType());
       newResNode->SetOpnd(mpyNode, 0);
+      if (prevNode->GetPrimType() != array->GetPrimType()) {
+        prevNode = mirModule.CurFuncCodeMemPool()->New<TypeCvtNode>(OP_cvt, array->GetPrimType(),
+                                                                    prevNode->GetPrimType(), prevNode);
+      }
       newResNode->SetOpnd(prevNode, 1);
       prevNode = newResNode;
     }

@@ -792,6 +792,7 @@ class MIRArrayType : public MIRType {
   bool HasFields() const override;
   size_t NumberOfFieldIDs() const override;
   MIRStructType *EmbeddedStructType() override;
+  size_t ElemNumber();
 
  private:
   TyIdx eTyIdx{ 0 };

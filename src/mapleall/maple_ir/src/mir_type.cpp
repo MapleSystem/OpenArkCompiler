@@ -1114,7 +1114,7 @@ uint32 MIRStructType::GetAlign() const {
   }
   uint32 maxAlign = 1;
   for (size_t i = 0; i < fields.size(); ++i) {
-    TyIdxFieldAttrPair tfap = GetFieldTyIdxAttrPair(i);
+    TyIdxFieldAttrPair tfap = GetTyidxFieldAttrPair(i);
     MIRType *fieldType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(tfap.first);
     uint32 algn = fieldType->GetAlign();
     if (fieldType->GetKind() == kTypeBitField) {
@@ -1378,6 +1378,19 @@ int64 MIRArrayType::GetBitOffsetFromArrayAddress(const std::vector<int64> &index
     offset += static_cast<MIRArrayType*>(GetElemType())->GetBitOffsetFromArrayAddress(subIndexArray);
   }
   return offset;
+}
+
+size_t MIRArrayType::ElemNumber() {
+  size_t elemNum = 1;
+  for (uint16 id = 0; id < dim; ++id) {
+    elemNum *= sizeArray[id];
+  }
+
+  auto elemType = GetElemType();
+  if (elemType->GetKind() == kTypeArray) {
+    elemNum *= static_cast<MIRArrayType*>(elemType)->ElemNumber();
+  }
+  return elemNum;
 }
 
 MIRType *MIRFarrayType::GetElemType() const {

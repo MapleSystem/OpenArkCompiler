@@ -2308,8 +2308,7 @@ Operand *SelectLiteral(T *c, MIRFunction *func, uint32 labelIdx, AArch64CGFunc *
   return nullptr;
 }
 
-Operand *AArch64CGFunc::HandleFmovImm(PrimType stype, int64 val) {
-  Operand *result;
+uint64 AArch64CGFunc::HandleFmovImm(PrimType stype, int64 val, Operand **result) {
   bool is64Bits = (GetPrimTypeBitSize(stype) == k64BitSize);
   uint64 canRepreset = is64Bits ? (val & 0xffffffffffff) : (val & 0x7ffff);
   uint32 val1 = is64Bits ? (val >> 61) & 0x3 : (val >> 29) & 0x3;
@@ -2322,27 +2321,31 @@ Operand *AArch64CGFunc::HandleFmovImm(PrimType stype, int64 val) {
     int64 imm8 = (temp2 & 0x7f) | temp1;
     Operand *newOpnd0 = &CreateImmOperand(imm8, k8BitSize, true, kNotVary, true);
     regno_t vRegNO = NewVReg(kRegTyFloat, GetPrimTypeSize(stype));
-    result = &CreateVirtualRegisterOperand(vRegNO);
+    *result = &CreateVirtualRegisterOperand(vRegNO);
     MOperator mopFmov = (is64Bits ? MOP_xdfmovri : MOP_wsfmovri);
-    GetCurBB()->AppendInsn(cg->BuildInstruction<AArch64Insn>(mopFmov, *result, *newOpnd0));
+    GetCurBB()->AppendInsn(cg->BuildInstruction<AArch64Insn>(mopFmov, **result, *newOpnd0));
   } else {
+    if (is64Bits) { // For DoubleConst, use ldr .literal
+      return canRepreset;
+    }
     Operand *newOpnd0 = &CreateImmOperand(val, GetPrimTypeSize(stype) * kBitsPerByte, false);
     PrimType itype = (stype == PTY_f32) ? PTY_i32 : PTY_i64;
     RegOperand &regOpnd = LoadIntoRegister(*newOpnd0, itype);
 
     regno_t vRegNO = NewVReg(kRegTyFloat, GetPrimTypeSize(stype));
-    result = &CreateVirtualRegisterOperand(vRegNO);
+    *result = &CreateVirtualRegisterOperand(vRegNO);
     MOperator mopFmov = (is64Bits ? MOP_xvmovdr: MOP_xvmovsr);
-    GetCurBB()->AppendInsn(cg->BuildInstruction<AArch64Insn>(mopFmov, *result, regOpnd));
+    GetCurBB()->AppendInsn(cg->BuildInstruction<AArch64Insn>(mopFmov, **result, regOpnd));
   }
-  return result;
+  return canRepreset;
 }
 
 Operand *AArch64CGFunc::SelectFloatConst(MIRFloatConst &floatConst) {
   PrimType stype = floatConst.GetType().GetPrimType();
   int32 val = floatConst.GetIntValue();
   /* according to aarch64 encoding format, convert int to float expression */
-  Operand *result = HandleFmovImm(stype, val);
+  Operand *result;
+  HandleFmovImm(stype, val, &result);
 
   return result;
 }
@@ -2351,8 +2354,13 @@ Operand *AArch64CGFunc::SelectDoubleConst(MIRDoubleConst &doubleConst) {
   PrimType stype = doubleConst.GetType().GetPrimType();
   int64 val = doubleConst.GetIntValue();
   /* according to aarch64 encoding format, convert int to float expression */
-  Operand *result = HandleFmovImm(stype, val);
-
+  Operand *result;
+  uint64 canRepreset = HandleFmovImm(stype, val, &result);
+  if (canRepreset == 0) {
+    uint32 labelIdxTmp = GetLabelIdx();
+    result = SelectLiteral(&doubleConst, &GetFunction(), labelIdxTmp++, this);
+    SetLabelIdx(labelIdxTmp);
+  }
   return result;
 }
 
@@ -7895,10 +7903,11 @@ Operand *AArch64CGFunc::SelectCclz(IntrinsicopNode &intrnNode) {
   if (opnd->IsMemoryAccessOperand()) {
     Insn &insn = GetCG()->BuildInstruction<AArch64Insn>(PickLdInsn(GetPrimTypeBitSize(ptype), ptype), ldDest, *opnd);
     GetCurBB()->AppendInsn(insn);
+    opnd = &ldDest;
   } else if (opnd->IsImmediate()) {
     SelectCopyImm(ldDest, *static_cast<ImmOperand *>(opnd), ptype);
+    opnd = &ldDest;
   }
-  opnd = &ldDest;
 
   if (GetPrimTypeSize(ptype) == k4ByteSize) {
     mop = MOP_wclz;
@@ -7919,11 +7928,11 @@ Operand *AArch64CGFunc::SelectCctz(IntrinsicopNode &intrnNode) {
   if (opnd->IsMemoryAccessOperand()) {
     Insn &insn = GetCG()->BuildInstruction<AArch64Insn>(PickLdInsn(GetPrimTypeBitSize(ptype), ptype), ldDest, *opnd);
     GetCurBB()->AppendInsn(insn);
+    opnd = &ldDest;
   } else if (opnd->IsImmediate()) {
-    RegOperand &ldDest = CreateRegisterOperandOfType(ptype);
     SelectCopyImm(ldDest, *static_cast<ImmOperand *>(opnd), ptype);
+    opnd = &ldDest;
   }
-  opnd = &ldDest;
 
   MOperator clzmop;
   MOperator rbitmop;

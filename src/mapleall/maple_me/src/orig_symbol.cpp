@@ -71,7 +71,12 @@ void OriginalStTable::Dump() {
 
 OriginalSt *OriginalStTable::FindOrCreateSymbolOriginalSt(MIRSymbol &mirst, PUIdx pidx, FieldID fld) {
   OffsetType offset(mirst.GetType()->GetBitOffsetFromBaseAddr(fld));
-  auto it = mirSt2Ost.find(SymbolFieldPair(mirst.GetStIdx(), fld, offset));
+  auto ostType = mirst.GetType();
+  if (fld != 0) {
+    CHECK_FATAL(ostType->IsStructType(), "must be structure type");
+    ostType = static_cast<MIRStructType*>(ostType)->GetFieldType(fld);
+  }
+  auto it = mirSt2Ost.find(SymbolFieldPair(mirst.GetStIdx(), fld, ostType->GetTypeIndex(), offset));
   if (it == mirSt2Ost.end()) {
     // create a new OriginalSt
     return CreateSymbolOriginalSt(mirst, pidx, fld);
@@ -85,17 +90,17 @@ OriginalSt *OriginalStTable::CreateSymbolOriginalSt(MIRSymbol &mirSt, PUIdx puId
                                                     const OffsetType &offset) {
   auto *ost = alloc.GetMemPool()->New<OriginalSt>(originalStVector.size(), mirSt, puIdx, fld, alloc);
   ost->SetOffset(offset);
-  ost->SetTyIdx(tyIdx);
   ost->SetIsFinal(mirSt.IsFinal());
   ost->SetIsPrivate(mirSt.IsPrivate());
+  ost->SetTyIdx(tyIdx);
   originalStVector.push_back(ost);
-  mirSt2Ost[SymbolFieldPair(mirSt.GetStIdx(), fld, offset)] = ost->GetIndex();
+  mirSt2Ost[SymbolFieldPair(mirSt.GetStIdx(), fld, tyIdx, offset)] = ost->GetIndex();
   return ost;
 }
 
 std::pair<OriginalSt*, bool> OriginalStTable::FindOrCreateSymbolOriginalSt(MIRSymbol &mirst, PUIdx pidx,
     FieldID fld, const TyIdx &tyIdx, const OffsetType &offset) {
-  auto it = mirSt2Ost.find(SymbolFieldPair(mirst.GetStIdx(), fld, offset));
+  auto it = mirSt2Ost.find(SymbolFieldPair(mirst.GetStIdx(), fld, tyIdx, offset));
   if (it == mirSt2Ost.end()) {
     // create a new OriginalSt
     auto *newOst = CreateSymbolOriginalSt(mirst, pidx, fld, tyIdx, offset);
@@ -129,7 +134,7 @@ OriginalSt *OriginalStTable::CreateSymbolOriginalSt(MIRSymbol &mirst, PUIdx pidx
   OffsetType offset(mirst.GetType()->GetBitOffsetFromBaseAddr(fld));
   ost->SetOffset(offset);
   originalStVector.push_back(ost);
-  mirSt2Ost[SymbolFieldPair(mirst.GetStIdx(), fld, offset)] = ost->GetIndex();
+  mirSt2Ost[SymbolFieldPair(mirst.GetStIdx(), fld, ost->GetTyIdx(), offset)] = ost->GetIndex();
   return ost;
 }
 
@@ -146,7 +151,7 @@ OriginalSt *OriginalStTable::CreatePregOriginalSt(PregIdx regidx, PUIdx pidx) {
 }
 
 OriginalSt *OriginalStTable::FindSymbolOriginalSt(MIRSymbol &mirst) {
-  auto it = mirSt2Ost.find(SymbolFieldPair(mirst.GetStIdx(), 0, OffsetType(0)));
+  auto it = mirSt2Ost.find(SymbolFieldPair(mirst.GetStIdx(), 0, mirst.GetTyIdx(), OffsetType(0)));
   if (it == mirSt2Ost.end()) {
     return nullptr;
   }
@@ -173,14 +178,30 @@ OriginalSt *OriginalStTable::FindOrCreateAddrofSymbolOriginalSt(OriginalSt *ost)
 }
 
 OriginalSt *OriginalStTable::FindOrCreateExtraLevSymOrRegOriginalSt(OriginalSt *ost, TyIdx tyIdx,
-    FieldID fld, const KlassHierarchy *klassHierarchy) {
+    FieldID fld, const OffsetType &offset, const KlassHierarchy *klassHierarchy) {
   TyIdx ptyIdxOfOst = ost->GetTyIdx();
   FieldID fldIDInOst = fld;
   if (ptyIdxOfOst != tyIdx && klassHierarchy != nullptr) {
     (void)klassHierarchy->UpdateFieldID(tyIdx, ptyIdxOfOst, fldIDInOst);
   }
+
   auto nextLevelOsts = ost->GetNextLevelOsts();
-  OriginalSt *nextLevOst = FindExtraLevOriginalSt(nextLevelOsts, fldIDInOst);
+  MIRType *typeOfExtraLevOst = GlobalTables::GetTypeTable().GetVoid();
+  OffsetType offsetOfNextLevOst(kOffsetUnknown);
+  tyIdx = (tyIdx == 0u) ? ost->GetTyIdx() : tyIdx;
+  if (tyIdx != 0u) {
+    // use the tyIdx info from the instruction
+    const MIRType *mirType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx);
+    if (mirType->GetKind() == kTypePointer) {
+      const auto *ptType = static_cast<const MIRPtrType*>(mirType);
+      typeOfExtraLevOst = GlobalTables::GetTypeTable().GetTypeFromTyIdx(ptType->GetPointedTyIdxWithFieldID(fld));
+      if (fld <= ptType->NumberOfFieldIDs()) {
+        offsetOfNextLevOst = offset + ptType->GetPointedType()->GetBitOffsetFromBaseAddr(fld);
+      }
+    }
+  }
+
+  OriginalSt *nextLevOst = FindExtraLevOriginalSt(nextLevelOsts, typeOfExtraLevOst, fldIDInOst, offsetOfNextLevOst);
   if (nextLevOst != nullptr) {
     return nextLevOst;
   }
@@ -197,6 +218,7 @@ OriginalSt *OriginalStTable::FindOrCreateExtraLevSymOrRegOriginalSt(OriginalSt *
   CHECK_FATAL(ost->GetIndirectLev() < INT8_MAX, "boundary check");
   nextLevOst->SetIndirectLev(ost->GetIndirectLev() + 1);
   nextLevOst->SetPrevLevelOst(ost);
+  nextLevOst->SetOffset(offsetOfNextLevOst);
   tyIdx = (tyIdx == 0u) ? ost->GetTyIdx() : tyIdx;
   if (tyIdx != 0u) {
     // use the tyIdx info from the instruction
@@ -204,12 +226,10 @@ OriginalSt *OriginalStTable::FindOrCreateExtraLevSymOrRegOriginalSt(OriginalSt *
     if (mirType->GetKind() == kTypePointer) {
       const auto *ptType = static_cast<const MIRPtrType*>(mirType);
       TyIdxFieldAttrPair fieldPair = ptType->GetPointedTyIdxFldAttrPairWithFieldID(fld);
-      nextLevOst->SetTyIdx(fieldPair.first);
       nextLevOst->SetIsFinal(fieldPair.second.GetAttr(FLDATTR_final));
       nextLevOst->SetIsPrivate(fieldPair.second.GetAttr(FLDATTR_private));
-    } else {
-      nextLevOst->SetTyIdx(TyIdx(PTY_void));
     }
+    nextLevOst->SetTyIdx(typeOfExtraLevOst->GetTypeIndex());
   }
   ASSERT(!GlobalTables::GetTypeTable().GetTypeTable().empty(), "container check");
   if (GlobalTables::GetTypeTable().GetTypeFromTyIdx(ost->GetTyIdx())->PointsToConstString()) {
@@ -219,18 +239,22 @@ OriginalSt *OriginalStTable::FindOrCreateExtraLevSymOrRegOriginalSt(OriginalSt *
   return nextLevOst;
 }
 
-OriginalSt *OriginalStTable::FindOrCreateExtraLevOriginalSt(OriginalSt *ost,
-                                                            TyIdx ptyIdx, FieldID fld) {
+OriginalSt *OriginalStTable::FindOrCreateExtraLevOriginalSt(OriginalSt *ost, TyIdx ptyIdx, FieldID fld,
+                                                            const OffsetType &offset) {
   if (ost->IsSymbolOst() || ost->IsPregOst()) {
-    return FindOrCreateExtraLevSymOrRegOriginalSt(ost, ptyIdx, fld);
+    return FindOrCreateExtraLevSymOrRegOriginalSt(ost, ptyIdx, fld, offset);
   }
   return nullptr;
 }
 
-OriginalSt *OriginalStTable::FindExtraLevOriginalSt(const MapleVector<OriginalSt*> &nextLevelOsts,
-                                                    FieldID fld) {
+OriginalSt *OriginalStTable::FindExtraLevOriginalSt(const MapleVector<OriginalSt*> &nextLevelOsts, MIRType *type,
+                                                    FieldID fld, const OffsetType &offset) {
   for (OriginalSt *nextLevelOst : nextLevelOsts) {
     if (nextLevelOst->GetFieldID() == fld) {
+      return nextLevelOst;
+    }
+    if (!offset.IsInvalid() && nextLevelOst->GetOffset() == offset &&
+        nextLevelOst->GetType()->GetSize() == type->GetSize()) {
       return nextLevelOst;
     }
   }

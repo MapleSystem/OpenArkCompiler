@@ -177,8 +177,7 @@ AliasElem *AliasClass::FindOrCreateAliasElem(OriginalSt &ost) {
 
 OffsetType AliasClass::OffsetInBitOfArrayElement(const ArrayNode *arrayNode) {
   ASSERT(arrayNode->GetOpCode() == OP_array, "must be arrayNode");
-  bool arrayAddrIsConst = (arrayNode->Opnd(0)->GetOpCode() == OP_addrof &&
-                           static_cast<AddrofSSANode*>(arrayNode->Opnd(0))->GetFieldID() == 0);
+  bool arrayAddrIsConst = arrayNode->Opnd(0)->GetOpCode() == OP_addrof;
   if (!arrayAddrIsConst) {
     return OffsetType::InvalidOffset();
   }
@@ -197,17 +196,20 @@ OffsetType AliasClass::OffsetInBitOfArrayElement(const ArrayNode *arrayNode) {
 
   auto *ptrTypeOfArrayType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(arrayNode->GetTyIdx());
   ASSERT(ptrTypeOfArrayType->IsMIRPtrType(), "must be pointer type");
-  auto *arrayType = static_cast<MIRPtrType*>(ptrTypeOfArrayType)->GetPointedType();
-  switch (arrayType->GetKind()) {
+  auto *mirType = static_cast<MIRPtrType*>(ptrTypeOfArrayType)->GetPointedType();
+  constexpr uint32 kUpperBoundaryOfElemNumOfIndexSensitiveArray = 100;
+  switch (mirType->GetKind()) {
     case kTypeArray: {
-      return OffsetType(
-          static_cast<MIRArrayType *>(arrayType)->GetBitOffsetFromArrayAddress(arrayIndexVector));
+      auto arrayType = static_cast<MIRArrayType *>(mirType);
+      if (arrayType->ElemNumber() > kUpperBoundaryOfElemNumOfIndexSensitiveArray) {
+        return OffsetType::InvalidOffset();
+      }
+      return OffsetType(arrayType->GetBitOffsetFromArrayAddress(arrayIndexVector));
     }
     case kTypeFArray:
     case kTypeJArray: {
       ASSERT(arrayIndexVector.size() == 1, "FArray/JArray has single index");
-      return OffsetType(
-          static_cast<MIRFarrayType *>(arrayType)->GetBitOffsetFromArrayAddress(arrayIndexVector.front()));
+      return OffsetType(static_cast<MIRFarrayType*>(mirType)->GetBitOffsetFromArrayAddress(arrayIndexVector.front()));
     }
     default: {
       CHECK_FATAL(false, "unsupported array type");
@@ -218,13 +220,12 @@ OffsetType AliasClass::OffsetInBitOfArrayElement(const ArrayNode *arrayNode) {
 
 OriginalSt *AliasClass::FindOrCreateExtraLevOst(SSATab *ssaTab, OriginalSt *prevLevOst, const TyIdx &tyIdx,
     FieldID fld, OffsetType offset) {
-  // create exact virtual-var for iread (array (addrof %array, i32 index))
-  if (!offset.IsInvalid()) {
+  if (!offset.IsInvalid() && prevLevOst->GetIndirectLev() < 0) {
     auto mirType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx);
     ASSERT(mirType->IsMIRPtrType(), "must be pointer type");
-    auto elemTypeIndex = static_cast<MIRPtrType*>(mirType)->GetPointedTyIdx();
+    auto tyIdxOfOst = static_cast<MIRPtrType*>(mirType)->GetPointedTyIdx();
     const auto &ostPair = ssaTab->GetOriginalStTable().FindOrCreateSymbolOriginalSt(*prevLevOst->GetMIRSymbol(),
-        prevLevOst->GetPuIdx(), 0, elemTypeIndex, offset);
+        prevLevOst->GetPuIdx(), fld, tyIdxOfOst, offset);
     auto *newOst = ostPair.first;
     newOst->SetPrevLevelOst(prevLevOst);
     if (ostPair.second) {
@@ -235,10 +236,10 @@ OriginalSt *AliasClass::FindOrCreateExtraLevOst(SSATab *ssaTab, OriginalSt *prev
 
   const TyIdx &tyIdxOfBaseOst = prevLevOst->GetTyIdx();
   if (ssaTab->GetModule().IsCModule() && tyIdxOfBaseOst != tyIdx) {
-    return ssaTab->FindOrCreateExtraLevOriginalSt(prevLevOst, tyIdx, 0);
+    return ssaTab->GetOriginalStTable().FindOrCreateExtraLevOriginalSt(prevLevOst, tyIdx, 0, offset);
   }
 
-  return ssaTab->FindOrCreateExtraLevOriginalSt(prevLevOst, tyIdx, fld);
+  return ssaTab->GetOriginalStTable().FindOrCreateExtraLevOriginalSt(prevLevOst, tyIdx, fld, offset);
 }
 
 AliasElem *AliasClass::FindOrCreateExtraLevAliasElem(BaseNode &baseAddress, const TyIdx &tyIdx, FieldID fieldId) {
@@ -293,8 +294,9 @@ AliasInfo AliasClass::CreateAliasElemsExpr(BaseNode &expr) {
       oSt.SetAddressTaken();
       FindOrCreateAliasElem(oSt);
       AliasElem *ae = &FindOrCreateAliasElemOfAddrofOSt(oSt);
-      OffsetType offset = (addrof.GetFieldID() == 0 ? OffsetType(0) : OffsetType::InvalidOffset());
-      return AliasInfo(ae, addrof.GetFieldID(), offset);
+      int64 offsetVal =
+          (addrof.GetFieldID() == 0) ? 0 : oSt.GetMIRSymbol()->GetType()->GetBitOffsetFromBaseAddr(oSt.GetFieldID());
+      return AliasInfo(ae, addrof.GetFieldID(), OffsetType(offsetVal));
     }
     case OP_dread: {
       OriginalSt *ost = static_cast<AddrofSSANode&>(expr).GetSSAVar()->GetOst();
@@ -303,7 +305,7 @@ AliasInfo AliasClass::CreateAliasElemsExpr(BaseNode &expr) {
       }
 
       AliasElem *ae = FindOrCreateAliasElem(*ost);
-      return AliasInfo(ae, 0);
+      return AliasInfo(ae, 0, OffsetType(0));
     }
     case OP_regread: {
       OriginalSt &oSt = *static_cast<RegreadSSANode&>(expr).GetSSAVar()->GetOst();
@@ -351,7 +353,7 @@ AliasInfo AliasClass::CreateAliasElemsExpr(BaseNode &expr) {
       const auto &aliasInfo = CreateAliasElemsExpr(*expr.Opnd(0));
       OffsetType offset = OffsetInBitOfArrayElement(static_cast<const ArrayNode*>(&expr));
       OffsetType newOffset = offset + aliasInfo.offset;
-      return AliasInfo(aliasInfo.ae, aliasInfo.fieldID, newOffset);
+      return AliasInfo(aliasInfo.ae, 0, newOffset);
     }
     case OP_cvt:
     case OP_retype: {
@@ -416,8 +418,10 @@ void AliasClass::ApplyUnionForFieldsInAggCopy(const OriginalSt *lhsost, const Or
       OffsetType offset(bitOffset);
       MapleUnorderedMap<SymbolFieldPair, OStIdx, HashSymbolFieldPair> &mirSt2Ost =
           ssaTab.GetOriginalStTable().mirSt2Ost;
-      auto lhsit = mirSt2Ost.find(SymbolFieldPair(lhsost->GetMIRSymbol()->GetStIdx(), fieldID, offset));
-      auto rhsit = mirSt2Ost.find(SymbolFieldPair(rhsost->GetMIRSymbol()->GetStIdx(), fieldID, offset));
+      auto lhsit = mirSt2Ost.find(
+          SymbolFieldPair(lhsost->GetMIRSymbol()->GetStIdx(), fieldID, fieldType->GetTypeIndex(), offset));
+      auto rhsit = mirSt2Ost.find(
+          SymbolFieldPair(rhsost->GetMIRSymbol()->GetStIdx(), fieldID, fieldType->GetTypeIndex(), offset));
       if (lhsit == mirSt2Ost.end() && rhsit == mirSt2Ost.end()) {
         continue;
       }
@@ -463,7 +467,8 @@ void AliasClass::ApplyUnionForFieldsInAggCopy(const OriginalSt *lhsost, const Or
       OffsetType offset(bitOffset);
       MapleUnorderedMap<SymbolFieldPair, OStIdx, HashSymbolFieldPair> &mirSt2Ost =
           ssaTab.GetOriginalStTable().mirSt2Ost;
-      auto it = mirSt2Ost.find(SymbolFieldPair(lhsost->GetMIRSymbol()->GetStIdx(), fieldID, offset));
+      auto it = mirSt2Ost.find(
+          SymbolFieldPair(lhsost->GetMIRSymbol()->GetStIdx(), fieldID, fieldType->GetTypeIndex(), offset));
       if (it == mirSt2Ost.end()) {
         continue;
       }
@@ -485,7 +490,8 @@ void AliasClass::ApplyUnionForFieldsInAggCopy(const OriginalSt *lhsost, const Or
       OffsetType offset(bitOffset);
       MapleUnorderedMap<SymbolFieldPair, OStIdx, HashSymbolFieldPair> &mirSt2Ost =
           ssaTab.GetOriginalStTable().mirSt2Ost;
-      auto it = mirSt2Ost.find(SymbolFieldPair(rhsost->GetMIRSymbol()->GetStIdx(), fieldID, offset));
+      auto it = mirSt2Ost.find(
+          SymbolFieldPair(rhsost->GetMIRSymbol()->GetStIdx(), fieldID, fieldType->GetTypeIndex(), offset));
       if (it == mirSt2Ost.end()) {
         continue;
       }

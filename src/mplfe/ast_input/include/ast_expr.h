@@ -286,9 +286,6 @@ class ASTUOMinusExpr: public ASTUnaryOperatorExpr {
   ASTUOMinusExpr() : ASTUnaryOperatorExpr(kASTOpMinus) {}
   ~ASTUOMinusExpr() = default;
 
- protected:
-  MIRConst *GenerateMIRConstImpl() const override;
-
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 };
