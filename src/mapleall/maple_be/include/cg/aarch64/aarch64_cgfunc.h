@@ -709,6 +709,9 @@ class AArch64CGFunc : public CGFunc {
                                           AArch64isa::MemoryOrdering memOrd);
   MemOperand &CreateNonExtendMemOpnd(PrimType ptype, const BaseNode &parent, BaseNode &addrExpr, int32 offset);
   std::string GenerateMemOpndVerbose(const Operand &src);
+  RegOperand *PrepareMemcpyParamOpnd(bool isLo12, MIRSymbol &symbol, int64 offsetVal, RegOperand &BaseReg);
+  RegOperand *PrepareMemcpyParamOpnd(int64 offset, Operand &exprOpnd);
+  RegOperand *PrepareMemcpyParamOpnd(uint64 copySize);
 };
 }  /* namespace maplebe */
 
