@@ -76,6 +76,7 @@ class Prop {
   bool IsVersionConsistent(const std::vector<const MeExpr*> &vstVec,
                            const MapleVector<MapleStack<MeExpr *> *> &vstLiveStack) const;
   bool IvarIsFinalField(const IvarMeExpr &ivarMeExpr) const;
+  bool CanBeReplacedByConst(MIRSymbol &symbol) const;
   bool Propagatable(const MeExpr &expr, const BB &fromBB, bool atParm) const;
   MeExpr &PropMeExpr(MeExpr &meExpr, bool &isproped, bool atParm);
 

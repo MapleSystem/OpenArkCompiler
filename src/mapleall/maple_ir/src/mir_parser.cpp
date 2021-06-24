@@ -39,6 +39,10 @@ bool MIRParser::ParseStmtDassign(StmtNodePtr &stmt) {
     Error("expect a symbol parsing ParseStmtDassign");
     return false;
   }
+  if (stidx.IsGlobal()) {
+    MIRSymbol *sym = GlobalTables::GetGsymTable().GetSymbolFromStidx(stidx.Idx());
+    sym->SetHasPotentialAssignment();
+  }
   auto *assignStmt = mod.CurFuncCodeMemPool()->New<DassignNode>();
   assignStmt->SetStIdx(stidx);
   TokenKind nextToken = lexer.NextToken();
@@ -2375,6 +2379,10 @@ bool MIRParser::ParseExprAddrof(BaseNodePtr &expr) {
   if (stidx.FullIdx() == 0) {
     Error("expect symbol ParseExprAddroffunc");
     return false;
+  }
+  if (stidx.IsGlobal()) {
+    MIRSymbol *sym = GlobalTables::GetGsymTable().GetSymbolFromStidx(stidx.Idx());
+    sym->SetHasPotentialAssignment();
   }
   addrofNode->SetStIdx(stidx);
   TokenKind tk = lexer.NextToken();

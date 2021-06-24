@@ -241,6 +241,9 @@ BaseNode *BinaryMplImport::ImportExpression(MIRFunction *func) {
         CHECK_FATAL(stag == kBinKindSymViaSymname, "kBinKindSymViaSymname expected");
         GStrIdx strIdx = ImportStr();
         MIRSymbol *sym = GlobalTables::GetGsymTable().GetSymbolFromStrIdx(strIdx);
+        if (op == OP_addrof) {
+          sym->SetHasPotentialAssignment();
+        }
         stIdx.SetIdx(sym->GetStIdx().Idx());
       }
       drNode->SetStIdx(stIdx);
@@ -473,6 +476,7 @@ BlockNode *BinaryMplImport::ImportBlockNode(MIRFunction *func) {
           CHECK_FATAL(stag == kBinKindSymViaSymname, "kBinKindSymViaSymname expected");
           GStrIdx strIdx = ImportStr();
           MIRSymbol *sym = GlobalTables::GetGsymTable().GetSymbolFromStrIdx(strIdx);
+          sym->SetHasPotentialAssignment();
           stIdx.SetIdx(sym->GetStIdx().Idx());
         }
         s->SetStIdx(stIdx);

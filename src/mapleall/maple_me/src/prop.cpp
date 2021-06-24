@@ -421,6 +421,12 @@ MeExpr &Prop::PropIvar(IvarMeExpr &ivarMeExpr) {
   return ivarMeExpr;
 }
 
+bool Prop::CanBeReplacedByConst(MIRSymbol &symbol) const {
+  PrimType primType = symbol.GetType()->GetPrimType();
+  return (symbol.GetStorageClass() == kScFstatic) && (!symbol.HasPotentialAssignment()) &&
+         !IsPrimitivePoint(primType) && (IsPrimitiveInteger(primType) || IsPrimitiveFloat(primType));
+}
+
 MeExpr &Prop::PropMeExpr(MeExpr &meExpr, bool &isProped, bool atParm) {
   MeExprOp meOp = meExpr.GetMeOp();
 
@@ -428,11 +434,17 @@ MeExpr &Prop::PropMeExpr(MeExpr &meExpr, bool &isProped, bool atParm) {
   switch (meOp) {
     case kMeOpVar: {
       auto &varExpr = static_cast<VarMeExpr&>(meExpr);
-      MeExpr &propMeExpr = PropVar(varExpr, atParm, true);
-      if (&propMeExpr != &varExpr) {
+      MeExpr *propMeExpr = &meExpr;
+      MIRSymbol *symbol = irMap.GetSSATab().GetMIRSymbolFromID(varExpr.GetOstIdx());
+      if (mirModule.IsCModule() && CanBeReplacedByConst(*symbol) && symbol->GetKonst() != nullptr) {
+        propMeExpr = irMap.CreateConstMeExpr(varExpr.GetPrimType(), *symbol->GetKonst());
+      } else {
+        propMeExpr = &PropVar(varExpr, atParm, true);
+      }
+      if (propMeExpr != &varExpr) {
         isProped = true;
       }
-      return propMeExpr;
+      return *propMeExpr;
     }
     case kMeOpReg: {
       auto &regExpr = static_cast<RegMeExpr&>(meExpr);

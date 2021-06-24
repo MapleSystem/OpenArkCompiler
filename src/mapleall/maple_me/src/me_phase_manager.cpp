@@ -230,10 +230,6 @@ void MeFuncPhaseManager::Run(MIRFunction *mirFunc, uint64 rangeNum, const std::s
   globalMIRModule = &mirModule;
   globalFunc = &func;
 #endif
-  // call constant folding
-  maple::ConstantFold cf(mirModule);
-  (void)cf.Simplify(mirFunc->GetBody());
-
   func.Prepare(rangeNum);
   if (timePhases) {
     funcPrepareTimer.Stop();

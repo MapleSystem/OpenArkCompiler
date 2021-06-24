@@ -24,6 +24,7 @@ ADD_PHASE("gencheckcast", JAVALANG)
 ADD_PHASE("javaintrnlowering", JAVALANG)
 ADD_PHASE("simplify", Options::O2)
 ADD_PHASE("inline", Options::O2 && Options::useInline)
+ADD_PHASE("ConstantFold", Options::O2)
 // mephase begin
 ADD_PHASE("mecfgbuild", CLANG && MeOption::optLevel >= 3)
 ADD_PHASE("injectiv", CLANG && MeOption::optLevel >= 3)

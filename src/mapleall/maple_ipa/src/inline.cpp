@@ -637,6 +637,8 @@ void MInline::ConvertPStaticToFStatic(MIRFunction &func) const {
       newSym->SetSKind(sym->GetSKind());
       newSym->SetAttrs(sym->GetAttrs());
       newSym->SetValue(sym->GetValue());
+      // avoid pstatic vars to be replaced by const
+      newSym->SetHasPotentialAssignment();
       bool success = GlobalTables::GetGsymTable().AddToStringSymbolMap(*newSym);
       CHECK_FATAL(success, "Found repeated global symbols!");
       oldStIdx2New[i] = newSym->GetStIdx().FullIdx();
