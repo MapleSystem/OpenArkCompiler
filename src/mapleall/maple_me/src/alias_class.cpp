@@ -242,7 +242,7 @@ OriginalSt *AliasClass::FindOrCreateExtraLevOst(SSATab *ssaTab, OriginalSt *prev
   return ssaTab->GetOriginalStTable().FindOrCreateExtraLevOriginalSt(prevLevOst, tyIdx, fld, offset);
 }
 
-AliasElem *AliasClass::FindOrCreateExtraLevAliasElem(BaseNode &baseAddress, const TyIdx &tyIdx, FieldID fieldId) {
+AliasElem *AliasClass::FindOrCreateExtraLevAliasElem(BaseNode &baseAddress, const TyIdx &tyIdx, FieldID fieldId, bool typeHasBeenCasted) {
   auto *baseAddr = RemoveTypeConvertionIfExist(&baseAddress);
   AliasInfo aliasInfoOfBaseAddress = CreateAliasElemsExpr(*baseAddr);
   if (aliasInfoOfBaseAddress.ae == nullptr) {
@@ -253,7 +253,7 @@ AliasElem *AliasClass::FindOrCreateExtraLevAliasElem(BaseNode &baseAddress, cons
   }
 
   auto newOst = FindOrCreateExtraLevOst(&ssaTab, aliasInfoOfBaseAddress.ae->GetOst(), tyIdx,
-      aliasInfoOfBaseAddress.fieldID + fieldId, aliasInfoOfBaseAddress.offset);
+      aliasInfoOfBaseAddress.fieldID + fieldId, typeHasBeenCasted ? OffsetType(kOffsetUnknown) : aliasInfoOfBaseAddress.offset);
 
   CHECK_FATAL(newOst != nullptr, "null ptr check");
   if (newOst->GetIndex() == osym2Elem.size()) {
@@ -313,7 +313,10 @@ AliasInfo AliasClass::CreateAliasElemsExpr(BaseNode &expr) {
     }
     case OP_iread: {
       auto &iread = static_cast<IreadSSANode&>(expr);
-      return AliasInfo(FindOrCreateExtraLevAliasElem(*iread.Opnd(0), iread.GetTyIdx(), iread.GetFieldID()), 0);
+      MIRType *mirType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(iread.GetTyIdx());
+      CHECK_FATAL(mirType->GetKind() == kTypePointer, "CreateAliasElemsExpr: ptr type expected in iread");
+      bool typeHasBeenCasted = static_cast<MIRPtrType*>(mirType)->GetPointedType()->GetSize() != GetPrimTypeSize(iread.GetPrimType());
+      return AliasInfo(FindOrCreateExtraLevAliasElem(*iread.Opnd(0), iread.GetTyIdx(), iread.GetFieldID(), typeHasBeenCasted), 0);
     }
     case OP_iaddrof: {
       auto &iread = static_cast<IreadNode&>(expr);
@@ -636,7 +639,7 @@ void AliasClass::ApplyUnionForCopies(StmtNode &stmt) {
       auto &iassignNode = static_cast<IassignNode&>(stmt);
       AliasInfo rhsAinfo = CreateAliasElemsExpr(*iassignNode.Opnd(1));
       AliasElem *lhsAliasElem =
-          FindOrCreateExtraLevAliasElem(*iassignNode.Opnd(0), iassignNode.GetTyIdx(), iassignNode.GetFieldID());
+          FindOrCreateExtraLevAliasElem(*iassignNode.Opnd(0), iassignNode.GetTyIdx(), iassignNode.GetFieldID(), false);
       if (lhsAliasElem != nullptr) {
         ApplyUnionForDassignCopy(*lhsAliasElem, rhsAinfo.ae, *iassignNode.Opnd(1));
       }
@@ -1604,7 +1607,7 @@ bool AliasClass::IsEquivalentField(TyIdx tyIdxA, FieldID fldA, TyIdx tyIdxB, Fie
 void AliasClass::CollectMayDefForIassign(StmtNode &stmt, std::set<OriginalSt*> &mayDefOsts) {
   auto &iassignNode = static_cast<IassignNode&>(stmt);
   AliasElem *lhsAe =
-      FindOrCreateExtraLevAliasElem(*iassignNode.Opnd(0), iassignNode.GetTyIdx(), iassignNode.GetFieldID());
+      FindOrCreateExtraLevAliasElem(*iassignNode.Opnd(0), iassignNode.GetTyIdx(), iassignNode.GetFieldID(), false);
 
   // lhsAe does not alias with any aliasElem
   if (lhsAe->GetClassSet() == nullptr) {
