@@ -17,7 +17,7 @@
 
 namespace maple {
 
-static ScalarMeExpr* ResolveOneInjuringDef(ScalarMeExpr *regx) {
+ScalarMeExpr* SSAEPre::ResolveOneInjuringDef(ScalarMeExpr *regx) const {
   if (regx->GetDefBy() != kDefByStmt) {
     return regx;
   }
