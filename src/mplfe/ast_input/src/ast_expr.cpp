@@ -29,17 +29,41 @@ const uint32 kOneByte = 8;
 // ---------- ASTValue ----------
 MIRConst *ASTValue::Translate2MIRConst() const {
   switch (pty) {
-    case PTY_i8:
-    case PTY_i16:
-    case PTY_i32:
-    case PTY_i64:
-    case PTY_u1:
-    case PTY_u8:
-    case PTY_u16:
-    case PTY_u32:
+    case PTY_u1: {
+      return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
+          val.u8, *GlobalTables::GetTypeTable().GetPrimType(PTY_u1));
+    }
+    case PTY_u8: {
+      return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
+          val.u8, *GlobalTables::GetTypeTable().GetPrimType(PTY_u8));
+    }
+    case PTY_u16: {
+      return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
+          val.u16, *GlobalTables::GetTypeTable().GetPrimType(PTY_u16));
+    }
+    case PTY_u32: {
+      return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
+          val.u32, *GlobalTables::GetTypeTable().GetPrimType(PTY_u32));
+    }
     case PTY_u64: {
       return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
-          val.i64, *GlobalTables::GetTypeTable().GetPrimType(pty));
+          val.u64, *GlobalTables::GetTypeTable().GetPrimType(PTY_u64));
+    }
+    case PTY_i8: {
+      return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
+          val.i8, *GlobalTables::GetTypeTable().GetPrimType(PTY_i8));
+    }
+    case PTY_i16: {
+      return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
+          val.i16, *GlobalTables::GetTypeTable().GetPrimType(PTY_i16));
+    }
+    case PTY_i32: {
+      return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
+          val.i32, *GlobalTables::GetTypeTable().GetPrimType(PTY_i32));
+    }
+    case PTY_i64: {
+      return GlobalTables::GetIntConstTable().GetOrCreateIntConst(
+          val.i64, *GlobalTables::GetTypeTable().GetPrimType(PTY_i64));
     }
     case PTY_f32: {
       return FEManager::GetModule().GetMemPool()->New<MIRFloatConst>(
@@ -356,15 +380,26 @@ MIRConst *ASTCastExpr::GenerateMIRFloatConst() const {
 MIRConst *ASTCastExpr::GenerateMIRIntConst() const {
   MIRConst *childConst = child->GenerateMIRConst();
   switch (childConst->GetKind()) {
-    case kConstDoubleConst: {
-      return FEManager::GetModule().GetMemPool()->New<MIRIntConst>(
-          static_cast<int64>(static_cast<MIRDoubleConst*>(childConst)->GetValue()),
-          *GlobalTables::GetTypeTable().GetPrimType(PTY_i64));
-    }
+    case kConstDoubleConst:
     case kConstInt: {
-      PrimType srcPrimType = src->GetPrimType();
-      int64 val = static_cast<MIRIntConst*>(childConst)->GetValue();
-      switch (srcPrimType) {
+      int64 val = childConst->GetKind() == kConstDoubleConst ?
+          static_cast<int64>(static_cast<MIRDoubleConst*>(childConst)->GetValue()) :
+          static_cast<MIRIntConst*>(childConst)->GetValue();
+
+      PrimType destPrimType = mirType->GetPrimType();
+      switch (destPrimType) {
+        case PTY_i8:
+          val = static_cast<int8>(val);
+          break;
+        case PTY_i16:
+          val = static_cast<int16>(val);
+          break;
+        case PTY_i32:
+          val = static_cast<int32>(val);
+          break;
+        case PTY_i64:
+          val = static_cast<int64>(val);
+          break;
         case PTY_u8:
           val = static_cast<uint8>(val);
           break;

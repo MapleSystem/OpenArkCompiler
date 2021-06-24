@@ -585,8 +585,58 @@ ASTValue *ASTParser::TranslateRValue2ASTValue(MapleAllocator &allocator, const c
     }
     auto *constMirType = astFile->CvtType(expr->getType().getCanonicalType());
     if (result.Val.isInt()) {
-      astValue->val.i64 = static_cast<int64>(result.Val.getInt().getExtValue());
-      astValue->pty = constMirType->GetPrimType();
+      switch (constMirType->GetPrimType()) {
+        case PTY_i8:
+          astValue->val.i8 = static_cast<int8>(result.Val.getInt().getExtValue());
+          astValue->pty = PTY_i8;
+          break;
+        case PTY_i16:
+          astValue->val.i16 = static_cast<int16>(result.Val.getInt().getExtValue());
+          astValue->pty = PTY_i16;
+          break;
+        case PTY_i32:
+          if (expr->getStmtClass() == clang::Stmt::CharacterLiteralClass) {
+            if (FEOptions::GetInstance().IsUseSignedChar()) {
+              astValue->val.i8 = static_cast<int8>(llvm::cast<clang::CharacterLiteral>(expr)->getValue());
+              astValue->pty = PTY_i8;
+            } else {
+              astValue->val.u8 = static_cast<uint8>(llvm::cast<clang::CharacterLiteral>(expr)->getValue());
+              astValue->pty = PTY_u8;
+            }
+          } else {
+            astValue->val.i32 = static_cast<int32>(result.Val.getInt().getExtValue());
+            astValue->pty = PTY_i32;
+          }
+          break;
+        case PTY_i64:
+          astValue->val.i64 = static_cast<int64>(result.Val.getInt().getExtValue());
+          astValue->pty = PTY_i64;
+          break;
+        case PTY_u8:
+          astValue->val.u8 = static_cast<uint8>(result.Val.getInt().getExtValue());
+          astValue->pty = PTY_u8;
+          break;
+        case PTY_u16:
+          astValue->val.u16 = static_cast<uint16>(result.Val.getInt().getExtValue());
+          astValue->pty = PTY_u16;
+          break;
+        case PTY_u32:
+          astValue->val.u32 = static_cast<uint32>(result.Val.getInt().getExtValue());
+          astValue->pty = PTY_u32;
+          break;
+        case PTY_u64:
+          astValue->val.u64 = static_cast<uint64>(result.Val.getInt().getExtValue());
+          astValue->pty = PTY_u64;
+          break;
+        case PTY_u1:
+          astValue->val.u8 = (result.Val.getInt().getExtValue() == 0 ? 0 : 1);
+          astValue->pty = PTY_u1;
+          break;
+        default: {
+          CHECK_FATAL(false, "Invalid");
+          break;
+        }
+      }
     } else if (result.Val.isFloat()) {
       llvm::APFloat fValue = result.Val.getFloat();
       llvm::APFloat::Semantics semantics = llvm::APFloatBase::SemanticsToEnum(fValue.getSemantics());

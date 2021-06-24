@@ -16,6 +16,7 @@
 #include "ast_interface.h"
 #include "ast_util.h"
 #include "fe_manager.h"
+#include "fe_options.h"
 
 namespace maple {
 MIRType *LibAstFile::CvtPrimType(const clang::QualType qualType) const {
@@ -38,11 +39,11 @@ PrimType LibAstFile::CvtPrimType(const clang::BuiltinType::Kind kind) const {
     case clang::BuiltinType::Bool:
       return PTY_u1;
     case clang::BuiltinType::Char_U:
-      return astContext->CharTy->isSignedIntegerType() ? PTY_i8 : PTY_u8;
+      return FEOptions::GetInstance().IsUseSignedChar() ? PTY_i8 : PTY_u8;
     case clang::BuiltinType::UChar:
       return PTY_u8;
     case clang::BuiltinType::WChar_U:
-      return astContext->WCharTy->isSignedIntegerType() ? PTY_i16 : PTY_u16;
+      return FEOptions::GetInstance().IsUseSignedChar() ? PTY_i16 : PTY_u16;
     case clang::BuiltinType::UShort:
       return PTY_u16;
     case clang::BuiltinType::UInt:
