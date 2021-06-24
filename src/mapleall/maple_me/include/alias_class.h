@@ -186,7 +186,7 @@ class AliasClass : public AnalysisResult {
   bool CallHasSideEffect(StmtNode *stmt) const;
   bool CallHasNoPrivateDefEffect(StmtNode *stmt) const;
   AliasElem *FindOrCreateAliasElem(OriginalSt &ost);
-  AliasElem *FindOrCreateExtraLevAliasElem(BaseNode &expr, const TyIdx &tyIdx, FieldID fieldId);
+  AliasElem *FindOrCreateExtraLevAliasElem(BaseNode &expr, const TyIdx &tyIdx, FieldID fieldId, bool typeHasBeenCasted);
   AliasInfo CreateAliasElemsExpr(BaseNode &expr);
   void SetNotAllDefsSeenForMustDefs(const StmtNode &callas);
   void SetPtrOpndNextLevNADS(const BaseNode &opnd, AliasElem *aliasElem, bool hasNoPrivateDefEffect);
