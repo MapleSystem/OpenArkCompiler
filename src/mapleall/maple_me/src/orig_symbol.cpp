@@ -55,6 +55,7 @@ OriginalStTable::OriginalStTable(MemPool &memPool, MIRModule &mod)
       mirModule(mod),
       originalStVector({ nullptr }, alloc.Adapter()),
       mirSt2Ost(alloc.Adapter()),
+      addrofSt2Ost(alloc.Adapter()),
       preg2Ost(alloc.Adapter()),
       pType2Ost(std::less<TyIdx>(), alloc.Adapter()),
       malloc2Ost(alloc.Adapter()),
@@ -163,15 +164,22 @@ OriginalSt *OriginalStTable::FindOrCreateAddrofSymbolOriginalSt(OriginalSt *ost)
   if (ost->GetPrevLevelOst() != nullptr) {
     return ost->GetPrevLevelOst();
   }
-  // create a new node
-  OriginalSt *prevLevelOst = alloc.GetMemPool()->New<OriginalSt>(
-      originalStVector.size(), *ost->GetMIRSymbol(), ost->GetPuIdx(), 0, alloc);
-  originalStVector.push_back(prevLevelOst);
-  prevLevelOst->SetIndirectLev(-1);
-  MIRPtrType pointType(ost->GetMIRSymbol()->GetTyIdx(), PTY_ptr);
-  TyIdx newTyIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&pointType);
-  prevLevelOst->SetTyIdx(newTyIdx);
-  prevLevelOst->SetFieldID(0);
+  OriginalSt *prevLevelOst = nullptr;
+  auto it = addrofSt2Ost.find(ost->GetMIRSymbol()->GetStIndex());
+  if (it != addrofSt2Ost.end()) {
+    prevLevelOst = originalStVector[it->second];
+  } else {
+    // create a new node
+    prevLevelOst = alloc.GetMemPool()->New<OriginalSt>(
+        originalStVector.size(), *ost->GetMIRSymbol(), ost->GetPuIdx(), 0, alloc);
+    originalStVector.push_back(prevLevelOst);
+    prevLevelOst->SetIndirectLev(-1);
+    MIRPtrType pointType(ost->GetMIRSymbol()->GetTyIdx(), PTY_ptr);
+    TyIdx newTyIdx = GlobalTables::GetTypeTable().GetOrCreateMIRType(&pointType);
+    prevLevelOst->SetTyIdx(newTyIdx);
+    prevLevelOst->SetFieldID(0);
+    addrofSt2Ost[ost->GetMIRSymbol()->GetStIndex()] = prevLevelOst->GetIndex();
+  }
   ost->SetPrevLevelOst(prevLevelOst);
   prevLevelOst->AddNextLevelOst(ost);
   return prevLevelOst;

@@ -412,6 +412,7 @@ class OriginalStTable {
   // mir symbol to original table, this only exists for no-original variables.
  public:
   MapleUnorderedMap<SymbolFieldPair, OStIdx, HashSymbolFieldPair> mirSt2Ost;
+  MapleUnorderedMap<StIdx, OStIdx> addrofSt2Ost;
  private:
   MapleUnorderedMap<PregIdx, OStIdx> preg2Ost;
   // mir type to virtual variables in original table. this only exists for no-original variables.
