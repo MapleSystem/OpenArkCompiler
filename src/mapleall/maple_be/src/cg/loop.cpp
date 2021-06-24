@@ -21,6 +21,12 @@ namespace maplebe {
 
 static void PrintLoopInfo(const LoopHierarchy &loop) {
   LogInfo::MapleLogger() << "header " << loop.GetHeader()->GetId();
+  if (loop.otherLoopEntries.size()) {
+    LogInfo::MapleLogger() << " multi-header ";
+    for (auto en : loop.otherLoopEntries) {
+      LogInfo::MapleLogger() << en->GetId() << " ";
+    }
+  }
   if (loop.GetOuterLoop() != nullptr) {
     LogInfo::MapleLogger() << " parent " << loop.GetOuterLoop()->GetHeader()->GetId();
   }
@@ -59,9 +65,73 @@ void LoopHierarchy::PrintLoops(const std::string &name) const {
   }
 }
 
+void CGFuncLoops::CheckOverlappingInnerLoops(const MapleVector<CGFuncLoops*> &innerLoops, const MapleVector<BB*> &loopMembers) const {
+  for (auto iloop : innerLoops) {
+    CHECK_FATAL(iloop->loopMembers.size() > 0, "Empty loop");
+    for (auto bb: iloop->loopMembers) {
+      if (find(loopMembers.begin(), loopMembers.end(), bb) != loopMembers.end()) {
+        LogInfo::MapleLogger() << "Error: inconsistent loop member";
+        CHECK_FATAL(0, "loop member overlap with inner loop");
+      }
+    }
+    CheckOverlappingInnerLoops(iloop->innerLoops, loopMembers);
+  }
+}
+
+void CGFuncLoops::CheckLoops() const {
+  // Make sure backedge -> header relationship holds
+  for (auto bEdge: backedge) {
+    if (find(bEdge->GetSuccs().begin(), bEdge->GetSuccs().end(), header) == bEdge->GetSuccs().end()) {
+      bool inOtherEntry = false;
+      for (auto entry: multiEntries) {
+        if (find(bEdge->GetSuccs().begin(), bEdge->GetSuccs().end(), entry) != bEdge->GetSuccs().end()) {
+          inOtherEntry = true;
+          break;
+        }
+      }
+      if (inOtherEntry == false) {
+        if (find(bEdge->GetEhSuccs().begin(), bEdge->GetEhSuccs().end(), header) == bEdge->GetEhSuccs().end()) {
+          LogInfo::MapleLogger() << "Error: inconsistent loop backedge";
+          CHECK_FATAL(0, "loop backedge does not go to loop header");
+        }
+      }
+    }
+    if (find(header->GetPreds().begin(), header->GetPreds().end(), bEdge) == header->GetPreds().end()) {
+      bool inOtherEntry = false;
+      for (auto entry: multiEntries) {
+        if (find(entry->GetPreds().begin(), entry->GetPreds().end(), bEdge) == entry->GetPreds().end()) {
+          inOtherEntry = true;
+          break;
+        }
+      }
+      if (inOtherEntry == false) {
+        if (find(header->GetEhPreds().begin(), header->GetEhPreds().end(), bEdge) == header->GetEhPreds().end()) {
+          LogInfo::MapleLogger() << "Error: inconsistent loop header";
+          CHECK_FATAL(0, "loop header does not have a backedge");
+        }
+      }
+    }
+  }
+
+  // Make sure containing loop members do not overlap
+  CheckOverlappingInnerLoops(innerLoops, loopMembers);
+
+  if (innerLoops.empty() == false) {
+    for (auto lp : innerLoops) {
+      lp->CheckLoops();
+    }
+  }
+}
+
 void CGFuncLoops::PrintLoops(const CGFuncLoops &funcLoop) const {
   LogInfo::MapleLogger() << "loop_level(" << funcLoop.loopLevel << ") ";
   LogInfo::MapleLogger() << "header " << funcLoop.GetHeader()->GetId() << " ";
+  if (multiEntries.size()) {
+    LogInfo::MapleLogger() << "other-header ";
+    for (auto bb : multiEntries) {
+      LogInfo::MapleLogger() << bb->GetId() << " ";
+    }
+  }
   if (funcLoop.GetOuterLoop() != nullptr) {
     LogInfo::MapleLogger() << "parent " << funcLoop.GetOuterLoop()->GetHeader()->GetId() << " ";
   }
@@ -86,100 +156,100 @@ void CGFuncLoops::PrintLoops(const CGFuncLoops &funcLoop) const {
   }
 }
 
-/* backege -> header */
-bool LoopFinder::DetectLoopSub(BB &header,  BB &back, std::set<BB*, BBIdCmp> &traversed) {
-  bool found = false;
-  if (&header == &back) {
-    return true;
+bool LoopFinder::DetectLoopSub(BB *header, BB *back) {
+  if (recurseVisited[header->GetId()]) {
+    return false;
   }
-
-  (void)traversed.insert(&header);
-  for (auto succ : header.GetSuccs()) {
-    bool alreadyInLoop = false;
-    for (auto candi : candidate) {
-      if (candi == succ) {
-        alreadyInLoop = true;
-        break;
-      }
-    }
-    if (alreadyInLoop) {
-      found = true;
-      candidate.push_back(succ);
-    }
-    if (traversed.find(succ) != traversed.end()) {
-      continue;
-    }
-    bool foundSub = DetectLoopSub(*succ, back, traversed);
-    if (foundSub) {
-      found = true;
-      candidate.push_back(succ);
+  recurseVisited[header->GetId()] = true;
+  for (auto succ : header->GetSuccs()) {
+    if (succ == back) {
+      return true;
     }
   }
-
-  for (auto ehSucc : header.GetEhSuccs()) {
-    bool alreadyInLoop = false;
-    for (auto candi : candidate) {
-      if (candi == ehSucc) {
-        alreadyInLoop = true;
-        break;
-      }
-    }
-    if (alreadyInLoop) {
-      found = true;
-      candidate.push_back(ehSucc);
-    }
-    if (traversed.find(ehSucc) != traversed.end()) {
-      continue;
-    }
-    bool foundSub = DetectLoopSub(*ehSucc, back, traversed);
-    if (foundSub) {
-      found = true;
-      candidate.push_back(ehSucc);
+  // not reachable yet, continue searching
+  for (auto succ : header->GetSuccs()) {
+    if (DetectLoopSub(succ, back)) {
+      return true;
     }
   }
-  return found;
+  for (auto ehSucc : header->GetEhSuccs()) {
+    if (ehSucc == back) {
+      return true;
+    }
+  }
+  for (auto ehSucc : header->GetEhSuccs()) {
+    if (DetectLoopSub(ehSucc, back)) {
+      return true;
+    }
+  }
+  return false;
 }
 
-/* backege -> header */
-void LoopFinder::DetectLoop(BB &header, BB &back) {
-  std::set<BB*, BBIdCmp> traversed;
-  (void)traversed.insert(&header);
-  candidate.push_back(&header);
-  candidate.push_back(&back);
-
-  for (auto succ : header.GetSuccs()) {
-    if (traversed.find(succ) != traversed.end()) {
-      continue;
-    }
-    bool found = DetectLoopSub(*succ, back, traversed);
-    if (found) {
-      candidate.push_back(succ);
+void LoopFinder::Insert(BB *bb, BB *header, std::set<BB *> &extraHeader) {
+  if (find(candidate.begin(), candidate.end(), bb) == candidate.end()) {
+    recurseVisited.clear();
+    recurseVisited.resize(cgFunc->NumBBs());
+    if (DetectLoopSub(header, bb)) {
+      candidate.push_back(bb);
+      stack.push(bb);
+    } else {
+      // since loop member predecessor is not reachable from loop header,
+      // it is another entry to the loop.
+      // If a backedge is to some bb not the header, then it should be
+      // considered a different loop.
+      for (auto succ : bb->GetSuccs()) {
+        if (find(candidate.begin(), candidate.end(), succ) != candidate.end()) {
+          extraHeader.insert(succ);
+          break;
+        }
+      }
+      for (auto ehsucc : bb->GetEhSuccs()) {
+        if (find(candidate.begin(), candidate.end(), ehsucc) != candidate.end()) {
+          extraHeader.insert(ehsucc);
+          break;
+        }
+      }
     }
   }
+}
 
-  for (auto ehSucc : header.GetEhSuccs()) {
-    if (traversed.find(ehSucc) != traversed.end()) {
-      continue;
+void LoopFinder::DetectLoop( BB *header, BB *back) {
+  std::set<BB *> moreHeaders;
+  candidate.push_back(header);
+  candidate.push_back(back);
+  stack.push(back);
+  while (stack.empty() == false) {
+    BB *bb = stack.top();
+    stack.pop();
+    if (bb == header) {
+      if (find(candidate.begin(), candidate.end(), bb) == candidate.end()) {
+        candidate.push_back(bb);
+      }
+    } else {
+      for (auto ibb : bb->GetPreds()) {
+        Insert(ibb, header, moreHeaders);
+      }
     }
-    bool found = DetectLoopSub(*ehSucc, back, traversed);
-    if (found) {
-      candidate.push_back(ehSucc);
+    if (bb != header) {
+      for (auto ibb : bb->GetEhPreds()) {
+        Insert(ibb, header, moreHeaders);
+      }
     }
   }
-
-  LoopHierarchy *simpleLoop = memPool->New<LoopHierarchy>(*memPool);
-  for (auto *bb : candidate) {
-    simpleLoop->InsertLoopMembers(*bb);
+  LoopHierarchy *simple_loop = memPool->New<LoopHierarchy>(*memPool);
+  for (auto ibb : candidate) {
+    simple_loop->InsertLoopMembers(*ibb);
   }
   candidate.clear();
-  simpleLoop->SetHeader(header);
-  simpleLoop->InsertBackedge(back);
+  simple_loop->SetHeader(*header);
+  simple_loop->InsertBackedge(*back);
+  simple_loop->otherLoopEntries.insert(moreHeaders.begin(), moreHeaders.end());
 
-  if (loops != nullptr) {
-    loops->SetPrev(simpleLoop);
+  if (loops) {
+    loops->SetPrev(simple_loop);
   }
-  simpleLoop->SetNext(loops);
-  loops = simpleLoop;
+  simple_loop->SetNext(loops);
+  loops = simple_loop;
 }
 
 void LoopFinder::FindBackedge() {
@@ -251,7 +321,7 @@ void LoopFinder::PushBackedge(BB &bb, std::stack<BB*> &succs, bool &childPushed)
       dfsBBs.push(succBB);
     } else if ((succBB->GetLevel() != 0) && (bb.GetLevel() >= succBB->GetLevel())) {
       /* Backedge bb -> succBB */
-      DetectLoop(*succBB, bb);
+      DetectLoop(succBB, &bb);
       bb.PushBackLoopSuccs(*succBB);
       succBB->PushBackLoopPreds(bb);
     }
@@ -267,6 +337,9 @@ void LoopFinder::MergeLoops() {
       }
       for (auto *bb : loopHierarchy2->GetLoopMembers()) {
         loopHierarchy1->InsertLoopMembers(*bb);
+      }
+      for (auto bb : loopHierarchy2->otherLoopEntries) {
+        loopHierarchy1->otherLoopEntries.insert(bb);
       }
       for (auto *bb : loopHierarchy2->GetBackedge()) {
         loopHierarchy1->InsertBackedge(*bb);
@@ -325,20 +398,34 @@ void LoopFinder::SortLoops() {
   } while (swapped);
 }
 
+void LoopFinder::UpdateOuterForInnerLoop(BB *bb, LoopHierarchy *outer) {
+  if (outer == nullptr) {
+    return;
+  }
+  for (auto ito = outer->GetLoopMembers().begin(); ito != outer->GetLoopMembers().end();) {
+    if (*ito == bb) {
+      ito = outer->EraseLoopMembers(ito);
+    } else {
+      ++ito;
+    }
+  }
+  if (outer->GetOuterLoop() != nullptr) {
+    UpdateOuterForInnerLoop(bb, const_cast<LoopHierarchy *>(outer->GetOuterLoop()));
+  }
+}
+
+void LoopFinder::UpdateOuterLoop(LoopHierarchy *loop) {
+  for (auto inner : loop->GetInnerLoops()) {
+    UpdateOuterLoop(inner);
+  }
+  for (auto *bb : loop->GetLoopMembers()) {
+    UpdateOuterForInnerLoop(bb, const_cast<LoopHierarchy *>(loop->GetOuterLoop()));
+  }
+}
+
 void LoopFinder::CreateInnerLoop(LoopHierarchy &inner, LoopHierarchy &outer) {
   outer.InsertInnerLoops(inner);
   inner.SetOuterLoop(outer);
-  MapleSet<BB*, BBIdCmp>::iterator ito;
-  for (auto *bb : inner.GetLoopMembers()) {
-    for (ito = outer.GetLoopMembers().begin(); ito != outer.GetLoopMembers().end();) {
-      BB *rm = *ito;
-      if (rm == bb) {
-        ito = outer.EraseLoopMembers(ito);
-      } else {
-        ++ito;
-      }
-    }
-  }
   if (loops == &inner) {
     loops = inner.GetNext();
   } else {
@@ -380,10 +467,17 @@ void LoopFinder::DetectInnerLoop() {
       }
     }
   } while (innerCreated);
+
+  for (LoopHierarchy *outer = loops; outer != nullptr; outer = outer->GetNext()) {
+    UpdateOuterLoop(outer);
+  }
 }
 
 static void CopyLoopInfo(LoopHierarchy &from, CGFuncLoops &to, CGFuncLoops *parent, MemPool &memPool) {
   to.SetHeader(*const_cast<BB*>(from.GetHeader()));
+  for (auto bb : from.otherLoopEntries) {
+    to.AddMultiEntries(*bb);
+  }
   for (auto *bb : from.GetLoopMembers()) {
     to.AddLoopMembers(*bb);
     bb->SetLoop(to);
@@ -456,6 +550,13 @@ AnalysisResult *CgDoLoopAnalysis::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncRes
   MemPool *loopMemPool = NewMemPool();
   LoopFinder *loopFinder = loopMemPool->New<LoopFinder>(*cgFunc, *loopMemPool);
   loopFinder->FormLoopHierarchy();
+
+#if DEBUG
+  std::cout << "CHECK\n";
+  for (const auto *lp : cgFunc->GetLoops()) {
+    lp->CheckLoops();
+  }
+#endif
 
   return loopFinder;
 }
