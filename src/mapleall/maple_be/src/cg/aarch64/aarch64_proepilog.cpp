@@ -142,6 +142,32 @@ void AArch64GenProEpilog::TailCallBBOpt(const BB &exitBB, std::set<Insn*> &callI
  *  Return value: true if function do not need Prologue/Epilogue. false otherwise.
  */
 bool AArch64GenProEpilog::TailCallOpt() {
+  /* Count how many call insns in the whole function. */
+  uint32 nCount = 0;
+  bool hasGetStackClass = false;
+
+  FOR_ALL_BB(bb, &cgFunc) {
+    FOR_BB_INSNS(insn, bb) {
+      if (insn->IsCall()) {
+        if (insn->GetMachineOpcode() == MOP_xbl) {
+          auto &target = static_cast<FuncNameOperand&>(insn->GetOperand(0));
+          if (IsFuncNeedFrame(target.GetName())) {
+            hasGetStackClass = true;
+          }
+        }
+        ++nCount;
+      }
+    }
+  }
+  if ((nCount > 0 && cgFunc.GetFunction().GetAttr(FUNCATTR_interface)) || hasGetStackClass) {
+    return false;
+  }
+
+  if (nCount == 0) {
+    // no bl instr in any bb
+    return true;
+  }
+
   size_t exitBBSize = cgFunc.GetExitBBsVec().size();
   if (exitBBSize > 1) {
     return false;
@@ -160,28 +186,6 @@ bool AArch64GenProEpilog::TailCallOpt() {
   }
 
   CHECK_FATAL(exitBB->GetFirstMachineInsn() == nullptr, "exit bb should be empty.");
-
-  /* Count how many call insns in the whole function. */
-  uint32 nCount = 0;
-  bool hasGetStackClass = false;
-
-  FOR_ALL_BB(bb, &cgFunc) {
-    FOR_BB_INSNS(insn, bb) {
-      if (insn->IsCall()) {
-        if (insn->GetMachineOpcode() == MOP_xbl) {
-          auto &target = static_cast<FuncNameOperand&>(insn->GetOperand(0));
-          if (IsFuncNeedFrame(target.GetName())) {
-            hasGetStackClass = true;
-          }
-        }
-        ++nCount;
-      }
-    }
-  }
-
-  if ((nCount > 0 && cgFunc.GetFunction().GetAttr(FUNCATTR_interface)) || hasGetStackClass) {
-    return false;
-  }
 
   std::set<Insn*> callInsns;
   TailCallBBOpt(*exitBB, callInsns);
