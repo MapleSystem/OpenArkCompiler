@@ -49,7 +49,8 @@ class SwitchLowerer {
   maple::MapleVector<SwitchItem> switchItems;  /* uint32 is index in switchTable */
   maple::MapleAllocator *ownAllocator;
   const maple::int32 kClusterSwitchCutoff = 6;
-  const float kClusterSwitchDensity = 0.7;
+  const float kClusterSwitchDensityHigh = 0.9;
+  const float kClusterSwitchDensityLow = 0.7;
   const maple::int32 kMaxRangeGotoTableSize = 127;
   bool jumpToDefaultBlockGenerated = false;
 
