@@ -110,11 +110,17 @@ class FEIRVar {
   }
 
   MIRSymbol *GenerateGlobalMIRSymbol(MIRBuilder &builder) const {
-    return GenerateGlobalMIRSymbolImpl(builder);
+    MIRSymbol *mirSym = GenerateGlobalMIRSymbolImpl(builder);
+    mirSym->GetSrcPosition().SetFileNum(srcFileIdx);
+    mirSym->GetSrcPosition().SetLineNum(srcFileLineNum);
+    return mirSym;
   }
 
   MIRSymbol *GenerateLocalMIRSymbol(MIRBuilder &builder) const {
-    return GenerateLocalMIRSymbolImpl(builder);
+    MIRSymbol *mirSym = GenerateLocalMIRSymbolImpl(builder);
+    mirSym->GetSrcPosition().SetFileNum(srcFileIdx);
+    mirSym->GetSrcPosition().SetLineNum(srcFileLineNum);
+    return mirSym;
   }
 
   MIRSymbol *GenerateMIRSymbol(MIRBuilder &builder) const {
@@ -145,6 +151,19 @@ class FEIRVar {
     genAttrs = argGenericAttrs;
   }
 
+  void SetSrcLOC(uint32 fileIdx, uint32 lineNum) {
+    srcFileIdx = fileIdx;
+    srcFileLineNum = lineNum;
+  }
+
+  uint32 GetSrcFileIdx() const {
+    return srcFileIdx;
+  }
+
+  uint32 GetSrcFileLineNum() const {
+    return srcFileLineNum;
+  }
+
  protected:
   virtual MIRSymbol *GenerateGlobalMIRSymbolImpl(MIRBuilder &builder) const;
   virtual MIRSymbol *GenerateLocalMIRSymbolImpl(MIRBuilder &builder) const;
@@ -161,6 +180,8 @@ class FEIRVar {
   UniqueFEIRType type;
   UniqueFEIRVarTrans trans;
   GenericAttrs genAttrs;
+  uint32 srcFileIdx = 0;
+  uint32 srcFileLineNum = 0;
 };
 
 using UniqueFEIRVar = std::unique_ptr<FEIRVar>;

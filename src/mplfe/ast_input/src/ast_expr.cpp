@@ -1264,19 +1264,22 @@ UniqueFEIRExpr ASTArraySubscriptExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> 
     auto sizeType = std::make_unique<FEIRTypeNative>(*GlobalTables::GetTypeTable().GetPrimType(PTY_u64));
 
     auto feIdxExpr = idxExpr->Emit2FEExpr(stmts);
-    UniqueFEIRExpr feSizeExpr;
-    if (isVLA) {
-      feSizeExpr = vlaSizeExpr->Emit2FEExpr(stmts);
-    } else {
-      feSizeExpr = FEIRBuilder::CreateExprConstU64(mirType->GetSize());
-    }
     if (feIdxExpr->GetPrimType() != PTY_i64) {
       feIdxExpr = FEIRBuilder::CreateExprCvtPrim(std::move(feIdxExpr), PTY_i64);
     }
-    auto feOffsetExpr = FEIRBuilder::CreateExprBinary(sizeType->Clone(), OP_mul, std::move(feIdxExpr),
-                                                      std::move(feSizeExpr));
-    offsetExprs.emplace_back(std::move(feOffsetExpr));
-
+    if (!isVLA && mirType->GetSize() == 1) {
+      offsetExprs.emplace_back(std::move(feIdxExpr));
+    } else {
+      UniqueFEIRExpr feSizeExpr;
+      if (isVLA) {
+        feSizeExpr = vlaSizeExpr->Emit2FEExpr(stmts);
+      } else {
+        feSizeExpr = FEIRBuilder::CreateExprConstU64(mirType->GetSize());
+      }
+      auto feOffsetExpr = FEIRBuilder::CreateExprBinary(sizeType->Clone(), OP_mul, std::move(feIdxExpr),
+                                                        std::move(feSizeExpr));
+      offsetExprs.emplace_back(std::move(feOffsetExpr));
+    }
     if (offsetExprs.size() == 1) {
       offsetExpr = std::move(offsetExprs[0]);
     } else if (offsetExprs.size() >= 2) {

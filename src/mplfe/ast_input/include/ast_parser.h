@@ -155,7 +155,6 @@ class ASTParser {
   ASTValue *TranslateLValue2ASTValue(MapleAllocator &allocator, const clang::Expr *expr) const;
   void TraverseDecl(const clang::Decl *decl, std::function<void (clang::Decl*)> const &functor);
   ASTDecl *GetAstDeclOfDeclRefExpr(MapleAllocator &allocator, const clang::Expr &expr);
-  void SetSourceFileInfo(clang::Decl *decl);
   uint32 GetSizeFromQualType(const clang::QualType qualType);
   ASTExpr *GetTypeSizeFromQualType(MapleAllocator &allocator, const clang::QualType qualType);
   uint32_t GetAlignOfType(const clang::QualType currQualType, clang::UnaryExprOrTypeTrait exprKind);
@@ -198,8 +197,6 @@ ASTExpr *ParseBuiltinFunc(MapleAllocator &allocator, const clang::CallExpr &expr
   MapleList<ASTVar*> &astVars;
 
   ASTInput *astIn = nullptr;
-
-  uint32 srcFileNum = 2; // src files start from 2, 1 is mpl file
 };
 }  // namespace maple
 #endif // MPLFE_AST_INPUT_INCLUDE_AST_PARSER_H

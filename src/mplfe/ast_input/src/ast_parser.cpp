@@ -745,7 +745,7 @@ ASTValue *ASTParser::TranslateExprEval(MapleAllocator &allocator, const clang::E
     if (expr->isConstantInitializer(*astFile->GetNonConstAstContext(), false, nullptr)) { \
       astExpr->SetConstantValue(TranslateExprEval(allocator, expr));                      \
     }                                                                                     \
-    Pos loc = astFile->GetStmtLOC(*expr);                                                 \
+    Pos loc = astFile->GetExprLOC(*expr);                                                 \
     astExpr->SetSrcLOC(loc.first, loc.second);                                            \
     return astExpr;                                                                       \
   }
@@ -1090,18 +1090,23 @@ ASTExpr *ASTParser::ProcessExprOffsetOfExpr(MapleAllocator &allocator, const cla
     } else if (comp.getKind() == clang::OffsetOfNode::Kind::Array) {
       int idx = comp.getArrayExprIndex();
       auto idxExpr = expr.getIndexExpr(idx);
+      auto leftExpr = ProcessExpr(allocator, idxExpr);
       auto arrayType = expr.getComponent(i - 1).getField()->getType();
       auto elementType = llvm::cast<clang::ArrayType>(arrayType)->getElementType();
       uint32 elementSize = GetSizeFromQualType(elementType);
-      auto astSizeExpr = ASTDeclsBuilder::ASTExprBuilder<ASTIntegerLiteral>(allocator);
-      astSizeExpr->SetVal(elementSize);
-      astSizeExpr->SetType(PTY_u64);
-      auto astExpr = ASTDeclsBuilder::ASTExprBuilder<ASTBinaryOperatorExpr>(allocator);
-      astExpr->SetOpcode(OP_mul);
-      astExpr->SetLeftExpr(ProcessExpr(allocator, idxExpr));
-      astExpr->SetRightExpr(astSizeExpr);
-      astExpr->SetRetType(GlobalTables::GetTypeTable().GetPrimType(PTY_u64));
-      vlaOffsetExprs.emplace_back(astExpr);
+      if (elementSize == 1) {
+        vlaOffsetExprs.emplace_back(leftExpr);
+      } else {
+        auto astSizeExpr = ASTDeclsBuilder::ASTExprBuilder<ASTIntegerLiteral>(allocator);
+        astSizeExpr->SetVal(elementSize);
+        astSizeExpr->SetType(PTY_u64);
+        auto astExpr = ASTDeclsBuilder::ASTExprBuilder<ASTBinaryOperatorExpr>(allocator);
+        astExpr->SetOpcode(OP_mul);
+        astExpr->SetLeftExpr(leftExpr);
+        astExpr->SetRightExpr(astSizeExpr);
+        astExpr->SetRetType(GlobalTables::GetTypeTable().GetPrimType(PTY_u64));
+        vlaOffsetExprs.emplace_back(astExpr);
+      }
     } else {
       CHECK_FATAL(false, "NIY");
     }
@@ -1269,6 +1274,9 @@ ASTExpr *ASTParser::BuildExprToComputeSizeFromVLA(MapleAllocator &allocator, con
       CHECK_FATAL(sizeExpr->getType()->isIntegerType(), "the type should be integer");
     } else if (llvm::isa<clang::ConstantArrayType>(qualType)) {
       uint32 size = llvm::cast<clang::ConstantArrayType>(qualType)->getSize().getSExtValue();
+      if (size == 1) {
+        return lhs;
+      }
       auto astExpr = ASTDeclsBuilder::ASTExprBuilder<ASTIntegerLiteral>(allocator);
       astExpr->SetVal(size);
       astExpr->SetType(PTY_i32);
@@ -2025,6 +2033,8 @@ bool ASTParser::PreProcessAST() {
     if (astDecl != nullptr) {                                                                      \
       astDecl->SetDeclPos(astFile->GetDeclPosInfo(decl));                                          \
       astDecl->SetGlobal(decl.isDefinedOutsideFunctionOrMethod());                                 \
+      Pos loc = astFile->GetLOC(decl.getLocation());                                               \
+      astDecl->SetSrcLOC(loc.first, loc.second);                                                   \
     }                                                                                              \
     return astDecl;                                                                                \
   }
@@ -2413,22 +2423,7 @@ void ASTParser::TraverseDecl(const clang::Decl *decl, std::function<void (clang:
     return;
   }
   for (auto *child : clang::dyn_cast<const clang::DeclContext>(decl)->decls()) {
-    SetSourceFileInfo(child);
     functor(child);
-  }
-}
-
-void ASTParser::SetSourceFileInfo(clang::Decl *decl) {
-  clang::FullSourceLoc fullLocation = astFile->GetAstContext()->getFullLoc(decl->getBeginLoc());
-  if (fullLocation.isValid() && fullLocation.isFileID()) {
-    const clang::FileEntry *fileEntry = fullLocation.getFileEntry();
-    ASSERT_NOT_NULL(fileEntry);
-    size_t oldSize = GlobalTables::GetStrTable().StringTableSize();
-    GStrIdx idx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(fileEntry->getName().data());
-    // Not duplicate
-    if (oldSize != GlobalTables::GetStrTable().StringTableSize()) {
-      FEManager::GetModule().PushbackFileInfo(MIRInfoPair(idx, srcFileNum++));
-    }
   }
 }
 }  // namespace maple

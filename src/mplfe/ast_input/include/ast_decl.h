@@ -81,6 +81,19 @@ class ASTDecl {
     pos = p;
   }
 
+  void SetSrcLOC(uint32 fileIdx, uint32 lineNum) {
+    srcFileIdx = fileIdx;
+    srcFileLineNum = lineNum;
+  }
+
+  uint32 GetSrcFileIdx() const {
+    return srcFileIdx;
+  }
+
+  uint32 GetSrcFileLineNum() const {
+    return srcFileLineNum;
+  }
+
   DeclKind GetDeclKind() const {
     return declKind;
   }
@@ -103,6 +116,8 @@ class ASTDecl {
   std::vector<MIRType*> typeDesc;
   GenericAttrs genAttrs;
   Pos pos = { 0, 0 };
+  uint32 srcFileIdx = 0;
+  uint32 srcFileLineNum = 0;
   DeclKind declKind = kASTDecl;
 };
 

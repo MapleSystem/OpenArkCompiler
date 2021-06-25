@@ -83,6 +83,7 @@ class LibAstFile {
 
   Pos GetDeclPosInfo(const clang::Decl &decl) const;
   Pos GetStmtLOC(const clang::Stmt &stmt) const;
+  Pos GetExprLOC(const clang::Expr &expr) const;
   Pos GetLOC(const clang::SourceLocation &srcLoc) const;
   uint32 GetMaxAlign(const clang::Decl &decl) const;
   uint32 RetrieveAggTypeAlign(const clang::Type *ty) const;

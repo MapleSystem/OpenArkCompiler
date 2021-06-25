@@ -143,6 +143,8 @@ bool ASTGlobalVar2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
   if (mirSymbol == nullptr) {
     return false;
   }
+  mirSymbol->GetSrcPosition().SetFileNum(astVar.GetSrcFileIdx());
+  mirSymbol->GetSrcPosition().SetLineNum(astVar.GetSrcFileLineNum());
   auto typeAttrs = astVar.GetGenericAttrs().ConvertToTypeAttrs();
   // do not allow extern var override global var
   if (mirSymbol->GetAttrs().GetAttrFlag() != 0 && typeAttrs.GetAttr(ATTR_extern)) {
@@ -200,6 +202,8 @@ bool ASTFunc2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
   }
   mirFunc = FEManager::GetTypeManager().CreateFunction(methodNameIdx, retMIRType->GetTypeIndex(),
                                                        argsTypeIdx, isVarg, isStatic);
+  mirFunc->GetSrcPosition().SetFileNum(func.GetSrcFileIdx());
+  mirFunc->GetSrcPosition().SetLineNum(func.GetSrcFileLineNum());
   std::vector<std::string> parmNames = func.GetParmNames();
   if (firstArgRet) {
     parmNames.insert(parmNames.begin(), "first_arg_return");

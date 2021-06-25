@@ -54,6 +54,7 @@ std::unique_ptr<FEIRVar> ASTVar::Translate2FEIRVar() const {
       std::make_unique<FEIRVarName>(GenerateUniqueVarName(), std::make_unique<FEIRTypeNative>(*(typeDesc[0])));
   feirVar->SetGlobal(isGlobalDecl);
   feirVar->SetAttrs(const_cast<GenericAttrs&>(genAttrs));
+  feirVar->SetSrcLOC(srcFileIdx, srcFileLineNum);
   return feirVar;
 }
 
@@ -125,6 +126,7 @@ void ASTVar::GenerateInitStmtImpl(std::list<UniqueFEIRStmt> &stmts) {
   } else {
     stmt = FEIRBuilder::CreateStmtDAssign(std::move(feirVar), std::move(initFeirExpr));
   }
+  stmt->SetSrcFileInfo(initExpr->GetSrcFileIdx(), initExpr->GetSrcFileLineNum());
   stmts.emplace_back(std::move(stmt));
 }
 
