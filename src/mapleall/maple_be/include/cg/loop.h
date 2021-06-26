@@ -32,6 +32,7 @@ class LoopHierarchy {
 
   explicit LoopHierarchy(MemPool &memPool)
       : loopMemPool(&memPool),
+        otherLoopEntries(loopMemPool.Adapter()),
         loopMembers(loopMemPool.Adapter()),
         backedge(loopMemPool.Adapter()),
         innerLoops(loopMemPool.Adapter()) {}
@@ -93,6 +94,8 @@ class LoopHierarchy {
  private:
   MapleAllocator loopMemPool;
   BB *header = nullptr;
+ public:
+  MapleSet<BB*, BBIdCmp> otherLoopEntries;
   MapleSet<BB*, BBIdCmp> loopMembers;
   MapleSet<BB*, BBIdCmp> backedge;
   MapleSet<LoopHierarchy*, HeadIDCmp> innerLoops;
@@ -106,19 +109,25 @@ class LoopFinder : public AnalysisResult {
         cgFunc(&func),
         memPool(&mem),
         loopMemPool(memPool),
+        stack(loopMemPool.Adapter()),
         candidate(loopMemPool.Adapter()),
         visitedBBs(loopMemPool.Adapter()),
         sortedBBs(loopMemPool.Adapter()),
-        dfsBBs(loopMemPool.Adapter()) {}
+        dfsBBs(loopMemPool.Adapter()),
+        recurseVisited(loopMemPool.Adapter())
+        {}
 
   ~LoopFinder() override = default;
 
-  void DetectLoop(BB &header, BB &back);
-  bool DetectLoopSub(BB &header, BB &back, std::set<BB*, BBIdCmp> &traversed);
+  void DetectLoop(BB *header, BB *back);
+  bool DetectLoopSub(BB *header, BB *back);
+  void Insert(BB *bb, BB *header, std::set<BB *> &extraHeader);
   void FindBackedge();
   void PushBackedge(BB &bb, std::stack<BB*> &succs, bool &childPushed);
   void MergeLoops();
   void SortLoops();
+  void UpdateOuterForInnerLoop(BB *bb, LoopHierarchy *outer);
+  void UpdateOuterLoop(LoopHierarchy *outer);
   void CreateInnerLoop(LoopHierarchy &inner, LoopHierarchy &outer);
   void DetectInnerLoop();
   void UpdateCGFunc();
@@ -128,10 +137,12 @@ class LoopFinder : public AnalysisResult {
   CGFunc *cgFunc;
   MemPool *memPool;
   MapleAllocator loopMemPool;
+  MapleStack<BB *> stack;
   MapleList<BB*> candidate;  /* loop candidate */
   MapleVector<bool> visitedBBs;
   MapleVector<BB*> sortedBBs;
   MapleStack<BB*> dfsBBs;
+  MapleVector<bool> recurseVisited;
   LoopHierarchy *loops = nullptr;
 };
 
@@ -139,12 +150,15 @@ class CGFuncLoops {
  public:
   explicit CGFuncLoops(MemPool &memPool)
       : loopMemPool(&memPool),
+        multiEntries(loopMemPool.Adapter()),
         loopMembers(loopMemPool.Adapter()),
         backedge(loopMemPool.Adapter()),
         innerLoops(loopMemPool.Adapter()) {}
 
   ~CGFuncLoops() = default;
 
+  void CheckOverlappingInnerLoops(const MapleVector<CGFuncLoops*> &innerLoops, const MapleVector<BB*> &loopMembers) const;
+  void CheckLoops() const;
   void PrintLoops(const CGFuncLoops &loops) const;
 
   const BB *GetHeader() const {
@@ -166,6 +180,9 @@ class CGFuncLoops {
     return loopLevel;
   }
 
+  void AddMultiEntries(BB &bb) {
+    multiEntries.emplace_back(&bb);
+  }
   void AddLoopMembers(BB &bb) {
     loopMembers.emplace_back(&bb);
   }
@@ -188,6 +205,7 @@ class CGFuncLoops {
  private:
   MapleAllocator loopMemPool;
   BB *header = nullptr;
+  MapleVector<BB*> multiEntries;
   MapleVector<BB*> loopMembers;
   MapleVector<BB*> backedge;
   MapleVector<CGFuncLoops*> innerLoops;
