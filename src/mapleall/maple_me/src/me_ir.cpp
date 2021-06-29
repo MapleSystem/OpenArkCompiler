@@ -593,8 +593,12 @@ bool OpMeExpr::StrengthReducible() {
       return false;
     }
     case OP_add:
-    case OP_sub:
+    case OP_sub: {
+      if (MeOption::srForAdd) {
+        return true;
+      }
       return false;
+    }
     default: return false;
   }
 }

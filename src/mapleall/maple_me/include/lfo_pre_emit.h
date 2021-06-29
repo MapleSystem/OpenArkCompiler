@@ -60,10 +60,10 @@ class LfoPreEmitter : public AnalysisResult {
     lfoExprParts[funcbody] = rootlfo;
   }
   void SetLfoStmtPart(uint32_t stmtID, LfoPart* lfoInfo) {
-     lfoStmtParts[stmtID] = lfoInfo;
+    lfoStmtParts[stmtID] = lfoInfo;
   }
   void SetLfoExprPart(BaseNode *expr, LfoPart* lfoInfo) {
-     lfoExprParts[expr] = lfoInfo;
+    lfoExprParts[expr] = lfoInfo;
   }
   LfoPart* GetLfoExprPart(BaseNode *node) {
     return lfoExprParts[node];

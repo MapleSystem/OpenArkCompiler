@@ -332,16 +332,6 @@ class FEIRExpr {
     return CalculateDefs4AllUsesImpl(checkPoint, udChain);
   }
 
-  void CheckPrimTypeEq(PrimType type0, PrimType type1) const {
-    if (type0 == PTY_ptr || type1 == PTY_ptr) {
-      return;
-    }
-    CHECK_FATAL(type0 == type1 ||
-                GetRegPrimType(type0) == type1 ||
-                type0 == GetRegPrimType(type1),
-                "primtype of opnds must be the same");
-  }
-
  protected:
   virtual std::unique_ptr<FEIRExpr> CloneImpl() const = 0;
   virtual BaseNode *GenMIRNodeImpl(MIRBuilder &mirBuilder) const = 0;
@@ -964,7 +954,7 @@ class FEIRExprIntrinsicop : public FEIRExprNary {
 class FEIRExprIntrinsicopForC : public FEIRExprNary {
  public:
   FEIRExprIntrinsicopForC(std::unique_ptr<FEIRType> exprType, MIRIntrinsicID argIntrinsicID,
-                      const std::vector<std::unique_ptr<FEIRExpr>> &argOpnds);
+                          const std::vector<std::unique_ptr<FEIRExpr>> &argOpnds);
   ~FEIRExprIntrinsicopForC() = default;
 
  protected:

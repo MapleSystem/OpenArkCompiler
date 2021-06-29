@@ -157,7 +157,8 @@ class CGFuncLoops {
 
   ~CGFuncLoops() = default;
 
-  void CheckOverlappingInnerLoops(const MapleVector<CGFuncLoops*> &innerLoops, const MapleVector<BB*> &loopMembers) const;
+  void CheckOverlappingInnerLoops(const MapleVector<CGFuncLoops*> &innerLoops,
+                                  const MapleVector<BB*> &loopMembers) const;
   void CheckLoops() const;
   void PrintLoops(const CGFuncLoops &loops) const;
 

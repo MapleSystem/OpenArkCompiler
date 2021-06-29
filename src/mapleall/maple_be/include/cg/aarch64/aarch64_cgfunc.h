@@ -712,6 +712,7 @@ class AArch64CGFunc : public CGFunc {
   RegOperand *PrepareMemcpyParamOpnd(bool isLo12, MIRSymbol &symbol, int64 offsetVal, RegOperand &BaseReg);
   RegOperand *PrepareMemcpyParamOpnd(int64 offset, Operand &exprOpnd);
   RegOperand *PrepareMemcpyParamOpnd(uint64 copySize);
+  Insn *AggtStrLdrInsert(bool bothUnion, Insn *lastStrLdr, Insn &newStrLdr);
 };
 }  /* namespace maplebe */
 

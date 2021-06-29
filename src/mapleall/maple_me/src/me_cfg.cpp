@@ -128,16 +128,15 @@ void MeCFG::ReplaceSwitchContainsOneCaseBranchWithBrtrue(maple::BB &bb, MapleVec
     return;
   } else {
     // lfopreemit can't handle the optimized cfg for swith with one case branch
-
     auto *ltNode = mirBuilder->CreateExprCompare(OP_lt, GetTypeFromTyIdx(TyIdx(PTY_u1)),
-                                               GetTypeFromTyIdx(TyIdx(PTY_i32)), baseNode, minCaseNode);
+                                                 GetTypeFromTyIdx(TyIdx(PTY_i32)), baseNode, minCaseNode);
     auto *condGoto = mirBuilder->CreateStmtCondGoto(ltNode, OP_brtrue, defaultLabelIdx);
     bb.ReplaceStmt(&switchStmt, condGoto);
     bb.SetKind(kBBCondGoto);
 
     auto *newBB = NewBasicBlock();
     auto *gtNode = mirBuilder->CreateExprCompare(OP_gt, GetTypeFromTyIdx(TyIdx(PTY_u1)),
-                                               GetTypeFromTyIdx(TyIdx(PTY_i32)), baseNode, maxCaseNode);
+                                                 GetTypeFromTyIdx(TyIdx(PTY_i32)), baseNode, maxCaseNode);
     condGoto = mirBuilder->CreateStmtCondGoto(gtNode, OP_brtrue, defaultLabelIdx);
     newBB->GetStmtNodes().push_back(condGoto);
     newBB->SetKind(kBBCondGoto);

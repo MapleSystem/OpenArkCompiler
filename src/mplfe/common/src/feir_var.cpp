@@ -152,7 +152,7 @@ MIRSymbol *FEIRVar::GenerateLocalMIRSymbolImpl(MIRBuilder &builder) const {
     attrs.ResetAttr(ATTR_static);
     mirSymbol->SetStorageClass(MIRStorageClass::kScPstatic);
   }
-  mirSymbol->SetAttrs(attrs);
+  mirSymbol->AddAttrs(attrs);
   return mirSymbol;
 }
 

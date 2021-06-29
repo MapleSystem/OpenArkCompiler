@@ -785,7 +785,7 @@ class MIRArrayType : public MIRType {
     (void)fieldID;
     return kOffsetUnknown;
   }
-  int64 GetBitOffsetFromArrayAddress(const std::vector<int64> &indexArray);
+  int64 GetBitOffsetFromArrayAddress(std::vector<int64> &indexArray);
 
   std::string GetMplTypeName() const override;
   std::string GetCompactMplTypeName() const override;

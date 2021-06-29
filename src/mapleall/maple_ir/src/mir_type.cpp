@@ -1354,11 +1354,20 @@ MIRStructType *MIRArrayType::EmbeddedStructType() {
   return elemType->EmbeddedStructType();
 }
 
-int64 MIRArrayType::GetBitOffsetFromArrayAddress(const std::vector<int64> &indexArray) {
+int64 MIRArrayType::GetBitOffsetFromArrayAddress(std::vector<int64> &indexArray) {
+  // for cases that num of dimension-operand is less than array's dimension
+  // e.g. array 1 ptr <* <[d1][d2][d3] type>> (array_base_addr, dim1_opnd)
+  // array's dimension is 3, and dimension-opnd's num is 1;
+  if (indexArray.size() < dim) {
+    indexArray.insert(indexArray.end(), dim - indexArray.size(), 0);
+  }
   if (GetElemType()->GetKind() == kTypeArray) {
-    ASSERT(indexArray.size() >= dim, "dimension mismatch!");
+    // for cases that array's dimension is less than num of dimension-opnd
+    // e.g array 1 ptr <* <[d1] <[d2] type>>> (array_base_addr, dim1_opnd, dim2_opnd)
+    // array's dimension is 1 (its element type is <[d2] type>), and dimension-opnd-num is 2
+    CHECK_FATAL(indexArray.size() >= dim, "dimension mismatch!");
   } else {
-    ASSERT(indexArray.size() == dim, "dimension mismatch!");
+    CHECK_FATAL(indexArray.size() == dim, "dimension mismatch!");
   }
   int64 sum = 0; // element numbers before the specified element
   uint32 numberOfElemInLowerDim = 1;

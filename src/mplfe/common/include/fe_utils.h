@@ -339,10 +339,18 @@ class AstLoopUtil {
   bool IsContinueLabelsEmpty() const;
   void PopCurrentContinue();
 
+  bool IsCurrentBreakLabelUsed() {
+    return breakLabels.top().second;
+  }
+
+  bool IsCurrentContinueLabelUsed() {
+    return continueLabels.top().second;
+  }
+
  private:
   AstLoopUtil() = default;
-  std::stack<std::string> loopLabels = std::stack<std::string>();
-  std::stack<std::string> continueLabels = std::stack<std::string>();
+  std::stack<std::pair<std::string, bool>> breakLabels = std::stack<std::pair<std::string, bool>>();
+  std::stack<std::pair<std::string, bool>> continueLabels = std::stack<std::pair<std::string, bool>>();
 };
 }  // namespace maple
 #endif  // MPLFE_INCLUDE_FE_UTILS_H

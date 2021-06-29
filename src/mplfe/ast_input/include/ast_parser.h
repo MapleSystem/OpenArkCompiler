@@ -149,6 +149,7 @@ class ASTParser {
   ASTDecl *PROCESS_DECL(Typedef);
   ASTDecl *PROCESS_DECL(EnumConstant);
   ASTDecl *PROCESS_DECL(Label);
+  ASTDecl *PROCESS_DECL(StaticAssert);
 
  private:
   ASTValue *TranslateRValue2ASTValue(MapleAllocator &allocator, const clang::Expr *expr) const;

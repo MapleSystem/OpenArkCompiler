@@ -2861,7 +2861,6 @@ BaseNode *FEIRExprBinary::GenMIRNodeNormal(MIRBuilder &mirBuilder) const {
 BaseNode *FEIRExprBinary::GenMIRNodeCompare(MIRBuilder &mirBuilder) const {
   BaseNode *nodeOpnd0 = opnd0->GenMIRNode(mirBuilder);
   BaseNode *nodeOpnd1 = opnd1->GenMIRNode(mirBuilder);
-  CheckPrimTypeEq(nodeOpnd0->GetPrimType(), nodeOpnd1->GetPrimType());
   MIRType *mirTypeSrc = GlobalTables::GetTypeTable().GetTypeFromTyIdx(
       TyIdx(static_cast<uint32>(nodeOpnd0->GetPrimType())));
   MIRType *mirTypeDst = GlobalTables::GetTypeTable().GetTypeFromTyIdx(TyIdx(static_cast<uint32>(type->GetPrimType())));
@@ -2872,7 +2871,6 @@ BaseNode *FEIRExprBinary::GenMIRNodeCompare(MIRBuilder &mirBuilder) const {
 BaseNode *FEIRExprBinary::GenMIRNodeCompareU1(MIRBuilder &mirBuilder) const {
   BaseNode *nodeOpnd0 = opnd0->GenMIRNode(mirBuilder);
   BaseNode *nodeOpnd1 = opnd1->GenMIRNode(mirBuilder);
-  CheckPrimTypeEq(nodeOpnd0->GetPrimType(), nodeOpnd1->GetPrimType());
   MIRType *mirTypeSrc = GlobalTables::GetTypeTable().GetTypeFromTyIdx(
       TyIdx(static_cast<uint32>(nodeOpnd0->GetPrimType())));
   // When the int32 is used to process Java, an error will be reported during the verification.
@@ -2940,7 +2938,6 @@ void FEIRExprBinary::SetExprTypeByOpNormal() {
     type->SetPrimType(PTY_ptr);
     return;
   }
-  CheckPrimTypeEq(primTypeOpnd0, primTypeOpnd1);
   type->SetPrimType(primTypeOpnd0);
 }
 
@@ -2954,8 +2951,6 @@ void FEIRExprBinary::SetExprTypeByOpShift() {
 
 void FEIRExprBinary::SetExprTypeByOpLogic() {
   PrimType primTypeOpnd0 = opnd0->GetPrimType();
-  PrimType primTypeOpnd1 = opnd1->GetPrimType();
-  CheckPrimTypeEq(primTypeOpnd0, primTypeOpnd1);
   CHECK_FATAL(IsPrimitiveInteger(primTypeOpnd0), "logic's opnds must be integer");
   type->SetPrimType(primTypeOpnd0);
 }
@@ -2982,9 +2977,6 @@ FEIRExprTernary::FEIRExprTernary(Opcode argOp, std::unique_ptr<FEIRType> argType
   SetOpnd(std::move(argOpnd0), 0);
   SetOpnd(std::move(argOpnd1), 1);
   SetOpnd(std::move(argOpnd2), 2);
-  PrimType primType = type->GetPrimType();
-  CheckPrimTypeEq(primType, opnd1->GetPrimType());
-  CheckPrimTypeEq(primType, opnd2->GetPrimType());
 }
 
 std::unique_ptr<FEIRExpr> FEIRExprTernary::CloneImpl() const {
@@ -3057,8 +3049,6 @@ void FEIRExprTernary::SetOpnd(std::unique_ptr<FEIRExpr> argOpnd, uint32 idx) {
 
 void FEIRExprTernary::SetExprTypeByOp() {
   PrimType primTypeOpnd1 = opnd1->GetPrimType();
-  PrimType primTypeOpnd2 = opnd2->GetPrimType();
-  CheckPrimTypeEq(primTypeOpnd1, primTypeOpnd2);
   type->SetPrimType(primTypeOpnd1);
 }
 

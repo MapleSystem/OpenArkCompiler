@@ -417,28 +417,30 @@ const std::string &AstSwitchUtil::GetTopOfBreakLabels() const {
   return nestedBreakLabels.top();
 }
 
-void AstLoopUtil::PushBreak(std::string labelPair) {
-  loopLabels.push(labelPair);
+void AstLoopUtil::PushBreak(std::string label) {
+  breakLabels.push(std::make_pair(label, false));
 }
 
 std::string AstLoopUtil::GetCurrentBreak() {
-  return loopLabels.top();
+  breakLabels.top().second = true;
+  return breakLabels.top().first;
 }
 
 bool AstLoopUtil::IsBreakLabelsEmpty() const {
-  return loopLabels.empty();
+  return breakLabels.empty();
 }
 
 void AstLoopUtil::PopCurrentBreak() {
-  loopLabels.pop();
+  breakLabels.pop();
 }
 
-void AstLoopUtil::PushContinue(std::string labelPair) {
-  continueLabels.push(labelPair);
+void AstLoopUtil::PushContinue(std::string label) {
+  continueLabels.push(std::make_pair(label, false));
 }
 
 std::string AstLoopUtil::GetCurrentContinue() {
-  return continueLabels.top();
+  continueLabels.top().second = true;
+  return continueLabels.top().first;
 }
 
 bool AstLoopUtil::IsContinueLabelsEmpty() const {

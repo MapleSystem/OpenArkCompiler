@@ -1173,15 +1173,30 @@ RegOperand *AArch64CGFunc::PrepareMemcpyParamOpnd(uint64 copySize) {
   return vregMemcpySize;
 }
 
+Insn *AArch64CGFunc::AggtStrLdrInsert(bool bothUnion, Insn *lastStrLdr, Insn &newStrLdr) {
+  if (bothUnion) {
+    if (lastStrLdr == nullptr) {
+      GetCurBB()->AppendInsn(newStrLdr);
+    } else  {
+      GetCurBB()->InsertInsnAfter(*lastStrLdr, newStrLdr);
+    }
+  } else {
+    GetCurBB()->AppendInsn(newStrLdr);
+  }
+  return &newStrLdr;
+}
+
 void AArch64CGFunc::SelectAggDassign(DassignNode &stmt) {
   MIRSymbol *lhsSymbol = GetFunction().GetLocalOrGlobalSymbol(stmt.GetStIdx());
   int32 lhsOffset = 0;
   MIRType *lhsType = lhsSymbol->GetType();
+  bool bothUnion = false;
   if (stmt.GetFieldID() != 0) {
     MIRStructType *structType = static_cast<MIRStructType*>(lhsSymbol->GetType());
     ASSERT(structType != nullptr, "SelectAggDassign: non-zero fieldID for non-structure");
     lhsType = structType->GetFieldType(stmt.GetFieldID());
     lhsOffset = GetBecommon().GetFieldOffset(*structType, stmt.GetFieldID()).first;
+    bothUnion |= (structType->GetKind() == kTypeUnion);
   }
   uint32 lhsAlign = GetBecommon().GetTypeAlign(lhsType->GetTypeIndex());
   uint64 lhsSize = GetBecommon().GetTypeSize(lhsType->GetTypeIndex());
@@ -1198,7 +1213,9 @@ void AArch64CGFunc::SelectAggDassign(DassignNode &stmt) {
       ASSERT(structType != nullptr, "SelectAggDassign: non-zero fieldID for non-structure");
       rhsType = structType->GetFieldType(rhsDread->GetFieldID());
       rhsOffset = GetBecommon().GetFieldOffset(*structType, rhsDread->GetFieldID()).first;
+      bothUnion &= (structType->GetKind() == kTypeUnion);
     }
+    bothUnion &= (rhsSymbol == lhsSymbol);
     rhsAlign = GetBecommon().GetTypeAlign(rhsType->GetTypeIndex());
     alignUsed = std::min(lhsAlign, rhsAlign);
     ASSERT(alignUsed != 0, "expect non-zero");
@@ -1234,6 +1251,8 @@ void AArch64CGFunc::SelectAggDassign(DassignNode &stmt) {
 
       return;
     }
+    Insn *lastLdr = nullptr;
+    Insn *lastStr = nullptr;
     for (uint32 i = 0; i < (lhsSize / copySize); i++) {
       uint32 rhsBaseOffset = i * copySize + rhsOffsetVal;
       uint32 lhsBaseOffset = i * copySize + lhsOffsetVal;
@@ -1248,32 +1267,38 @@ void AArch64CGFunc::SelectAggDassign(DassignNode &stmt) {
       RegOperand &result = CreateVirtualRegisterOperand(NewVReg(kRegTyInt, std::max(4u, copySize)));
       bool doPair = (!rhsIsLo12 && !lhsIsLo12 && (copySize >= k4BitSize) && ((i + 1) < (lhsSize / copySize)));
       RegOperand *result1 = nullptr;
+      Insn *newLoadInsn = nullptr;
       if (doPair) {
         MOperator mOpLDP = (copySize == k4BitSize) ? MOP_wldp : MOP_xldp;
         result1 = &CreateVirtualRegisterOperand(NewVReg(kRegTyInt, std::max(4u, copySize)));
         rhsMemOpnd = FixLargeMemOpnd(mOpLDP, *rhsMemOpnd, copySize * k8BitSize, kInsnThirdOpnd);
-        GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(mOpLDP, result, *result1, *rhsMemOpnd));
+        newLoadInsn = &GetCG()->BuildInstruction<AArch64Insn>(mOpLDP, result, *result1, *rhsMemOpnd);
       } else {
         MOperator mOp = PickLdInsn(copySize * k8BitSize, PTY_u32);
         rhsMemOpnd = FixLargeMemOpnd(mOp, *rhsMemOpnd, copySize * k8BitSize, kInsnSecondOpnd);
-        GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(mOp, result, *rhsMemOpnd));
+        newLoadInsn = &GetCG()->BuildInstruction<AArch64Insn>(mOp, result, *rhsMemOpnd);
       }
+      ASSERT(newLoadInsn != nullptr, "build load instruction failed in SelectAggDassign");
+      lastLdr = AggtStrLdrInsert(bothUnion, lastLdr, *newLoadInsn);
       /* generate the store */
       AArch64OfstOperand &lhsOfstOpnd = GetOrCreateOfstOpnd(lhsBaseOffset, k32BitSize);
       addrMode = lhsIsLo12 ? AArch64MemOperand::kAddrModeLo12Li : AArch64MemOperand::kAddrModeBOi;
       sym = lhsIsLo12 ? lhsSymbol : nullptr;
+      Insn *newStoreInsn = nullptr;
       MemOperand *lhsMemOpnd =
           &GetOrCreateMemOpnd(addrMode, copySize * k8BitSize, lhsBaseReg, nullptr, &lhsOfstOpnd, sym);
       if (doPair) {
         MOperator mOpSTP = (copySize == k4BitSize) ? MOP_wstp : MOP_xstp;
         lhsMemOpnd = FixLargeMemOpnd(mOpSTP, *lhsMemOpnd, copySize * k8BitSize, kInsnThirdOpnd);
-        GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(mOpSTP, result, *result1, *lhsMemOpnd));
+        newStoreInsn = &GetCG()->BuildInstruction<AArch64Insn>(mOpSTP, result, *result1, *lhsMemOpnd);
         i++;
       } else {
         MOperator mOp = PickStInsn(copySize * k8BitSize, PTY_u32);
         lhsMemOpnd = FixLargeMemOpnd(mOp, *lhsMemOpnd, copySize * k8BitSize, kInsnSecondOpnd);
-        GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(mOp, result, *lhsMemOpnd));
+        newStoreInsn = &GetCG()->BuildInstruction<AArch64Insn>(mOp, result, *lhsMemOpnd);
       }
+      ASSERT(newStoreInsn != nullptr, "build store instruction failed in SelectAggDassign");
+      lastStr = AggtStrLdrInsert(bothUnion, lastStr, *newStoreInsn);
     }
     /* take care of extra content at the end less than the unit */
     uint64 lhsSizeCovered = (lhsSize / copySize) * copySize;
@@ -2899,6 +2924,13 @@ void AArch64CGFunc::SelectAdd(Operand &resOpnd, Operand &opnd0, Operand &opnd1, 
 }
 
 Operand *AArch64CGFunc::SelectMadd(BinaryNode &node, Operand &opndM0, Operand &opndM1, Operand &opnd1) {
+  Operand::OperandType opndM0Type = opndM0.GetKind();
+  Operand::OperandType opndM1Type = opndM1.GetKind();
+  if (opndM0Type == Operand::kOpdImmediate || opndM0Type == Operand::kOpdOffset ||
+      opndM1Type == Operand::kOpdImmediate || opndM1Type == Operand::kOpdOffset) {
+    return nullptr;
+  }
+
   PrimType dtype = node.GetPrimType();
   bool isSigned = IsSignedInteger(dtype);
   uint32 dsize = GetPrimTypeBitSize(dtype);
@@ -3252,7 +3284,6 @@ void AArch64CGFunc::SelectRem(Operand &resOpnd, Operand &lhsOpnd, Operand &rhsOp
   * allocate temporary register
   */
   RegOperand &temp = CreateRegisterOperandOfType(primType);
-  Insn *movImmInsn = GetCurBB()->GetLastInsn();
   /*
    * mov     w1, #2
    * sdiv    wTemp, w0, w1
@@ -3270,58 +3301,83 @@ void AArch64CGFunc::SelectRem(Operand &resOpnd, Operand &lhsOpnd, Operand &rhsOp
    * add     wRespond, w0, wTemp
    * and     wRespond, wRespond, #1
    * sub     wRespond, wRespond, w2
+   *
+   * for unsigned rem op, just use and
    */
-  if ((Globals::GetInstance()->GetOptimLevel() >= CGOptions::kLevel2) && movImmInsn && isSigned &&
-      ((movImmInsn->GetMachineOpcode() == MOP_xmovri32) || (movImmInsn->GetMachineOpcode() == MOP_xmovri64)) &&
-       movImmInsn->GetOperand(0).Equals(opnd1)) {
-    auto &imm = static_cast<AArch64ImmOperand&>(movImmInsn->GetOperand(kInsnSecondOpnd));
+  if ((Globals::GetInstance()->GetOptimLevel() >= CGOptions::kLevel2)) {
+    AArch64ImmOperand *imm = nullptr;
+    Insn *movImmInsn = GetCurBB()->GetLastInsn();
+    if (movImmInsn &&
+        ((movImmInsn->GetMachineOpcode() == MOP_xmovri32) || (movImmInsn->GetMachineOpcode() == MOP_xmovri64)) &&
+        movImmInsn->GetOperand(0).Equals(opnd1)) {
+      /*
+       * mov w1, #2
+       * rem res, w0, w1
+       */
+      imm = static_cast<AArch64ImmOperand*>(&movImmInsn->GetOperand(kInsnSecondOpnd));
+    } else if (opnd1.IsImmediate()) {
+      /*
+       * rem res, w0, #2
+       */
+      imm = opnd1.IsZeroRegister() ? &CreateImmOperand(0, opnd1.GetSize(), false)
+                                   : static_cast<AArch64ImmOperand*>(&opnd1);
+    }
     /* positive or negative do not have effect on the result */
-    const int64 dividor = (imm.GetValue() >= 0) ? imm.GetValue() : ((-1) * imm.GetValue());
+    const int64 dividor = (imm != nullptr) ? ((imm->GetValue() >= 0) ? imm->GetValue() : ((-1) * imm->GetValue()))
+                                           : 0; /* not an immReg */
     const int64 Log2OfDividor = IsPowerOf2(dividor);
     if ((dividor != 0) && (Log2OfDividor > 0)) {
       if (is64Bits) {
         CHECK_FATAL(Log2OfDividor < k64BitSize, "imm out of bound");
-        AArch64ImmOperand &rightShiftValue = CreateImmOperand(k64BitSize - Log2OfDividor, k64BitSize, isSigned);
-        if (Log2OfDividor != 1) {
-          /* 63->shift ALL , 32 ->32bit register */
-          AArch64ImmOperand &rightShiftAll = CreateImmOperand(63, k64BitSize, isSigned);
-          GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xasrrri6, temp, opnd0, rightShiftAll));
+        if (isSigned) {
+          AArch64ImmOperand &rightShiftValue = CreateImmOperand(k64BitSize - Log2OfDividor, k64BitSize, isSigned);
+          if (Log2OfDividor != 1) {
+            /* 63->shift ALL , 32 ->32bit register */
+            AArch64ImmOperand &rightShiftAll = CreateImmOperand(63, k64BitSize, isSigned);
+            GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xasrrri6, temp, opnd0, rightShiftAll));
 
-          GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xlsrrri6, temp, temp, rightShiftValue));
+            GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xlsrrri6, temp, temp, rightShiftValue));
+          } else {
+            GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xlsrrri6, temp, opnd0, rightShiftValue));
+          }
+          GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xaddrrr, resOpnd, opnd0, temp));
+          AArch64ImmOperand &remBits = CreateImmOperand(dividor - 1, k64BitSize, isSigned);
+          GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xandrri13, resOpnd, resOpnd, remBits));
+          GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xsubrrr, resOpnd, resOpnd, temp));
         } else {
-          GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xlsrrri6, temp, opnd0, rightShiftValue));
+          AArch64ImmOperand &remBits = CreateImmOperand(dividor - 1, k64BitSize, isSigned);
+          GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xandrri13, resOpnd, opnd0, remBits));
         }
-
-        GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xaddrrr, resOpnd, opnd0, temp));
-
-        AArch64ImmOperand &remBits = CreateImmOperand(dividor - 1, k64BitSize, isSigned);
-        GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xandrri13, resOpnd, resOpnd, remBits));
-
-        GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xsubrrr, resOpnd, resOpnd, temp));
         return;
       } else {
         CHECK_FATAL(Log2OfDividor < k32BitSize, "imm out of bound");
-        AArch64ImmOperand &rightShiftValue = CreateImmOperand(k32BitSize - Log2OfDividor, k32BitSize, isSigned);
-        if (Log2OfDividor != 1) {
-          /* 31->shift ALL , 32 ->32bit register */
-          AArch64ImmOperand &rightShiftAll = CreateImmOperand(31, k32BitSize, isSigned);
-          GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_wasrrri5, temp, opnd0, rightShiftAll));
+        if (isSigned) {
+          AArch64ImmOperand &rightShiftValue = CreateImmOperand(k32BitSize - Log2OfDividor, k32BitSize, isSigned);
+          if (Log2OfDividor != 1) {
+            /* 31->shift ALL , 32 ->32bit register */
+            AArch64ImmOperand &rightShiftAll = CreateImmOperand(31, k32BitSize, isSigned);
+            GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_wasrrri5, temp, opnd0, rightShiftAll));
 
-          GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_wlsrrri5, temp, temp, rightShiftValue));
+            GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_wlsrrri5, temp, temp, rightShiftValue));
+          } else {
+            GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_wlsrrri5, temp, opnd0, rightShiftValue));
+          }
+
+          GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_waddrrr, resOpnd, opnd0, temp));
+          AArch64ImmOperand &remBits = CreateImmOperand(dividor - 1, k32BitSize, isSigned);
+          GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_wandrri12, resOpnd, resOpnd, remBits));
+
+          GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_wsubrrr, resOpnd, resOpnd, temp));
         } else {
-          GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_wlsrrri5, temp, opnd0, rightShiftValue));
+          AArch64ImmOperand &remBits = CreateImmOperand(dividor - 1, k32BitSize, isSigned);
+          GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_wandrri12, resOpnd, opnd0, remBits));
         }
 
-        GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_waddrrr, resOpnd, opnd0, temp));
-
-        AArch64ImmOperand &remBits = CreateImmOperand(dividor - 1, k32BitSize, isSigned);
-        GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_wandrri12, resOpnd, resOpnd, remBits));
-
-        GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_wsubrrr, resOpnd, resOpnd, temp));
         return;
       }
     }
   }
+
   uint32 mopDiv = is64Bits ? (isSigned ? MOP_xsdivrrr : MOP_xudivrrr) : (isSigned ? MOP_wsdivrrr : MOP_wudivrrr);
   GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(mopDiv, temp, opnd0, opnd1));
 

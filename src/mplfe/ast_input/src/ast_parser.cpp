@@ -649,6 +649,7 @@ ASTValue *ASTParser::TranslateRValue2ASTValue(MapleAllocator &allocator, const c
           break;
         case llvm::APFloat::S_IEEEquad:
         case llvm::APFloat::S_PPCDoubleDouble:
+        case llvm::APFloat::S_x87DoubleExtended:
           bool LosesInfo;
           if (constMirType->GetPrimType() == PTY_f64) {
             fValue.convert(llvm::APFloat::IEEEdouble(), llvm::APFloatBase::roundingMode::rmNearestTiesToAway,
@@ -666,7 +667,10 @@ ASTValue *ASTParser::TranslateRValue2ASTValue(MapleAllocator &allocator, const c
       astValue->pty = constMirType->GetPrimType();
     } else if (result.Val.isComplexInt() || result.Val.isComplexFloat()) {
       WARN(kLncWarn, "Unsupported complex value in MIR");
-    } else if (result.Val.isVector() || result.Val.isMemberPointer() || result.Val.isAddrLabelDiff()) {
+    } else if (result.Val.isVector()) {
+      // vector type var must be init by initListExpr
+      return nullptr;
+    } else if (result.Val.isMemberPointer() || result.Val.isAddrLabelDiff()) {
       CHECK_FATAL(false, "NIY");
     }
     // Others: Agg const processed in `InitListExpr`
@@ -1055,6 +1059,13 @@ ASTExpr *ASTParser::ProcessExprInitListExpr(MapleAllocator &allocator, const cla
     }
     if (expr.isTransparent()) {
       astInitListExpr->SetTransparent(true);
+    }
+    if (aggType->isVectorType()) {
+      astInitListExpr->SetHasVectorType(true);
+      // for one elem vector type
+      if (LibAstFile::isOneElementVector(aggType)) {
+        astInitListExpr->SetTransparent(true);
+      }
     }
     for (uint32 i = 0; i < n; ++i) {
       const clang::Expr *eExpr = le[i];
@@ -2019,6 +2030,12 @@ bool ASTParser::PreProcessAST() {
       case clang::Decl::Enum:
         globalEnumDecles.emplace_back(child);
         break;
+      case clang::Decl::FileScopeAsm:
+        // need to add processing
+        break;
+      case clang::Decl::Empty:
+      case clang::Decl::StaticAssert:
+        break;
       default: {
         WARN(kLncWarn, "Unsupported decl kind: %u", child->getKind());
       }
@@ -2053,10 +2070,15 @@ ASTDecl *ASTParser::ProcessDecl(MapleAllocator &allocator, const clang::Decl &de
     DECL_CASE(Typedef);
     DECL_CASE(EnumConstant);
     DECL_CASE(Label);
+    DECL_CASE(StaticAssert);
     default:
       CHECK_FATAL(false, "ASTDecl: %s NIY", decl.getDeclKindName());
       return nullptr;
   }
+  return nullptr;
+}
+
+ASTDecl *ASTParser::ProcessDeclStaticAssertDecl(MapleAllocator &allocator, const clang::StaticAssertDecl &assertDecl) {
   return nullptr;
 }
 

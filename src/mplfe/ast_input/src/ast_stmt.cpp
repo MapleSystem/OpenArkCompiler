@@ -109,8 +109,8 @@ std::list<UniqueFEIRStmt> ASTForStmt::Emit2FEStmtImpl() const {
   std::list<UniqueFEIRStmt> stmts;
   std::string loopBodyEndLabelName = FEUtils::GetSequentialName("dowhile_body_end_");
   std::string loopEndLabelName = FEUtils::GetSequentialName("dowhile_end_");
-  AstLoopUtil::Instance().PushBreak(loopEndLabelName);
   AstLoopUtil::Instance().PushContinue(loopBodyEndLabelName);
+  AstLoopUtil::Instance().PushBreak(loopEndLabelName);
   auto labelBodyEndStmt = std::make_unique<FEIRStmtLabel>(loopBodyEndLabelName);
   auto labelLoopEndStmt = std::make_unique<FEIRStmtLabel>(loopEndLabelName);
   if (initStmt != nullptr) {
@@ -118,7 +118,9 @@ std::list<UniqueFEIRStmt> ASTForStmt::Emit2FEStmtImpl() const {
     stmts.splice(stmts.cend(), feStmts);
   }
   std::list<UniqueFEIRStmt> bodyFEStmts = bodyStmt->Emit2FEStmt();
-  bodyFEStmts.emplace_back(std::move(labelBodyEndStmt));
+  if (AstLoopUtil::Instance().IsCurrentContinueLabelUsed()) {
+    bodyFEStmts.emplace_back(std::move(labelBodyEndStmt));
+  }
   UniqueFEIRExpr condFEExpr;
   if (condExpr != nullptr) {
     (void)condExpr->Emit2FEExpr(stmts);
@@ -145,7 +147,9 @@ std::list<UniqueFEIRStmt> ASTForStmt::Emit2FEStmtImpl() const {
   UniqueFEIRStmt whileStmt = std::make_unique<FEIRStmtDoWhile>(OP_while, std::move(condFEExpr), std::move(bodyFEStmts));
   whileStmt->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
   stmts.emplace_back(std::move(whileStmt));
-  stmts.emplace_back(std::move(labelLoopEndStmt));
+  if (AstLoopUtil::Instance().IsCurrentBreakLabelUsed()) {
+    stmts.emplace_back(std::move(labelLoopEndStmt));
+  }
   AstLoopUtil::Instance().PopCurrentBreak();
   AstLoopUtil::Instance().PopCurrentContinue();
   return stmts;
@@ -164,14 +168,18 @@ std::list<UniqueFEIRStmt> ASTWhileStmt::Emit2FEStmtImpl() const {
   std::list<UniqueFEIRStmt> condPreStmts;
   UniqueFEIRExpr condFEExpr = condExpr->Emit2FEExpr(condStmts);
   (void)condExpr->Emit2FEExpr(condPreStmts);
-  bodyFEStmts.emplace_back(std::move(labelBodyEndStmt));
+  if (AstLoopUtil::Instance().IsCurrentContinueLabelUsed()) {
+    bodyFEStmts.emplace_back(std::move(labelBodyEndStmt));
+  }
   bodyFEStmts.splice(bodyFEStmts.end(), condPreStmts);
   UseCompareAsCondFEExpr(condFEExpr);
   auto whileStmt = std::make_unique<FEIRStmtDoWhile>(OP_while, std::move(condFEExpr), std::move(bodyFEStmts));
   whileStmt->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
   stmts.splice(stmts.end(), condStmts);
   stmts.emplace_back(std::move(whileStmt));
-  stmts.emplace_back(std::move(labelLoopEndStmt));
+  if (AstLoopUtil::Instance().IsCurrentBreakLabelUsed()) {
+    stmts.emplace_back(std::move(labelLoopEndStmt));
+  }
   AstLoopUtil::Instance().PopCurrentBreak();
   AstLoopUtil::Instance().PopCurrentContinue();
   return stmts;
@@ -189,7 +197,9 @@ std::list<UniqueFEIRStmt> ASTDoStmt::Emit2FEStmtImpl() const {
   if (bodyStmt != nullptr) {
     bodyFEStmts = bodyStmt->Emit2FEStmt();
   }
-  bodyFEStmts.emplace_back(std::move(labelBodyEndStmt));
+  if (AstLoopUtil::Instance().IsCurrentContinueLabelUsed()) {
+    bodyFEStmts.emplace_back(std::move(labelBodyEndStmt));
+  }
   std::list<UniqueFEIRStmt> condStmts;
   UniqueFEIRExpr condFEExpr = condExpr->Emit2FEExpr(condStmts);
   bodyFEStmts.splice(bodyFEStmts.end(), condStmts);
@@ -198,7 +208,9 @@ std::list<UniqueFEIRStmt> ASTDoStmt::Emit2FEStmtImpl() const {
                                                                std::move(bodyFEStmts));
   whileStmt->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
   stmts.emplace_back(std::move(whileStmt));
-  stmts.emplace_back(std::move(labelLoopEndStmt));
+  if (AstLoopUtil::Instance().IsCurrentBreakLabelUsed()) {
+    stmts.emplace_back(std::move(labelLoopEndStmt));
+  }
   AstLoopUtil::Instance().PopCurrentBreak();
   AstLoopUtil::Instance().PopCurrentContinue();
   return stmts;

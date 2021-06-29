@@ -97,6 +97,7 @@ bool MeOption::placementRC = false;
 bool MeOption::subsumRC = false;
 bool MeOption::performFSAA = true;
 bool MeOption::strengthReduction = true;
+bool MeOption::srForAdd = false;
 bool MeOption::doLFTR = false;
 std::string MeOption::inlineFuncList = "";
 bool MeOption::meVerify = false;
@@ -187,6 +188,7 @@ enum OptionIndex {
   kSubsumRC,
   kPerformFSAA,
   kStrengthReduction,
+  kSRAdd,
   kLFTR,
   kRegReadAtReturn,
   kProPatphi,
@@ -782,6 +784,16 @@ const Descriptor kUsage[] = {
     kArgCheckPolicyBool,
     "  --strengthreduction      \tPerform strength reduction\n"
     "  --no-strengthreduction   \tDisable strength reduction\n",
+    "me",
+    {} },
+  { kSRAdd,
+    kEnable,
+    "",
+    "srAdd",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --sradd                   \tPerform strength reduction for OP_add/sub\n"
+    "  --no-sradd                \tDisable strength reduction for OP_add/sub\n",
     "me",
     {} },
   { kLFTR,
@@ -1389,6 +1401,9 @@ bool MeOption::SolveOptions(const std::vector<mapleOption::Option> &opts, bool i
         break;
       case kStrengthReduction:
         strengthReduction = (opt.Type() == kEnable);
+        break;
+      case kSRAdd:
+        srForAdd = (opt.Type() == kEnable);
         break;
       case kLFTR:
         doLFTR = (opt.Type() == kEnable);

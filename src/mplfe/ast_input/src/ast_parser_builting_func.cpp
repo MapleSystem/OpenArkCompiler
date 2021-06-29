@@ -83,8 +83,8 @@ UniqueFEIRExpr ASTCallExpr::ProcessBuiltinFunc(std::list<UniqueFEIRStmt> &stmts,
   if (funcName.compare(0, prefix.size(), prefix) == 0) {
     auto arg1Expr = args[0]->Emit2FEExpr(stmts);
     auto arg2Expr = args[1]->Emit2FEExpr(stmts);
-    UniqueFEIRType type = FEIRTypeHelper::CreateTypeNative(*mirType);
-    auto stmt = FEIRBuilder::CreateStmtIAssign(arg1Expr->GetType()->Clone(), std::move(arg1Expr), std::move(arg2Expr));
+    UniqueFEIRType type = FEIRTypeHelper::CreateTypeNative(*args[0]->GetType());
+    auto stmt = FEIRBuilder::CreateStmtIAssign(std::move(type), std::move(arg1Expr), std::move(arg2Expr));
     stmt->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
     stmts.emplace_back(std::move(stmt));
     isFinish = true;

@@ -337,11 +337,11 @@ AliasInfo AliasClass::CreateAliasElemsExpr(BaseNode &expr) {
       }
 
       auto *opnd = expr.Opnd(1);
-      if (!opnd->IsConstval()) {
+      if (!opnd->IsConstval() || !IsAddress(expr.GetPrimType())) {
         return AliasInfo(aliasInfo.ae, aliasInfo.fieldID, OffsetType::InvalidOffset());
       }
       auto mirConst = static_cast<ConstvalNode*>(opnd)->GetConstVal();
-      ASSERT(mirConst->GetKind() == kConstInt, "array index must be integer");
+      CHECK_FATAL(mirConst->GetKind() == kConstInt, "array index must be integer");
       int64 constVal = static_cast<MIRIntConst*>(mirConst)->GetValue();
       if (expr.GetOpCode() == OP_sub) {
         constVal = -constVal;
