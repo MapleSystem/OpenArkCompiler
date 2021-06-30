@@ -24,6 +24,13 @@
 #include "safe_ptr.h"
 
 namespace maple {
+
+enum Propagatability {
+  kPropNo,
+  kPropOnlyWithInverse,
+  kPropYes,
+};
+
 class Prop {
  public:
   struct PropConfig {
@@ -33,14 +40,15 @@ class Prop {
     bool propagateFinalIloadRef;
     bool propagateIloadRefNonParm;
     bool propagateAtPhi;
+    bool propagateWithInverse;
   };
 
   Prop(IRMap&, Dominance&, MemPool&, uint32 bbvecsize, const PropConfig &config);
   virtual ~Prop() = default;
 
   MeExpr *CheckTruncation(MeExpr *lhs, MeExpr *rhs) const;
-  MeExpr &PropVar(VarMeExpr &varmeExpr, bool atParm, bool checkPhi) const;
-  MeExpr &PropReg(RegMeExpr &regmeExpr, bool atParm) const;
+  MeExpr &PropVar(VarMeExpr &varmeExpr, bool atParm, bool checkPhi);
+  MeExpr &PropReg(RegMeExpr &regmeExpr, bool atParm);
   MeExpr &PropIvar(IvarMeExpr &ivarMeExpr);
   void PropUpdateDef(MeExpr &meExpr);
   void PropUpdateChiListDef(const MapleMap<OStIdx, ChiMeNode*> &chiList);
@@ -77,7 +85,11 @@ class Prop {
                            const MapleVector<MapleStack<MeExpr *> *> &vstLiveStack) const;
   bool IvarIsFinalField(const IvarMeExpr &ivarMeExpr) const;
   bool CanBeReplacedByConst(MIRSymbol &symbol) const;
-  bool Propagatable(const MeExpr &expr, const BB &fromBB, bool atParm) const;
+  int32 InvertibleOccurrences(ScalarMeExpr *scalar, MeExpr *x);
+  bool IsFunctionOfCurVersion(ScalarMeExpr *scalar, ScalarMeExpr *cur);
+  Propagatability Propagatable(MeExpr *x, BB *fromBB, bool atParm, bool checkInverse = false, ScalarMeExpr *propagatingScalar = nullptr);
+  MeExpr *FormInverse(ScalarMeExpr *v, MeExpr *x, MeExpr *formingExp);
+  MeExpr *RehashUsingInverse(MeExpr *x);
   MeExpr &PropMeExpr(MeExpr &meExpr, bool &isproped, bool atParm);
 
   IRMap &irMap;

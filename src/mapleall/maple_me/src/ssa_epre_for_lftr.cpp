@@ -84,7 +84,7 @@ OpMeExpr *SSAEPre::FormLFTRCompare(MeRealOcc *compOcc, MeExpr *regorvar) {
     BuildWorkListExpr(*compOcc->GetMeStmt(), compOcc->GetSequence(), *hashedSide, isRebuild, nullptr, true);
   }
   OpMeExpr newcompare(-1, compare->GetOp(), compare->GetPrimType(), 2);
-  newcompare.SetOpndType(static_cast<OpMeExpr*>(compare)->GetOpndType());
+  newcompare.SetOpndType(regorvar->GetPrimType());
   newcompare.SetOpnd(j, regorvar);
   newcompare.SetOpnd(1-j, hashedSide);
   return static_cast<OpMeExpr *>(irMap->HashMeExpr(newcompare));
