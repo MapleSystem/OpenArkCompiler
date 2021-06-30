@@ -98,8 +98,7 @@ RegMeExpr *SSARename2Preg::RenameVar(const VarMeExpr *varmeexpr) {
       return nullptr;
     }
     curtemp = meirmap->CreateRegMeExpr(*ty);
-    OriginalSt *pregOst =
-        ssaTab->GetOriginalStTable().CreatePregOriginalSt(curtemp->GetRegIdx(), func->GetMirFunc()->GetPuidx());
+    OriginalSt *pregOst = curtemp->GetOst();
     pregOst->SetIsFormal(ost->IsFormal());
     sym2reg_map[ost->GetIndex()] = pregOst;
     (void)vstidx2reg_map.insert(std::make_pair(varmeexpr->GetExprID(), curtemp));
@@ -210,6 +209,8 @@ void SSARename2Preg::Rename2PregLeafLHS(MeStmt *mestmt, const VarMeExpr *varmeex
       }
     }
     AssignMeStmt *regssmestmt = meirmap->New<AssignMeStmt>(OP_regassign, varreg, oldrhs);
+    varreg->SetDefByStmt(*regssmestmt);
+    varreg->SetDefBy(kDefByStmt);
     regssmestmt->CopyBase(*mestmt);
     mestmt->GetBB()->InsertMeStmtBefore(mestmt, regssmestmt);
     mestmt->GetBB()->RemoveMeStmt(mestmt);

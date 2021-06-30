@@ -364,6 +364,9 @@ bool IvarMeExpr::IsVolatile() const {
     return true;
   }
   auto *type = static_cast<MIRPtrType*>(GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx));
+  if (type->IsPointedTypeVolatile(fieldID)) {
+    return true;
+  }
   MIRType *pointedType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(type->GetPointedTyIdx());
   if (fieldID == 0) {
     return pointedType->HasVolatileField();

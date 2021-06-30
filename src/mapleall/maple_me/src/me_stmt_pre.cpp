@@ -69,6 +69,16 @@ void MeStmtPre::CodeMotion() {
               }
             }
           }
+          auto *chiList = realOcc->GetMeStmt()->GetChiList();
+          if (chiList != nullptr) {
+            for (const auto &ostIdx2Chi : *chiList) {
+              OStIdx ostIdx = ostIdx2Chi.first;
+              if (candsForSSAUpdate.find(ostIdx) == candsForSSAUpdate.end()) {
+                candsForSSAUpdate[ostIdx] =
+                    ssaPreMemPool->New<MapleSet<BBId>>(std::less<BBId>(), ssaPreAllocator.Adapter());
+              }
+            }
+          }
         }
         break;
       }

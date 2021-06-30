@@ -1911,13 +1911,9 @@ void AliasClass::InsertMayDefUseClinitCheck(IntrinsiccallNode &stmt, BBId bbid) 
   for (OStIdx ostIdx : globalsMayAffectedByClinitCheck) {
     AliasElem *aliasElem = osym2Elem[ostIdx];
     OriginalSt &ostOfAE = aliasElem->GetOriginalSt();
-    std::string typeNameOfOst = ostOfAE.GetMIRSymbol()->GetName();
-    std::string typeNameOfStmt = GlobalTables::GetTypeTable().GetTypeFromTyIdx(stmt.GetTyIdx())->GetName();
-    if (typeNameOfOst.find(typeNameOfStmt) != std::string::npos) {
-      ssaPart->InsertMayDefNode(MayDefNode(
-          ssaTab.GetVersionStTable().GetVersionStVectorItem(ostOfAE.GetZeroVersionIndex()), &stmt));
-      ssaTab.AddDefBB4Ost(ostOfAE.GetIndex(), bbid);
-    }
+    ssaPart->InsertMayDefNode(MayDefNode(
+        ssaTab.GetVersionStTable().GetVersionStVectorItem(ostOfAE.GetZeroVersionIndex()), &stmt));
+    ssaTab.AddDefBB4Ost(ostOfAE.GetIndex(), bbid);
   }
 }
 

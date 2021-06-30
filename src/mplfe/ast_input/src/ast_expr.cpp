@@ -1663,8 +1663,11 @@ UniqueFEIRExpr ASTBinaryOperatorExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> 
       MIRType *tempVarType = GlobalTables::GetTypeTable().GetInt32();
       UniqueFEIRType tempFeirType = std::make_unique<FEIRTypeNative>(*tempVarType);
       UniqueFEIRVar shortCircuit = FEIRBuilder::CreateVarNameForC(varName, *tempVarType);
-      std::string labelName = FEUtils::GetSequentialName("shortCircuit_label_");
+      std::string labelName = FEUtils::GetSequentialName(labelID + "_");
 
+      if (leftExpr->GetASTOp() == kASTOpBO) {
+        static_cast<ASTBinaryOperatorExpr*>(leftExpr)->SetLabelID(labelID);
+      }
       auto leftFEExpr = leftExpr->Emit2FEExpr(stmts);
       auto leftCond = CreateZeroExprCompare(std::move(leftFEExpr), OP_ne);
       auto leftStmt = std::make_unique<FEIRStmtDAssign>(shortCircuit->Clone(), leftCond->Clone(), 0);
@@ -1674,6 +1677,9 @@ UniqueFEIRExpr ASTBinaryOperatorExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> 
       UniqueFEIRStmt condGoToExpr = std::make_unique<FEIRStmtCondGotoForC>(dreadExpr->Clone(), op, labelName);
       stmts.emplace_back(std::move(condGoToExpr));
 
+      if (rightExpr->GetASTOp() == kASTOpBO) {
+        static_cast<ASTBinaryOperatorExpr*>(rightExpr)->SetLabelID(labelID);
+      }
       auto rightFEExpr = rightExpr->Emit2FEExpr(stmts);
       auto rightCond = CreateZeroExprCompare(std::move(rightFEExpr), OP_ne);
       auto rightStmt = std::make_unique<FEIRStmtDAssign>(shortCircuit->Clone(), rightCond->Clone(), 0);
@@ -1683,6 +1689,17 @@ UniqueFEIRExpr ASTBinaryOperatorExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> 
       labelStmt->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
       stmts.emplace_back(std::move(labelStmt));
 
+      if ((leftExpr->GetASTOp() != kASTOpBO || (leftExpr->GetASTOp() == kASTOpBO &&
+           !((static_cast<ASTBinaryOperatorExpr*>(leftExpr)->GetOp() == OP_lior) ||
+             (static_cast<ASTBinaryOperatorExpr*>(leftExpr)->GetOp() == OP_land)))) &&
+          (!AstShortCircuitUtil::Instance().IsParenLabelsEmpty() ||
+           !AstShortCircuitUtil::Instance().IsBinaryOperatorLabelsEmpty())) {
+        std::string endLabelName = labelName + "_end";
+        UniqueFEIRStmt goStmt = FEIRBuilder::CreateStmtGoto(endLabelName);
+        auto labelEndStmt = std::make_unique<FEIRStmtLabel>(endLabelName);
+        stmts.emplace_back(std::move(goStmt));
+        stmts.emplace_back(std::move(labelEndStmt));
+      }
       UniqueFEIRExpr zeroConstExpr = FEIRBuilder::CreateExprConstAnyScalar(PTY_i32, 0);
       return FEIRBuilder::CreateExprBinary(std::move(tempFeirType), OP_ne,
           dreadExpr->Clone(), std::move(zeroConstExpr));

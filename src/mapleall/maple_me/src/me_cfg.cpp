@@ -798,6 +798,8 @@ void MeCFG::ConvertMePhiList2IdentityAssigns(BB &meBB) const {
       MePhiNode *regPhi = phiIt->second;
       auto *regAss = func.GetIRMap()->New<AssignMeStmt>(
           OP_regassign, static_cast<RegMeExpr*>(regPhi->GetLHS()), regPhi->GetOpnd(0));
+      regPhi->GetLHS()->SetDefByStmt(*regAss);
+      regPhi->GetLHS()->SetDefBy(kDefByStmt);
       regAss->SetBB(regPhi->GetDefBB());
       regAss->SetIsLive(regPhi->GetIsLive());
       meBB.PrependMeStmt(regAss);

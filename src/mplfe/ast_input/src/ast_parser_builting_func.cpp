@@ -372,6 +372,16 @@ ASTExpr *ASTParser::ParseBuiltinFunc(MapleAllocator &allocator, const clang::Cal
   return (this->*(builtingFuncPtrMap[ss.str()]))(allocator, expr, ss);
 }
 
+ASTExpr *ASTParser::ProcessBuiltinFuncByName(MapleAllocator &allocator, const clang::CallExpr &expr,
+                                             std::stringstream &ss, std::string name) const {
+  (void)allocator;
+  (void)expr;
+  ss.clear();
+  ss.str(std::string());
+  ss << name;
+  return nullptr;
+}
+
 ASTExpr *ASTParser::ParseBuiltinClassifyType(MapleAllocator &allocator, const clang::CallExpr &expr,
                                              std::stringstream &ss) const {
   (void)ss;
@@ -402,12 +412,7 @@ ASTExpr *ASTParser::ParseBuiltinConstantP(MapleAllocator &allocator, const clang
 
 ASTExpr *ASTParser::ParseBuiltinSignbit(MapleAllocator &allocator, const clang::CallExpr &expr,
                                         std::stringstream &ss) const {
-  (void)allocator;
-  (void)expr;
-  ss.clear();
-  ss.str(std::string());
-  ss << "__signbit";
-  return nullptr;
+   return ProcessBuiltinFuncByName(allocator, expr, ss, "__signbit");
 }
 
 ASTExpr *ASTParser::ParseBuiltinIsinfsign(MapleAllocator &allocator, const clang::CallExpr &expr,
@@ -434,6 +439,22 @@ ASTExpr *ASTParser::ParseBuiltinHugeVal(MapleAllocator &allocator, const clang::
   return astFloatingLiteral;
 }
 
+ASTExpr *ASTParser::ParseBuiltinHugeValf(MapleAllocator &allocator, const clang::CallExpr &expr,
+                                         std::stringstream &ss) const {
+  ASTFloatingLiteral *astFloatingLiteral = ASTDeclsBuilder::ASTExprBuilder<ASTFloatingLiteral>(allocator);
+  astFloatingLiteral->SetKind(F32);
+  astFloatingLiteral->SetVal(std::numeric_limits<float>::infinity());
+  return astFloatingLiteral;
+}
+
+ASTExpr *ASTParser::ParseBuiltinInf(MapleAllocator &allocator, const clang::CallExpr &expr,
+                                    std::stringstream &ss) const {
+  ASTFloatingLiteral *astFloatingLiteral = ASTDeclsBuilder::ASTExprBuilder<ASTFloatingLiteral>(allocator);
+  astFloatingLiteral->SetKind(F64);
+  astFloatingLiteral->SetVal(std::numeric_limits<float>::infinity());
+  return astFloatingLiteral;
+}
+
 ASTExpr *ASTParser::ParseBuiltinInff(MapleAllocator &allocator, const clang::CallExpr &expr,
                                     std::stringstream &ss) const {
   ASTFloatingLiteral *astFloatingLiteral = ASTDeclsBuilder::ASTExprBuilder<ASTFloatingLiteral>(allocator);
@@ -442,12 +463,11 @@ ASTExpr *ASTParser::ParseBuiltinInff(MapleAllocator &allocator, const clang::Cal
   return astFloatingLiteral;
 }
 
-ASTExpr *ASTParser::ParseBuiltinInfl(MapleAllocator &allocator, const clang::CallExpr &expr,
+ASTExpr *ASTParser::ParseBuiltinNan(MapleAllocator &allocator, const clang::CallExpr &expr,
                                     std::stringstream &ss) const {
-  // long double infinity use 64 process?
   ASTFloatingLiteral *astFloatingLiteral = ASTDeclsBuilder::ASTExprBuilder<ASTFloatingLiteral>(allocator);
   astFloatingLiteral->SetKind(F64);
-  astFloatingLiteral->SetVal(std::numeric_limits<long double>::infinity());
+  astFloatingLiteral->SetVal(nan(""));
   return astFloatingLiteral;
 }
 
@@ -461,31 +481,31 @@ ASTExpr *ASTParser::ParseBuiltinNanf(MapleAllocator &allocator, const clang::Cal
 
 ASTExpr *ASTParser::ParseBuiltinSignBitf(MapleAllocator &allocator, const clang::CallExpr &expr,
                                          std::stringstream &ss) const {
-  (void)allocator;
-  (void)expr;
-  ss.clear();
-  ss.str(std::string());
-  ss << "__signbitf";
-  return nullptr;
+   return ProcessBuiltinFuncByName(allocator, expr, ss, "__signbitf");
 }
 
 ASTExpr *ASTParser::ParseBuiltinSignBitl(MapleAllocator &allocator, const clang::CallExpr &expr,
                                          std::stringstream &ss) const {
-  (void)allocator;
-  (void)expr;
-  ss.clear();
-  ss.str(std::string());
-  ss << "__signbitl";
-  return nullptr;
+  return ProcessBuiltinFuncByName(allocator, expr, ss, "__signbitl");
 }
 
 ASTExpr *ASTParser::ParseBuiltinTrap(MapleAllocator &allocator, const clang::CallExpr &expr,
                                      std::stringstream &ss) const {
-  (void)allocator;
-  (void)expr;
-  ss.clear();
-  ss.str(std::string());
-  ss << "abort";
-  return nullptr;
+  return ProcessBuiltinFuncByName(allocator, expr, ss, "abort");
+}
+
+ASTExpr *ASTParser::ParseBuiltinCopysignf(MapleAllocator &allocator, const clang::CallExpr &expr,
+                                          std::stringstream &ss) const {
+  return ProcessBuiltinFuncByName(allocator, expr, ss, "copysignf");
+}
+
+ASTExpr *ASTParser::ParseBuiltinCopysign(MapleAllocator &allocator, const clang::CallExpr &expr,
+                                          std::stringstream &ss) const {
+  return ProcessBuiltinFuncByName(allocator, expr, ss, "copysign");
+}
+
+ASTExpr *ASTParser::ParseBuiltinCopysignl(MapleAllocator &allocator, const clang::CallExpr &expr,
+                                          std::stringstream &ss) const {
+  return ProcessBuiltinFuncByName(allocator, expr, ss, "copysignl");
 }
 } // namespace maple

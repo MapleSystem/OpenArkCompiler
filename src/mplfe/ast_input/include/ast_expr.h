@@ -640,7 +640,9 @@ class ASTBinaryConditionalOperator : public ASTExpr {
 class ASTBinaryOperatorExpr : public ASTExpr {
  public:
   explicit ASTBinaryOperatorExpr(ASTOp o) : ASTExpr(o) {}
-  ASTBinaryOperatorExpr() : ASTExpr(kASTOpBO), varName(FEUtils::GetSequentialName("shortCircuit_")) {}
+  ASTBinaryOperatorExpr()
+      : ASTExpr(kASTOpBO), varName(FEUtils::GetSequentialName("shortCircuit_")),
+        labelID(FEUtils::GetSequentialName("shortCircuit_label_")) {}
 
   ~ASTBinaryOperatorExpr() override = default;
 
@@ -692,6 +694,10 @@ class ASTBinaryOperatorExpr : public ASTExpr {
     cvtNeeded = needed;
   }
 
+  void SetLabelID(std::string id) {
+    labelID = id;
+  }
+
   UniqueFEIRType SelectBinaryOperatorType(UniqueFEIRExpr &left, UniqueFEIRExpr &right) const;
 
  protected:
@@ -709,6 +715,7 @@ class ASTBinaryOperatorExpr : public ASTExpr {
   ASTExpr *rightImagExpr = nullptr;
   bool cvtNeeded = false;
   std::string varName;
+  std::string labelID;
 };
 
 class ASTImplicitValueInitExpr : public ASTExpr {

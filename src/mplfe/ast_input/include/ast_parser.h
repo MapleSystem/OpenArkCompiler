@@ -166,21 +166,28 @@ class ASTParser {
 using FuncPtrBuiltinFunc = ASTExpr *(ASTParser::*)(MapleAllocator &allocator, const clang::CallExpr &expr,
                                                    std::stringstream &ss) const;
 static std::map<std::string, FuncPtrBuiltinFunc> InitBuiltinFuncPtrMap();
+ASTExpr *ProcessBuiltinFuncByName(MapleAllocator &allocator, const clang::CallExpr &expr, std::stringstream &ss,
+                                  std::string name) const;
 ASTExpr *ParseBuiltinFunc(MapleAllocator &allocator, const clang::CallExpr &expr, std::stringstream &ss) const;
 #define PARSE_BUILTIIN_FUNC(FUNC) ParseBuiltin##FUNC(MapleAllocator &allocator, const clang::CallExpr &expr,\
                                                      std::stringstream &ss) const
   ASTExpr *PARSE_BUILTIIN_FUNC(ClassifyType);
   ASTExpr *PARSE_BUILTIIN_FUNC(ConstantP);
-  ASTExpr *PARSE_BUILTIIN_FUNC(Signbit);
   ASTExpr *PARSE_BUILTIIN_FUNC(Isinfsign);
   ASTExpr *PARSE_BUILTIIN_FUNC(HugeVal);
+  ASTExpr *PARSE_BUILTIIN_FUNC(HugeValf);
+  ASTExpr *PARSE_BUILTIIN_FUNC(Inf);
   ASTExpr *PARSE_BUILTIIN_FUNC(Inff);
-  ASTExpr *PARSE_BUILTIIN_FUNC(Infl);
+  ASTExpr *PARSE_BUILTIIN_FUNC(Nan);
   ASTExpr *PARSE_BUILTIIN_FUNC(Nanf);
+  ASTExpr *PARSE_BUILTIIN_FUNC(Signbit);
   ASTExpr *PARSE_BUILTIIN_FUNC(SignBitf);
   ASTExpr *PARSE_BUILTIIN_FUNC(SignBitl);
   ASTExpr *PARSE_BUILTIIN_FUNC(Trap);
   ASTExpr *PARSE_BUILTIIN_FUNC(IsUnordered);
+  ASTExpr *PARSE_BUILTIIN_FUNC(Copysignf);
+  ASTExpr *PARSE_BUILTIIN_FUNC(Copysign);
+  ASTExpr *PARSE_BUILTIIN_FUNC(Copysignl);
 
   static std::map<std::string, FuncPtrBuiltinFunc> builtingFuncPtrMap;
   uint32 fileIdx;

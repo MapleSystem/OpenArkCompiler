@@ -581,7 +581,7 @@ MeStmt *IRMapBuild::BuildAssignMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart) {
   auto &regNode = static_cast<RegassignNode&>(stmt);
   meStmt->SetRHS(BuildExpr(*regNode.Opnd(0), false, false));
   auto *regLHS = static_cast<RegMeExpr*>(BuildLHSReg(*ssaPart.GetSSAVar(), *meStmt, regNode));
-  meStmt->SetLHS(regLHS);
+  meStmt->UpdateLhs(regLHS);
   // determine isIncDecStmt
   MeExpr *rhs = meStmt->GetRHS();
   if (rhs->GetOp() == OP_add || rhs->GetOp() == OP_sub) {

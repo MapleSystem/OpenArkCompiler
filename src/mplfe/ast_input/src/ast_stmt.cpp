@@ -382,7 +382,9 @@ std::list<UniqueFEIRStmt> ASTImplicitCastExprStmt::Emit2FEStmtImpl() const {
 std::list<UniqueFEIRStmt> ASTParenExprStmt::Emit2FEStmtImpl() const {
   std::list<UniqueFEIRStmt> stmts;
   std::list<UniqueFEIRExpr> feExprs;
+  AstShortCircuitUtil::Instance().PushParen("parenShortCircuitLabel");
   exprs.front()->Emit2FEExpr(stmts);
+  AstShortCircuitUtil::Instance().PopParen();
   return stmts;
 }
 
@@ -465,6 +467,7 @@ std::list<UniqueFEIRStmt> ASTBinaryOperatorStmt::Emit2FEStmtImpl() const {
   std::list<UniqueFEIRStmt> stmts;
   auto boExpr = static_cast<ASTBinaryOperatorExpr*>(exprs.front());
   if (boExpr->GetASTOp() == kASTOpBO) {
+    AstShortCircuitUtil::Instance().PushBinaryOperator("binaryOperatorShortCircuitLabel");
     UniqueFEIRExpr boFEExpr = boExpr->Emit2FEExpr(stmts);
     if (boFEExpr != nullptr) {
       std::list<UniqueFEIRExpr> exprs;
@@ -473,6 +476,7 @@ std::list<UniqueFEIRStmt> ASTBinaryOperatorStmt::Emit2FEStmtImpl() const {
       stmt->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
       stmts.emplace_back(std::move(stmt));
     }
+    AstShortCircuitUtil::Instance().PopBinaryOperator();
   } else {
     // has been processed by child expr emit, skip here
     UniqueFEIRExpr boFEExpr = boExpr->Emit2FEExpr(stmts);

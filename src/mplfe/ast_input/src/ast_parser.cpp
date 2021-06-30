@@ -550,6 +550,10 @@ ASTStmt *ASTParser::ProcessStmtDeclStmt(MapleAllocator &allocator, const clang::
           astStmt->SetASTExpr(expr);
         }
       }
+      // extern func decl in function
+      if (decl->getKind() == clang::Decl::Function) {
+        astFuncs.emplace_back(static_cast<ASTFunc*>(ad));
+      }
       if (ad != nullptr) {
         astStmt->SetSubDecl(ad);
       }
