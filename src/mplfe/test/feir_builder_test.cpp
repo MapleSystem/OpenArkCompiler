@@ -59,6 +59,9 @@ TEST_F(FEIRBuilderTest, CreateExprConst_Any) {
   UniqueFEIRExpr expr6 = FEIRBuilder::CreateExprConstAnyScalar(PTY_i8, -1);
   expr6->GenMIRNode(mirBuilder)->Dump();
   EXPECT_EQ(GetBufferString(), "constval i8 -1\n");
+  UniqueFEIRExpr expr7 = FEIRBuilder::CreateExprConstAnyScalar(PTY_v4i32, 0);
+  expr7->GenMIRNode(mirBuilder)->Dump();
+  EXPECT_EQ(GetBufferString(), "intrinsicop v4i32 vector_from_scalar_v4i32 (constval i32 0)\n");
   RestoreCout();
 }
 

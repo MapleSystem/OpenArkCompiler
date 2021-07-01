@@ -37,11 +37,25 @@ struct CmpStr {
   }
 };
 
+// optimization for hot method retrival.
+// check risk incurred by multi-threads.
+std::map<const char*, unsigned int, CmpStr> hotMethodCache;
+std::map<const char*, unsigned int>::iterator it;
 std::mutex mapLock;
 
 unsigned int GetSecondHashIndex(const char *name) {
   std::lock_guard<std::mutex> guard(mapLock);
+  if (hotMethodCache.size() == 0) {
+    for (unsigned int i = 0; i < ITAB_HOTMETHOD_SIZE; ++i) {
+      hotMethodCache.insert(std::pair<const char*, int>(itabHotMethod[i], i));
+    }
+  }
+
+  it = hotMethodCache.find(name);
+  if (it != hotMethodCache.end()) {
+    return it->second;
+  }
   unsigned int hashcode = DJBHash(name);
-  return hashcode % kItabSecondHashSize;
+  return ITAB_HOTMETHOD_SIZE + (hashcode % (kItabSecondHashSize - ITAB_HOTMETHOD_SIZE));
 }
 }  // namespace maple

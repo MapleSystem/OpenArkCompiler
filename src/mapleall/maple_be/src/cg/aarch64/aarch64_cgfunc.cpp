@@ -714,9 +714,9 @@ void AArch64CGFunc::SelectCopy(Operand &dest, PrimType dtype, Operand &src, Prim
         /* check vector reg to vector reg move */
         CHECK_FATAL(GetPrimTypeLanes(dtype) > 0, "invalid vectreg to vectreg move");
         VectorRegSpec *vecSpecSrc = GetMemoryPool()->New<VectorRegSpec>();
-        vecSpecSrc->vecLaneMax = dsize >> 3;
+        vecSpecSrc->vecLaneMax = dsize >> k3ByteSize;
         VectorRegSpec *vecSpecDest = GetMemoryPool()->New<VectorRegSpec>();
-        vecSpecDest->vecLaneMax = dsize >> 3;
+        vecSpecDest->vecLaneMax = dsize >> k3ByteSize;
         Insn *insn =
             &GetCG()->BuildInstruction<AArch64VectorInsn>(dsize <= k64BitSize ? MOP_vmovuu : MOP_vmovvv, dest, src);
         static_cast<AArch64VectorInsn*>(insn)->PushRegSpecEntry(vecSpecDest);
@@ -2831,7 +2831,8 @@ Operand *AArch64CGFunc::SelectAdd(BinaryNode &node, Operand &opnd0, Operand &opn
     SelectAdd(*resOpnd, opnd0, opnd1, primType);
   } else {
     /* vector operands */
-    resOpnd = SelectVectorBinOp(dtype, &opnd0, node.Opnd(0)->GetPrimType(), &opnd1, node.Opnd(1)->GetPrimType(), OP_add);
+    resOpnd = SelectVectorBinOp(dtype, &opnd0, node.Opnd(0)->GetPrimType(), &opnd1,
+                                node.Opnd(1)->GetPrimType(), OP_add);
   }
   return resOpnd;
 }
@@ -3099,7 +3100,8 @@ Operand *AArch64CGFunc::SelectSub(BinaryNode &node, Operand &opnd0, Operand &opn
     SelectSub(*resOpnd, opnd0, opnd1, primType);
   } else {
     /* vector operands */
-    resOpnd = SelectVectorBinOp(dtype, &opnd0, node.Opnd(0)->GetPrimType(), &opnd1, node.Opnd(1)->GetPrimType(), OP_sub);
+    resOpnd = SelectVectorBinOp(dtype, &opnd0, node.Opnd(0)->GetPrimType(), &opnd1,
+                                node.Opnd(1)->GetPrimType(), OP_sub);
   }
   return resOpnd;
 }
@@ -3559,7 +3561,8 @@ Operand *AArch64CGFunc::SelectCmpOp(CompareNode &node, Operand &opnd0, Operand &
     resOpnd = &CreateRegisterOperandOfType(node.GetPrimType());
     SelectCmpOp(*resOpnd, opnd0, opnd1, node.GetOpCode(), node.GetOpndType());
   } else {
-    resOpnd = SelectVectorCompare(&opnd0, node.Opnd(0)->GetPrimType(), &opnd1, node.Opnd(1)->GetPrimType(), node.GetOpCode());
+    resOpnd = SelectVectorCompare(&opnd0, node.Opnd(0)->GetPrimType(), &opnd1,
+                                  node.Opnd(1)->GetPrimType(), node.GetOpCode());
   }
   return resOpnd;
 }
@@ -6871,7 +6874,7 @@ AArch64RegOperand &AArch64CGFunc::GetOrCreatePhysicalRegisterOperand(AArch64reg 
     aarch64PhyRegIdx = (aarch64PhyRegIdx << 1) + 1;
   } else {
     size = (size == k128BitSize) ? k128BitSize : k64BitSize;
-    aarch64PhyRegIdx = (aarch64PhyRegIdx * 3) + 1;
+    aarch64PhyRegIdx = (aarch64PhyRegIdx * k3ByteSize) + 1;
   }
   ASSERT(aarch64PhyRegIdx < k256BitSize, "phyRegOperandTable index out of range");
   AArch64RegOperand *phyRegOpnd = nullptr;
@@ -7107,21 +7110,70 @@ RegOperand &AArch64CGFunc::GenStructParamIndex(RegOperand &base, const BaseNode 
   return structAddr;
 }
 
-/* iread a64 <* <* void>> 0 (add a64 (
- *   addrof a64 $__reg_jni_func_tab$$libcore_all_dex,
- *   mul a64 (
- *     cvt a64 i32 (constval i32 21),
- *     constval a64 8)))
+/*
+ *  case 1: iread a64 <* <* void>> 0 (add a64 (
+ *  addrof a64 $__reg_jni_func_tab$$libcore_all_dex,
+ *  mul a64 (
+ *    cvt a64 i32 (constval i32 21),
+ *    constval a64 8)))
+ *
+ * case 2 : iread u32 <* u8> 0 (add a64 (regread a64 %61, constval a64 3))
+ * case 3 : iread u32 <* u8> 0 (add a64 (regread a64 %61, regread a64 %65))
+ * case 4 : iread u32 <* u8> 0 (add a64 (cvt a64 i32(regread  %n)))
  */
 MemOperand *AArch64CGFunc::CheckAndCreateExtendMemOpnd(PrimType ptype, BaseNode &addrExpr, int32 offset,
                                                        AArch64isa::MemoryOrdering memOrd) {
   aggParamReg = nullptr;
-  if (memOrd != AArch64isa::kMoNone || !IsPrimitiveInteger(ptype) || addrExpr.GetOpCode() != OP_add || offset != 0) {
+  if (memOrd != AArch64isa::kMoNone || addrExpr.GetOpCode() != OP_add || offset != 0) {
     return nullptr;
   }
   BaseNode *baseExpr = addrExpr.Opnd(0);
   BaseNode *addendExpr = addrExpr.Opnd(1);
-  if (addendExpr->GetOpCode() != OP_mul) {
+
+  if (baseExpr->GetOpCode() == OP_regread) {
+    /* case 2 */
+    if (addendExpr->GetOpCode() == OP_constval) {
+      ASSERT(addrExpr.GetNumOpnds() == 2, "Unepect expr operand in CheckAndCreateExtendMemOpnd");
+      ConstvalNode *constOfstNode = static_cast<ConstvalNode*>(addendExpr);
+      ASSERT(constOfstNode->GetConstVal()->GetKind() == kConstInt, "expect MIRIntConst");
+      MIRIntConst *intOfst = safe_cast<MIRIntConst>(constOfstNode->GetConstVal());
+      CHECK_FATAL(intOfst != nullptr, "just checking");
+      int32 scale = intOfst->GetValue();
+      AArch64OfstOperand &ofstOpnd = GetOrCreateOfstOpnd(scale, k32BitSize);
+      uint32 dsize = GetPrimTypeBitSize(ptype);
+      MemOperand *memOpnd = &GetOrCreateMemOpnd(AArch64MemOperand::kAddrModeBOi, GetPrimTypeBitSize(ptype),
+          SelectRegread(*static_cast<RegreadNode*>(baseExpr)), nullptr, &ofstOpnd, nullptr);
+      return IsOperandImmValid(PickLdInsn(dsize, ptype), memOpnd, kInsnSecondOpnd) ? memOpnd : nullptr;
+      /* case 3 */
+    } else if (addendExpr->GetOpCode() == OP_regread) {
+      CHECK_FATAL(addrExpr.GetNumOpnds() == 2, "Unepect expr operand in CheckAndCreateExtendMemOpnd");
+      if (GetPrimTypeSize(baseExpr->GetPrimType()) != GetPrimTypeSize(addendExpr->GetPrimType())) {
+        return nullptr;
+      }
+
+      MemOperand *memOpnd = &GetOrCreateMemOpnd(
+          AArch64MemOperand::kAddrModeBOrX, GetPrimTypeBitSize(ptype),
+          SelectRegread(*static_cast<RegreadNode*>(baseExpr)),
+          SelectRegread(*static_cast<RegreadNode*>(addendExpr)), nullptr, nullptr);
+      return memOpnd;
+      /* case 4 */
+    } else if (addendExpr->GetOpCode() == OP_cvt && addendExpr->GetNumOpnds() == 1) {
+      int shiftAmount = 0;
+      BaseNode *cvtRegreadNode = addendExpr->Opnd(kInsnFirstOpnd);
+      if (cvtRegreadNode->GetOpCode() == OP_regread && cvtRegreadNode->IsLeaf()) {
+        uint32 fromSize = GetPrimTypeBitSize(cvtRegreadNode->GetPrimType());
+        uint32 toSize = GetPrimTypeBitSize(addendExpr->GetPrimType());
+        bool isExpand = toSize > fromSize;
+        CHECK_FATAL(toSize >= fromSize, "unKnown convert in ldr or store");
+        MemOperand *memOpnd = &GetOrCreateMemOpnd(
+            AArch64MemOperand::kAddrModeBOrX, GetPrimTypeBitSize(ptype),
+            SelectRegread(*static_cast<RegreadNode*>(baseExpr)),
+            SelectRegread(*static_cast<RegreadNode*>(cvtRegreadNode)), shiftAmount, isExpand);
+        return memOpnd;
+      }
+    }
+  }
+  if (addendExpr->GetOpCode() != OP_mul || !IsPrimitiveInteger(ptype)) {
     return nullptr;
   }
   BaseNode *indexExpr, *scaleExpr;
@@ -8376,7 +8428,8 @@ RegOperand *AArch64CGFunc::SelectVectorGetElement(PrimType rType, Operand *src, 
   vecSpecSrc->vecLaneMax = GetPrimTypeLanes(sType);
   vecSpecSrc->vecLane = lane;
 
-  MOperator mop = GetPrimTypeBitSize(rType) > k64BitSize ? MOP_vxmovrv : (GetPrimTypeBitSize(sType) > k64BitSize ? MOP_vwmovrv : MOP_vwmovru);
+  MOperator mop = GetPrimTypeBitSize(rType) > k64BitSize ?
+      MOP_vxmovrv : (GetPrimTypeBitSize(sType) > k64BitSize ? MOP_vwmovrv : MOP_vwmovru);
   Insn *insn = &GetCG()->BuildInstruction<AArch64VectorInsn>(mop, *res, *src);
   static_cast<AArch64VectorInsn*>(insn)->PushRegSpecEntry(vecSpecSrc);
   GetCurBB()->AppendInsn(*insn);
@@ -8490,7 +8543,7 @@ void AArch64CGFunc::PrepareVectorOperands(Operand **o1, PrimType &oty1, Operand 
   if (opd->IsConstImmediate()) {
     mOp = GetPrimTypeSize(rType) > k8ByteSize ? MOP_vmovvi : MOP_vmovui;    /* a const */
   } else {
-    mOp = GetPrimTypeSize(rType) > k8ByteSize ? MOP_vdupvr: MOP_vdupur;     /* a scalar var */
+    mOp = GetPrimTypeSize(rType) > k8ByteSize ? MOP_vdupvr : MOP_vdupur;     /* a scalar var */
   }
   Insn *insn = &GetCG()->BuildInstruction<AArch64VectorInsn>(mOp, *res, *opd);
   static_cast<AArch64VectorInsn*>(insn)->PushRegSpecEntry(vecSpec);
@@ -8636,26 +8689,26 @@ RegOperand *AArch64CGFunc::SelectVectorShift(PrimType rType, Operand *o1, Operan
   return res;
 }
 
-uint32 validShiftConst(PrimType rType) {
+uint32 ValidShiftConst(PrimType rType) {
   switch (rType) {
     case PTY_v8u8:
     case PTY_v8i8:
     case PTY_v16u8:
     case PTY_v16i8:
-      return 8;
+      return k8BitSize;
     case PTY_v4u16:
     case PTY_v4i16:
     case PTY_v8u16:
     case PTY_v8i16:
-      return 16;
+      return k16BitSize;
     case PTY_v2u32:
     case PTY_v2i32:
     case PTY_v4u32:
     case PTY_v4i32:
-      return 32;
+      return k32BitSize;
     case PTY_v2u64:
     case PTY_v2i64:
-      return 64;
+      return k64BitSize;
     default:
       CHECK_FATAL(0, "Invalid Shift operand type");
   }
@@ -8672,7 +8725,7 @@ RegOperand *AArch64CGFunc::SelectVectorShiftImm(PrimType rType, Operand *o1, Ope
   if (!imm->IsConstImmediate()) {
     CHECK_FATAL(0, "VectorUShiftImm has invalid shift const");
   }
-  uint32 shift = validShiftConst(rType);
+  uint32 shift = ValidShiftConst(rType);
   bool needDup = false;
   if (opc == OP_shl) {
     if ((shift == k8BitSize && (sVal < 0 || sVal >= shift)) ||
@@ -8772,7 +8825,8 @@ RegOperand *AArch64CGFunc::SelectVectorMull(PrimType rType, Operand *o1, PrimTyp
   return res;
 }
 
-RegOperand *AArch64CGFunc::SelectVectorBinOp(PrimType rType, Operand *o1, PrimType oty1, Operand *o2, PrimType oty2, Opcode opc) {
+RegOperand *AArch64CGFunc::SelectVectorBinOp(PrimType rType, Operand *o1, PrimType oty1, Operand *o2,
+                                             PrimType oty2, Opcode opc) {
   PrepareVectorOperands(&o1, oty1, &o2, oty2);
   ASSERT(oty1 == oty2, "vector operand type mismatch");
 
@@ -8800,7 +8854,8 @@ RegOperand *AArch64CGFunc::SelectVectorBinOp(PrimType rType, Operand *o1, PrimTy
   return res;
 }
 
-RegOperand *AArch64CGFunc::SelectVectorBitwiseOp(PrimType rType, Operand *o1, PrimType oty1, Operand *o2, PrimType oty2, Opcode opc) {
+RegOperand *AArch64CGFunc::SelectVectorBitwiseOp(PrimType rType, Operand *o1, PrimType oty1, Operand *o2,
+                                                 PrimType oty2, Opcode opc) {
   PrepareVectorOperands(&o1, oty1, &o2, oty2);
   ASSERT(oty1 == oty2, "vector operand type mismatch");
 

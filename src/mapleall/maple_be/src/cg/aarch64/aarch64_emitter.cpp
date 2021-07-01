@@ -26,6 +26,7 @@ const std::unordered_set<std::string> kJniNativeFuncList = {
   "Landroid_2Fos_2FParcel_3B_7CnativeWriteInterfaceToken_7C_28JLjava_2Flang_2FString_3B_29V_native",
   "Landroid_2Fos_2FParcel_3B_7CnativeEnforceInterface_7C_28JLjava_2Flang_2FString_3B_29V_native"
 };
+constexpr uint32 kBinSearchInsnCount = 56;
 // map func name to <filename, insnCount> pair
 using Func2CodeInsnMap = std::unordered_map<std::string, std::pair<std::string, uint32>>;
 Func2CodeInsnMap func2CodeInsnMap {
@@ -368,6 +369,8 @@ void AArch64AsmEmitter::Run(FuncEmitInfo &funcEmitInfo) {
     // nothing
   } else {
     bool isExternFunction = false;
+  /* should refer to function attribute */
+    isExternFunction = kJniNativeFuncList.find(funcStName) != kJniNativeFuncList.end();
     (void)emitter.Emit("\t.globl\t").Emit(funcSt->GetName()).Emit("\n");
     if (!currCG->GetMIRModule()->IsCModule() || !isExternFunction) {
       (void)emitter.Emit("\t.hidden\t").Emit(funcSt->GetName()).Emit("\n");
@@ -501,6 +504,23 @@ void AArch64AsmEmitter::Run(FuncEmitInfo &funcEmitInfo) {
       (void)emitter.Emit(" - " + st->GetName() + "\n");
       emitter.IncreaseJavaInsnCount(kQuadInsnCount);
     }
+  }
+  /* insert manually optimized assembly language */
+  if (funcSt->GetName() == "Landroid_2Futil_2FContainerHelpers_3B_7C_3Cinit_3E_7C_28_29V") {
+    std::string optFile = "maple/mrt/codetricks/arch/arm64/ContainerHelpers_binarySearch.s";
+    struct stat buffer;
+    if (stat(optFile.c_str(), &buffer) == 0) {
+      std::ifstream binarySearchFileFD(optFile);
+      if (!binarySearchFileFD.is_open()) {
+        ERR(kLncErr, " %s open failed!", optFile.c_str());
+      } else {
+        std::string contend;
+        while (getline(binarySearchFileFD, contend)) {
+          emitter.Emit(contend + "\n");
+        }
+      }
+    }
+    emitter.IncreaseJavaInsnCount(kBinSearchInsnCount);
   }
 
   for (const auto &mpPair : cgFunc.GetLabelAndValueMap()) {

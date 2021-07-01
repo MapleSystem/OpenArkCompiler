@@ -303,10 +303,6 @@ UniqueFEIRExpr ASTCallExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) co
 }
 
 // ---------- ASTCastExpr ----------
-ASTValue *ASTCastExpr::GetConstantValueImpl() const {
-  return child->GetConstantValue();
-}
-
 MIRConst *ASTCastExpr::GenerateMIRConstImpl() const {
   std::list<UniqueFEIRStmt> stmts;
   auto feExpr = child->Emit2FEExpr(stmts);
@@ -1869,7 +1865,7 @@ UniqueFEIRExpr ASTConstantExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts
 }
 
 MIRConst *ASTConstantExpr::GenerateMIRConstImpl() const {
-  if (child->GetConstantValue()->GetPrimType() == PTY_begin) {
+  if (child->GetConstantValue() == nullptr || child->GetConstantValue()->GetPrimType() == PTY_begin) {
     return child->GenerateMIRConst();
   } else {
     return child->GetConstantValue()->Translate2MIRConst();

@@ -72,6 +72,7 @@ void AArch64PeepHole::InitOpts() {
   optimizations[kEliminateSpecifcUXTOpt] = optOwnMemPool->New<EliminateSpecifcUXTAArch64>(cgFunc);
   optimizations[kFmovRegOpt] = optOwnMemPool->New<FmovRegAArch64>(cgFunc);
   optimizations[kCbnzToCbzOpt] = optOwnMemPool->New<CbnzToCbzAArch64>(cgFunc);
+  optimizations[kCsetCbzToBeqOpt] = optOwnMemPool->New<CsetCbzToBeqOptAArch64>(cgFunc);
   optimizations[kContiLDRorSTRToSameMEMOpt] = optOwnMemPool->New<ContiLDRorSTRToSameMEMAArch64>(cgFunc);
   optimizations[kRemoveIncDecRefOpt] = optOwnMemPool->New<RemoveIncDecRefAArch64>(cgFunc);
   optimizations[kInlineReadBarriersOpt] = optOwnMemPool->New<InlineReadBarriersAArch64>(cgFunc);
@@ -127,6 +128,12 @@ void AArch64PeepHole::Run(BB &bb, Insn &insn) {
     case MOP_wcbnz:
     case MOP_xcbnz: {
       (static_cast<CbnzToCbzAArch64*>(optimizations[kCbnzToCbzOpt]))->Run(bb, insn);
+      (static_cast<CsetCbzToBeqOptAArch64*>(optimizations[kCsetCbzToBeqOpt]))->Run(bb, insn);
+      break;
+    }
+    case MOP_wcbz:
+    case MOP_xcbz: {
+      (static_cast<CsetCbzToBeqOptAArch64*>(optimizations[kCsetCbzToBeqOpt]))->Run(bb, insn);
       break;
     }
     case MOP_xbl: {
@@ -825,6 +832,74 @@ void CbnzToCbzAArch64::Run(BB &bb, Insn &insn) {
   /* Now make nextBB fallthru to targetBB */
   nextBB->PushFrontSuccs(*targetBB);
   targetBB->PushBackPreds(*nextBB);
+}
+
+void CsetCbzToBeqOptAArch64::Run(BB &bb, Insn &insn) {
+  Insn *insn1 = insn.GetPreviousMachineInsn();
+  if (insn1 == nullptr) {
+    return;
+  }
+  /* prevInsn must be "cset" insn */
+  MOperator opCode1 = insn1->GetMachineOpcode();
+  if (opCode1 != MOP_xcsetrc && opCode1 != MOP_wcsetrc) {
+    return;
+  }
+
+  auto &tmpRegOp1 = static_cast<RegOperand&>(insn1->GetOperand(kInsnFirstOpnd));
+  regno_t baseRegNO1 = tmpRegOp1.GetRegisterNumber();
+  auto &tmpRegOp2 = static_cast<RegOperand&>(insn.GetOperand(kInsnFirstOpnd));
+  regno_t baseRegNO2 = tmpRegOp2.GetRegisterNumber();
+  if (baseRegNO1 != baseRegNO2) {
+    return;
+  }
+  /* If the reg will be used later, we shouldn't optimize the cset insn here */
+  if (IfOperandIsLiveAfterInsn(tmpRegOp2, insn)) {
+      return;
+  }
+  MOperator opCode = insn.GetMachineOpcode();
+  bool reverse = (opCode == MOP_xcbz || opCode == MOP_wcbz);
+  Operand &rflag = static_cast<AArch64CGFunc*>(&cgFunc)->GetOrCreateRflag();
+  auto &label = static_cast<LabelOperand&>(insn.GetOperand(kInsnSecondOpnd));
+  auto &cond = static_cast<CondOperand&>(insn1->GetOperand(kInsnSecondOpnd));
+  MOperator jmpOperator = SelectMOperator(cond.GetCode(), reverse);
+  Insn &newInsn = cgFunc.GetCG()->BuildInstruction<AArch64Insn>(jmpOperator, rflag, label);
+  bb.RemoveInsn(*insn1);
+  bb.ReplaceInsn(insn, newInsn);
+}
+
+MOperator CsetCbzToBeqOptAArch64::SelectMOperator(AArch64CC_t condCode, bool inverse) const {
+  switch (condCode) {
+    case CC_NE:
+      return inverse ? MOP_beq : MOP_bne;
+    case CC_EQ:
+      return inverse ? MOP_bne : MOP_beq;
+    case CC_MI:
+      return inverse ? MOP_bpl : MOP_bmi;
+    case CC_PL:
+      return inverse ? MOP_bmi : MOP_bpl;
+    case CC_VS:
+      return inverse ? MOP_bvc : MOP_bvs;
+    case CC_VC:
+      return inverse ? MOP_bvs : MOP_bvc;
+    case CC_HI:
+      return inverse ? MOP_bls : MOP_bhi;
+    case CC_LS:
+      return inverse ? MOP_bhi : MOP_bls;
+    case CC_GE:
+      return inverse ? MOP_blt : MOP_bge;
+    case CC_LT:
+      return inverse ? MOP_bge : MOP_blt;
+    case CC_HS:
+      return inverse ? MOP_blo : MOP_bhs;
+    case CC_LO:
+      return inverse ? MOP_bhs : MOP_blo;
+    case CC_LE:
+      return inverse ? MOP_bgt : MOP_ble;
+    case CC_GT:
+      return inverse ? MOP_ble : MOP_bgt;
+    default:
+      return MOP_undef;
+  }
 }
 
 void ContiLDRorSTRToSameMEMAArch64::Run(BB &bb, Insn &insn) {

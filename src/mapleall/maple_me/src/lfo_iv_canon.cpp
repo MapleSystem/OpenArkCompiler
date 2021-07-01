@@ -180,7 +180,7 @@ void IVCanon::FindPrimaryIV() {
           if (laststmt == nullptr || laststmt->GetOp() != OP_dassign ||
               // variable is struct, skip use agg type variable as primary IV
               // because fieldID doesn't store in whileloopinfo
-              (((DassignMeStmt *)laststmt)->GetLHS()->GetOst()->GetFieldID() != 0)) {
+              (static_cast<DassignMeStmt *>(laststmt)->GetLHS()->GetOst()->GetFieldID() != 0)) {
             continue;
           }
           lastdass = static_cast<DassignMeStmt *>(laststmt);
@@ -238,7 +238,7 @@ bool IVCanon::IsLoopInvariant(MeExpr *x) {
   return false;
 }
 
-static bool compareHasEqual(Opcode op) {
+static bool CompareHasEqual(Opcode op) {
   return (op == OP_le || op == OP_ge);
 }
 
@@ -333,7 +333,7 @@ void IVCanon::ComputeTripCount() {
   if (ivdesc->stepValue < 0) {
     divPrimType = GetSignedPrimType(divPrimType);
     // simplify tricount if stepValue is -1 and bound is 0
-    if (ivdesc->stepValue == -1 && testExpr->GetOpnd(1)->IsZero() && !compareHasEqual(condbr->GetOpnd()->GetOp())) {
+    if (ivdesc->stepValue == -1 && testExpr->GetOpnd(1)->IsZero() && !CompareHasEqual(condbr->GetOpnd()->GetOp())) {
       tripCount = ivdesc->initExpr;
       return;
     }
@@ -341,12 +341,13 @@ void IVCanon::ComputeTripCount() {
   // add: t = bound + (stepValue +/-1)
   OpMeExpr add(-1, OP_add, primTypeUsed, 2);
   add.SetOpnd(0, testExpr->GetOpnd(1)); // IV bound
-  if (compareHasEqual(condbr->GetOpnd()->GetOp())) {
+  if (CompareHasEqual(condbr->GetOpnd()->GetOp())) {
     // if cond has equal operand, t = bound + stepValue
     add.SetOpnd(1, irMap->CreateIntConstMeExpr(ivdesc->stepValue, primTypeUsed));
   } else {
     add.SetOpnd(1, irMap->CreateIntConstMeExpr(ivdesc->stepValue > 0 ? ivdesc->stepValue - 1
-                                               : ivdesc->stepValue + 1, primTypeUsed));
+                                                                     : ivdesc->stepValue + 1,
+                                               primTypeUsed));
   }
   MeExpr *subx = irMap->HashMeExpr(add);
   if (!ivdesc->initExpr->IsZero()) {
@@ -369,7 +370,7 @@ void IVCanon::ComputeTripCount() {
   if (tripCount && (tripCount->GetOp() == maple::OP_constval)) {
     MIRConst *con =  static_cast<ConstMeExpr *>(tripCount)->GetConstVal();
     MIRIntConst *countval =  static_cast<MIRIntConst *>(con);
-    if ((int32_t)countval->GetValue() < 0) {
+    if (static_cast<int32>(countval->GetValue()) < 0) {
       MIRIntConst *zeroConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(0, con->GetType());
       tripCount = irMap->CreateConstMeExpr(tripCount->GetPrimType(), *zeroConst);
     }

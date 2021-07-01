@@ -106,6 +106,15 @@ ErrorCode DriverRunner::Run() {
 }
 
 bool DriverRunner::IsFramework() const {
+  MapleVector<MIRFunction*> funcList = theModule->GetFunctionList();
+  for (auto it = funcList.begin(); it != funcList.end(); ++it) {
+    MIRFunction *mirFunc = *it;
+    ASSERT(mirFunc != nullptr, "nullptr check");
+    if (mirFunc->GetBody() != nullptr &&
+        mirFunc->GetName() == "Landroid_2Fos_2FParcel_3B_7CnativeWriteString_7C_28JLjava_2Flang_2FString_3B_29V") {
+      return true;
+    }
+  }
   return false;
 }
 
@@ -335,6 +344,7 @@ void DriverRunner::ProcessCGPhase(const std::string &outputFile, const std::stri
     if (cgOptions->WithDwarf()) {
       cg->GetEmitter()->EmitDIHeader();
     }
+    InitProfile();
     // Run the cg optimizations phases
     if (theModule->HasPartO2List()) {
       CHECK_FATAL(cgOptions->GetOptimizeLevel() == CGOptions::kLevel2, "partO2 need coroperate with O2");
@@ -407,6 +417,16 @@ CG *DriverRunner::CreateCGAndBeCommon(const std::string &outputFile, const std::
   return cg;
 }
 
+void DriverRunner::InitProfile() const {
+  if (!cgOptions->IsProfileDataEmpty()) {
+    uint32 dexNameIdx = theModule->GetFileinfo(GlobalTables::GetStrTable().GetOrCreateStrIdxFromName("INFO_filename"));
+    const std::string &dexName = GlobalTables::GetStrTable().GetStringFromStrIdx(GStrIdx(dexNameIdx));
+    bool deCompressSucc = theModule->GetProfile().DeCompress(cgOptions->GetProfileData(), dexName);
+    if (!deCompressSucc) {
+      LogInfo::MapleLogger() << "WARN: DeCompress() " << cgOptions->GetProfileData() << "failed in mplcg()\n";
+    }
+  }
+}
 
 void DriverRunner::RunCGFunctions(CG &cg, CgFuncPhaseManager &cgNormalfpm, CgFuncPhaseManager &cgO0fpm,
                                   std::vector<long> &extraPhasesTime,
@@ -431,6 +451,7 @@ void DriverRunner::RunCGFunctions(CG &cg, CgFuncPhaseManager &cgNormalfpm, CgFun
     cg.AddStackGuardvar();
   }
 
+  ConstantFold cf(*theModule);
 
   unsigned long rangeNum = 0;
   uint32 countFuncId = 0;
@@ -455,6 +476,12 @@ void DriverRunner::RunCGFunctions(CG &cg, CgFuncPhaseManager &cgNormalfpm, CgFun
     }
     // LowerIR.
     theModule->SetCurFunction(mirFunc);
+    if (cg.DoConstFold()) {
+      timer.Start();
+      cf.Simplify(mirFunc->GetBody());
+      timer.Stop();
+      constFoldTime += timer.ElapsedMicroseconds();
+    }
     timer.Start();
     // if maple_me not run, needs extra lowering
     if (theModule->GetFlavor() <= kFeProduced) {
@@ -492,6 +519,11 @@ void DriverRunner::RunCGFunctions(CG &cg, CgFuncPhaseManager &cgNormalfpm, CgFun
       cgFunc->SetDebugInfo(theModule->GetDbgInfo());
     }
 
+    // Run the cg optimizations phases.
+    if (CGOptions::UseRange() &&
+        rangeNum >= CGOptions::GetRangeBegin() && rangeNum <= CGOptions::GetRangeEnd()) {
+      CGOptions::EnableInRange();
+    }
     cgfpm->Run(*cgFunc);
 
     cg.GetEmitter()->EmitLocalVariable(*cgFunc);
@@ -506,6 +538,7 @@ void DriverRunner::RunCGFunctions(CG &cg, CgFuncPhaseManager &cgNormalfpm, CgFun
     mirFunc->ReleaseCodeMemory();
 
     ++rangeNum;
+    CGOptions::DisableInRange();
   }
   cg.GetEmitter()->EmitHugeSoRoutines(true);
   extraPhasesTime.push_back(lowerTime);
@@ -518,6 +551,7 @@ void DriverRunner::RunCGFunctions(CG &cg, CgFuncPhaseManager &cgNormalfpm, CgFun
 
 void DriverRunner::EmitGlobalInfo(CG &cg) const {
   EmitDuplicatedAsmFunc(cg);
+  EmitFastFuncs(cg);
   if (cgOptions->IsGenerateObjectMap()) {
     cg.GenerateObjectMaps(*beCommon);
   }
@@ -574,6 +608,27 @@ void DriverRunner::EmitDuplicatedAsmFunc(const CG &cg) const {
   duplicateAsmFileFD.close();
 }
 
+void DriverRunner::EmitFastFuncs(const CG &cg) const {
+  if (cgOptions->IsFastFuncsAsmFileEmpty() || !(JAVALANG)) {
+    return;
+  }
+
+  struct stat buffer;
+  if (stat(cgOptions->GetFastFuncsAsmFile().c_str(), &buffer) != 0) {
+    return;
+  }
+
+  std::ifstream fastFuncsAsmFileFD(cgOptions->GetFastFuncsAsmFile());
+  if (fastFuncsAsmFileFD.is_open()) {
+    std::string contend;
+    cg.GetEmitter()->Emit("#define ENABLE_LOCAL_FAST_FUNCS 1\n");
+
+    while (getline(fastFuncsAsmFileFD, contend)) {
+      cg.GetEmitter()->Emit(contend + "\n");
+    }
+  }
+  fastFuncsAsmFileFD.close();
+}
 
 void DriverRunner::ProcessExtraTime(const std::vector<long> &extraPhasesTime,
                                     const std::vector<std::string> &extraPhasesName, CgFuncPhaseManager &cgfpm) const {

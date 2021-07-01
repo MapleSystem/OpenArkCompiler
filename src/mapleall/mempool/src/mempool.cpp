@@ -38,19 +38,18 @@ void MemPoolCtrler::FreeMemBlocks(const MemPool &pool, MemBlock *fixedMemHead, M
     }
   }
 
+  while (bigMemHead != nullptr) {
+    auto *cur = bigMemHead;
+    bigMemHead = bigMemHead->nextMemBlock;
+    free(cur->startPtr);
+    delete cur;
+  }
+
   ParallelGuard guard(ctrlerMutex, HaveRace());
   if (fixedTail != nullptr) {
     fixedTail->nextMemBlock = fixedFreeMemBlocks;
     ASSERT(fixedTail->nextMemBlock != fixedTail, "error");
     fixedFreeMemBlocks = fixedMemHead;
-  }
-
-  if (bigMemHead != nullptr) {
-    auto *cur = bigMemHead;
-    while (cur != nullptr) {
-      bigFreeMemBlocks.insert(cur);
-      cur = cur->nextMemBlock;
-    }
   }
 }
 
@@ -85,11 +84,6 @@ void MemPoolCtrler::FreeMem() {
     fixedFreeMemBlocks = fixedFreeMemBlocks->nextMemBlock;
     delete arena;
   }
-
-  for (MemBlock *block : bigFreeMemBlocks) {
-    delete block;
-  }
-  bigFreeMemBlocks.clear();
 }
 
 MemBlock *MemPoolCtrler::AllocMemBlock(const MemPool &pool, size_t size) {
@@ -126,16 +120,9 @@ MemBlock *MemPoolCtrler::AllocFixMemBlock(const MemPool &pool) {
 MemBlock *MemPoolCtrler::AllocBigMemBlock(const MemPool &pool, size_t size) {
   ASSERT(size > kMemBlockSizeMin, "Big memory block must be bigger than fixed memory block");
   (void)(pool);
-  MemBlock *ret = nullptr;
 
-  ParallelGuard guard(ctrlerMutex, HaveRace());
-  if (!bigFreeMemBlocks.empty() && (*bigFreeMemBlocks.begin())->memSize >= size) {
-    ret = *bigFreeMemBlocks.begin();
-    bigFreeMemBlocks.erase(bigFreeMemBlocks.begin());
-    return ret;
-  }
-
-  return new MemBlock(sysMemoryMgr->RealAllocMemory(size), size);
+  uint8_t *block = reinterpret_cast<uint8_t *>(malloc(size));
+  return new MemBlock(block, size);
 }
 
 MemPool::~MemPool() {

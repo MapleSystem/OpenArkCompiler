@@ -45,6 +45,7 @@ class FEUtils {
                                    bool isTopLevel = true);
   static MIRType *GetStructFieldType(MIRStructType *type, FieldID feildID);
   static MIRConst *CreateImplicitConst(MIRType *type);
+  static PrimType GetVectorElementPrimType(PrimType vectorPrimType);
 
   static const std::string kBoolean;
   static const std::string kByte;

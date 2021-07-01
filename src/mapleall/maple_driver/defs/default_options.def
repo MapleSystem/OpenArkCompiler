@@ -18,43 +18,91 @@
 namespace maple {
 // O0 ME options
 static MplOption kMeDefaultOptionsO0[] = {
+#ifdef ANDROID
+#include "android/O0_options_me.def"
+#else
 #include "default/O0_options_me.def"
+#endif
+};
+// O2 ME options
+static MplOption kMeDefaultOptionsO2[] = {
+#ifdef ANDROID
+#include "android/O2_options_me.def"
+#else
+#include "default/O2_options_me.def"
+#endif
 };
 // O0 mpl2mpl options
 static MplOption kMpl2MplDefaultOptionsO0[] = {
+#ifdef ANDROID
+#include "android/O0_options_mpl2mpl.def"
+#else
 #include "default/O0_options_mpl2mpl.def"
+#endif
+};
+// O2 mpl2mpl options
+static MplOption kMpl2MplDefaultOptionsO2[] = {
+#ifdef ANDROID
+#include "android/O2_options_mpl2mpl.def"
+#else
+#include "default/O2_options_mpl2mpl.def"
+#endif
+};
+// O0 mplcg options
+static MplOption kMplcgDefaultOptionsO0[] = {
+#ifdef ANDROID
+#include "android/O0_options_mplcg.def"
+#else
+#include "default/O0_options_mplcg.def"
+#endif
+};
+// O2 mplcg options
+static MplOption kMplcgDefaultOptionsO2[] = {
+#ifdef ANDROID
+#include "android/O2_options_mplcg.def"
+#else
+#include "default/O2_options_mplcg.def"
+#endif
+};
+// O2 mplipa options
+static MplOption kMplipaDefaultOptionsO2[] = {
+#ifdef ANDROID
+#include "android/O2_options_mplipa.def"
+#else
+#include "default/O2_options_mplipa.def"
+#endif
+};
+// O0 dex2mpl options
+static MplOption kDex2mplDefaultOptionsO0[] = {
+#ifdef ANDROID
+#include "android/O0_options_dex2mpl.def"
+#else
+#include "default/O0_options_dex2mpl.def"
+#endif
+};
+// O2 dex2mpl options
+static MplOption kDex2mplDefaultOptionsO2[] = {
+#ifdef ANDROID
+#include "android/O2_options_dex2mpl.def"
+#else
+#include "default/O2_options_dex2mpl.def"
+#endif
 };
 // O0 mpl2mpl options for C language
 static MplOption kMpl2MplDefaultOptionsO0ForC[] = {
 #include "default/O0_options_mpl2mpl_c.def"
 };
-// O0 mplcg options
-static MplOption kMplcgDefaultOptionsO0[] = {
-#include "default/O0_options_mplcg.def"
+// O2 mpl2mpl options for C language
+static MplOption kMpl2MplDefaultOptionsO2ForC[] = {
+#include "default/O2_options_mpl2mpl_c.def"
 };
 // O0 mplcg options for C language
 static MplOption kMplcgDefaultOptionsO0ForC[] = {
 #include "default/O0_options_mplcg_c.def"
 };
-// O2 ME options
-static MplOption kMeDefaultOptionsO2[] = {
-#include "default/O2_options_me.def"
-};
 // O2 ME options for C language
 static MplOption kMeDefaultOptionsO2ForC[] = {
 #include "default/O2_options_me_c.def"
-};
-// O2 mpl2mpl options
-static MplOption kMpl2MplDefaultOptionsO2[] = {
-#include "default/O2_options_mpl2mpl.def"
-};
-// O2 mpl2mpl options for C language
-static MplOption kMpl2MplDefaultOptionsO2ForC[] = {
-#include "default/O2_options_mpl2mpl_c.def"
-};
-// O2 mplcg options
-static MplOption kMplcgDefaultOptionsO2[] = {
-#include "default/O2_options_mplcg.def"
 };
 // O2 mplcg options for C language
 static MplOption kMplcgDefaultOptionsO2ForC[] = {

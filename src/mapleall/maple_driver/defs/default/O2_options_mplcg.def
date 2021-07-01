@@ -19,4 +19,6 @@
 { "--verbose-asm", "", false },
 { "--fpic", "", false },
 { "--maplelinker", "", false },
+{ "--gen-c-macro-def", "", false },
+{ "--duplicate_asm_list", "out/target/product/maple_arm64/lib/codetricks/asm/duplicateFunc.s", true },
 

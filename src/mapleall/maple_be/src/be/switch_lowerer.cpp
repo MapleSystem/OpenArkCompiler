@@ -185,12 +185,11 @@ BlockNode *SwitchLowerer::BuildCodeForSwitchItems(int32 start, int32 end, bool l
     if (!lowBlockNodeChecked) {
       lowBlockNodeChecked = true;
       if (!(IsUnsignedInteger(stmt->GetSwitchOpnd()->GetPrimType()) &&
-           (stmt->GetCasePair(switchItems[start].first).first == 0))) {
+          (stmt->GetCasePair(switchItems[start].first).first == 0))) {
         cGoto = BuildCondGotoNode(-1, OP_brtrue, *BuildCmpNode(OP_lt, switchItems[start].first));
         localBlk->AddStatement(cGoto);
       }
     }
-
     rangeGoto = BuildRangeGotoNode(switchItems[start].first, switchItems[start].second);
     cmpNode = BuildCmpNode(OP_le, switchItems[start].second);
     ifStmt = static_cast<IfStmtNode*>(mirModule.GetMIRBuilder()->CreateStmtIf(cmpNode));
