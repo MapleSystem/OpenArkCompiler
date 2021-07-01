@@ -145,6 +145,10 @@ void CGFuncLoops::PrintLoops(const CGFuncLoops &funcLoop) const {
   for (auto *bb : funcLoop.GetLoopMembers()) {
     LogInfo::MapleLogger() << bb->GetId() << " ";
   }
+  LogInfo::MapleLogger() << "\n exits ";
+  for (auto *bb : funcLoop.GetExits()) {
+    LogInfo::MapleLogger() << bb->GetId() << " ";
+  }
   LogInfo::MapleLogger() << "\n";
   if (!funcLoop.GetInnerLoops().empty()) {
     LogInfo::MapleLogger() << " inner_loop_headers ";
@@ -200,7 +204,8 @@ void LoopFinder::Insert(BB *bb, BB *header, std::set<BB *> &extraHeader) {
       // If a backedge is to some bb not the header, then it should be
       // considered a different loop.
       for (auto succ : bb->GetSuccs()) {
-        if (find(candidate.begin(), candidate.end(), succ) != candidate.end()) {
+        if (find(candidate.begin(), candidate.end(), succ) == candidate.end() &&
+            find(header->GetPreds().begin(), header->GetPreds().end(), succ) == header->GetPreds().end()) {
           extraHeader.insert(succ);
           break;
         }
@@ -442,7 +447,24 @@ void LoopFinder::CreateInnerLoop(LoopHierarchy &inner, LoopHierarchy &outer) {
   }
 }
 
+
+static void FindLoopExits(LoopHierarchy *loop) {
+  for (auto *bb : loop->GetLoopMembers()) {
+    for (auto succ : bb->GetSuccs()) {
+      if (find(loop->GetLoopMembers().begin(), loop->GetLoopMembers().end(), succ) == loop->GetLoopMembers().end()) {
+        loop->InsertExit(*bb);
+      }
+    }
+  }
+  for (auto *inner : loop->GetInnerLoops()) {
+    FindLoopExits(inner);
+  }
+}
+
 void LoopFinder::DetectInnerLoop() {
+  for (LoopHierarchy *loop = loops; loop != nullptr; loop = loop->GetNext()) {
+    FindLoopExits(loop);
+  }
   bool innerCreated;
   do {
     innerCreated = false;
@@ -475,28 +497,31 @@ void LoopFinder::DetectInnerLoop() {
   }
 }
 
-static void CopyLoopInfo(LoopHierarchy &from, CGFuncLoops &to, CGFuncLoops *parent, MemPool &memPool) {
-  to.SetHeader(*const_cast<BB*>(from.GetHeader()));
-  for (auto bb : from.otherLoopEntries) {
-    to.AddMultiEntries(*bb);
+static void CopyLoopInfo(LoopHierarchy *from, CGFuncLoops *to, CGFuncLoops *parent, MemPool *memPool) {
+  to->SetHeader(*const_cast<BB*>(from->GetHeader()));
+  for (auto bb : from->otherLoopEntries) {
+    to->AddMultiEntries(*bb);
   }
-  for (auto *bb : from.GetLoopMembers()) {
-    to.AddLoopMembers(*bb);
-    bb->SetLoop(to);
+  for (auto *bb : from->GetLoopMembers()) {
+    to->AddLoopMembers(*bb);
+    bb->SetLoop(*to);
   }
-  for (auto *bb : from.GetBackedge()) {
-    to.AddBackedge(*bb);
+  for (auto *bb : from->GetBackedge()) {
+    to->AddBackedge(*bb);
   }
-  if (!from.GetInnerLoops().empty()) {
-    for (auto *inner : from.GetInnerLoops()) {
-      CGFuncLoops *floop = memPool.New<CGFuncLoops>(memPool);
-      to.AddInnerLoops(*floop);
-      floop->SetLoopLevel(to.GetLoopLevel() + 1);
-      CopyLoopInfo(*inner, *floop, &to, memPool);
+  for (auto *bb : from->GetExits()) {
+    to->AddExit(*bb);
+  }
+  if (!from->GetInnerLoops().empty()) {
+    for (auto *inner : from->GetInnerLoops()) {
+      CGFuncLoops *floop = memPool->New<CGFuncLoops>(*memPool);
+      to->AddInnerLoops(*floop);
+      floop->SetLoopLevel(to->GetLoopLevel() + 1);
+      CopyLoopInfo(inner, floop, to, memPool);
     }
   }
   if (parent != nullptr) {
-    to.SetOuterLoop(*parent);
+    to->SetOuterLoop(*parent);
   }
 }
 
@@ -505,7 +530,7 @@ void LoopFinder::UpdateCGFunc() {
     CGFuncLoops *floop = cgFunc->GetMemoryPool()->New<CGFuncLoops>(*cgFunc->GetMemoryPool());
     cgFunc->PushBackLoops(*floop);
     floop->SetLoopLevel(1);    /* top level */
-    CopyLoopInfo(*loop, *floop, nullptr, *cgFunc->GetMemoryPool());
+    CopyLoopInfo(loop, floop, nullptr, cgFunc->GetMemoryPool());
   }
 }
 

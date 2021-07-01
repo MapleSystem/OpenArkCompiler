@@ -655,6 +655,17 @@ class CGOptions : public MapleDriverOptionBase {
   static bool DoGlobalOpt() {
     return doGlobalOpt;
   }
+  static void EnableVregRename() {
+    doVregRename = true;
+  }
+
+  static void DisableVregRename() {
+    doVregRename = false;
+  }
+
+  static bool DoVregRename() {
+    return doVregRename;
+  }
 
   static void EnableMultiPassColorRA() {
     doMultiPassColorRA = true;
@@ -1070,6 +1081,7 @@ class CGOptions : public MapleDriverOptionBase {
   static bool doICO;
   static bool doStoreLoadOpt;
   static bool doGlobalOpt;
+  static bool doVregRename;
   static bool doMultiPassColorRA;
   static bool doPrePeephole;
   static bool doPeephole;
