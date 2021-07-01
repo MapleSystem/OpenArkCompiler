@@ -1324,6 +1324,12 @@ bool AArch64Insn::HasLoop() const {
 
 bool AArch64Insn::IsSpecialIntrinsic() const {
   switch (mOp) {
+    case MOP_vdupur:
+    case MOP_vduprv:
+    case MOP_vwinsur:
+    case MOP_vxinsur:
+    case MOP_vwinsvr:
+    case MOP_vxinsvr:
     case MOP_get_and_addI:
     case MOP_get_and_addL:
     case MOP_compare_and_swapI:
