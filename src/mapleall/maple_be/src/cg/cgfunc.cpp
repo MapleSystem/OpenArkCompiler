@@ -396,7 +396,8 @@ Operand *HandleVectorReverse(IntrinsicopNode &intrnNode, CGFunc &cgFunc, uint32 
 Operand *HandleVectorBitwiseOp(IntrinsicopNode &intrnNode, CGFunc &cgFunc, Opcode opc) {
   Operand *src1 = cgFunc.HandleExpr(intrnNode, *intrnNode.Opnd(0));    /* vector operand1 */
   Operand *src2 = cgFunc.HandleExpr(intrnNode, *intrnNode.Opnd(1));    /* vector operand2 */
-  return cgFunc.SelectVectorBitwiseOp(intrnNode.GetPrimType(), src1, intrnNode.Opnd(0)->GetPrimType(), src2, intrnNode.Opnd(1)->GetPrimType(), opc);
+  return cgFunc.SelectVectorBitwiseOp(intrnNode.GetPrimType(), src1, intrnNode.Opnd(0)->GetPrimType(),
+                                      src2, intrnNode.Opnd(1)->GetPrimType(), opc);
 }
 
 Operand *HandleVectorSum(IntrinsicopNode &intrnNode, CGFunc &cgFunc) {
@@ -408,7 +409,8 @@ Operand *HandleVectorSum(IntrinsicopNode &intrnNode, CGFunc &cgFunc) {
 Operand *HandleVectorCompare(IntrinsicopNode &intrnNode, CGFunc &cgFunc, Opcode opc) {
   Operand *opnd1 = cgFunc.HandleExpr(intrnNode, *intrnNode.Opnd(0));   /* vector operand 1 */
   Operand *opnd2 = cgFunc.HandleExpr(intrnNode, *intrnNode.Opnd(1));   /* vector operand 2 */
-  return cgFunc.SelectVectorCompare(opnd1, intrnNode.Opnd(0)->GetPrimType(), opnd2, intrnNode.Opnd(1)->GetPrimType(), opc);
+  return cgFunc.SelectVectorCompare(opnd1, intrnNode.Opnd(0)->GetPrimType(), opnd2,
+                                    intrnNode.Opnd(1)->GetPrimType(), opc);
 }
 
 Operand *HandleVectorTableLookup(IntrinsicopNode &intrnNode, CGFunc &cgFunc) {

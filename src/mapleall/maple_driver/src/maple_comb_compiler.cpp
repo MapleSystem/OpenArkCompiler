@@ -108,6 +108,7 @@ ErrorCode MapleCombCompiler::MakeMeOptions(const MplOptions &options, DriverRunn
   if (it == options.GetRunningExes().end()) {
     return kErrorNoError;
   }
+  realRunningExe = kBinNameMe;
   MeOption &meOption = MeOption::GetInstance();
   auto itOpt = options.GetExeOptions().find(kBinNameMe);
   if (itOpt == options.GetExeOptions().end()) {
@@ -129,6 +130,7 @@ ErrorCode MapleCombCompiler::MakeMpl2MplOptions(const MplOptions &options, Drive
   if (it == options.GetRunningExes().end()) {
     return kErrorNoError;
   }
+  realRunningExe = kBinNameMpl2mpl;
   auto &mpl2mplOption = Options::GetInstance();
   auto itOption = options.GetExeOptions().find(kBinNameMpl2mpl);
   if (itOption == options.GetExeOptions().end()) {

@@ -66,7 +66,7 @@ class MallocSysMemoryManager : public SysMemoryManager {
     CHECK_FATAL(block != nullptr, "malloc failed");
 
     mallocMemories.push_front(block);
-    return reinterpret_cast<uint8_t *>(malloc(size));
+    return reinterpret_cast<uint8_t *>(block);
   }
   ~MallocSysMemoryManager() override {
     for (void *ptr : mallocMemories) {
@@ -108,7 +108,6 @@ class MemPoolCtrler {
 
   std::mutex ctrlerMutex;  // this mutex is used to protect memPools
   MemBlock *fixedFreeMemBlocks = nullptr;
-  std::multiset<MemBlock *, MemBlockCmp> bigFreeMemBlocks;
   std::unique_ptr<SysMemoryManager> sysMemoryMgr;
 };
 

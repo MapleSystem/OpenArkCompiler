@@ -115,6 +115,27 @@ class CbnzToCbzAArch64 : public PeepPattern {
   void Run(BB &bb, Insn &insn) override;
 };
 
+/* i.   cset    w0, EQ
+ *      cbnz    w0, .label    ===> beq .label
+ *
+ * ii.  cset    w0, EQ
+ *      cbz    w0, .label     ===> bne .label
+ *
+ * iii. cset    w0, NE
+ *      cbnz    w0, .label    ===> bne .label
+ *
+ * iiii.cset    w0, NE
+ *      cbz    w0, .label     ===> beq .label
+ * ... ...
+ */
+class CsetCbzToBeqOptAArch64 : public PeepPattern {
+ public:
+  explicit CsetCbzToBeqOptAArch64(CGFunc &cgFunc) : PeepPattern(cgFunc) {}
+  ~CsetCbzToBeqOptAArch64() override = default;
+  void Run(BB &bb, Insn &insn) override;
+  MOperator SelectMOperator(AArch64CC_t condCode, bool inverse) const;
+};
+
 /* When exist load after load or load after store, and [MEM] is
  * totally same. Then optimize them.
  */
@@ -643,6 +664,7 @@ class AArch64PeepHole : public PeepPatternMatch {
     kEliminateSpecifcUXTOpt,
     kFmovRegOpt,
     kCbnzToCbzOpt,
+    kCsetCbzToBeqOpt,
     kContiLDRorSTRToSameMEMOpt,
     kRemoveIncDecRefOpt,
     kInlineReadBarriersOpt,

@@ -49,6 +49,10 @@ executable("maple") {
     "src/maple.cpp",
     "src/maple_comb_compiler.cpp",
     "src/mpl_options.cpp",
+    "src/dex2mpl_compiler.cpp",
+    "src/ipa_compiler.cpp",
+    "src/as_compiler.cpp",
+    "src/ld_compiler.cpp",
     "src/mplcg_compiler.cpp",
   ]
 

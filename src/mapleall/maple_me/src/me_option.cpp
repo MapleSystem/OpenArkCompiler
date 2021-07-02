@@ -791,7 +791,7 @@ const Descriptor kUsage[] = {
   { kSRAdd,
     kEnable,
     "",
-    "srAdd",
+    "sradd",
     kBuildTypeExperimental,
     kArgCheckPolicyBool,
     "  --sradd                   \tPerform strength reduction for OP_add/sub\n"

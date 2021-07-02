@@ -152,8 +152,9 @@ class ASTParser {
   ASTDecl *PROCESS_DECL(StaticAssert);
 
  private:
-  ASTValue *TranslateRValue2ASTValue(MapleAllocator &allocator, const clang::Expr *expr) const;
-  ASTValue *TranslateLValue2ASTValue(MapleAllocator &allocator, const clang::Expr *expr) const;
+  ASTValue *TranslateConstantValue2ASTValue(MapleAllocator &allocator, const clang::Expr *expr) const;
+  ASTValue *TranslateLValue2ASTValue(MapleAllocator &allocator,
+      const clang::Expr::EvalResult &result, const clang::Expr *expr) const;
   void TraverseDecl(const clang::Decl *decl, std::function<void (clang::Decl*)> const &functor);
   ASTDecl *GetAstDeclOfDeclRefExpr(MapleAllocator &allocator, const clang::Expr &expr);
   uint32 GetSizeFromQualType(const clang::QualType qualType);

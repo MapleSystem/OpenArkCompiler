@@ -16,4 +16,5 @@
 { "--quiet", "", false },
 { "-regnativefunc", "", false },
 { "--maplelinker", "", false },
-{ "--emitVtableImpl", "", false },
+{ "--profile", "out/target/product/maple_arm64/lib/codetricks/profile.pv/meta.list", true },
+{ "--maplelinker-nolocal", "", false },

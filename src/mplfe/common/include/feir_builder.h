@@ -68,6 +68,7 @@ class FEIRBuilder {
   static UniqueFEIRExpr CreateExprConstF32(float val);
   static UniqueFEIRExpr CreateExprConstF64(double val);
   static UniqueFEIRExpr CreateExprConstAnyScalar(PrimType primType, int64 val);
+  static UniqueFEIRExpr CreateExprVdupAnyVector(PrimType primtype, int64 val);
   static UniqueFEIRExpr CreateExprMathUnary(Opcode op, UniqueFEIRVar var0);
   static UniqueFEIRExpr CreateExprMathUnary(Opcode op, UniqueFEIRExpr expr);
   static UniqueFEIRExpr CreateExprMathBinary(Opcode op, UniqueFEIRVar var0, UniqueFEIRVar var1);

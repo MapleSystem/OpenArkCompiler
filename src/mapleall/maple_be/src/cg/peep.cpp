@@ -136,6 +136,30 @@ bool PeepPattern::CheckOpndLiveinSuccs(const RegOperand &regOpnd, const BB &bb) 
       continue;
     }
   }
+  return CheckRegLiveinReturnBB(regOpnd, bb);
+}
+
+/* Check if the reg is used in return BB */
+bool PeepPattern::CheckRegLiveinReturnBB(const RegOperand &regOpnd, const BB &bb) const {
+#if TARGAARCH64 || TARGRISCV64
+  if (bb.GetKind() == BB::kBBReturn) {
+    regno_t regNO = regOpnd.GetRegisterNumber();
+    RegType regType = regOpnd.GetRegisterType();
+    if (regType == kRegTyVary) {
+      return false;
+    }
+    PrimType returnType = cgFunc.GetFunction().GetReturnType()->GetPrimType();
+    regno_t returnReg = R0;
+    if (IsPrimitiveFloat(returnType)) {
+        returnReg = V0;
+    } else if (IsPrimitiveInteger(returnType)) {
+        returnReg = R0;
+    }
+    if (regNO == returnReg) {
+      return true;
+    }
+  }
+#endif
   return false;
 }
 

@@ -200,7 +200,6 @@ class ASTCastExpr : public ASTExpr {
   }
 
  protected:
-  ASTValue *GetConstantValueImpl() const override;
   MIRConst *GenerateMIRConstImpl() const override;
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
 

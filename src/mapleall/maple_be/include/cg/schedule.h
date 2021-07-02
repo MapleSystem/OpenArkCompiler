@@ -114,6 +114,7 @@ class Schedule {
   virtual void CountUnitKind(const DepNode &depNode, uint32 array[], const uint32 arraySize) const = 0;
   virtual bool CanCombine(const Insn &insn) const = 0;
   void InitIDAndLoc();
+  void RestoreFirstLoc();
   std::string PhaseName() const {
     return phaseName;
   }

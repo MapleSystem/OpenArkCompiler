@@ -129,6 +129,30 @@ void OptionParser::PrintUsage(const std::string &helpType, const uint32_t helpLe
   }
 }
 
+bool OptionParser::CheckSpecialOption(const std::string &option, std::string &key, std::string &value) {
+  uint32_t index = 0;
+  std::string pattern;
+  if (strncmp(option.c_str(), "j", strlen("j")) == 0) {
+    pattern = "^j[0-9]+\\b";
+    index = strlen("j");
+  } else if (strncmp(option.c_str(), "maxid", strlen("maxid")) == 0) {
+    pattern = "^maxid.[0-9]+\\b";
+    index = strlen("maxid");
+  } else if (strncmp(option.c_str(), "minid", strlen("minid")) == 0) {
+    pattern = "^minid.[0-9]+\\b";
+    index = strlen("maxid");
+  }
+  if (index != 0) {
+    std::regex rx(pattern);
+    bool isMatched = std::regex_match(option.begin(), option.end(), rx);
+    if (isMatched) {
+      key = option.substr(0, index);
+      value = option.substr(index);
+      return true;
+    }
+  }
+  return false;
+}
 
 bool OptionParser::HandleKeyValue(const std::string &key, const std::string &value,
                                   std::vector<mapleOption::Option> &inputOption, const std::string &exeName,
@@ -231,6 +255,16 @@ bool OptionParser::CheckOpt(const std::string option, std::string &lastKey,
                             bool &isLastMatch, std::vector<mapleOption::Option> &inputOption,
                             const std::string &exeName) {
   std::vector<std::string> temps;
+  // check -j100, -maxid, -minid
+  if (exeName == "dex2mpl") {
+    std::string key;
+    std::string value;
+    bool isMatched = CheckSpecialOption(option, key, value);
+    if (isMatched) {
+      isValueEmpty = value.empty();
+      return HandleKeyValue(key, value, inputOption, exeName);
+    }
+  }
   size_t pos = option.find('=');
   if (pos != std::string::npos) {
     ASSERT(pos > 0, "option should not begin with symbol '='");

@@ -57,7 +57,6 @@ OpMeExpr *SSAEPre::FormLFTRCompare(MeRealOcc *compOcc, MeExpr *regorvar) {
   // handle the ops corresponding to OpMeExpr::StrengthReducible()
   OpMeExpr newSide(-1, x->GetOp(), x->GetPrimType(), x->GetNumOpnds());
   newSide.SetOpnd(i, compare->GetOpnd(1-j));
-  bool isRebuild = !newSide.GetOpnd(i)->IsLeaf();  // so hashedSide will always create new workcand
   switch (x->GetOp()) {
     case OP_cvt: {
       newSide.SetOpndType(x->GetOpndType());
@@ -81,7 +80,7 @@ OpMeExpr *SSAEPre::FormLFTRCompare(MeRealOcc *compOcc, MeExpr *regorvar) {
     hashedSide = simplifyExpr;
   } else {
     hashedSide = irMap->HashMeExpr(newSide);
-    BuildWorkListExpr(*compOcc->GetMeStmt(), compOcc->GetSequence(), *hashedSide, isRebuild, nullptr, true);
+    BuildWorkListExpr(*compOcc->GetMeStmt(), compOcc->GetSequence(), *hashedSide, true, nullptr, true);
   }
   OpMeExpr newcompare(-1, compare->GetOp(), compare->GetPrimType(), 2);
   newcompare.SetOpndType(regorvar->GetPrimType());
