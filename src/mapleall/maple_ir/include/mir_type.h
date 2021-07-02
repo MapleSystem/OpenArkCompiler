@@ -69,7 +69,7 @@ inline bool IsPossible32BitAddress(PrimType tp) {
 }
 
 inline bool IsPrimitivePureScalar(PrimitiveType primitiveType) {
-  return primitiveType.IsInteger() && !primitiveType.IsAddress() && !primitiveType.IsDynamic();
+  return primitiveType.IsInteger() && !primitiveType.IsAddress() && !primitiveType.IsDynamic() && !primitiveType.IsVector();
 }
 
 inline bool IsUnsignedInteger(PrimitiveType primitiveType) {
@@ -81,7 +81,7 @@ inline bool IsSignedInteger(PrimitiveType primitiveType) {
 }
 
 inline bool IsPrimitiveInteger(PrimitiveType primitiveType) {
-  return primitiveType.IsInteger() && !primitiveType.IsDynamic();
+  return primitiveType.IsInteger() && !primitiveType.IsDynamic() && !primitiveType.IsVector();
 }
 
 inline bool IsPrimitiveDynType(PrimitiveType primitiveType) {
@@ -97,7 +97,7 @@ inline bool IsPrimitiveDynFloat(PrimitiveType primitiveType) {
 }
 
 inline bool IsPrimitiveFloat(PrimitiveType primitiveType) {
-  return primitiveType.IsFloat() && !primitiveType.IsDynamic();
+  return primitiveType.IsFloat() && !primitiveType.IsDynamic() && !primitiveType.IsVector();
 }
 
 inline bool IsPrimitiveScalar(PrimitiveType primitiveType) {

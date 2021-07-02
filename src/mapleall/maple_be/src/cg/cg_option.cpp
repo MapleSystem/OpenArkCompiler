@@ -1374,6 +1374,7 @@ bool CGOptions::SolveOptions(const std::vector<Option> &opts, bool isDebug) {
   if (WithLoc()) {
     DisableSchedule();
     SetOption(kWithMpl);
+    SetOption(kWithSrc);
   }
   if (WithDwarf()) {
     DisableEBO();
@@ -1382,6 +1383,7 @@ bool CGOptions::SolveOptions(const std::vector<Option> &opts, bool isDebug) {
     DisableSchedule();
     SetOption(kDebugFriendly);
     SetOption(kWithMpl);
+    SetOption(kWithSrc);
     SetOption(kWithLoc);
     ClearOption(kSuppressFileInfo);
   }
