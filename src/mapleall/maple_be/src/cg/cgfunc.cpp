@@ -1081,6 +1081,7 @@ void CGFunc::GenerateLoc(StmtNode *stmt, unsigned &lastSrcLoc, unsigned &lastMpl
     /* if original src file location info is availiable for this stmt,
      * use it and skip mpl file location info for this stmt
      */
+    bool hasLoc = false;
     unsigned newSrcLoc = cg->GetCGOptions().WithSrc() ? stmt->GetSrcPos().LineNum() : 0;
     if (newSrcLoc != 0 && newSrcLoc != lastSrcLoc) {
       /* .loc for original src file */
@@ -1090,10 +1091,11 @@ void CGFunc::GenerateLoc(StmtNode *stmt, unsigned &lastSrcLoc, unsigned &lastMpl
       Insn &loc = cg->BuildInstruction<mpldbg::DbgInsn>(mpldbg::OP_DBG_loc, *o0, *o1);
       curBB->AppendInsn(loc);
       lastSrcLoc = newSrcLoc;
+      hasLoc = true;
     }
-    /* .loc for mpl file */
+    /* .loc for mpl file, skip if already has .loc from src for this stmt*/
     unsigned newMplLoc = cg->GetCGOptions().WithMpl() ? stmt->GetSrcPos().MplLineNum() : 0;
-    if (newMplLoc != 0 && newMplLoc != lastMplLoc) {
+    if (newMplLoc != 0 && newMplLoc != lastMplLoc && !hasLoc) {
       unsigned fileid = 1;
       Operand *o0 = CreateDbgImmOperand(fileid);
       Operand *o1 = CreateDbgImmOperand(newMplLoc);
