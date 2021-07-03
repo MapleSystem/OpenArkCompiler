@@ -266,11 +266,11 @@ class CGFunc {
   virtual bool IsFrameReg(const RegOperand &opnd) const = 0;
 
   /* For Neon intrinsics */
-  virtual RegOperand *SelectVectorFromScalar(PrimType pType, BaseNode *arg, Operand *opnd) = 0;
+  virtual RegOperand *SelectVectorFromScalar(PrimType pType, Operand *opnd, PrimType sType) = 0;
   virtual RegOperand *SelectVectorMerge(PrimType rTyp, Operand *o1, PrimType typ1, Operand *o2, PrimType typ2,
                                         Operand *o3) = 0;
-  virtual RegOperand *SelectVectorGetHigh(PrimType rType, Operand *src, PrimType sType) = 0;
-  virtual RegOperand *SelectVectorGetLow(PrimType rType, Operand *src, PrimType sType) = 0;
+  virtual RegOperand *SelectVectorGetHigh(PrimType rType, Operand *src) = 0;
+  virtual RegOperand *SelectVectorGetLow(PrimType rType, Operand *src) = 0;
   virtual RegOperand *SelectVectorGetElement(PrimType rType, Operand *src, PrimType sType, int32 lane) = 0;
   virtual RegOperand *SelectVectorPairwiseAdd(PrimType rType, Operand *src, PrimType sType) = 0;
   virtual RegOperand *SelectVectorSetElement(Operand *eOp, PrimType eTyp, Operand *vOpd, PrimType vTyp, int32 lane) = 0;
