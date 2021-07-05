@@ -120,6 +120,9 @@ class MemPoolStat {
   void SetName(const std::string &name) {
     this->name = name;
   }
+  void SetName(const char *name) {
+    this->name = name;
+  }
   std::string name;
 };
 #else
@@ -129,6 +132,7 @@ class MemPoolStat {
 
  protected:
   void SetName(const std::string & /* name */) {}
+  void SetName(const char /* name */) {}
 };
 #endif
 
@@ -140,6 +144,9 @@ class MemPool : private MemPoolStat {
   MemPool(MemPoolCtrler &ctl, const std::string &name) : ctrler(ctl) {
     SetName(name);
   }
+  MemPool(MemPoolCtrler &ctl, const char *name) : ctrler(ctl) {
+    SetName(name);
+  }
 
   virtual ~MemPool();
 
@@ -147,6 +154,10 @@ class MemPool : private MemPoolStat {
   void *Calloc(size_t size);
   void *Realloc(const void *ptr, size_t oldSize, size_t newSize);
   virtual void ReleaseContainingMem();
+
+  MemPoolCtrler &GetCtrler() {
+    return ctrler;
+  }
 
   const MemPoolCtrler &GetCtrler() const {
     return ctrler;
@@ -235,7 +246,7 @@ class StackMemPool : public MemPool, private StackMemPoolDebug {
 
  private:
   // all malloc requested from LocalMapleAllocator
-  void *Malloc(size_t size);
+  void *Malloc(size_t size) override;
   uint8_t *AllocTailMemBlock(size_t size);
 
   // these methods should be called from LocalMapleAllocator

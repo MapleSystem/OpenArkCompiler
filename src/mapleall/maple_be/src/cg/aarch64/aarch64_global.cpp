@@ -518,9 +518,10 @@ void BackPropPattern::Optimize(Insn &insn) {
       !(cgFunc.GetFunction().IsReturnVoid()) &&
       (firstRegNO == R0) &&
       (static_cast<RegOperand&>(insn.GetOperand(kInsnSecondOpnd)).GetRegisterNumber() == R0))  {
-    // Keep this instruction: mov R0, R0
+    /* Keep this instruction: mov R0, R0 */
+    return;
   } else {
-     insn.GetBB()->RemoveInsn(insn);
+    insn.GetBB()->RemoveInsn(insn);
   }
 }
 

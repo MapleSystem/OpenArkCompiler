@@ -19,12 +19,13 @@
 #include "insn.h"
 #include "cgbb.h"
 #include "datainfo.h"
+#include "cgfunc.h"
 
 namespace maplebe {
 class LiveAnalysis : public AnalysisResult {
  public:
   LiveAnalysis(CGFunc &func, MemPool &memPool)
-      : AnalysisResult(&memPool), cgFunc(&func), memPool(&memPool) {}
+      : AnalysisResult(&memPool), cgFunc(&func), memPool(&memPool), alloc(&memPool), stackMp(func.GetStackMemPool()) {}
   ~LiveAnalysis() override = default;
 
   void AnalysisLive();
@@ -42,19 +43,19 @@ class LiveAnalysis : public AnalysisResult {
   void EnlargeSpaceForLiveAnalysis(BB &currBB);
 
   DataInfo *NewLiveIn(uint32 maxRegCount) {
-    return memPool->New<DataInfo>(maxRegCount, *memPool);
+    return memPool->New<DataInfo>(maxRegCount, alloc);
   }
 
   DataInfo *NewLiveOut(uint32 maxRegCount) {
-    return memPool->New<DataInfo>(maxRegCount, *memPool);
+    return memPool->New<DataInfo>(maxRegCount, alloc);
   }
 
   DataInfo *NewDef(uint32 maxRegCount) {
-    return memPool->New<DataInfo>(maxRegCount, *memPool);
+    return memPool->New<DataInfo>(maxRegCount, alloc);
   }
 
   DataInfo *NewUse(uint32 maxRegCount) {
-    return memPool->New<DataInfo>(maxRegCount, *memPool);
+    return memPool->New<DataInfo>(maxRegCount, alloc);
   }
 
   virtual void GetBBDefUse(BB &bb) = 0;
@@ -65,6 +66,8 @@ class LiveAnalysis : public AnalysisResult {
   int iteration = 0;
   CGFunc *cgFunc;
   MemPool *memPool;
+  MapleAllocator alloc;
+  StackMemPool &stackMp;
 };
 
 CGFUNCPHASE(CgDoLiveAnalysis, "liveanalysis")

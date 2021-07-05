@@ -3301,7 +3301,7 @@ void Emitter::EmitHugeSoRoutines(bool lastRoutine) {
   }
   for (auto &target : hugeSoTargets) {
     (void)Emit("\t.section ." + std::string(namemangler::kMuidJavatextPrefixStr) + ",\"ax\"\n");
-    Emit("\t.align 2\n");
+    Emit("\t.align 3\n");
     std::string routineName = target + HugeSoPostFix();
     Emit("\t.type\t" + routineName + ", %function\n");
     Emit(routineName + ":\n");

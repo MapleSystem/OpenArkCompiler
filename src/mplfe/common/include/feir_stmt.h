@@ -166,6 +166,14 @@ class FEIRStmt : public GeneralStmt {
     return (srcFileLineNum != 0 || srcFileIndex != 0);
   }
 
+  bool IsDummy() const {
+    return isDummy;
+  }
+
+  void SetDummy() {
+    isDummy = true;
+  }
+
  protected:
   std::string DumpDotStringImpl() const override;
   virtual void RegisterDFGNodes2CheckPointImpl(FEIRStmtCheckPoint &checkPoint) {}
@@ -215,6 +223,7 @@ class FEIRStmt : public GeneralStmt {
   uint32 srcFileIndex = 0;
   uint32 srcFileLineNum = 0;
   uint32 hexPC = UINT32_MAX;
+  bool isDummy = false;
 };
 
 using UniqueFEIRStmt = std::unique_ptr<FEIRStmt>;

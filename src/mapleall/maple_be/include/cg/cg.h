@@ -190,7 +190,8 @@ class CG {
     return *insn;
   }
 
-  virtual CGFunc *CreateCGFunc(MIRModule &mod, MIRFunction&, BECommon&, MemPool&, MapleAllocator&, uint32) = 0;
+  virtual CGFunc *CreateCGFunc(MIRModule &mod, MIRFunction&, BECommon&, MemPool&, StackMemPool&,
+                               MapleAllocator&, uint32) = 0;
 
   bool IsExclusiveEH() const {
     return CGOptions::IsExclusiveEH();

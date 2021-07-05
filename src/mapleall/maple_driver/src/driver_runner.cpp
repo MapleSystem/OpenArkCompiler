@@ -512,7 +512,9 @@ void DriverRunner::RunCGFunctions(CG &cg, CgFuncPhaseManager &cgNormalfpm, CgFun
 
     // Create CGFunc
     mirFunc->SetPuidxOrigin(++countFuncId);
-    CGFunc *cgFunc = cg.CreateCGFunc(*theModule, *mirFunc, *beCommon, *funcMp, funcScopeAllocator, countFuncId);
+    auto stackMp = std::make_unique<StackMemPool>(funcMp->GetCtrler(), "");
+    CGFunc *cgFunc = cg.CreateCGFunc(*theModule, *mirFunc, *beCommon, *funcMp, *stackMp,
+                                     funcScopeAllocator, countFuncId);
     CHECK_FATAL(cgFunc != nullptr, "nullptr check");
     CG::SetCurCGFunc(*cgFunc);
     if (withDwarf) {

@@ -117,6 +117,7 @@ class ReachingDefinition : public AnalysisResult {
                             InsnSet &useInsnSet, bool onlyFindForEhSucc) const;
   CGFunc *cgFunc;
   MapleAllocator rdAlloc;
+  StackMemPool &stackMp;
   MapleVector<Insn*> pseudoInsns;
   AnalysisType mode = kRDRegAnalysis;
   BB *firstCleanUpBB = nullptr;

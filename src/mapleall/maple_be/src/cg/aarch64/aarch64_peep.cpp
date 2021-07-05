@@ -854,7 +854,7 @@ void CsetCbzToBeqOptAArch64::Run(BB &bb, Insn &insn) {
   }
   /* If the reg will be used later, we shouldn't optimize the cset insn here */
   if (IfOperandIsLiveAfterInsn(tmpRegOp2, insn)) {
-      return;
+    return;
   }
   MOperator opCode = insn.GetMachineOpcode();
   bool reverse = (opCode == MOP_xcbz || opCode == MOP_wcbz);

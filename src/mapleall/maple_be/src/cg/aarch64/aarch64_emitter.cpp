@@ -130,9 +130,9 @@ void AArch64AsmEmitter::EmitFullLSDA(FuncEmitInfo &funcEmitInfo) {
   EHFunc *ehFunc = cgFunc.GetEHFunc();
   Emitter *emitter = currCG->GetEmitter();
   /* emit header */
-  emitter->Emit("\t.align 2\n");
+  emitter->Emit("\t.align 3\n");
   emitter->Emit("\t.section .gcc_except_table,\"a\",@progbits\n");
-  emitter->Emit("\t.align 2\n");
+  emitter->Emit("\t.align 3\n");
   /* emit LSDA header */
   LSDAHeader *lsdaHeader = ehFunc->GetLSDAHeader();
   emitter->EmitStmtLabel(lsdaHeader->GetLSDALabel()->GetLabelIdx());
@@ -251,7 +251,7 @@ void AArch64AsmEmitter::EmitFullLSDA(FuncEmitInfo &funcEmitInfo) {
     emitter->Emit("\t.byte ").Emit(lsdaAction->GetActionIndex()).Emit("\n");
     emitter->Emit("\t.byte ").Emit(lsdaAction->GetActionFilter()).Emit("\n");
   }
-  emitter->Emit("\t.align 2\n");
+  emitter->Emit("\t.align 3\n");
   for (int32 i = ehFunc->GetEHTyTableSize() - 1; i >= 0; i--) {
     MIRType *mirType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(ehFunc->GetEHTyTableMember(i));
     MIRTypeKind typeKind = mirType->GetKind();
@@ -330,7 +330,7 @@ void AArch64AsmEmitter::Run(FuncEmitInfo &funcEmitInfo) {
   } else {
     (void)emitter.Emit("\t.text\n");
   }
-  (void)emitter.Emit("\t.align 2\n");
+  (void)emitter.Emit("\t.align 3\n");
   MIRSymbol *funcSt = GlobalTables::GetGsymTable().GetSymbolFromStidx(cgFunc.GetFunction().GetStIdx().Idx());
   const std::string &funcName = std::string(cgFunc.GetShortFuncName().c_str());
 
@@ -444,7 +444,7 @@ void AArch64AsmEmitter::Run(FuncEmitInfo &funcEmitInfo) {
     MIRStorageClass storageClass = st->GetStorageClass();
     MIRSymKind symKind = st->GetSKind();
     if (storageClass == kScPstatic && symKind == kStConst) {
-      emitter.Emit("\t.align 2\n" + st->GetName() + ":\n");
+      emitter.Emit("\t.align 3\n" + st->GetName() + ":\n");
       if (st->GetKonst()->GetKind() == kConstStr16Const) {
         MIRStr16Const *str16Const = safe_cast<MIRStr16Const>(st->GetKonst());
         emitter.EmitStr16Constant(*str16Const);

@@ -965,7 +965,7 @@ void InitHandleStmtFactory() {
 }
 
 CGFunc::CGFunc(MIRModule &mod, CG &cg, MIRFunction &mirFunc, BECommon &beCommon, MemPool &memPool,
-               MapleAllocator &allocator, uint32 funcId)
+               StackMemPool &stackMp, MapleAllocator &allocator, uint32 funcId)
     : vRegTable(allocator.Adapter()),
       vRegOperandTable(allocator.Adapter()),
       pRegSpillMemOperands(allocator.Adapter()),
@@ -977,6 +977,7 @@ CGFunc::CGFunc(MIRModule &mod, CG &cg, MIRFunction &mirFunc, BECommon &beCommon,
       cg(&cg),
       mirModule(mod),
       memPool(&memPool),
+      stackMp(stackMp),
       func(mirFunc),
       exitBBVec(allocator.Adapter()),
       lab2BBMap(allocator.Adapter()),
@@ -1093,7 +1094,7 @@ void CGFunc::GenerateLoc(StmtNode *stmt, unsigned &lastSrcLoc, unsigned &lastMpl
       lastSrcLoc = newSrcLoc;
       hasLoc = true;
     }
-    /* .loc for mpl file, skip if already has .loc from src for this stmt*/
+    /* .loc for mpl file, skip if already has .loc from src for this stmt */
     unsigned newMplLoc = cg->GetCGOptions().WithMpl() ? stmt->GetSrcPos().MplLineNum() : 0;
     if (newMplLoc != 0 && newMplLoc != lastMplLoc && !hasLoc) {
       unsigned fileid = 1;

@@ -86,7 +86,7 @@ class CGFunc {
   };
 
   CGFunc(MIRModule &mod, CG &cg, MIRFunction &mirFunc, BECommon &beCommon, MemPool &memPool,
-         MapleAllocator &mallocator, uint32 funcId);
+         StackMemPool &stackMp, MapleAllocator &mallocator, uint32 funcId);
   virtual ~CGFunc();
 
   const std::string &GetName() const {
@@ -706,6 +706,10 @@ class CGFunc {
     return memPool;
   }
 
+  StackMemPool &GetStackMemPool() {
+    return stackMp;
+  }
+
   MapleAllocator *GetFuncScopeAllocator() {
     return funcScopeAllocator;
   }
@@ -932,6 +936,7 @@ class CGFunc {
   CG *cg;
   MIRModule &mirModule;
   MemPool *memPool;
+  StackMemPool &stackMp;
 
   PregIdx GetPseudoRegIdxFromVirtualRegNO(const regno_t vRegNO) const {
     ASSERT(IsVRegNOForPseudoRegister(vRegNO), "");

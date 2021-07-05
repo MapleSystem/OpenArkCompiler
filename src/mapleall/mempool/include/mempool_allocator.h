@@ -40,6 +40,14 @@ class MapleAllocator {
     return (memPool != nullptr) ? memPool->Malloc(bytes) : nullptr;
   }
 
+  template <class T, typename... Arguments>
+  T *New(Arguments &&... args) {
+    void *p = memPool->Malloc(sizeof(T));
+    ASSERT(p != nullptr, "ERROR: New error");
+    p = new (p) T(std::forward<Arguments>(args)...);
+    return static_cast<T *>(p);
+  }
+
   MemPool *GetMemPool() const {
     return memPool;
   }
@@ -76,14 +84,6 @@ class LocalMapleAllocator : public MapleAllocator {
   }
 
   MemPool *GetMemPool() const = delete;
-
-  template <class T, typename... Arguments>
-  T *New(Arguments &&... args) {
-    void *p = memPool->Malloc(sizeof(T));
-    ASSERT(p != nullptr, "ERROR: New error");
-    p = new (p) T(std::forward<Arguments>(args)...);
-    return static_cast<T *>(p);
-  }
 
   void *Alloc(size_t bytes) override {
     static_cast<StackMemPool *>(memPool)->CheckTopAllocator(this);

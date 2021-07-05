@@ -453,6 +453,9 @@ class BB {
   const MapleSet<regno_t> &GetLiveInRegNO() const {
     return liveInRegNO;
   }
+  MapleSet<regno_t> &GetLiveInRegNO() {
+    return liveInRegNO;
+  }
   void InsertLiveInRegNO(regno_t arg) {
     (void)liveInRegNO.insert(arg);
   }
@@ -466,6 +469,9 @@ class BB {
     liveInRegNO.clear();
   }
   const MapleSet<regno_t> &GetLiveOutRegNO() const {
+    return liveOutRegNO;
+  }
+  MapleSet<regno_t> &GetLiveOutRegNO() {
     return liveOutRegNO;
   }
   void InsertLiveOutRegNO(regno_t arg) {

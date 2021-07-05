@@ -149,7 +149,7 @@ class IpaCompiler : public Compiler {
 
 class MapleCombCompiler : public Compiler {
  public:
-  explicit MapleCombCompiler(const std::string &name) : Compiler(name), realRunningExe("") {}
+  explicit MapleCombCompiler(const std::string &name) : Compiler(name) {}
 
   ~MapleCombCompiler() = default;
 
@@ -158,7 +158,6 @@ class MapleCombCompiler : public Compiler {
   std::string GetInputFileName(const MplOptions &options) const override;
 
  private:
-  std::string realRunningExe;
   std::unordered_set<std::string> GetFinalOutputs(const MplOptions &mplOptions) const override;
   void GetTmpFilesToDelete(const MplOptions &mplOptions, std::vector<std::string> &tempFiles) const override;
   ErrorCode MakeMeOptions(const MplOptions &options, DriverRunner &runner);

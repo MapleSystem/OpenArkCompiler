@@ -583,6 +583,7 @@ UniqueFEIRExpr ASTUnaryOperatorExpr::ASTUOSideEffectExpr(Opcode op, std::list<Un
   if (post) {
     tempVar = FEIRBuilder::CreateVarNameForC(varName, *subType);
     UniqueFEIRStmt readSelfstmt = FEIRBuilder::CreateStmtDAssign(tempVar->Clone(), childFEIRExpr->Clone());
+    readSelfstmt->SetDummy();
     stmts.emplace_back(std::move(readSelfstmt));
   }
 
@@ -2152,7 +2153,9 @@ UniqueFEIRExpr ASTExprStmtExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts
   if (lastCpdStmt->GetASTStmtList().size() != 0 && lastCpdStmt->GetASTStmtList().back()->GetExprs().size() != 0) {
     UniqueFEIRExpr feirExpr = lastCpdStmt->GetASTStmtList().back()->GetExprs().back()->Emit2FEExpr(stmts0);
     for (int i = 0; i < stmts0.size(); ++i) {
-      stmts.pop_back();
+      if (!stmts.empty()) {
+        stmts.pop_back();
+      }
     }
     for (auto &stmt : stmts0) {
       stmts.emplace_back(std::move(stmt));

@@ -896,7 +896,7 @@ void Prop::TraversalBB(BB &bb) {
   curBB = &bb;
 
   // record stack size for variable versions before processing rename. It is used for stack pop up.
-  MapleVector<size_t> curStackSizeVec(vstLiveStackVec.size(), propMapAlloc.Adapter());
+  std::vector<size_t> curStackSizeVec(vstLiveStackVec.size());
   for (size_t i = 1; i < vstLiveStackVec.size(); ++i) {
     curStackSizeVec[i] = vstLiveStackVec[i]->size();
   }
