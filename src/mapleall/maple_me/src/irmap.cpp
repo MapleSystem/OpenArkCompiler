@@ -22,6 +22,7 @@ namespace maple {
 VarMeExpr *IRMap::CreateVarMeExprVersion(OriginalSt *ost) {
   VarMeExpr *varMeExpr = New<VarMeExpr>(exprID++, ost, verst2MeExprTable.size(),
       GlobalTables::GetTypeTable().GetTypeFromTyIdx(ost->GetTyIdx())->GetPrimType());
+  ost->PushbackVersionsIndices(verst2MeExprTable.size());
   verst2MeExprTable.push_back(varMeExpr);
   return varMeExpr;
 }
@@ -103,6 +104,7 @@ RegMeExpr *IRMap::CreateRegMeExprVersion(OriginalSt &pregOSt) {
   RegMeExpr *regReadExpr =
       New<RegMeExpr>(exprID++, &pregOSt, verst2MeExprTable.size(), kMeOpReg,
                      OP_regread, pregOSt.GetMIRPreg()->GetPrimType());
+  pregOSt.PushbackVersionsIndices(verst2MeExprTable.size());
   verst2MeExprTable.push_back(regReadExpr);
   return regReadExpr;
 }

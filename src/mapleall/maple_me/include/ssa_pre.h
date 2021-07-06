@@ -181,7 +181,7 @@ class SSAPre {
   virtual void BuildWorkListIvarLHSOcc(MeStmt&, int32, bool, MeExpr*) {}
 
   virtual void BuildWorkListExpr(MeStmt &meStmt, int32 seqStmt, MeExpr &meExpr, bool isRebuilt, MeExpr *tempVar,
-                                 bool isRootExpr) = 0;
+                                 bool isRootExpr, bool insertSorted) = 0;
   virtual void BuildWorkListStmt(MeStmt &stmt, uint32 seqStmt, bool isRebuilt, MeExpr *tempVar = nullptr);
   virtual void BuildWorkListBB(BB *bb);
   virtual void ConstructUseOccurMap() {}
@@ -200,7 +200,7 @@ class SSAPre {
   }
 
   bool CheckIfAnyLocalOpnd(const MeExpr &meExpr) const;
-  MeRealOcc *CreateRealOcc(MeStmt &meStmt, int32 seqStmt, MeExpr &meExpr, bool isRebuilt, bool isLHS = false);
+  void CreateRealOcc(MeStmt &meStmt, int32 seqStmt, MeExpr &meExpr, bool insertSorted, bool isLHS = false);
   virtual bool ScreenPhiBB(BBId bbId) const = 0;
   virtual bool EpreLocalRefVar() const {
     return false;
