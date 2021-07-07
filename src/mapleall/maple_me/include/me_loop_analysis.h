@@ -128,10 +128,14 @@ class IdentifyLoops : public AnalysisResult {
     meLoops[i] = &desc;
   }
 
+  LoopDesc *GetBBLoopParent(BBId bbID) const {
+    return bbLoopParent.at(bbID);
+  }
+
   LoopDesc *CreateLoopDesc(BB &hd, BB &tail);
   void SetLoopParent4BB(const BB &bb, LoopDesc &loopDesc);
   void SetExitBB(LoopDesc &loop);
-  void InsertExitBB(LoopDesc &loop);
+  bool InsertExitBB(LoopDesc &loop);
   void ProcessBB(BB *bb);
   void MarkBB();
   void Dump() const;

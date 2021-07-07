@@ -235,6 +235,7 @@ class IRMap : public AnalysisResult {
   void PutToBucket(uint32, MeExpr&);
   BB *GetFalseBrBB(const CondGotoMeStmt&);
   MeExpr *ReplaceMeExprExpr(MeExpr &origExpr, MeExpr &newExpr, size_t opndsSize, const MeExpr &meExpr, MeExpr &repExpr);
+  MeExpr *SimplifyCompareSameExpr(OpMeExpr *opmeexpr);
 };
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_IRMAP_H

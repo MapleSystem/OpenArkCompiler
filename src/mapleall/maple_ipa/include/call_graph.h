@@ -106,6 +106,10 @@ class CGNode {
     --numReferences;
   }
 
+  uint32 NumReferences() const {
+    return numReferences;
+  }
+
   CGNode(MIRFunction *func, MapleAllocator &allocater, uint32 index)
       : alloc(&allocater),
         id(index),

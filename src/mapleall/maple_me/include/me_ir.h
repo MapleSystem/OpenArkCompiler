@@ -315,6 +315,7 @@ class ScalarMeExpr : public MeExpr {
     return ost->GetPregIdx() >= 0;
   }
 
+  MeStmt *GetDefByMeStmt() const;
   BB *GetDefByBBMeStmt(const Dominance&, MeStmtPtr&) const;
   void Dump(const IRMap*, int32 indent = 0) const override;
   BaseNode &EmitExpr(SSATab&) override;

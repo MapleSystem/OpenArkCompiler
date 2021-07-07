@@ -1541,8 +1541,9 @@ void AArch64CGFunc::SelectIassign(IassignNode &stmt) {
 
   PrimType styp = stmt.GetRHS()->GetPrimType();
   Operand *valOpnd = HandleExpr(stmt, *stmt.GetRHS());
-  Operand &srcOpnd = LoadIntoRegister(*valOpnd,
-                     IsPrimitiveInteger(styp) || IsPrimitiveVectorInteger(styp) , GetPrimTypeBitSize(styp));
+  Operand &srcOpnd =
+      LoadIntoRegister(*valOpnd,
+                       (IsPrimitiveInteger(styp) || IsPrimitiveVectorInteger(styp)), GetPrimTypeBitSize(styp));
 
   PrimType destType = pointedType->GetPrimType();
   if (destType == PTY_agg) {
@@ -3120,7 +3121,8 @@ Operand *AArch64CGFunc::SelectMpy(BinaryNode &node, Operand &opnd0, Operand &opn
     resOpnd = &CreateRegisterOperandOfType(primType);
     SelectMpy(*resOpnd, opnd0, opnd1, primType);
   } else {
-    resOpnd = SelectVectorBinOp(dtype, &opnd0, node.Opnd(0)->GetPrimType(), &opnd1, node.Opnd(1)->GetPrimType(), OP_mul);
+    resOpnd = SelectVectorBinOp(dtype, &opnd0, node.Opnd(0)->GetPrimType(), &opnd1,
+                                node.Opnd(1)->GetPrimType(), OP_mul);
   }
   return resOpnd;
 }
@@ -8427,7 +8429,7 @@ RegOperand *AArch64CGFunc::SelectVectorGetHigh(PrimType rType, Operand *src) {
   rType = FilterOneElementVectorType(oType);
   RegOperand *res = &CreateRegisterOperandOfType(rType);                 /* result operand */
   VectorRegSpec *vecSpecSrc = GetMemoryPool()->New<VectorRegSpec>();     /* src operand */
-  vecSpecSrc->vecLaneMax = 2;
+  vecSpecSrc->vecLaneMax = k2ByteSize;
   vecSpecSrc->vecLane = 1;
 
   Insn *insn = &GetCG()->BuildInstruction<AArch64VectorInsn>(MOP_vduprv, *res, *src);
@@ -8444,7 +8446,7 @@ RegOperand *AArch64CGFunc::SelectVectorGetLow(PrimType rType, Operand *src) {
   rType = FilterOneElementVectorType(oType);
   RegOperand *res = &CreateRegisterOperandOfType(rType);                 /* result operand */
   VectorRegSpec *vecSpecSrc = GetMemoryPool()->New<VectorRegSpec>();     /* src operand */
-  vecSpecSrc->vecLaneMax = 2;
+  vecSpecSrc->vecLaneMax = k2ByteSize;
   vecSpecSrc->vecLane = 0;
 
   Insn *insn = &GetCG()->BuildInstruction<AArch64VectorInsn>(MOP_vduprv, *res, *src);
@@ -8481,9 +8483,11 @@ RegOperand *AArch64CGFunc::SelectVectorPairwiseAdd(PrimType rType, Operand *src,
 
   Insn *insn;
   if (IsUnsignedInteger(sType)) {
-    insn = &GetCG()->BuildInstruction<AArch64VectorInsn>(GetPrimTypeSize(sType) > k8ByteSize ? MOP_vupaddvv : MOP_vupadduu, *res, *src);
+    insn = &GetCG()->BuildInstruction<AArch64VectorInsn>(
+        GetPrimTypeSize(sType) > k8ByteSize ? MOP_vupaddvv : MOP_vupadduu, *res, *src);
   } else {
-    insn = &GetCG()->BuildInstruction<AArch64VectorInsn>(GetPrimTypeSize(sType) > k8ByteSize ? MOP_vspaddvv : MOP_vspadduu, *res, *src);
+    insn = &GetCG()->BuildInstruction<AArch64VectorInsn>(
+        GetPrimTypeSize(sType) > k8ByteSize ? MOP_vspaddvv : MOP_vspadduu, *res, *src);
   }
   static_cast<AArch64VectorInsn*>(insn)->PushRegSpecEntry(vecSpecDest);    /* dest pushed first, popped first */
   static_cast<AArch64VectorInsn*>(insn)->PushRegSpecEntry(vecSpecSrc);

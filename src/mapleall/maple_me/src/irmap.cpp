@@ -621,6 +621,52 @@ static bool IgnoreInnerTypeCvt(PrimType typeA, PrimType typeB, PrimType typeC) {
   return false;
 }
 
+// return nullptr if the result is unknow
+MeExpr *IRMap::SimplifyCompareSameExpr(OpMeExpr *opmeexpr) {
+  CHECK_FATAL(opmeexpr->GetOpnd(0) == opmeexpr->GetOpnd(1), "must be");
+  Opcode opop = opmeexpr->GetOp();
+  int64 val = 0;
+  switch (opop) {
+    case OP_eq:
+    case OP_le:
+    case OP_ge: {
+      val = 1;
+      break;
+    }
+    case OP_ne:
+    case OP_lt:
+    case OP_gt:
+    case OP_cmp: {
+      val = 0;
+      break;
+    }
+    case OP_cmpl:
+    case OP_cmpg: {
+      // cmpl/cmpg is special for cases that any of opnd is NaN
+      auto opndType = opmeexpr->GetOpndType();
+      if (IsPrimitiveFloat(opndType) || IsPrimitiveDynFloat(opndType)) {
+        if (opmeexpr->GetOpnd(0)->GetMeOp() == kMeOpConst) {
+          double dVal =
+              static_cast<MIRFloatConst*>(static_cast<ConstMeExpr *>(opmeexpr->GetOpnd(0))->GetConstVal())->GetValue();
+          if (isnan(dVal)) {
+            val = (opop == OP_cmpl) ? -1 : 1;
+          } else {
+            val = 0;
+          }
+          break;
+        }
+        // other case, return nullptr because it is not sure whether any of opnd is nan.
+        return nullptr;
+      }
+      val = 0;
+      break;
+    }
+    default:
+      CHECK_FATAL(false, "must be compare op!");
+  }
+  return CreateIntConstMeExpr(val, opmeexpr->GetPrimType());
+}
+
 MeExpr *IRMap::SimplifyOpMeExpr(OpMeExpr *opmeexpr) {
   Opcode opop = opmeexpr->GetOp();
   switch (opop) {
@@ -752,6 +798,13 @@ MeExpr *IRMap::SimplifyOpMeExpr(OpMeExpr *opmeexpr) {
     case OP_cmpg: {
       MeExpr *opnd0 = opmeexpr->GetOpnd(0);
       MeExpr *opnd1 = opmeexpr->GetOpnd(1);
+      if (opnd0 == opnd1) {
+        // node compared with itself
+        auto *cmpExpr = SimplifyCompareSameExpr(opmeexpr);
+        if (cmpExpr != nullptr) {
+          return cmpExpr;
+        }
+      }
       bool isneeq = (opop == OP_ne || opop == OP_eq);
       if (opnd0->GetMeOp() == kMeOpConst && opnd1->GetMeOp() == kMeOpConst) {
         maple::ConstantFold cf(mirModule);
