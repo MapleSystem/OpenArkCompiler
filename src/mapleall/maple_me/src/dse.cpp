@@ -37,6 +37,10 @@ using namespace utils;
 
 bool DSE::ExprHasSideEffect(const BaseNode &expr) const {
   Opcode op = expr.GetOpCode();
+  // in c language, OP_array and OP_div has no side-effect
+  if (ssaTab.GetModule().IsCModule() && (op == OP_array || op == OP_div)) {
+    return false;
+  }
   if (kOpcodeInfo.HasSideEffect(op)) {
     return true;
   }
