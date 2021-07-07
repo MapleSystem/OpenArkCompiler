@@ -58,7 +58,7 @@ bool IVCanon::ResolveExprValue(MeExpr *x, ScalarMeExpr *phiLHS) {
     if (defStmt->GetOp() == OP_dassign) {
       // defstmt is  %post = i, i is identified as IV
       // set %post is IV and use i's step value
-      scalar = static_cast<ScalarMeExpr *>(defStmt->GetRHS());
+      scalar = dynamic_cast<ScalarMeExpr *>(defStmt->GetRHS());
       if (scalar && scalar->GetOst() && IsScalarIV(scalar->GetOst())) {
         return true;
       }
@@ -98,7 +98,7 @@ int32 IVCanon::ComputeIncrAmt(MeExpr *x, ScalarMeExpr *phiLHS, int32 *appearance
       CHECK_FATAL(scalar->GetDefBy() == kDefByStmt, "ComputeIncrAmt: cannot be here");
       AssignMeStmt *defstmt = static_cast<AssignMeStmt*>(scalar->GetDefStmt());
       if (defstmt->GetOp() == OP_dassign) {
-        scalar = static_cast<ScalarMeExpr *>(defstmt->GetRHS());
+        scalar = dynamic_cast<ScalarMeExpr *>(defstmt->GetRHS());
         if (scalar && scalar->GetOst() && IsScalarIV(scalar->GetOst())) {
           int32_t stepVal = 0;
           if (IsScalarIV(scalar->GetOst(), &stepVal)) {
