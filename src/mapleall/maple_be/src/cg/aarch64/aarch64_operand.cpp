@@ -90,9 +90,9 @@ void AArch64RegOperand::Emit(Emitter &emitter, const OpndProp *opndProp) const {
       if (static_cast<const AArch64OpndProp*>(opndProp)->IsVectorOperand() && laneSize != 0) {
         std::string width;
         if (opndSize == k128BitSize) {
-          width = laneSize == k16BitSize ? "b" : (laneSize == k8BitSize ? "h" : (laneSize == k4BitSize ? "s" : "d"));
+          width = laneSize == k16ByteSize ? "b" : (laneSize == k8ByteSize ? "h" : (laneSize == k4ByteSize ? "s" : "d"));
         } else if (opndSize == k64BitSize) {
-          width = laneSize == k8BitSize ? "b" : (laneSize == k4BitSize ? "h" : "s");
+          width = laneSize == k8ByteSize ? "b" : (laneSize == k4ByteSize ? "h" : (laneSize == k2ByteSize ? "s" : "d"));
         }
         int16 lanePos = GetVecLanePosition();
         emitter.Emit(AArch64CG::vectorRegNames[regNO]);
