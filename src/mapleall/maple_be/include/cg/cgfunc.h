@@ -177,6 +177,9 @@ class CGFunc {
   virtual Operand *SelectIntrinsicOpWithOneParam(IntrinsicopNode &intrinopNode, std::string name) = 0;
   virtual Operand *SelectCclz(IntrinsicopNode &intrinopNode) = 0;
   virtual Operand *SelectCctz(IntrinsicopNode &intrinopNode) = 0;
+  virtual Operand *SelectCpopcount(IntrinsicopNode &intrinopNode) = 0;
+  virtual Operand *SelectCparity(IntrinsicopNode &intrinopNode) = 0;
+  virtual Operand *SelectCclrsb(IntrinsicopNode &intrinopNode) = 0;
   virtual void SelectMembar(StmtNode &membar) = 0;
   virtual void SelectComment(CommentNode &comment) = 0;
   virtual void HandleCatch() = 0;

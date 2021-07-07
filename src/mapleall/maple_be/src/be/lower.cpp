@@ -3346,6 +3346,12 @@ bool CGLowerer::IsIntrinsicOpHandledAtLowerLevel(MIRIntrinsicID intrinsic) {
   case INTRN_C_clz64:
   case INTRN_C_ctz32:
   case INTRN_C_ctz64:
+  case INTRN_C_popcount32:
+  case INTRN_C_popcount64:
+  case INTRN_C_parity32:
+  case INTRN_C_parity64:
+  case INTRN_C_clrsb32:
+  case INTRN_C_clrsb64:
     return true;
 #endif
   default:

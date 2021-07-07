@@ -112,6 +112,9 @@ class AArch64CGFunc : public CGFunc {
   Operand *SelectIntrinsicOpWithOneParam(IntrinsicopNode &intrinopNode, std::string name) override;
   Operand *SelectCclz(IntrinsicopNode &intrinopNode) override;
   Operand *SelectCctz(IntrinsicopNode &intrinopNode) override;
+  Operand *SelectCpopcount(IntrinsicopNode &intrinopNode) override;
+  Operand *SelectCparity(IntrinsicopNode &intrinopNode) override;
+  Operand *SelectCclrsb(IntrinsicopNode &intrinopNode) override;
   void SelectMembar(StmtNode &membar) override;
   void SelectComment(CommentNode &comment) override;
 

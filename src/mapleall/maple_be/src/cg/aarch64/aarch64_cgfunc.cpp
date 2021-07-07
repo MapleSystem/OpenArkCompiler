@@ -8190,6 +8190,21 @@ Operand *AArch64CGFunc::SelectCctz(IntrinsicopNode &intrnNode) {
   return &dst2;
 }
 
+Operand *AArch64CGFunc::SelectCpopcount(IntrinsicopNode &intrnNode) {
+  CHECK_FATAL(false, "%s NIY", intrnNode.GetIntrinDesc().name);
+  return nullptr;
+}
+
+Operand *AArch64CGFunc::SelectCparity(IntrinsicopNode &intrnNode) {
+  CHECK_FATAL(false, "%s NIY", intrnNode.GetIntrinDesc().name);
+  return nullptr;
+}
+
+Operand *AArch64CGFunc::SelectCclrsb(IntrinsicopNode &intrnNode) {
+  CHECK_FATAL(false, "%s NIY", intrnNode.GetIntrinDesc().name);
+  return nullptr;
+}
+
 /*
  * NOTE: consider moving the following things into aarch64_cg.cpp  They may
  * serve not only inrinsics, but other MapleIR instructions as well.

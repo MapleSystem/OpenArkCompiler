@@ -501,6 +501,15 @@ Operand *HandleIntrinOp(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) 
     case INTRN_C_ctz32:
     case INTRN_C_ctz64:
       return cgFunc.SelectCctz(intrinsicopNode);
+    case INTRN_C_popcount32:
+    case INTRN_C_popcount64:
+      return cgFunc.SelectCpopcount(intrinsicopNode);
+    case INTRN_C_parity32:
+    case INTRN_C_parity64:
+      return cgFunc.SelectCparity(intrinsicopNode);
+    case INTRN_C_clrsb32:
+    case INTRN_C_clrsb64:
+      return cgFunc.SelectCclrsb(intrinsicopNode);
 
     case INTRN_vector_sum_v8u8: case INTRN_vector_sum_v8i8:
     case INTRN_vector_sum_v4u16: case INTRN_vector_sum_v4i16:

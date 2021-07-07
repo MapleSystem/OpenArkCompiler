@@ -1079,6 +1079,23 @@ class ASTCallExpr : public ASTExpr {
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Ctzl);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Clz);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Clzl);
+
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Popcount);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Popcountl);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Popcountll);
+
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Parity);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Parityl);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Parityll);
+
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Clrsb);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Clrsbl);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Clrsbll);
+
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Ffs);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Ffsl);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Ffsll);
+
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Alloca);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Expect);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(VaStart);
@@ -1103,7 +1120,6 @@ class ASTCallExpr : public ASTExpr {
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Sinhf);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Exp);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Expf);
-  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Ffs);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Fmax);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Fmin);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Log);

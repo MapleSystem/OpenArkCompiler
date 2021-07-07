@@ -87,3 +87,15 @@ DEF_MIR_INTRINSIC(C_ctz32,\
                   "sinh"/*dummy*/, INTRNISPURE, kArgTyI32, kArgTyU32)
 DEF_MIR_INTRINSIC(C_ctz64,\
                   "sinh"/*dummy*/, INTRNISPURE, kArgTyI32, kArgTyU64)
+DEF_MIR_INTRINSIC(C_popcount32,\
+                  "sinh"/*dummy*/, INTRNISPURE, kArgTyI32, kArgTyU32)
+DEF_MIR_INTRINSIC(C_popcount64,\
+                  "sinh"/*dummy*/, INTRNISPURE, kArgTyI32, kArgTyU64)
+DEF_MIR_INTRINSIC(C_parity32,\
+                  "sinh"/*dummy*/, INTRNISPURE, kArgTyI32, kArgTyU32)
+DEF_MIR_INTRINSIC(C_parity64,\
+                  "sinh"/*dummy*/, INTRNISPURE, kArgTyI32, kArgTyU64)
+DEF_MIR_INTRINSIC(C_clrsb32,\
+                  "sinh"/*dummy*/, INTRNISPURE, kArgTyI32, kArgTyU32)
+DEF_MIR_INTRINSIC(C_clrsb64,\
+                  "sinh"/*dummy*/, INTRNISPURE, kArgTyI32, kArgTyU64)
