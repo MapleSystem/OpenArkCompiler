@@ -1628,6 +1628,9 @@ bool MIRParser::ParseStmtBlockForVar(TokenKind stmtTK) {
     Error("duplicate declare symbol parse function ");
     return false;
   }
+  if (!ParseDeclareVarInitValue(*st)) {
+    return false;
+  }
   return true;
 }
 
