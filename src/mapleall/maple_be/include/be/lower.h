@@ -176,6 +176,8 @@ class CGLowerer {
   StmtNode *LowerDassignBitfield(DassignNode &dassign, BlockNode &block);
   StmtNode *LowerIassignBitfield(IassignNode &iassign, BlockNode &block);
 
+  void LowerAsmStmt(AsmNode *asmNode, BlockNode *blk);
+
   bool ShouldOptarray() const {
     ASSERT(mirModule.CurFunction() != nullptr, "nullptr check");
     return MIRLower::ShouldOptArrayMrt(*mirModule.CurFunction());
