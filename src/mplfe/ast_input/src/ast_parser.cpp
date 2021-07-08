@@ -1051,7 +1051,8 @@ ASTExpr *ASTParser::ProcessExprInitListExpr(MapleAllocator &allocator, const cla
     CHECK_FATAL(astDecl != nullptr && astDecl->GetDeclKind() == kASTStruct, "Undefined record type");
     uint i = 0;
     for (const auto field : static_cast<ASTStruct*>(astDecl)->GetFields()) {
-      if (field->IsAnonymousField() && fieldDecl == nullptr) {
+      if (field->IsAnonymousField() && fieldDecl == nullptr &&
+          n != static_cast<ASTStruct*>(astDecl)->GetFields().size()) {
         astInitListExpr->SetInitExprs(nullptr);
       } else {
         if (i < n) {
