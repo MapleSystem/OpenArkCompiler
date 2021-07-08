@@ -18,6 +18,11 @@ BUILTIN_FUNC_EMIT("__builtin_clrsbll", &ASTCallExpr::EmitBuiltinClrsbll)
 BUILTIN_FUNC_EMIT("__builtin_ffsl", &ASTCallExpr::EmitBuiltinFfsl)
 BUILTIN_FUNC_EMIT("__builtin_ffsll", &ASTCallExpr::EmitBuiltinFfsll)
 
+
+BUILTIN_FUNC_EMIT("__builtin_is_aligned", &ASTCallExpr::EmitBuiltinIsAligned)
+BUILTIN_FUNC_EMIT("__builtin_align_up", &ASTCallExpr::EmitBuiltinAlignUp)
+BUILTIN_FUNC_EMIT("__builtin_align_down", &ASTCallExpr::EmitBuiltinAlignDown)
+
 BUILTIN_FUNC_EMIT("__builtin_alloca", &ASTCallExpr::EmitBuiltinAlloca)
 BUILTIN_FUNC_EMIT("__builtin_expect", &ASTCallExpr::EmitBuiltinExpect)
 BUILTIN_FUNC_EMIT("__builtin_va_start", &ASTCallExpr::EmitBuiltinVaStart)

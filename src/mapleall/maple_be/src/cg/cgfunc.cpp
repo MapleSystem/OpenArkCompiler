@@ -510,6 +510,12 @@ Operand *HandleIntrinOp(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) 
     case INTRN_C_clrsb32:
     case INTRN_C_clrsb64:
       return cgFunc.SelectCclrsb(intrinsicopNode);
+    case INTRN_C_isaligned:
+      return cgFunc.SelectCisaligned(intrinsicopNode);
+    case INTRN_C_alignup:
+      return cgFunc.SelectCalignup(intrinsicopNode);
+    case INTRN_C_aligndown:
+      return cgFunc.SelectCaligndown(intrinsicopNode);
 
     case INTRN_vector_sum_v8u8: case INTRN_vector_sum_v8i8:
     case INTRN_vector_sum_v4u16: case INTRN_vector_sum_v4i16:

@@ -1096,6 +1096,10 @@ class ASTCallExpr : public ASTExpr {
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Ffsl);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Ffsll);
 
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(IsAligned);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(AlignUp);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(AlignDown);
+
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Alloca);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(Expect);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(VaStart);

@@ -88,14 +88,20 @@ DEF_MIR_INTRINSIC(C_ctz32,\
 DEF_MIR_INTRINSIC(C_ctz64,\
                   "sinh"/*dummy*/, INTRNISPURE, kArgTyI32, kArgTyU64)
 DEF_MIR_INTRINSIC(C_popcount32,\
-                  "sinh"/*dummy*/, INTRNISPURE, kArgTyI32, kArgTyU32)
+                  "popcount32"/*dummy*/, INTRNISPURE, kArgTyI32, kArgTyU32)
 DEF_MIR_INTRINSIC(C_popcount64,\
-                  "sinh"/*dummy*/, INTRNISPURE, kArgTyI32, kArgTyU64)
+                  "popcount64"/*dummy*/, INTRNISPURE, kArgTyI32, kArgTyU64)
 DEF_MIR_INTRINSIC(C_parity32,\
-                  "sinh"/*dummy*/, INTRNISPURE, kArgTyI32, kArgTyU32)
+                  "parity32"/*dummy*/, INTRNISPURE, kArgTyI32, kArgTyU32)
 DEF_MIR_INTRINSIC(C_parity64,\
-                  "sinh"/*dummy*/, INTRNISPURE, kArgTyI32, kArgTyU64)
+                  "parity64"/*dummy*/, INTRNISPURE, kArgTyI32, kArgTyU64)
 DEF_MIR_INTRINSIC(C_clrsb32,\
-                  "sinh"/*dummy*/, INTRNISPURE, kArgTyI32, kArgTyU32)
+                  "clrsb32"/*dummy*/, INTRNISPURE, kArgTyI32, kArgTyU32)
 DEF_MIR_INTRINSIC(C_clrsb64,\
-                  "sinh"/*dummy*/, INTRNISPURE, kArgTyI32, kArgTyU64)
+                  "clrsb64"/*dummy*/, INTRNISPURE, kArgTyI32, kArgTyU64)
+DEF_MIR_INTRINSIC(C_isaligned,\
+                  "isaligned"/*dummy*/, INTRNISPURE, kArgTyU1, kArgTyPtr, kArgTyU64)
+DEF_MIR_INTRINSIC(C_alignup,\
+                  "alignup"/*dummy*/, INTRNISPURE, kArgTyU1, kArgTyPtr, kArgTyU64)
+DEF_MIR_INTRINSIC(C_aligndown,\
+                  "aligndown"/*dummy*/, INTRNISPURE, kArgTyU1, kArgTyPtr, kArgTyU64)

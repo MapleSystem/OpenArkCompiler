@@ -117,6 +117,9 @@ class AArch64CGFunc : public CGFunc {
   Operand *SelectCpopcount(IntrinsicopNode &intrinopNode) override;
   Operand *SelectCparity(IntrinsicopNode &intrinopNode) override;
   Operand *SelectCclrsb(IntrinsicopNode &intrinopNode) override;
+  Operand *SelectCisaligned(IntrinsicopNode &intrinopNode) override;
+  Operand *SelectCalignup(IntrinsicopNode &intrinopNode) override;
+  Operand *SelectCaligndown(IntrinsicopNode &intrinopNode) override;
   void SelectMembar(StmtNode &membar) override;
   void SelectComment(CommentNode &comment) override;
 

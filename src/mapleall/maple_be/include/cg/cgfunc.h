@@ -180,6 +180,9 @@ class CGFunc {
   virtual Operand *SelectCpopcount(IntrinsicopNode &intrinopNode) = 0;
   virtual Operand *SelectCparity(IntrinsicopNode &intrinopNode) = 0;
   virtual Operand *SelectCclrsb(IntrinsicopNode &intrinopNode) = 0;
+  virtual Operand *SelectCisaligned(IntrinsicopNode &intrinopNode) = 0;
+  virtual Operand *SelectCalignup(IntrinsicopNode &intrinopNode) = 0;
+  virtual Operand *SelectCaligndown(IntrinsicopNode &intrinopNode) = 0;
   virtual void SelectMembar(StmtNode &membar) = 0;
   virtual void SelectComment(CommentNode &comment) = 0;
   virtual void HandleCatch() = 0;
