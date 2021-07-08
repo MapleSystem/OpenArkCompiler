@@ -1074,6 +1074,41 @@ class CommentOperand : public Operand {
  private:
   const MapleString comment;
 };
+
+using StringOperand = CommentOperand;
+
+class ListConstraintOperand : public Operand {
+ public:
+  explicit ListConstraintOperand(MapleAllocator &allocator)
+      : Operand(Operand::kOpdString, 0),
+        stringList(allocator.Adapter()) {};
+
+  ~ListConstraintOperand() override = default;
+
+  void Dump() const override {
+    for (auto *str : stringList) {
+      LogInfo::MapleLogger() << "(" << str->GetComment().c_str() << ")";
+    }
+  }
+
+  Operand *Clone(MemPool &memPool) const override {
+    return memPool.Clone<ListConstraintOperand>(*this);
+  }
+
+  bool Less(const Operand &right) const override {
+    /* For different type. */
+    if (opndKind != right.GetKind()) {
+      return opndKind < right.GetKind();
+    }
+
+    ASSERT(false, "We don't need to compare list operand.");
+    return false;
+  }
+
+  void Emit(Emitter &emitter, const OpndProp *opndProp) const override;
+
+  MapleList<StringOperand*> stringList;
+};
 }  /* namespace maplebe */
 namespace std {
 template<> /* function-template-specialization */
