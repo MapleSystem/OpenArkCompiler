@@ -2741,7 +2741,11 @@ void Emitter::EmitDIHeader() {
 }
 
 void Emitter::EmitDIFooter() {
-  (void)Emit("\t.section ." + std::string(namemangler::kMuidJavatextPrefixStr) + ",\"ax\"\n");
+  if (cg->GetMIRModule()->GetSrcLang() == kSrcLangC) {
+    (void)Emit("\t.section ." + std::string("c_text") + ",\"ax\"\n");
+  } else {
+    (void)Emit("\t.section ." + std::string(namemangler::kMuidJavatextPrefixStr) + ",\"ax\"\n");
+  }
   Emit(".L" XSTR(TEXT_END) ":\n");
 }
 
@@ -2760,7 +2764,6 @@ LabelIdx Emitter::GetLabelIdxForLabelDie(DBGDie *lbldie) {
   CHECK_FATAL(it != labdie2labidxTable.end(), "");
   return it->second;
 }
-
 
 void Emitter::ApplyInPrefixOrder(DBGDie *die, const std::function<void(DBGDie*)> &func) {
   func(die);
@@ -3016,11 +3019,16 @@ void Emitter::EmitDIDebugInfoSection(DebugInfo *mirdi) {
   EmitHexUnsigned(mirdi->GetDebugInfoLength());
   Emit(CMNT "section length\n");
   /* DWARF version. uhalf. */
-  Emit("\t.2byte\t0x" XSTR(kDwarfVersion) "\n");  /* 4 for version 4. */
+  Emit("\t.2byte\t");
+  /* 4 for version 4. */
+  EmitHexUnsigned(kDwarfVersion);
+  Emit("\n");
   /* debug_abbrev_offset. 4byte for 32-bit, 8byte for 64-bit */
   Emit("\t.4byte\t.L" XSTR(DEBUG_ABBREV_0) "\n");
   /* address size. ubyte */
-  Emit("\t.byte\t0x" XSTR(kSizeOfPTR) "\n");
+  Emit("\t.byte\t");
+  EmitHexUnsigned(kSizeOfPTR);
+  Emit("\n");
   /*
    * 7.5.1.2 type unit header
    * currently empty...

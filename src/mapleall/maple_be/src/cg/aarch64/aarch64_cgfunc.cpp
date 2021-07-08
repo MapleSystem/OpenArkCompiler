@@ -142,6 +142,24 @@ MOperator PickLdStInsn(bool isLoad, uint32 bitSize, PrimType primType, AArch64is
 }
 }
 
+RegOperand &AArch64CGFunc::GetOrCreateResOperand(const BaseNode &parent, PrimType primType) {
+  RegOperand *resOpnd = nullptr;
+  if (parent.GetOpCode() == OP_regassign) {
+    auto &regAssignNode = static_cast<const RegassignNode&>(parent);
+    PregIdx pregIdx = regAssignNode.GetRegIdx();
+    if (IsSpecialPseudoRegister(pregIdx)) {
+      /* if it is one of special registers */
+      ASSERT(-pregIdx != kSregRetval0, "the dest of RegAssign node must not be kSregRetval0");
+      resOpnd = &GetOrCreateSpecialRegisterOperand(-pregIdx);
+    } else {
+      resOpnd = &GetOrCreateVirtualRegisterOperand(GetVirtualRegNOFromPseudoRegIdx(pregIdx));
+    }
+  } else {
+    resOpnd = &CreateRegisterOperandOfType(primType);
+  }
+  return *resOpnd;
+}
+
 MOperator AArch64CGFunc::PickLdInsn(uint32 bitSize, PrimType primType, AArch64isa::MemoryOrdering memOrd) {
   return PickLdStInsn(true, bitSize, primType, memOrd);
 }
@@ -2260,14 +2278,12 @@ Operand *AArch64CGFunc::SelectIread(const BaseNode &parent, IreadNode &expr) {
   } else if (regSize < k4ByteSize) {
     regSize = k4ByteSize;  /* 32-bit */
   }
-  regno_t vRegNO;
   Operand *result = nullptr;
   if (parent.GetOpCode() == OP_eval) {
     /* regSize << 3, that is regSize * 8, change bytes to bits */
     result = &AArch64RegOperand::GetZeroRegister(regSize << 3);
   } else {
-    vRegNO = NewVReg(regType, regSize);
-    result = &CreateVirtualRegisterOperand(vRegNO);
+    result = &GetOrCreateResOperand(parent, expr.GetPrimType());
   }
 
   PrimType destType = pointedType->GetPrimType();
@@ -3086,7 +3102,7 @@ void AArch64CGFunc::SelectSub(Operand &resOpnd, Operand &opnd0, Operand &opnd1, 
   GetCurBB()->AppendInsn(newInsn);
 }
 
-Operand *AArch64CGFunc::SelectSub(BinaryNode &node, Operand &opnd0, Operand &opnd1) {
+Operand *AArch64CGFunc::SelectSub(BinaryNode &node, Operand &opnd0, Operand &opnd1, const BaseNode &parent) {
   PrimType dtype = node.GetPrimType();
   bool isSigned = IsSignedInteger(dtype);
   uint32 dsize = GetPrimTypeBitSize(dtype);
@@ -3097,7 +3113,7 @@ Operand *AArch64CGFunc::SelectSub(BinaryNode &node, Operand &opnd0, Operand &opn
     /* promoted type */
     PrimType primType =
         isFloat ? dtype : ((is64Bits ? (isSigned ? PTY_i64 : PTY_u64) : (isSigned ? PTY_i32 : PTY_u32)));
-    resOpnd = &CreateRegisterOperandOfType(primType);
+    resOpnd = &GetOrCreateResOperand(parent, primType);
     SelectSub(*resOpnd, opnd0, opnd1, primType);
   } else {
     /* vector operands */
@@ -3107,7 +3123,7 @@ Operand *AArch64CGFunc::SelectSub(BinaryNode &node, Operand &opnd0, Operand &opn
   return resOpnd;
 }
 
-Operand *AArch64CGFunc::SelectMpy(BinaryNode &node, Operand &opnd0, Operand &opnd1) {
+Operand *AArch64CGFunc::SelectMpy(BinaryNode &node, Operand &opnd0, Operand &opnd1, const BaseNode &parent) {
   PrimType dtype = node.GetPrimType();
   bool isSigned = IsSignedInteger(dtype);
   uint32 dsize = GetPrimTypeBitSize(dtype);
@@ -3118,7 +3134,7 @@ Operand *AArch64CGFunc::SelectMpy(BinaryNode &node, Operand &opnd0, Operand &opn
     /* promoted type */
     PrimType primType =
         isFloat ? dtype : ((is64Bits ? (isSigned ? PTY_i64 : PTY_u64) : (isSigned ? PTY_i32 : PTY_u32)));
-    resOpnd = &CreateRegisterOperandOfType(primType);
+    resOpnd = &GetOrCreateResOperand(parent, primType);
     SelectMpy(*resOpnd, opnd0, opnd1, primType);
   } else {
     resOpnd = SelectVectorBinOp(dtype, &opnd0, node.Opnd(0)->GetPrimType(), &opnd1,
@@ -3561,10 +3577,10 @@ void AArch64CGFunc::SelectCmpOp(Operand &resOpnd, Operand &lhsOpnd, Operand &rhs
   SelectAArch64CSet(resOpnd, GetCondOperand(cc), (dsize == k64BitSize));
 }
 
-Operand *AArch64CGFunc::SelectCmpOp(CompareNode &node, Operand &opnd0, Operand &opnd1) {
+Operand *AArch64CGFunc::SelectCmpOp(CompareNode &node, Operand &opnd0, Operand &opnd1, const BaseNode &parent) {
   RegOperand *resOpnd = nullptr;
   if (!IsPrimitiveVector(node.GetPrimType())) {
-    resOpnd = &CreateRegisterOperandOfType(node.GetPrimType());
+    resOpnd = &GetOrCreateResOperand(parent, node.GetPrimType());
     SelectCmpOp(*resOpnd, opnd0, opnd1, node.GetOpCode(), node.GetOpndType());
   } else {
     resOpnd = SelectVectorCompare(&opnd0, node.Opnd(0)->GetPrimType(), &opnd1,
@@ -4048,9 +4064,9 @@ Operand *AArch64CGFunc::SelectBnot(UnaryNode &node, Operand &opnd0) {
   return resOpnd;
 }
 
-Operand *AArch64CGFunc::SelectExtractbits(ExtractbitsNode &node, Operand &srcOpnd) {
+Operand *AArch64CGFunc::SelectExtractbits(ExtractbitsNode &node, Operand &srcOpnd, const BaseNode &parent) {
   PrimType dtype = node.GetPrimType();
-  RegOperand &resOpnd = CreateRegisterOperandOfType(dtype);
+  RegOperand &resOpnd = GetOrCreateResOperand(parent, dtype);
   bool isSigned = (node.GetOpCode() == OP_sext) ? true : (node.GetOpCode() == OP_zext) ? false : IsSignedInteger(dtype);
   uint8 bitOffset = node.GetBitsOffset();
   uint8 bitSize = node.GetBitsSize();
@@ -4601,8 +4617,7 @@ void AArch64CGFunc::SelectCvtInt2Int(const BaseNode *parent, Operand *&resOpnd, 
       /* same size, so resOpnd can be set */
       if ((mirModule.IsJavaModule()) || (IsSignedInteger(fromType) == IsSignedInteger(toType)) ||
           (GetPrimTypeSize(toType) >= k4BitSize)) {
-        AArch64RegOperand *reg = static_cast<AArch64RegOperand*>(resOpnd);
-        reg->SetRegisterNumber(static_cast<AArch64RegOperand*>(opnd0)->GetRegisterNumber());
+        resOpnd = opnd0;
       } else if (IsUnsignedInteger(toType)) {
         MOperator mop;
         switch (toType) {
@@ -4643,7 +4658,7 @@ Operand *AArch64CGFunc::SelectCvt(const BaseNode &parent, TypeCvtNode &node, Ope
   if (fromType == toType) {
     return &opnd0;  /* noop */
   }
-  Operand *resOpnd = &static_cast<Operand&>(CreateRegisterOperandOfType(toType));
+  Operand *resOpnd = &GetOrCreateResOperand(parent, toType);
   if (IsPrimitiveFloat(toType) && IsPrimitiveInteger(fromType)) {
     SelectCvtInt2Float(*resOpnd, opnd0, toType, fromType);
   } else if (IsPrimitiveFloat(fromType) && IsPrimitiveInteger(toType)) {

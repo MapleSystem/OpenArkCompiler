@@ -76,6 +76,8 @@ class AArch64CGFunc : public CGFunc {
     return kRFLAG;
   }
 
+  RegOperand &GetOrCreateResOperand(const BaseNode &parent, PrimType primType);
+
   void IntrinsifyGetAndAddInt(AArch64ListOperand &srcOpnds, PrimType pty);
   void IntrinsifyGetAndSetInt(AArch64ListOperand &srcOpnds, PrimType pty);
   void IntrinsifyCompareAndSwapInt(AArch64ListOperand &srcOpnds, PrimType pty);
@@ -145,7 +147,7 @@ class AArch64CGFunc : public CGFunc {
   void SelectMadd(Operand &resOpnd, Operand &oM0, Operand &oM1, Operand &o1, PrimType primeType) override;
   Operand *SelectMadd(BinaryNode &node, Operand &oM0, Operand &oM1, Operand &o1) override;
   Operand *SelectShift(BinaryNode &node, Operand &o0, Operand &o1) override;
-  Operand *SelectSub(BinaryNode &node, Operand &o0, Operand &o1) override;
+  Operand *SelectSub(BinaryNode &node, Operand &o0, Operand &o1, const BaseNode &parent) override;
   void SelectSub(Operand &resOpnd, Operand &o0, Operand &o1, PrimType primType) override;
   Operand *SelectBand(BinaryNode &node, Operand &o0, Operand &o1) override;
   void SelectBand(Operand &resOpnd, Operand &o0, Operand &o1, PrimType primType) override;
@@ -164,7 +166,7 @@ class AArch64CGFunc : public CGFunc {
   void SelectFMinFMax(Operand &resOpnd, Operand &o0, Operand &o1, bool is64Bits, bool isMin);
   void SelectCmpOp(Operand &resOpnd, Operand &o0, Operand &o1, Opcode opCode, PrimType primType);
 
-  Operand *SelectCmpOp(CompareNode &node, Operand &o0, Operand &o1) override;
+  Operand *SelectCmpOp(CompareNode &node, Operand &o0, Operand &o1, const BaseNode &parent) override;
 
   void SelectAArch64Cmp(Operand &o, Operand &i, bool isIntType, uint32 dsize);
   void SelectTargetFPCmpQuiet(Operand &o0, Operand &o1, uint32 dsize);
@@ -173,7 +175,7 @@ class AArch64CGFunc : public CGFunc {
   void SelectAArch64CSINV(Operand &res, Operand &o0, Operand &o1, CondOperand &cond, bool is64Bits);
   void SelectAArch64CSINC(Operand &res, Operand &o0, Operand &o1, CondOperand &cond, bool is64Bits);
   void SelectShift(Operand &resOpnd, Operand &o0, Operand &o1, ShiftDirection direct, PrimType primType);
-  Operand *SelectMpy(BinaryNode &node, Operand &o0, Operand &o1) override;
+  Operand *SelectMpy(BinaryNode &node, Operand &o0, Operand &o1, const BaseNode &parent) override;
   void SelectMpy(Operand &resOpnd, Operand &o0, Operand &o1, PrimType primType) override;
   /* method description contains method information which is metadata for reflection. */
   MemOperand *AdjustMemOperandIfOffsetOutOfRange(MemOperand *memOpnd, regno_t regNO, bool isDest, Insn &insn,
@@ -187,7 +189,7 @@ class AArch64CGFunc : public CGFunc {
   Operand *SelectAbsSub(Insn &lastInsn, const UnaryNode &node, Operand &newOpnd0);
   Operand *SelectAbs(UnaryNode &node, Operand &opnd0) override;
   Operand *SelectBnot(UnaryNode &node, Operand &opnd0) override;
-  Operand *SelectExtractbits(ExtractbitsNode &node, Operand &opnd0) override;
+  Operand *SelectExtractbits(ExtractbitsNode &node, Operand &opnd0, const BaseNode &parent) override;
   Operand *SelectDepositBits(DepositbitsNode &node, Operand &opnd0, Operand &opnd1) override;
   Operand *SelectLnot(UnaryNode &node, Operand &opnd0) override;
   Operand *SelectNeg(UnaryNode &node, Operand &opnd0) override;
