@@ -27,7 +27,6 @@
 #include "mplfe_ut_regx.h"
 #include "fe_utils_java.h"
 #define private public
-#include "dex_op.h"
 #undef private
 
 namespace maple {
