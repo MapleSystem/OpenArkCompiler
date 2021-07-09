@@ -347,6 +347,22 @@ PrimType GetSignedPrimType(PrimType pty) {
   return pty;
 }
 
+// return the unsigned version that has the same size
+PrimType GetUnsignedPrimType(PrimType pty) {
+  switch (pty) {
+    case PTY_i64:
+      return PTY_u64;
+    case PTY_i8:
+      return PTY_u8;
+    case PTY_i16:
+      return PTY_u16;
+    case PTY_i32:
+      return PTY_u32;
+    default: ;
+  }
+  return pty;
+}
+
 const char *GetPrimTypeName(PrimType primType) {
 #define LOAD_ALGO_PRIMARY_TYPE
   switch (primType) {

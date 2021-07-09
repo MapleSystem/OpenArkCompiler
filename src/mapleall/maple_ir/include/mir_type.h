@@ -40,6 +40,7 @@ extern bool VerifyPrimType(PrimType primType1, PrimType primType2);       // ver
 extern uint32 GetPrimTypeSize(PrimType primType);                         // answer in bytes; 0 if unknown
 extern uint32 GetPrimTypeP2Size(PrimType primType);                       // answer in bytes in power-of-two.
 extern PrimType GetSignedPrimType(PrimType pty);                          // return signed version
+extern PrimType GetUnsignedPrimType(PrimType pty);                        // return unsigned version
 extern uint32 GetPrimTypeLanes(PrimType pty);                             // lane size if vector
 extern const char *GetPrimTypeName(PrimType primType);
 extern const char *GetPrimTypeJavaName(PrimType primType);

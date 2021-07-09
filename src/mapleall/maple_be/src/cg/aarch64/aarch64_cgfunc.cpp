@@ -2947,13 +2947,6 @@ void AArch64CGFunc::SelectAdd(Operand &resOpnd, Operand &opnd0, Operand &opnd1, 
 }
 
 Operand *AArch64CGFunc::SelectMadd(BinaryNode &node, Operand &opndM0, Operand &opndM1, Operand &opnd1) {
-  Operand::OperandType opndM0Type = opndM0.GetKind();
-  Operand::OperandType opndM1Type = opndM1.GetKind();
-  if (opndM0Type == Operand::kOpdImmediate || opndM0Type == Operand::kOpdOffset ||
-      opndM1Type == Operand::kOpdImmediate || opndM1Type == Operand::kOpdOffset) {
-    return nullptr;
-  }
-
   PrimType dtype = node.GetPrimType();
   bool isSigned = IsSignedInteger(dtype);
   uint32 dsize = GetPrimTypeBitSize(dtype);
