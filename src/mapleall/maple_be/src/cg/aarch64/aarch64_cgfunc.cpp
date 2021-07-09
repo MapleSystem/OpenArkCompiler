@@ -7162,7 +7162,11 @@ MemOperand *AArch64CGFunc::CheckAndCreateExtendMemOpnd(PrimType ptype, BaseNode 
       ASSERT(constOfstNode->GetConstVal()->GetKind() == kConstInt, "expect MIRIntConst");
       MIRIntConst *intOfst = safe_cast<MIRIntConst>(constOfstNode->GetConstVal());
       CHECK_FATAL(intOfst != nullptr, "just checking");
-      int32 scale = intOfst->GetValue();
+     /* discard large offset and negative offset */
+      if (intOfst->GetValue() > INT32_MAX || intOfst->GetValue() < 0) {
+        return nullptr;
+      }
+      uint32 scale = static_cast<uint32>(intOfst->GetValue());
       AArch64OfstOperand &ofstOpnd = GetOrCreateOfstOpnd(scale, k32BitSize);
       uint32 dsize = GetPrimTypeBitSize(ptype);
       MemOperand *memOpnd = &GetOrCreateMemOpnd(AArch64MemOperand::kAddrModeBOi, GetPrimTypeBitSize(ptype),

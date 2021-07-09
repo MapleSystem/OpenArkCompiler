@@ -31,6 +31,7 @@
 #include "me_dse.h"
 #include "me_hdse.h"
 #include "me_prop.h"
+#include "copy_prop.h"
 #include "me_rename2preg.h"
 #include "me_loop_unrolling.h"
 #include "me_cfg_opt.h"
