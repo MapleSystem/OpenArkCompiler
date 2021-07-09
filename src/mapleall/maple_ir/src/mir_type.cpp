@@ -137,6 +137,9 @@ PrimType GetNonDynType(PrimType primType) {
 }
 
 bool IsNoCvtNeeded(PrimType toType, PrimType fromType) {
+  if (toType == fromType) {
+    return true;
+  }
   switch (toType) {
     case PTY_i32:
       return fromType == PTY_i16 || fromType == PTY_i8;
