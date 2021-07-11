@@ -607,7 +607,7 @@ static bool IgnoreInnerTypeCvt(PrimType typeA, PrimType typeB, PrimType typeC) {
   if (IsPrimitiveInteger(typeA)) {
     if (IsPrimitiveInteger(typeB)) {
       if (IsPrimitiveInteger(typeC)) {
-        return GetPrimTypeSize(typeB) >= GetPrimTypeSize(typeA) || GetPrimTypeSize(typeB) >= GetPrimTypeSize(typeC);
+        return (GetPrimTypeSize(typeB) >= GetPrimTypeSize(typeA) || GetPrimTypeSize(typeB) >= GetPrimTypeSize(typeC));
       } else if (IsPrimitiveFloat(typeC)) {
         return GetPrimTypeSize(typeB) >= GetPrimTypeSize(typeA) && IsSignedInteger(typeB) == IsSignedInteger(typeA);
       }
@@ -953,7 +953,6 @@ MeExpr *IRMap::SimplifyOpMeExpr(OpMeExpr *opmeexpr) {
   Opcode opop = opmeexpr->GetOp();
   switch (opop) {
     case OP_cvt: {
-      // return nullptr;
       OpMeExpr *cvtmeexpr = static_cast<OpMeExpr *>(opmeexpr);
       MeExpr *opnd0 = cvtmeexpr->GetOpnd(0);
       if (opnd0->GetMeOp() == kMeOpConst) {
@@ -980,12 +979,14 @@ MeExpr *IRMap::SimplifyOpMeExpr(OpMeExpr *opmeexpr) {
         }
         return nullptr;
       }
-
       if (opnd0->GetOp() == OP_cvt) {
         OpMeExpr *cvtopnd0 = static_cast<OpMeExpr *>(opnd0);
         // cvtopnd0 should have tha same type as cvtopnd0->GetOpnd(0) or cvtmeexpr,
         // and the type size of cvtopnd0 should be ge(>=) one of them.
         // Otherwise, deleting the cvt of cvtopnd0 may result in information loss.
+        if (maple::IsSignedInteger(cvtmeexpr->GetOpndType()) != maple::IsSignedInteger(cvtopnd0->GetOpndType())) {
+          return nullptr;
+        }
         if (maple::GetPrimTypeSize(cvtopnd0->GetPrimType()) >=
             maple::GetPrimTypeSize(cvtopnd0->GetOpnd(0)->GetPrimType())) {
           if ((maple::IsPrimitiveInteger(cvtopnd0->GetPrimType()) &&

@@ -1800,6 +1800,16 @@ BaseNode *ConstantFold::SimplifyDoubleCompare(CompareNode &compareNode) const {
             opnd = nullptr;
           }
         } while (opnd != nullptr);
+        if (opnd != nullptr && (l->GetOpCode() == OP_ne || l->GetOpCode() == OP_eq)) {
+          result = l;
+        }
+      }
+    } else if (node->GetOpCode() == OP_eq && r->GetOpCode() == OP_constval) {
+      ConstvalNode *constNode = static_cast<ConstvalNode*>(r);
+      if (constNode->GetConstVal()->GetKind() == kConstInt && constNode->GetConstVal()->IsZero() &&
+          (l->GetOpCode() == OP_ne || l->GetOpCode() == OP_eq)) {
+        result = l;
+        result->SetOpCode(l->GetOpCode() == OP_ne ? OP_eq : OP_ne);
       }
     }
   } else if (node->GetOpCode() == OP_gt || node->GetOpCode() == OP_lt) {
