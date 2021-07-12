@@ -18,11 +18,12 @@
 namespace maple {
 ASTInput::ASTInput(MIRModule &moduleIn, MapleAllocator &allocatorIn)
     : module(moduleIn), allocator(allocatorIn), astParserMap(allocatorIn.Adapter()),
-      astStructs(allocatorIn.Adapter()), astFuncs(allocatorIn.Adapter()), astVars(allocatorIn.Adapter()) {}
+      astStructs(allocatorIn.Adapter()), astFuncs(allocatorIn.Adapter()), astVars(allocatorIn.Adapter()),
+      astFileScopeAsms(allocatorIn.Adapter()) {}
 
 bool ASTInput::ReadASTFile(MapleAllocator &allocatorIn, uint32 index, const std::string &fileName) {
-  ASTParser *astParser =
-      allocator.GetMemPool()->New<ASTParser>(allocator, index, fileName, astStructs, astFuncs, astVars);
+  ASTParser *astParser = allocator.GetMemPool()->New<ASTParser>(allocator, index, fileName,
+                                                                astStructs, astFuncs, astVars, astFileScopeAsms);
   astParser->SetAstIn(this);
   TRY_DO(astParser->OpenFile());
   TRY_DO(astParser->Verify());
@@ -32,6 +33,7 @@ bool ASTInput::ReadASTFile(MapleAllocator &allocatorIn, uint32 index, const std:
   TRY_DO(astParser->RetrieveFuncs(allocatorIn));
   TRY_DO(astParser->RetrieveStructs(allocatorIn));
   TRY_DO(astParser->RetrieveGlobalVars(allocatorIn));
+  TRY_DO(astParser->RetrieveFileScopeAsms(allocatorIn));
   astParserMap.emplace(fileName, astParser);
   return true;
 }

@@ -25,11 +25,13 @@ class ASTInput;
 class ASTParser {
  public:
   ASTParser(MapleAllocator &allocatorIn, uint32 fileIdxIn, const std::string &fileNameIn,
-            MapleList<ASTStruct*> &astStructsIn, MapleList<ASTFunc*> &astFuncsIn, MapleList<ASTVar*> &astVarsIn)
+            MapleList<ASTStruct*> &astStructsIn, MapleList<ASTFunc*> &astFuncsIn, MapleList<ASTVar*> &astVarsIn,
+            MapleList<ASTFileScopeAsm*> &astFileScopeAsmsIn)
       : fileIdx(fileIdxIn), fileName(fileNameIn), globalVarDecles(allocatorIn.Adapter()),
         funcDecles(allocatorIn.Adapter()), recordDecles(allocatorIn.Adapter()),
         globalEnumDecles(allocatorIn.Adapter()), globalTypeDefDecles(allocatorIn.Adapter()),
-        astStructs(astStructsIn), astFuncs(astFuncsIn), astVars(astVarsIn) {}
+        globalFileScopeAsm(allocatorIn.Adapter()), astStructs(astStructsIn), astFuncs(astFuncsIn),
+        astVars(astVarsIn), astFileScopeAsms(astFileScopeAsmsIn) {}
   virtual ~ASTParser() = default;
   bool OpenFile();
   bool Verify();
@@ -38,6 +40,7 @@ class ASTParser {
   bool RetrieveStructs(MapleAllocator &allocator);
   bool RetrieveFuncs(MapleAllocator &allocator);
   bool RetrieveGlobalVars(MapleAllocator &allocator);
+  bool RetrieveFileScopeAsms(MapleAllocator &allocator);
 
   bool ProcessGlobalTypeDef(MapleAllocator &allocator);
 
@@ -148,6 +151,7 @@ class ASTParser {
   ASTDecl *PROCESS_DECL(Enum);
   ASTDecl *PROCESS_DECL(Typedef);
   ASTDecl *PROCESS_DECL(EnumConstant);
+  ASTDecl *PROCESS_DECL(FileScopeAsm);
   ASTDecl *PROCESS_DECL(Label);
   ASTDecl *PROCESS_DECL(StaticAssert);
 
@@ -200,10 +204,12 @@ ASTExpr *ParseBuiltinFunc(MapleAllocator &allocator, const clang::CallExpr &expr
   MapleList<clang::Decl*> recordDecles;
   MapleList<clang::Decl*> globalEnumDecles;
   MapleList<clang::Decl*> globalTypeDefDecles;
+  MapleList<clang::Decl*> globalFileScopeAsm;
 
   MapleList<ASTStruct*> &astStructs;
   MapleList<ASTFunc*> &astFuncs;
   MapleList<ASTVar*> &astVars;
+  MapleList<ASTFileScopeAsm*> &astFileScopeAsms;
 
   ASTInput *astIn = nullptr;
 };

@@ -136,6 +136,7 @@ class MPLFECompilerComponent {
   std::list<FEInputStructHelper*> structHelpers;
   std::list<FEInputMethodHelper*> globalFuncHelpers;
   std::list<FEInputGlobalVarHelper*> globalVarHelpers;
+  std::list<FEInputFileScopeAsmHelper*> globalFileScopeAsmHelpers;
   std::unique_ptr<FEFunctionPhaseResult> phaseResultTotal;
   std::set<FEFunction*> compileFailedFEFunctions;
 };

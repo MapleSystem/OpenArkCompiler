@@ -96,6 +96,10 @@ bool MPLFECompilerComponent::ProcessDeclImpl() {
     ASSERT_NOT_NULL(helper);
     success = helper->ProcessDecl() ? success : false;
   }
+  for (FEInputFileScopeAsmHelper *helper : globalFileScopeAsmHelpers) {
+    ASSERT_NOT_NULL(helper);
+    success = helper->ProcessDecl() ? success : false;
+  }
   timer.StopAndDumpTimeMS("MPLFECompilerComponent::ProcessDecl()");
   return success;
 }

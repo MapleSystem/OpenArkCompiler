@@ -175,6 +175,12 @@ bool ASTGlobalVar2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
   return true;
 }
 
+bool ASTFileScopeAsm2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
+  AsmNode *asmNode = allocator.GetMemPool()->New<AsmNode>(&allocator);
+  asmNode->asmString = astAsm.GetAsmStr();
+  return true;
+}
+
 // ---------- ASTFunc2FEHelper ----------
 bool ASTFunc2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
   MPLFE_PARALLEL_FORBIDDEN();

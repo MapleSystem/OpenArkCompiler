@@ -33,6 +33,7 @@ enum DeclKind {
   kASTVar,
   kASTEnumConstant,
   kASTEnumDecl,
+  kASTFileScopeAsm,
 };
 
 class ASTDecl {
@@ -225,6 +226,26 @@ class ASTVar : public ASTDecl {
   void GenerateInitStmt4StringLiteral(ASTExpr *initASTExpr, UniqueFEIRVar feirVar, UniqueFEIRExpr initFeirExpr,
                                       std::list<UniqueFEIRStmt> &stmts);
   ASTExpr *initExpr = nullptr;
+};
+
+class ASTFileScopeAsm : public ASTDecl {
+ public:
+  ASTFileScopeAsm(const std::string &srcFile)
+      : ASTDecl(srcFile, "", std::vector<MIRType*>{}) {
+    declKind = kASTFileScopeAsm;
+  }
+  ~ASTFileScopeAsm() = default;
+
+  void SetAsmStr(const std::string &str) {
+    asmStr = str;
+  }
+
+  const std::string &GetAsmStr() const {
+    return asmStr;
+  }
+
+ private:
+  std::string asmStr;
 };
 
 class ASTEnumConstant : public ASTDecl {

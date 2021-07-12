@@ -1219,6 +1219,10 @@ void MInline::InlineCallsBlock(MIRFunction &func, BlockNode &enclosingBlk, BaseN
   }
 }
 
+static inline bool IsExternInlineFunc(const MIRFunction& func) {
+    return func.GetAttr(FUNCATTR_extern) && func.GetAttr(FUNCATTR_inline);
+}
+
 InlineResult MInline::AnalyzeCallsite(const MIRFunction &caller, MIRFunction &callee, const CallNode &callStmt) {
   GStrIdx callerStrIdx = caller.GetNameStrIdx();
   GStrIdx calleeStrIdx = callee.GetNameStrIdx();
@@ -1231,6 +1235,10 @@ InlineResult MInline::AnalyzeCallsite(const MIRFunction &caller, MIRFunction &ca
     if (callerList->find(callerStrIdx) != callerList->end()) {
       return InlineResult(false, "LIST_NOINLINE_CALLSITE");
     }
+  }
+  // For extern inline function, we check nothing
+  if (IsExternInlineFunc(callee)) {
+    return InlineResult(true, "EXTERN_INLINE");
   }
   // For hardCoded function, we check nothing.
   if (hardCodedCallee.find(calleeStrIdx) != hardCodedCallee.end()) {
@@ -1465,6 +1473,11 @@ void MInline::CleanupInline() {
           MarkUsedSymbols(func->GetBody());
         }
         func->SetBody(nullptr);
+      }
+      if (func != nullptr && IsExternInlineFunc(*func)) {
+        func->SetBody(nullptr);
+        func->ReleaseCodeMemory();
+        func->ReleaseMemory();
       }
     }
   }

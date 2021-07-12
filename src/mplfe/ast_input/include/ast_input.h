@@ -55,6 +55,14 @@ class ASTInput {
     astVars.emplace_back(astVar);
   }
 
+  const MapleList<ASTFileScopeAsm*> &GetASTFileScopeAsms() const {
+    return astFileScopeAsms;
+  }
+
+  void AddASTFileScopeAsm(ASTFileScopeAsm *fileScopeAsm) {
+    astFileScopeAsms.emplace_back(fileScopeAsm);
+  }
+
  private:
   MIRModule &module;
   MapleAllocator &allocator;
@@ -63,6 +71,7 @@ class ASTInput {
   MapleList<ASTStruct*> astStructs;
   MapleList<ASTFunc*> astFuncs;
   MapleList<ASTVar*> astVars;
+  MapleList<ASTFileScopeAsm*> astFileScopeAsms;
 };
 }
 #endif  // MPLFE_AST_INPUT_INCLUDE_AST_INPUT_H

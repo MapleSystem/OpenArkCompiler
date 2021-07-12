@@ -61,6 +61,12 @@ bool ASTCompilerComponent::ParseInputImpl() {
     FEInputGlobalVarHelper *varHelper = allocator.GetMemPool()->New<ASTGlobalVar2FEHelper>(allocator, *astVar);
     globalVarHelpers.emplace_back(varHelper);
   }
+
+  for (auto &astFileScopeAsm : astInput.GetASTFileScopeAsms()) {
+    FEInputFileScopeAsmHelper *asmHelper = allocator.GetMemPool()->New<ASTFileScopeAsm2FEHelper>(
+        allocator, *astFileScopeAsm);
+    globalFileScopeAsmHelpers.emplace_back(asmHelper);
+  }
   timer.StopAndDumpTimeMS("ASTCompilerComponent::ParseInput()");
   return success;
 }

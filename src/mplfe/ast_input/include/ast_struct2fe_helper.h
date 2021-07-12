@@ -55,6 +55,18 @@ class ASTGlobalVar2FEHelper : public FEInputGlobalVarHelper {
   const ASTVar &astVar;
 };
 
+class ASTFileScopeAsm2FEHelper : public FEInputFileScopeAsmHelper {
+ public:
+  ASTFileScopeAsm2FEHelper(MapleAllocator &allocatorIn, const ASTFileScopeAsm &astAsmIn)
+      : FEInputFileScopeAsmHelper(allocatorIn),
+        astAsm(astAsmIn) {}
+  ~ASTFileScopeAsm2FEHelper() = default;
+
+ protected:
+  bool ProcessDeclImpl(MapleAllocator &allocator) override;
+  const ASTFileScopeAsm &astAsm;
+};
+
 class ASTStructField2FEHelper : public FEInputFieldHelper {
  public:
   ASTStructField2FEHelper(MapleAllocator &allocator, const ASTField &fieldIn)
