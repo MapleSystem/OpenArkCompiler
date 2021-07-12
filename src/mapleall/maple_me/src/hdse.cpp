@@ -378,8 +378,8 @@ void HDSE::PropagateUseLive(MeExpr &meExpr) {
 
 bool HDSE::ExprHasSideEffect(const MeExpr &meExpr) const {
   Opcode op = meExpr.GetOp();
-  // in c language, OP_array has no side-effect
-  if (mirModule.IsCModule() && op == OP_array) {
+  // in c language, OP_array and OP_div has no side-effect
+  if (mirModule.IsCModule() && (op == OP_array || op == OP_div)) {
     return false;
   }
   if (kOpcodeInfo.HasSideEffect(op)) {
