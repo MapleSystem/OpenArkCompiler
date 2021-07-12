@@ -29,14 +29,7 @@ void MRT_BootstrapClinit(void) {
 #define MRT_CLASSINFO(className) __MRT_MAGIC_PASTE(CLASSINFO_PREFIX, className)
 #ifdef __ANDROID__
 
-#ifndef OPS_ANDROID
 #include "white_list.def"
-#else // OPS_ANDROID
-  CLASS_PREFIX(Ljava_2Flang_2FClassLoader_24SystemClassLoader_3B)
-  (void)MRT_TryInitClass(*reinterpret_cast<MClass*>(&MRT_CLASSINFO(Ljava_2Flang_2FString_3B)));
-  (void)MRT_TryInitClass(*reinterpret_cast<MClass*>(&MRT_CLASSINFO(Ljava_2Flang_2FByte_24ByteCache_3B)));
-  (void)MRT_TryInitClass(*reinterpret_cast<MClass*>(&MRT_CLASSINFO(Ljava_2Flang_2FByte_3B)));
-#endif // OPS_ANDROID
 
 #else
   (void)MRT_TryInitClass(*reinterpret_cast<MClass*>(&MRT_CLASSINFO(Ljava_2Flang_2FString_3B)));

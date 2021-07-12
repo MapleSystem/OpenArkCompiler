@@ -197,6 +197,66 @@ UniqueFEIRExpr ASTCallExpr::EmitBuiltinClzl(std::list<UniqueFEIRStmt> &stmts) co
   return CreateIntrinsicopForC(stmts, INTRN_C_clz64);
 }
 
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinPopcount(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C_popcount32);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinPopcountl(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C_popcount64);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinPopcountll(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C_popcount64);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinParity(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C_parity32);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinParityl(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C_parity64);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinParityll(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C_parity64);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinClrsb(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C_clrsb32);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinClrsbl(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C_clrsb64);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinClrsbll(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C_clrsb64);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinFfs(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C_ffs);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinFfsl(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C_ffs);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinFfsll(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C_ffs);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinIsAligned(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C_isaligned);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinAlignUp(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C_alignup);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinAlignDown(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C_aligndown);
+}
+
 UniqueFEIRExpr ASTCallExpr::EmitBuiltinAlloca(std::list<UniqueFEIRStmt> &stmts) const {
   auto arg = args[0]->Emit2FEExpr(stmts);
   auto alloca = std::make_unique<FEIRExprUnary>(OP_alloca, mirType, std::move(arg));
@@ -292,10 +352,6 @@ UniqueFEIRExpr ASTCallExpr::EmitBuiltinExp(std::list<UniqueFEIRStmt> &stmts) con
 
 UniqueFEIRExpr ASTCallExpr::EmitBuiltinExpf(std::list<UniqueFEIRStmt> &stmts) const {
   return CreateIntrinsicopForC(stmts, INTRN_C_expf);
-}
-
-UniqueFEIRExpr ASTCallExpr::EmitBuiltinFfs(std::list<UniqueFEIRStmt> &stmts) const {
-  return CreateIntrinsicopForC(stmts, INTRN_C_ffs);
 }
 
 UniqueFEIRExpr ASTCallExpr::EmitBuiltinFmax(std::list<UniqueFEIRStmt> &stmts) const {

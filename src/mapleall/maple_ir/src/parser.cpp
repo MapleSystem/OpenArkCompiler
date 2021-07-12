@@ -1674,6 +1674,22 @@ bool MIRParser::ParseDeclareReg(MIRSymbol &symbol, const MIRFunction &func) {
   return true;
 }
 
+bool MIRParser::ParseDeclareVarInitValue(MIRSymbol &symbol) {
+  TokenKind tk = lexer.GetTokenKind();
+  // take a look if there are any initialized values
+  if (tk == TK_eqsign) {
+    // parse initialized values
+    MIRConst *mirConst = nullptr;
+    lexer.NextToken();
+    if (!ParseInitValue(mirConst, symbol.GetTyIdx(), mod.IsCModule())) {
+      Error("wrong initialization value at ");
+      return false;
+    }
+    symbol.SetKonst(mirConst);
+  }
+  return true;
+}
+
 bool MIRParser::ParseDeclareVar(MIRSymbol &symbol) {
   TokenKind tk = lexer.GetTokenKind();
   // i.e, var %i i32
@@ -1740,18 +1756,6 @@ bool MIRParser::ParseDeclareVar(MIRSymbol &symbol) {
     if (isLocal) {
       mod.CurFunction()->SetAttr(FUNCATTR_generic);
     }
-  }
-  tk = lexer.GetTokenKind();
-  // take a look if there are any initialized values
-  if (tk == TK_eqsign) {
-    // parse initialized values
-    MIRConst *mirConst = nullptr;
-    lexer.NextToken();
-    if (!ParseInitValue(mirConst, tyIdx, mod.IsCModule())) {
-      Error("wrong initialization value at ");
-      return false;
-    }
-    symbol.SetKonst(mirConst);
   }
   return true;
 }
@@ -2480,6 +2484,9 @@ bool MIRParser::ParseMIRForVar() {
       prevSt->SetTyIdx(st.GetTyIdx());
       SetSrcPos(prevSt->GetSrcPosition(), lexer.GetLineNum());
     }
+    if (!ParseDeclareVarInitValue(*prevSt)) {
+      return false;
+    }
   } else {  // seeing the first time
     maple::MIRBuilder mirBuilder(&mod);
     MIRSymbol *newst = mirBuilder.CreateSymbol(st.GetTyIdx(), st.GetNameStrIdx(), st.GetSKind(), st.GetStorageClass(),
@@ -2492,6 +2499,9 @@ bool MIRParser::ParseMIRForVar() {
     newst->SetNameStrIdx(st.GetNameStrIdx());
     newst->SetValue(st.GetValue());
     SetSrcPos(newst->GetSrcPosition(), lexer.GetLineNum());
+    if (!ParseDeclareVarInitValue(*newst)) {
+      return false;
+    }
   }
   return true;
 }
@@ -2908,6 +2918,9 @@ bool MIRParser::ParsePrototypeRemaining(MIRFunction &func, std::vector<TyIdx> &v
         return false;
       }
       (void)func.GetSymTab()->AddToStringSymbolMap(*symbol);
+      if (!ParseDeclareVarInitValue(*symbol)) {
+        return false;
+      }
     }
     func.AddArgument(symbol);
     vecTyIdx.push_back(symbol->GetTyIdx());

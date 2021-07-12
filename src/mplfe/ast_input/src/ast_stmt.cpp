@@ -96,6 +96,7 @@ std::list<UniqueFEIRStmt> ASTIfStmt::Emit2FEStmtImpl() const {
   if (elseStmt != nullptr) {
     elseStmts = elseStmt->Emit2FEStmt();
   }
+  condExpr->SetShortCircuitParent();
   UniqueFEIRExpr condFEExpr = condExpr->Emit2FEExpr(stmts);
   UseCompareAsCondFEExpr(condFEExpr);
   UniqueFEIRStmt ifStmt;
@@ -123,6 +124,7 @@ std::list<UniqueFEIRStmt> ASTForStmt::Emit2FEStmtImpl() const {
   }
   UniqueFEIRExpr condFEExpr;
   if (condExpr != nullptr) {
+    condExpr->SetShortCircuitParent();
     (void)condExpr->Emit2FEExpr(stmts);
   } else {
     condFEExpr = std::make_unique<FEIRExprConst>(static_cast<int64>(1), PTY_i32);
@@ -164,6 +166,7 @@ std::list<UniqueFEIRStmt> ASTWhileStmt::Emit2FEStmtImpl() const {
   std::list<UniqueFEIRStmt> bodyFEStmts = bodyStmt->Emit2FEStmt();
   std::list<UniqueFEIRStmt> condStmts;
   std::list<UniqueFEIRStmt> condPreStmts;
+  condExpr->SetShortCircuitParent();
   UniqueFEIRExpr condFEExpr = condExpr->Emit2FEExpr(condStmts);
   (void)condExpr->Emit2FEExpr(condPreStmts);
   if (AstLoopUtil::Instance().IsCurrentContinueLabelUsed()) {
@@ -199,6 +202,7 @@ std::list<UniqueFEIRStmt> ASTDoStmt::Emit2FEStmtImpl() const {
     bodyFEStmts.emplace_back(std::move(labelBodyEndStmt));
   }
   std::list<UniqueFEIRStmt> condStmts;
+  condExpr->SetShortCircuitParent();
   UniqueFEIRExpr condFEExpr = condExpr->Emit2FEExpr(condStmts);
   bodyFEStmts.splice(bodyFEStmts.end(), condStmts);
   UseCompareAsCondFEExpr(condFEExpr);

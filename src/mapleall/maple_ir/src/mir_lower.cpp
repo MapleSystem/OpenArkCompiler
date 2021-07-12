@@ -506,7 +506,7 @@ BaseNode *MIRLower::LowerCArray(ArrayNode *array) {
         mpyNode->SetOpnd(mulSize, 0);
         if (resNode->GetPrimType() != array->GetPrimType()) {
           resNode = mirModule.CurFuncCodeMemPool()->New<TypeCvtNode>(OP_cvt, array->GetPrimType(),
-                                                                     GetSignedPrimType(resNode->GetPrimType()), resNode);
+              GetSignedPrimType(GetRegPrimType(resNode->GetPrimType())), resNode);
         }
         mpyNode->SetOpnd(resNode, 1);
       }
@@ -519,7 +519,7 @@ BaseNode *MIRLower::LowerCArray(ArrayNode *array) {
       newResNode->SetOpnd(mpyNode, 0);
       if (prevNode->GetPrimType() != array->GetPrimType()) {
         prevNode = mirModule.CurFuncCodeMemPool()->New<TypeCvtNode>(OP_cvt, array->GetPrimType(),
-                                                                    GetSignedPrimType(prevNode->GetPrimType()), prevNode);
+            GetSignedPrimType(GetRegPrimType(prevNode->GetPrimType())), prevNode);
       }
       newResNode->SetOpnd(prevNode, 1);
       prevNode = newResNode;
@@ -544,7 +544,7 @@ BaseNode *MIRLower::LowerCArray(ArrayNode *array) {
   rMul->SetPrimType(array->GetPrimType());
   if (resNode->GetPrimType() != array->GetPrimType()) {
     resNode = mirModule.CurFuncCodeMemPool()->New<TypeCvtNode>(OP_cvt, array->GetPrimType(),
-                                                               GetSignedPrimType(resNode->GetPrimType()), resNode);
+        GetSignedPrimType(GetRegPrimType(resNode->GetPrimType())), resNode);
   }
   rMul->SetOpnd(resNode, 0);
   rMul->SetOpnd(eSize, 1);

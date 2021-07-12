@@ -104,6 +104,7 @@ void SSAPre::GenerateSaveInsertedOcc(MeInsertedOcc &insertedOcc) {
     insertedOcc.GetBB()->InsertMeStmtLastBr(newMeStmt);
     insertedOcc.SetSavedExpr(*regOrVar);
   }
+  EnterCandsForSSAUpdate(regOrVar->GetOstIdx(), *insertedOcc.GetBB());
 }
 
 void SSAPre::GenerateSavePhiOcc(MePhiOcc &phiOcc) {
@@ -286,7 +287,7 @@ void SSAPre::CodeMotion() {
         auto *phiOcc = static_cast<MePhiOcc*>(occ);
         if (phiOcc->IsRemoved() || !phiOcc->IsWillBeAvail()) {
           break;
-        };
+        }
         GenerateSavePhiOcc(*phiOcc);
         break;
       }
@@ -1406,6 +1407,10 @@ void SSAPre::CreateRealOcc(MeStmt &meStmt, int seqStmt, MeExpr &meExpr, bool ins
       wkCand->AddRealOccSorted(*dom, *newOcc, GetPUIdx());
     } else {
       wkCand->AddRealOccAsLast(*newOcc, GetPUIdx());
+    }
+    if (strengthReduction && !wkCand->isSRCand && meExpr.StrengthReducible() &&
+        meStmt.GetBB()->GetAttributes(kBBAttrIsInLoop)) {
+      wkCand->isSRCand = true;
     }
     return;
   }

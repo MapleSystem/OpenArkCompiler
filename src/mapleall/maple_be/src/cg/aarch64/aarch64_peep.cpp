@@ -1831,6 +1831,9 @@ void OneHoleBranchesPreAArch64::Run(BB &bb, Insn &insn) {
     if (&(prevInsn->GetOperand(kInsnFirstOpnd)) != &(insn.GetOperand(kInsnFirstOpnd))) {
       return;
     }
+    if (IfOperandIsLiveAfterInsn(static_cast<RegOperand&>(insn.GetOperand(kInsnFirstOpnd)), insn)) {
+      return;
+    }
     insn.SetOperand(kInsnFirstOpnd, prevInsn->GetOperand(kInsnSecondOpnd));
     bb.RemoveInsn(*prevInsn);
   }

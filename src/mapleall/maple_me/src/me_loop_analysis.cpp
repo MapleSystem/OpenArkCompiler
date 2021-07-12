@@ -51,7 +51,7 @@ void IdentifyLoops::SetExitBB(LoopDesc& loop) {
   }
 }
 
-void IdentifyLoops::InsertExitBB(LoopDesc &loop) {
+bool IdentifyLoops::InsertExitBB(LoopDesc &loop) {
   std::set<BB*> traveledBBs;
   std::queue<BB*> inLoopBBs;
   inLoopBBs.push(loop.head);
@@ -84,12 +84,12 @@ void IdentifyLoops::InsertExitBB(LoopDesc &loop) {
     for (auto it : *succBB) {
       for (auto pred : it->GetPred()) {
         if (!loop.Has(*pred)) {
-          loop.inloopBB2exitBBs.clear();
-          return;
+          return false;
         }
       }
     }
   }
+  return true;
 }
 
 // process each BB in preorder traversal of dominator tree
@@ -249,14 +249,16 @@ AnalysisResult *MeDoMeLoop::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResu
   identLoops->SetTryBB();
   identLoops->SetIGotoBB();
   for (auto loop : identLoops->GetMeLoops()) {
+    if (!identLoops->InsertExitBB(*loop)) {
+      continue;
+    }
     if (loop->HasTryBB() || loop->HasIGotoBB()) {
       continue;
     }
     if (!identLoops->ProcessPreheaderAndLatch(*loop)) {
       continue;
     }
-    identLoops->InsertExitBB(*loop);
-    loop->SetIsCanonicalLoop(loop->inloopBB2exitBBs.size() == 0 ? false : true);
+    loop->SetIsCanonicalLoop(true);
   }
   if (DEBUGFUNC(func)) {
     identLoops->Dump();

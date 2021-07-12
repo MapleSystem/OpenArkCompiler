@@ -504,7 +504,7 @@ void MeDoLoopCanon::ExecuteLoopNormalization(MeFunction &func,  MeFuncResultMgr 
     }
 
     if (!loop->IsCanonicalLoop()) {
-      CHECK_FATAL(loop->inloopBB2exitBBs.size() == 0, "must be zero");
+      loop->inloopBB2exitBBs.clear();
       InsertExitBB(func, *loop);
       loop->SetIsCanonicalLoop(true);
       cfgchanged = true;

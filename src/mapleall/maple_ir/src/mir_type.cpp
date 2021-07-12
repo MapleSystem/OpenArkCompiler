@@ -137,6 +137,9 @@ PrimType GetNonDynType(PrimType primType) {
 }
 
 bool IsNoCvtNeeded(PrimType toType, PrimType fromType) {
+  if (toType == fromType) {
+    return true;
+  }
   switch (toType) {
     case PTY_i32:
       return fromType == PTY_i16 || fromType == PTY_i8;
@@ -339,6 +342,22 @@ PrimType GetSignedPrimType(PrimType pty) {
     case PTY_a32:
     case PTY_u32:
       return PTY_i32;
+    default: ;
+  }
+  return pty;
+}
+
+// return the unsigned version that has the same size
+PrimType GetUnsignedPrimType(PrimType pty) {
+  switch (pty) {
+    case PTY_i64:
+      return PTY_u64;
+    case PTY_i8:
+      return PTY_u8;
+    case PTY_i16:
+      return PTY_u16;
+    case PTY_i32:
+      return PTY_u32;
     default: ;
   }
   return pty;

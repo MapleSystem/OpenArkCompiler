@@ -1941,7 +1941,11 @@ bool BinaryNode::Verify() const {
     this->Dump();
   }
   bool comp0Verf = CompatibleTypeVerify(*GetBOpnd(0), *this);
-  bool comp1Verf = CompatibleTypeVerify(*GetBOpnd(1), *this);
+  bool comp1Verf = true;
+  // Shift operations do not require same-type operands
+  if (GetOpCode() < OP_ashr || GetOpCode() > OP_shl) {
+    comp1Verf = CompatibleTypeVerify(*GetBOpnd(1), *this);
+  }
   bool signVerf = true;
   bool typeVerf = resTypeVerf && comp0Verf && comp1Verf;
   if (typeVerf) {

@@ -386,8 +386,16 @@ class AstShortCircuitUtil {
     return BinaryOperatorLabels.empty();
   }
 
+  void SetIsShortCircuit(bool shortCircuit) {
+    isShortCircuit = shortCircuit;
+  }
+
+  bool GetIsShortCircuit() const {
+    return isShortCircuit;
+  }
  private:
   AstShortCircuitUtil() = default;
+  bool isShortCircuit = false;
   std::stack<std::string> ParenLabels = std::stack<std::string>();
   std::stack<std::string> BinaryOperatorLabels = std::stack<std::string>();
 };

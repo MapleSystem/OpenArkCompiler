@@ -315,6 +315,7 @@ class ScalarMeExpr : public MeExpr {
     return ost->GetPregIdx() >= 0;
   }
 
+  MeStmt *GetDefByMeStmt() const;
   BB *GetDefByBBMeStmt(const Dominance&, MeStmtPtr&) const;
   void Dump(const IRMap*, int32 indent = 0) const override;
   BaseNode &EmitExpr(SSATab&) override;
@@ -766,6 +767,12 @@ class OpMeExpr : public MeExpr {
  public:
   OpMeExpr(int32 exprID, Opcode o, PrimType t, size_t n)
       : MeExpr(exprID, kMeOpOp, o, t, n), tyIdx(TyIdx(0)) {}
+
+  OpMeExpr(int32 exprID, Opcode o, PrimType t, MeExpr *opnd0, MeExpr *opnd1)
+      : MeExpr(exprID, kMeOpOp, o, t, 2), tyIdx(TyIdx(0)) {
+    opnds[0] = opnd0;
+    opnds[1] = opnd1;
+  }
 
   OpMeExpr(const OpMeExpr &opMeExpr, int32 exprID)
       : MeExpr(exprID, kMeOpOp, opMeExpr.GetOp(), opMeExpr.GetPrimType(), opMeExpr.GetNumOpnds()),

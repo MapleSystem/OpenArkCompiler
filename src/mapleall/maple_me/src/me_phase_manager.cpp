@@ -26,10 +26,12 @@
 #include "me_profile_use.h"
 #include "me_loop_canon.h"
 #include "me_analyzector.h"
+#include "me_value_range_prop.h"
 #include "me_abco.h"
 #include "me_dse.h"
 #include "me_hdse.h"
 #include "me_prop.h"
+#include "copy_prop.h"
 #include "me_rename2preg.h"
 #include "me_loop_unrolling.h"
 #include "me_cfg_opt.h"
@@ -72,6 +74,7 @@
 #include "lfo_inject_iv.h"
 #include "lfo_pre_emit.h"
 #include "lfo_iv_canon.h"
+#include "cfg_opt.h"
 
 #define JAVALANG (mirModule.IsJavaModule())
 

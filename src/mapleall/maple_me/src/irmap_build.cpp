@@ -402,11 +402,9 @@ MeExpr *IRMapBuild::BuildExpr(BaseNode &mirNode, bool atParm, bool noProp) {
     return retmeexpr;
   }
 
-  if (op == OP_cvt) {
-    auto *simplifiedMeExpr = irMap->SimplifyOpMeExpr(static_cast<OpMeExpr*>(meExpr));
-    if (simplifiedMeExpr != nullptr) {
-      return simplifiedMeExpr;
-    }
+  auto *simplifiedMeExpr = irMap->SimplifyOpMeExpr(static_cast<OpMeExpr*>(meExpr));
+  if (simplifiedMeExpr != nullptr) {
+    return simplifiedMeExpr;
   }
 
   if (op == OP_mul) {

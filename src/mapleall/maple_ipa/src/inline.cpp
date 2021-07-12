@@ -34,6 +34,18 @@ constexpr uint32 kHalfInsn = 1;
 constexpr uint32 kOneInsn = 2;
 constexpr uint32 kDoubleInsn = 4;
 constexpr uint32 kPentupleInsn = 10;
+constexpr uint32 kBigFuncNumStmts = 1000;
+
+static int GetNumStmtsOfFunc(const MIRFunction &func) {
+  if (func.GetBody() == nullptr) {
+    return 0;
+  }
+  const auto &stmtNodes = func.GetBody()->GetStmtNodes();
+  if (stmtNodes.empty()) {
+    return 0;
+  }
+  return stmtNodes.back().GetStmtID() - stmtNodes.front().GetStmtID();
+}
 
 static bool IsFinalMethod(const MIRFunction *mirFunc) {
   if (mirFunc == nullptr) {
@@ -1164,6 +1176,10 @@ void MInline::InlineCalls(const CGNode &node) {
   if (func == nullptr || func->GetBody() == nullptr || func->IsFromMpltInline()) {
     return;
   }
+  // The caller is big enough, we don't inline any callees more
+  if (GetNumStmtsOfFunc(*func) > kBigFuncNumStmts) {
+    return;
+  }
   bool changed = false;
   int currInlineDepth = 0;
   do {
@@ -1325,6 +1341,16 @@ InlineResult MInline::AnalyzeCallee(const MIRFunction &caller, MIRFunction &call
       thresholdType = kHotAndRecursiveFuncThreshold;
     }
   }
+  // More tolerant of functions with inline attr
+  if (callee.GetAttr(FUNCATTR_inline)) {
+    threshold <<= 3;
+  }
+  // We don't always inline called_once callee to avoid super big caller
+  if (module.GetSrcLang() == kSrcLangC &&
+      callee.GetAttr(FUNCATTR_called_once) &&
+      callee.GetAttr(FUNCATTR_static)) {
+    threshold <<= 5;
+  }
   uint32 cost = 0;
   BlockNode *calleeBody = callee.GetBody();
   if (&caller == &callee && currFuncBody != nullptr) {
@@ -1356,6 +1382,8 @@ void MInline::InlineCallsBlockInternal(MIRFunction &func, BlockNode &enclosingBl
       func.Dump(false);
     }
     bool inlined = PerformInline(func, enclosingBlk, callStmt, *callee);
+    // A inlined callee is never regarded as called_once
+    callee->UnSetAttr(FUNCATTR_called_once);
     if (dumpDetail && dumpFunc == func.GetName()) {
       LogInfo::MapleLogger() << "[Dump after inline ] " << func.GetName() << '\n';
       func.Dump(false);
@@ -1415,6 +1443,10 @@ void MInline::Inline() {
   const MapleVector<SCCNode*> &topVec = cg->GetSCCTopVec();
   for (MapleVector<SCCNode*>::const_reverse_iterator it = topVec.rbegin(); it != topVec.rend(); ++it) {
     for (CGNode *node : (*it)->GetCGNodes()) {
+      // If a function is called only once by a single caller, we set the func called_once. Callee will be set first.
+      if (node->NumberOfUses() == 1 && node->NumReferences() == 1 && !node->IsAddrTaken()) {
+        node->GetMIRFunction()->SetAttr(FUNCATTR_called_once);
+      }
       InlineCalls(*node);
     }
   }

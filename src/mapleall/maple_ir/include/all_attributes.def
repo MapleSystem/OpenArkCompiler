@@ -79,5 +79,6 @@
 #endif
 #ifdef FUNC_ATTR
   ATTR(firstarg_return)
+  ATTR(called_once)
 #endif
   ATTR(oneelem_simd)
