@@ -183,6 +183,10 @@ class CGNode {
     (void)callerSet.erase(caller);
   }
 
+  void DelCallee(CallInfo *callInfo, CGNode *callee) {
+    (void)callees[callInfo]->erase(callee);
+  }
+
   bool HasCaller() const {
     return (!callerSet.empty());
   }
@@ -280,6 +284,14 @@ class CGNode {
     return icallCandidates;
   }
 
+  bool IsAddrTaken() const {
+    return addrTaken;
+  }
+
+  void SetAddrTaken() {
+    addrTaken = true;
+  }
+
  private:
   // mirFunc is generated from callStmt's puIdx from mpl instruction
   // mirFunc will be nullptr if CGNode represents a external/intrinsic call
@@ -304,6 +316,8 @@ class CGNode {
   // so it cannot be inlined and all the parent nodes which contain this node should not be inlined, either.
   bool mustNotBeInlined;
   MapleVector<MIRFunction*> vcallCands;
+
+  bool addrTaken = false; // whether this function is taken address
 };
 
 using Callsite = std::pair<CallInfo*, MapleSet<CGNode*, Comparator<CGNode>>*>;
@@ -341,6 +355,10 @@ class SCCNode {
 
   const MapleSet<SCCNode*, Comparator<SCCNode>> &GetCallerScc() const {
     return callerScc;
+  }
+
+  void RemoveCallerScc(SCCNode *const sccNode) {
+    callerScc.erase(sccNode);
   }
 
   bool HasRecursion() const;
@@ -395,6 +413,8 @@ class CallGraph : public AnalysisResult {
   }
 
   void HandleBody(MIRFunction&, BlockNode&, CGNode&, uint32);
+  void CollectAddroffuncFromStmt(StmtNode *stmt);
+  void CollectAddroffuncFromConst(MIRConst *mirConst);
   void AddCallGraphNode(MIRFunction&);
   void DumpToFile(bool dumpAll = true) const;
   void Dump() const;
@@ -445,6 +465,8 @@ class CallGraph : public AnalysisResult {
   CGNode *GetOrGenCGNode(PUIdx puIdx, bool isVcall = false, bool isIcall = false);
   CallType GetCallType(Opcode op) const;
   void FindRootNodes();
+  void RemoveFileStaticRootNodes(); // file static root nodes can be removed
+  void RemoveFileStaticSCC();       // SCC can be removed if it has no caller and all its nodes is file static
   void SCCTopologicalSort(const std::vector<SCCNode*> &sccNodes);
   void SetCompilationFunclist() const;
   void IncrNodesCount(CGNode *cgNode, BaseNode *bn);

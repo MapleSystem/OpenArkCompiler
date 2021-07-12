@@ -1444,7 +1444,7 @@ void MInline::Inline() {
   for (MapleVector<SCCNode*>::const_reverse_iterator it = topVec.rbegin(); it != topVec.rend(); ++it) {
     for (CGNode *node : (*it)->GetCGNodes()) {
       // If a function is called only once by a single caller, we set the func called_once. Callee will be set first.
-      if (node->NumberOfUses() == 1 && node->NumReferences() == 1) {
+      if (node->NumberOfUses() == 1 && node->NumReferences() == 1 && !node->IsAddrTaken()) {
         node->GetMIRFunction()->SetAttr(FUNCATTR_called_once);
       }
       InlineCalls(*node);

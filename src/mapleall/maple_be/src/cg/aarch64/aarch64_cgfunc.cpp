@@ -2590,6 +2590,7 @@ MOperator AArch64CGFunc::PickJmpInsn(Opcode brOp, Opcode cmpOp, bool isFloat, bo
 }
 
 bool AArch64CGFunc::GenerateCompareWithZeroInstruction(Opcode jmpOp, Opcode cmpOp, bool is64Bits,
+                                                       PrimType primType,
                                                        LabelOperand &targetOpnd, Operand &opnd0) {
   bool finish = true;
   MOperator mOpCode = MOP_undef;
@@ -2619,6 +2620,9 @@ bool AArch64CGFunc::GenerateCompareWithZeroInstruction(Opcode jmpOp, Opcode cmpO
      * for that purpose.
      */
     case OP_lt: {
+      if (primType == PTY_u64 || primType == PTY_u32) {
+        return false;
+      }
       ImmOperand &signBit = CreateImmOperand(is64Bits ? kHighestBitOf64Bits : kHighestBitOf32Bits, k8BitSize, false);
       if (jmpOp == OP_brtrue) {
         mOpCode = is64Bits ? MOP_xtbnz : MOP_wtbnz;
@@ -2629,6 +2633,9 @@ bool AArch64CGFunc::GenerateCompareWithZeroInstruction(Opcode jmpOp, Opcode cmpO
       break;
     }
     case OP_ge: {
+      if (primType == PTY_u64 || primType == PTY_u32) {
+        return false;
+      }
       ImmOperand &signBit = CreateImmOperand(is64Bits ? kHighestBitOf64Bits : kHighestBitOf32Bits, k8BitSize, false);
       if (jmpOp == OP_brtrue) {
         mOpCode = is64Bits ? MOP_xtbz : MOP_wtbz;
@@ -2680,9 +2687,8 @@ void AArch64CGFunc::SelectCondGoto(LabelOperand &targetOpnd, Opcode jmpOp, Opcod
       /* Special cases, i.e., comparing with zero
        * Do not perform optimization for C, unlike Java which has no unsigned int.
        */
-      if (static_cast<AArch64ImmOperand*>(opnd1)->IsZero() && (Globals::GetInstance()->GetOptimLevel() > 0) &&
-          ((mirModule.GetSrcLang() != kSrcLangC) || ((primType != PTY_u64) && (primType != PTY_u32)))) {
-        bool finish = GenerateCompareWithZeroInstruction(jmpOp, cmpOp, is64Bits, targetOpnd, *opnd0);
+      if (static_cast<AArch64ImmOperand*>(opnd1)->IsZero() && (Globals::GetInstance()->GetOptimLevel() > 0)) {
+        bool finish = GenerateCompareWithZeroInstruction(jmpOp, cmpOp, is64Bits, primType, targetOpnd, *opnd0);
         if (finish) {
           return;
         }

@@ -192,7 +192,8 @@ void CallGraph::DelNode(CGNode &node) {
   for (auto &callSite : node.GetCallee()) {
     for (auto &cgIt : *callSite.second) {
       cgIt->DelCaller(&node);
-      if (!cgIt->HasCaller()) {
+      node.DelCallee(callSite.first, cgIt);
+      if (!cgIt->HasCaller() && cgIt->GetMIRFunction()->IsStatic()) {
         DelNode(*cgIt);
       }
     }
@@ -220,6 +221,10 @@ void CallGraph::DelNode(CGNode &node) {
       }
       if (j < mirModule->GetFunctionList().size()) {
         mirModule->GetFunctionList().erase(mirModule->GetFunctionList().begin() + j);
+        CHECK_FATAL(mirModule->GetCompilationList()[j] == func,
+                    "Function diff : In CompilationList is \"%s\" v.s. In FuncList is \"%s\"\n",
+                    mirModule->GetCompilationList()[j]->GetName().c_str(), func->GetName().c_str());
+        mirModule->GetCompilationList().erase(mirModule->GetCompilationList().begin() + j);
       }
       GlobalTables::GetFunctionTable().SetFunctionItem(i, nullptr);
       break;
@@ -230,6 +235,8 @@ void CallGraph::DelNode(CGNode &node) {
   if (klassh->GetKlassFromFunc(func) != nullptr) {
     klassh->GetKlassFromFunc(func)->DelMethod(*func);
   }
+  func->ReleaseCodeMemory();
+  func->ReleaseMemory();
 }
 
 CallGraph::CallGraph(MIRModule &m, MemPool &memPool, KlassHierarchy &kh, const std::string &fn)
@@ -420,6 +427,40 @@ CGNode *CallGraph::GetOrGenCGNode(PUIdx puIdx, bool isVcall, bool isIcall) {
   return node;
 }
 
+// if expr has addroffunc expr as its opnd, store all the addroffunc puidx into result
+static void GetAddroffuncExpr (BaseNode *expr, std::set<PUIdx> &result) {
+  if (expr->GetOpCode() == OP_addroffunc) {
+    result.insert(static_cast<AddroffuncNode*>(expr)->GetPUIdx());
+    return;
+  }
+  for (size_t i = 0; i < expr->GetNumOpnds(); ++i) {
+    GetAddroffuncExpr(expr->Opnd(i), result);
+  }
+}
+
+void CallGraph::CollectAddroffuncFromStmt(StmtNode *stmt) {
+  std::set<PUIdx> addroffuncVec;
+  for (size_t i = 0; i < stmt->NumOpnds(); ++i) {
+    GetAddroffuncExpr(stmt->Opnd(i), addroffuncVec);
+  }
+  for (auto &puIdx : addroffuncVec) {
+    CGNode *calleeNode = GetOrGenCGNode(puIdx);
+    calleeNode->SetAddrTaken();
+  }
+}
+
+void CallGraph::CollectAddroffuncFromConst(MIRConst *mirConst) {
+  if (mirConst->GetKind() == kConstAddrofFunc) {
+    CGNode *calleeNode = GetOrGenCGNode(static_cast<MIRAddroffuncConst*>(mirConst)->GetValue());
+    calleeNode->SetAddrTaken();
+  } else if (mirConst->GetKind() == kConstAggConst) {
+    auto &constVec = static_cast<MIRAggConst*>(mirConst)->GetConstVec();
+    for (auto &cst : constVec) {
+      CollectAddroffuncFromConst(cst);
+    }
+  }
+}
+
 void CallGraph::HandleBody(MIRFunction &func, BlockNode &body, CGNode &node, uint32 loopDepth) {
   StmtNode *stmtNext = nullptr;
   for (StmtNode *stmt = body.GetFirst(); stmt != nullptr; stmt = stmtNext) {
@@ -565,6 +606,7 @@ void CallGraph::HandleBody(MIRFunction &func, BlockNode &body, CGNode &node, uin
         }
       }
     }
+    CollectAddroffuncFromStmt(stmt);
   }
 }
 
@@ -1293,9 +1335,33 @@ void CallGraph::GenCallGraph() {
     mirModule->SetCurFunction(mirFunc);
     AddCallGraphNode(*mirFunc);
   }
+
+  // collect addroffunc from global symbol
+  auto &symbolSet = mirModule->GetSymbolSet();
+  for (auto sit = symbolSet.begin(); sit != symbolSet.end(); ++sit) {
+    MIRSymbol *s = GlobalTables::GetGsymTable().GetSymbolFromStidx(sit->Idx());
+    if (s->IsConst()) {
+      MIRConst *mirConst = s->GetKonst();
+      CollectAddroffuncFromConst(mirConst);
+    }
+  }
+
   // Add all root nodes
   FindRootNodes();
+  // Remove root nodes if it is file static
+  // A file static function can only be accessed directly by function or variable
+  // in the same file. If a file static func is never used, we can rm it.
+  // A static func can be used in:
+  // 1. caller
+  // 2. addroffunc
+  if (mirModule->IsCModule()) {
+    RemoveFileStaticRootNodes();
+  }
   BuildSCC();
+  // Remove SCC if it has no used and all nodes is static
+  if (mirModule->IsCModule()) {
+    RemoveFileStaticSCC();
+  }
 }
 
 void CallGraph::FindRootNodes() {
@@ -1307,6 +1373,57 @@ void CallGraph::FindRootNodes() {
     if (!node->HasCaller()) {
       rootNodes.push_back(node);
     }
+  }
+}
+
+void CallGraph::RemoveFileStaticRootNodes() {
+  std::vector<CGNode *> staticRoots;
+  std::copy_if(rootNodes.begin(), rootNodes.end(),
+               std::inserter(staticRoots, staticRoots.begin()),
+               [](CGNode *root){
+    // root means no caller, we should also make sure that root is not be used in addroffunc
+    return root != nullptr && root->GetMIRFunction() != nullptr && // remove before
+           !root->IsAddrTaken() && root->GetMIRFunction()->IsStatic(); // no used
+  });
+  for (auto *root : staticRoots) {
+    // DFS delete root and its callee that is static and have no caller after root is deleted
+    DelNode(*root);
+  }
+  // rebuild rootNodes
+  rootNodes.clear();
+  FindRootNodes();
+}
+
+void CallGraph::RemoveFileStaticSCC() {
+  for (size_t idx = 0; idx < sccTopologicalVec.size();) {
+    SCCNode *sccNode = sccTopologicalVec[idx];
+    if (sccNode->HasCaller() || sccNode == nullptr) {
+      ++idx;
+      continue;
+    }
+    bool canBeDel = true;
+    for (auto *node : sccNode->GetCGNodes()) {
+      // If the function is not static, it may be referred in other module;
+      // If the function is taken address, we should deal with this situation conservatively,
+      // because we are not sure whether the func pointer may escape from this SCC
+      if (!node->GetMIRFunction()->IsStatic() ||
+          node->IsAddrTaken()) {
+        canBeDel = false;
+        break;
+      }
+    }
+    if (canBeDel) {
+      sccTopologicalVec.erase(sccTopologicalVec.begin() + idx);
+      for (auto *calleeSCC : sccNode->GetCalleeScc()) {
+        calleeSCC->RemoveCallerScc(sccNode);
+      }
+      for (auto *cgnode : sccNode->GetCGNodes()) {
+        DelNode(*cgnode);
+      }
+      // this sccnode is deleted from sccTopologicalVec, so we don't inc idx here
+      continue;
+    }
+    ++idx;
   }
 }
 

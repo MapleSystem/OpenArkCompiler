@@ -698,7 +698,7 @@ class AArch64CGFunc : public CGFunc {
   void SelectCopyMemOpnd(Operand &dest, PrimType dtype, uint32 dsize, Operand &src, PrimType stype);
   void SelectCopyRegOpnd(Operand &dest, PrimType dtype, Operand::OperandType opndType, uint32 dsize, Operand &src,
                          PrimType stype);
-  bool GenerateCompareWithZeroInstruction(Opcode jmpOp, Opcode cmpOp, bool is64Bits,
+  bool GenerateCompareWithZeroInstruction(Opcode jmpOp, Opcode cmpOp, bool is64Bits, PrimType primType,
                                           LabelOperand &targetOpnd, Operand &opnd0);
   void GenCVaStartIntrin(RegOperand &opnd, uint32 stkSize);
   void SelectCVaStart(const IntrinsiccallNode &intrnNode);
