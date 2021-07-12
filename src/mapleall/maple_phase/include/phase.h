@@ -44,7 +44,7 @@ class AnalysisResult {
     memPool = nullptr;
   }
 
- private:
+ protected:
   MemPool *memPool;
 };
 
@@ -120,7 +120,7 @@ class AnalysisResultManager {
   }
 
   // analysis result use global mempool and allocator
-  AnalysisResult *GetAnalysisResult(PhaseIDT id, UnitIR *ir) {
+  AnalysisResult *GetAnalysisResult(PhaseIDT id, UnitIR *ir, bool verbose = false) {
     ASSERT(ir != nullptr, "ir is null in AnalysisResultManager::GetAnalysisResult");
     std::pair<PhaseIDT, UnitIR*> key = std::make_pair(id, ir);
     if (analysisResults.find(key) != analysisResults.end()) {
@@ -132,6 +132,9 @@ class AnalysisResultManager {
       return nullptr;
     }
 
+    if (verbose) {
+      LogInfo::MapleLogger() << "  ++ depended phase [ " << anaPhase->PhaseName() << " ] invoked\n";
+    }
     AnalysisResult *result = anaPhase->Run(ir, this);
     // allow invoke phases whose return value is nullptr using GetAnalysisResult
     if (result == nullptr) {
