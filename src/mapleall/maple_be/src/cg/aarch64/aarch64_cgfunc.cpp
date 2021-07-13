@@ -1089,8 +1089,152 @@ void AArch64CGFunc::SelectAssertNull(UnaryStmtNode &stmt) {
   GetCurBB()->AppendInsn(loadRef);
 }
 
+static char *GetRegPrefixFromPrimType(PrimType pType, uint32 size) {
+  static char str[2];
+  if (IsPrimitiveVector(pType)) {
+   str[0] = 'v';
+  } else if (IsPrimitiveInteger(pType)) {
+    if (size == k32BitSize) {
+      str[0] = 'w';
+    } else {
+      str[0] = 'x';
+    }
+  } else {
+    if (size == k32BitSize) {
+      str[0] = 's';
+    } else {
+      str[0] = 'd';
+    }
+  }
+  str[1] = '\0';
+  return str;
+}
+
 void AArch64CGFunc::SelectAsm(AsmNode &node) {
-  (void)node;
+  Operand *asmString = &CreateStringOperand(node.asmString);
+  AArch64ListOperand *listInputOpnd = memPool->New<AArch64ListOperand>(*GetFuncScopeAllocator());
+  AArch64ListOperand *listOutputOpnd = memPool->New<AArch64ListOperand>(*GetFuncScopeAllocator());
+  AArch64ListOperand *listClobber = memPool->New<AArch64ListOperand>(*GetFuncScopeAllocator());
+  ListConstraintOperand *listInConstraint = memPool->New<ListConstraintOperand>(*GetFuncScopeAllocator());
+  ListConstraintOperand *listOutConstraint = memPool->New<ListConstraintOperand>(*GetFuncScopeAllocator());
+  ListConstraintOperand *listInRegPrefix = memPool->New<ListConstraintOperand>(*GetFuncScopeAllocator());
+  ListConstraintOperand *listOutRegPrefix = memPool->New<ListConstraintOperand>(*GetFuncScopeAllocator());
+  if (node.asmString.find('$') == std::string::npos) {
+    /* no replacements */
+    return;
+  }
+  /* input constraints should be processed before OP_asm instruction */
+  for (size_t i = 0; i < node.numOpnds; ++i) {
+    /* process input constraint */
+    std::string str = GlobalTables::GetUStrTable().GetStringFromStrIdx(node.inputConstraints[i]);
+    listInConstraint->stringList.push_back(static_cast<StringOperand*>(&CreateStringOperand(str)));
+    /* process input operands */
+    switch (node.Opnd(i)->op) {
+    case OP_dread: {
+      DreadNode &dread = static_cast<DreadNode&>(*node.Opnd(i));
+      Operand *inOpnd = SelectDread(node, dread);
+      listInputOpnd->PushOpnd(static_cast<RegOperand&>(*inOpnd));
+      PrimType pType = dread.GetPrimType();
+      listInRegPrefix->stringList.push_back(static_cast<StringOperand*>(&CreateStringOperand(GetRegPrefixFromPrimType(pType, inOpnd->GetSize()))));
+      break;
+    }
+    default:
+      CHECK_FATAL(0, "Inline asm input expression not handled");
+    }
+  }
+  std::vector<Operand*> intrnOpnds;
+  intrnOpnds.emplace_back(asmString);
+  intrnOpnds.emplace_back(listOutputOpnd);
+  intrnOpnds.emplace_back(listInputOpnd);
+  intrnOpnds.emplace_back(listClobber);
+  intrnOpnds.emplace_back(listOutConstraint);
+  intrnOpnds.emplace_back(listInConstraint);
+  intrnOpnds.emplace_back(listOutRegPrefix);
+  intrnOpnds.emplace_back(listInRegPrefix);
+  Insn *asmInsn = &GetCG()->BuildInstruction<AArch64Insn>(MOP_asm, intrnOpnds);
+  GetCurBB()->AppendInsn(*asmInsn);
+
+  /* process listOutputOpnd */
+  for (size_t i = 0; i < node.asmOutputs.size(); ++i) {
+    /* process output constraint */
+    std::string str = GlobalTables::GetUStrTable().GetStringFromStrIdx(node.outputConstraints[i]);
+    listOutConstraint->stringList.push_back(static_cast<StringOperand*>(&CreateStringOperand(str)));
+    /* process output operands */
+    StIdx stIdx = node.asmOutputs[i].first;
+    RegFieldPair regFieldPair = node.asmOutputs[i].second;
+    if (regFieldPair.IsReg()) {
+      PregIdx pregIdx = static_cast<PregIdx>(regFieldPair.GetPregIdx());
+      MIRPreg *mirPreg = mirModule.CurFunction()->GetPregTab()->PregFromPregIdx(pregIdx);
+      RegOperand *outOpnd = &CreateVirtualRegisterOperand(GetVirtualRegNOFromPseudoRegIdx(pregIdx));
+      PrimType srcType = mirPreg->GetPrimType();
+      PrimType destType = srcType;
+      if (GetPrimTypeBitSize(destType) < k32BitSize) {
+        destType = IsSignedInteger(destType) ? PTY_i32 : PTY_u32;
+      }
+      RegType rtype = GetRegTyFromPrimTy(srcType);
+      RegOperand *opnd0 = &CreateVirtualRegisterOperand(NewVReg(rtype, GetPrimTypeSize(srcType)));
+      SelectCopy(*outOpnd, destType, *opnd0, srcType);
+      if (pregIdx >= 0) {
+        MemOperand *dest = GetPseudoRegisterSpillMemoryOperand(pregIdx);
+        PrimType stype = GetTypeFromPseudoRegIdx(pregIdx);
+        uint32 srcBitLength = GetPrimTypeBitSize(mirPreg->GetPrimType());
+        GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(PickStInsn(srcBitLength, stype), *outOpnd, *dest));
+      }
+      listOutputOpnd->PushOpnd(static_cast<RegOperand&>(*outOpnd));
+      listOutRegPrefix->stringList.push_back(static_cast<StringOperand*>(&CreateStringOperand(GetRegPrefixFromPrimType(srcType, outOpnd->GetSize()))));
+    } else {
+      MIRSymbol *var;
+      if (stIdx.IsGlobal()) {
+        var = GlobalTables::GetGsymTable().GetSymbolFromStidx(stIdx.Idx());
+      } else {
+        var = mirModule.CurFunction()->GetSymbolTabItem(stIdx.Idx());
+      }
+      CHECK_FATAL(var != nullptr, "var should not be nullptr");
+      PrimType pty = GlobalTables::GetTypeTable().GetTypeTable().at(var->GetTyIdx())->GetPrimType();
+      RegType rtype = GetRegTyFromPrimTy(pty);
+      RegOperand *outOpnd = &CreateVirtualRegisterOperand(NewVReg(rtype, GetPrimTypeSize(pty)));
+      SaveReturnValueInLocal(node.asmOutputs, i, PTY_a64, *outOpnd, node);
+      listOutputOpnd->PushOpnd(static_cast<RegOperand&>(*outOpnd));
+      listOutRegPrefix->stringList.push_back(static_cast<StringOperand*>(&CreateStringOperand(GetRegPrefixFromPrimType(pty, outOpnd->GetSize()))));
+    }
+  }
+  /* process listClobber */
+  for (size_t i = 0; i < node.clobberList.size(); ++i) {
+    std::string str = GlobalTables::GetUStrTable().GetStringFromStrIdx(node.clobberList[i]);
+    regno_t regno = str[1] - '0';
+    if (str[2] >= '0' && str[2] <= '9') {
+      regno = regno * 10 + (str[2] - '0');
+    }
+    RegOperand *reg;
+    switch (str[0]) {
+    case 'w':
+      reg = &GetOrCreatePhysicalRegisterOperand(static_cast<AArch64reg>(regno + R0), k32BitSize, kRegTyInt);
+      listClobber->PushOpnd(*reg);
+      break;
+    case 'x':
+      reg = &GetOrCreatePhysicalRegisterOperand(static_cast<AArch64reg>(regno + R0), k64BitSize, kRegTyInt);
+      listClobber->PushOpnd(*reg);
+      break;
+    case 's':
+      reg = &GetOrCreatePhysicalRegisterOperand(static_cast<AArch64reg>(regno + V0), k32BitSize, kRegTyFloat);
+      listClobber->PushOpnd(*reg);
+      break;
+    case 'd':
+      reg = &GetOrCreatePhysicalRegisterOperand(static_cast<AArch64reg>(regno + V0), k64BitSize, kRegTyFloat);
+      listClobber->PushOpnd(*reg);
+      break;
+    case 'v':
+      reg = &GetOrCreatePhysicalRegisterOperand(static_cast<AArch64reg>(regno + V0), k64BitSize, kRegTyFloat);
+      listClobber->PushOpnd(*reg);
+      break;
+    case 'm': {
+      /* memory */
+      break;
+    }
+    default:
+      CHECK_FATAL(0, "Inline asm clobber list not handled");
+    }
+  }
   return;
 }
 
@@ -5521,16 +5665,17 @@ void AArch64CGFunc::DetermineReturnTypeofCall() {
       continue;
     }
     FOR_BB_INSNS(insn, bb) {
-      if (!insn->IsCall()) {
+      if (!insn->IsCall() || insn->GetMachineOpcode() == MOP_asm) {
         continue;
       }
       Insn *nextInsn = insn->GetNextMachineInsn();
       if (nextInsn == nullptr) {
         continue;
       }
-      if ((nextInsn->IsMove() && nextInsn->GetOperand(kInsnSecondOpnd).IsRegister()) ||
-          nextInsn->IsStore() ||
-          (nextInsn->IsCall() && nextInsn->GetOperand(kInsnFirstOpnd).IsRegister())) {
+      if ((nextInsn->GetMachineOpcode() != MOP_asm) &&
+          ((nextInsn->IsMove() && nextInsn->GetOperand(kInsnSecondOpnd).IsRegister()) ||
+           nextInsn->IsStore() ||
+           (nextInsn->IsCall() && nextInsn->GetOperand(kInsnFirstOpnd).IsRegister()))) {
         auto *srcOpnd = static_cast<RegOperand*>(nextInsn->GetOpnd(kInsnFirstOpnd));
         CHECK_FATAL(srcOpnd != nullptr, "nullptr");
         if (!srcOpnd->IsPhysicalRegister()) {

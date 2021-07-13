@@ -183,6 +183,7 @@ class AArch64Insn : public Insn {
   void EmitCompareAndSwapInt(Emitter &emitter) const;
   void EmitStringIndexOf(Emitter &emitter) const;
   void EmitCounter(const CG&, Emitter&) const;
+  void EmitInlineAsm(const CG&, Emitter&) const;
 };
 
 struct VectorRegSpec {

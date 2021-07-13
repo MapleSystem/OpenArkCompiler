@@ -396,6 +396,14 @@ class AArch64CGFunc : public CGFunc {
     return *memPool->New<CommentOperand>(s.c_str(), *memPool);
   }
 
+  Operand &CreateStringOperand(const std::string &s) {
+    return *memPool->New<StringOperand>(s, *memPool);
+  }
+
+  Operand &CreateStringOperand(const MapleString &s) {
+    return *memPool->New<StringOperand>(s.c_str(), *memPool);
+  }
+
   void AddtoCalleeSaved(AArch64reg reg) {
     if (find(calleeSavedRegs.begin(), calleeSavedRegs.end(), reg) != calleeSavedRegs.end()) {
       return;
