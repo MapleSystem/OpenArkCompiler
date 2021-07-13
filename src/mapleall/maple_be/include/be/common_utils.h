@@ -135,6 +135,8 @@ constexpr int32 kMax16UnsignedImm = 65535;
 /* aarch64 assembly takes up to 24-bits */
 constexpr uint32 kMaxImmVal24Bits = 24;
 
+constexpr uint32 kDecimalMax = 10;
+
 constexpr double kMicroSecPerMilliSec = 1000.0;
 
 constexpr double kPercent = 100.0;
