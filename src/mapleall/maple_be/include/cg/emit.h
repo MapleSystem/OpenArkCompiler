@@ -208,6 +208,7 @@ class Emitter {
   void MarkVtabOrItabEndFlag(const std::vector<MIRSymbol*> &mirSymbolVec);
   void EmitArrayConstant(MIRConst &mirConst);
   void EmitStructConstant(MIRConst &mirConst);
+  void EmitVectorConstant(MIRConst &mirConst);
   void EmitLocalVariable(const CGFunc &cgFunc);
   void EmitGlobalVariable();
   void EmitGlobalRootList(const MIRSymbol &mirSymbol);
