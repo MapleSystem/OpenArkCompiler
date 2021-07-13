@@ -2877,7 +2877,13 @@ BaseNode *FEIRExprBinary::GenMIRNodeCompareU1(MIRBuilder &mirBuilder) const {
   // The verification will need to be updated later.
   MIRType *mirTypeU1;
   if (mirBuilder.GetMirModule().GetSrcLang() == kSrcLangC) {
-    mirTypeU1 = GlobalTables::GetTypeTable().GetInt32();
+    // If the src type is a vector type, there is no need to use int32 to replace
+    MIRType *mirTypeDst = type->GenerateMIRTypeAuto();
+    if (PrimitiveType(mirTypeDst->GetPrimType()).IsVector()) {
+      mirTypeU1 = mirTypeDst;
+    } else {
+      mirTypeU1 = GlobalTables::GetTypeTable().GetInt32();
+    }
   } else {
     mirTypeU1 = GlobalTables::GetTypeTable().GetUInt1();
   }
