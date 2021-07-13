@@ -187,6 +187,11 @@ bool Ebo::RegForwardCheck(Insn &insn, const Operand &opnd, const Operand *opndRe
         !insn.IsMove())) {
     return false;
   }
+  MOperator mOp = insn.GetMachineOpcode();
+  if (!(mOp == MOP_wmovrr || mOp == MOP_xmovrr) && (opnd.GetSize() != oldOpnd.GetSize() ||
+      opndReplace->GetSize() != oldOpnd.GetSize())) {
+      return false;
+  }
   if (!((insn.GetResultNum() == 0) ||
         (((insn.GetResult(0) != nullptr) && !RegistersIdentical(opnd, *(insn.GetResult(0)))) || !beforeRegAlloc))) {
     return false;
