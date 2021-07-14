@@ -340,7 +340,8 @@ MeExpr *IRMapBuild::BuildExpr(BaseNode &mirNode, bool atParm, bool noProp) {
         opmeexpr.SetOpnd(0, retmeexpr);
         retmeexpr = irMap->HashMeExpr(opmeexpr);
       } else {
-        retmeexpr = irMap->CreateMeExprTypeCvt(addrOfNode.GetPrimType(), retmeexpr->GetPrimType(), *retmeexpr);
+        bool isSigned = IsSignedInteger(addrOfNode.GetPrimType());
+        retmeexpr = irMap->CreateMeExprTypeCvt(addrOfNode.GetPrimType(), isSigned ? PTY_i32 : PTY_u32, *retmeexpr);
       }
     }
     return retmeexpr;
