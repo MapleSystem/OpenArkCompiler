@@ -564,4 +564,21 @@ ASTExpr *ASTParser::ParseBuiltinCopysignl(MapleAllocator &allocator, const clang
                                           std::stringstream &ss) const {
   return ProcessBuiltinFuncByName(allocator, expr, ss, "copysignl");
 }
+
+ASTExpr *ASTParser::ParseBuiltinObjectsize(MapleAllocator &allocator, const clang::CallExpr &expr,
+                                           std::stringstream &ss) const {
+  uint32 objSizeType = expr.getArg(1)->EvaluateKnownConstInt(*astFile->GetContext()).getZExtValue();
+  // GCC size_t __builtin_object_size(void *ptr, int type) type range is 0 ~ 3
+  ASSERT(objSizeType <= 3, "unexpected type");
+  uint64 objSize;
+  bool canEval = expr.getArg(0)->tryEvaluateObjectSize(objSize, *astFile->GetNonConstAstContext(), objSizeType);
+  if (!canEval) {
+    // type 0 and 1 need return -1, type 2 and 3 need return 0
+    objSize = objSizeType & 2 ? 0 : -1;
+  }
+  ASTIntegerLiteral *astIntegerLiteral = ASTDeclsBuilder::ASTExprBuilder<ASTIntegerLiteral>(allocator);
+  astIntegerLiteral->SetVal(static_cast<uint64>(objSize));
+  astIntegerLiteral->SetType(astFile->CvtType(expr.getType())->GetPrimType());
+  return astIntegerLiteral;
+}
 } // namespace maple
