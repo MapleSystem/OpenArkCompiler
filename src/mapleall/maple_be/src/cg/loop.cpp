@@ -553,7 +553,6 @@ AnalysisResult *CgDoLoopAnalysis::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncRes
   loopFinder->FormLoopHierarchy();
 
 #if DEBUG
-  LogInfo::MapleLogger() << "CHECK\n";
   for (const auto *lp : cgFunc->GetLoops()) {
     lp->CheckLoops();
   }
