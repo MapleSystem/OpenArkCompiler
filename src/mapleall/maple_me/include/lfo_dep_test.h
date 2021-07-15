@@ -21,7 +21,6 @@
 #include "me_phase.h"
 
 namespace maple {
-
 class LfoDepInfo;
 
 class SubscriptDesc{
@@ -31,8 +30,7 @@ class SubscriptDesc{
   int64 additiveConst = 0;
   bool tooMessy = false;;  // too complicated to analyze
 
- public:
-  SubscriptDesc() {}
+  SubscriptDesc() = default;
 };
 
 class ArrayAccessDesc {
@@ -40,13 +38,12 @@ class ArrayAccessDesc {
   ArrayNode *theArray;
   MapleVector<SubscriptDesc *> subscriptVec;  // describe the subscript of each array dimension
 
- public:
-  ArrayAccessDesc(MapleAllocator *alloc, ArrayNode *arr) : theArray(arr), subscriptVec(alloc->Adapter()){}
+  ArrayAccessDesc(MapleAllocator *alloc, ArrayNode *arr) : theArray(arr), subscriptVec(alloc->Adapter()) {}
 };
 
 class DoloopInfo {
  public:
-  MapleAllocator *alloc;  
+  MapleAllocator *alloc;
   LfoDepInfo *depInfo;
   DoloopNode *doloop;
   DoloopInfo *parent;
@@ -56,15 +53,14 @@ class DoloopInfo {
   bool hasPtrAccess = false;                    // give up dep testing if true
   bool hasCall = false;                         // give up dep testing if true
 
- public:
-  DoloopInfo(MapleAllocator *allc, LfoDepInfo *depinfo, DoloopNode *doloop, DoloopInfo *prnt) : 
-                                                  alloc(allc),
-                                                  depInfo(depinfo),
-                                                  doloop(doloop),
-                                                  parent(prnt),
-                                                  children(alloc->Adapter()),
-                                                  lhsArrays(alloc->Adapter()),
-                                                  rhsArrays(alloc->Adapter()) {}
+  DoloopInfo(MapleAllocator *allc, LfoDepInfo *depinfo, DoloopNode *doloop, DoloopInfo *prnt)
+      : alloc(allc),
+        depInfo(depinfo),
+        doloop(doloop),
+        parent(prnt),
+        children(alloc->Adapter()),
+        lhsArrays(alloc->Adapter()),
+        rhsArrays(alloc->Adapter()) {}
   ~DoloopInfo() = default;
   SubscriptDesc *BuildOneSubscriptDesc(BaseNode *subsX);
   void BuildOneArrayAccessDesc(ArrayNode *arr, bool isRHS);
@@ -74,16 +70,19 @@ class DoloopInfo {
 
 class LfoDepInfo : public AnalysisResult {
  public:
-  MapleAllocator alloc;  
+  MapleAllocator alloc;
   LfoFunction *lfoFunc;
   LfoPreEmitter *preEmit;
   MapleVector<DoloopInfo *> outermostDoloopInfoVec;  // outermost doloops' DoloopInfo in program order
   MapleMap<DoloopNode *, DoloopInfo *> doloopInfoMap;
 
- public:
-  LfoDepInfo(MemPool *mempool, LfoFunction *f, LfoPreEmitter *preemit) : AnalysisResult(mempool), alloc(mempool), lfoFunc(f), preEmit(preemit),
-                                                 outermostDoloopInfoVec(alloc.Adapter()),
-                                                 doloopInfoMap(alloc.Adapter()) {}
+  LfoDepInfo(MemPool *mempool, LfoFunction *f, LfoPreEmitter *preemit)
+      : AnalysisResult(mempool),
+        alloc(mempool),
+        lfoFunc(f),
+        preEmit(preemit),
+        outermostDoloopInfoVec(alloc.Adapter()),
+        doloopInfoMap(alloc.Adapter()) {}
   ~LfoDepInfo() = default;
   void CreateDoloopInfo(BlockNode *block, DoloopInfo *parent);
   void CreateArrayAccessDesc(MapleMap<DoloopNode *, DoloopInfo *> *doloopInfoVec);
@@ -93,9 +92,11 @@ class LfoDepInfo : public AnalysisResult {
 class DoLfoDepTest : public MeFuncPhase {
  public:
   explicit DoLfoDepTest(MePhaseID id) : MeFuncPhase(id) {}
-  ~DoLfoDepTest() {}
+  ~DoLfoDepTest() = default;
   AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr *moduleResMgr) override;
-  std::string PhaseName() const override { return "deptest"; }
+  std::string PhaseName() const override {
+    return "deptest";
+  }
 };
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_LFO_DEP_TEST_H

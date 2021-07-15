@@ -878,7 +878,8 @@ bool AArch64Ebo::SpecialSequence(Insn &insn, const MapleVector<OpndInfo*> &origI
       * ===> ubfx d0, d1, #6, #1
       */
       int64 immValue = static_cast<ImmOperand&>(insn.GetOperand(kInsnThirdOpnd)).GetValue();
-      if (immValue != 0 && (static_cast<uint64>(immValue) & (static_cast<uint64>(immValue) + 1)) == 0) {
+      if (!beforeRegAlloc && immValue != 0 &&
+          (static_cast<uint64>(immValue) & (static_cast<uint64>(immValue) + 1)) == 0) {
         /* immValue is (1 << n - 1) */
         OpndInfo *opndInfo = origInfos.at(kInsnSecondOpnd);
         return CombineLsrAnd(insn, *opndInfo, false, false);
@@ -899,7 +900,8 @@ bool AArch64Ebo::SpecialSequence(Insn &insn, const MapleVector<OpndInfo*> &origI
       * ===> ubfx d0, d1, #6, #1
       */
       int64 immValue = static_cast<ImmOperand&>(insn.GetOperand(kInsnThirdOpnd)).GetValue();
-      if (immValue != 0 && (static_cast<uint64>(immValue) & (static_cast<uint64>(immValue) + 1)) == 0) {
+      if (!beforeRegAlloc && immValue != 0 &&
+          (static_cast<uint64>(immValue) & (static_cast<uint64>(immValue) + 1)) == 0) {
         /* immValue is (1 << n - 1) */
         OpndInfo *opndInfo = origInfos.at(kInsnSecondOpnd);
         return CombineLsrAnd(insn, *opndInfo, true, false);

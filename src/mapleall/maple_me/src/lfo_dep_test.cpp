@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -12,14 +12,13 @@
  * FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-#include "me_function.h"
 #include "lfo_dep_test.h"
+#include "me_function.h"
 
 namespace maple {
-
 void LfoDepInfo::CreateDoloopInfo(BlockNode *block, DoloopInfo *parent) {
   StmtNode *stmt = block->GetFirst();
-  while (stmt) {
+  while (stmt != nullptr) {
     switch (stmt->GetOpCode()) {
       case OP_doloop: {
         DoloopNode *doloop = static_cast<DoloopNode *>(stmt);
@@ -39,10 +38,12 @@ void LfoDepInfo::CreateDoloopInfo(BlockNode *block, DoloopInfo *parent) {
       }
       case OP_if: {
         IfStmtNode *ifstmtnode = static_cast<IfStmtNode *>(stmt);
-        if (ifstmtnode->GetThenPart())
+        if (ifstmtnode->GetThenPart()) {
           CreateDoloopInfo(ifstmtnode->GetThenPart(), parent);
-        if (ifstmtnode->GetElsePart())
+        }
+        if (ifstmtnode->GetElsePart()) {
           CreateDoloopInfo(ifstmtnode->GetElsePart(), parent);
+        }
         break;
       }
       case OP_dowhile:
@@ -77,8 +78,9 @@ SubscriptDesc *DoloopInfo::BuildOneSubscriptDesc(BaseNode *subsX) {
       return subsDesc;
     }
     subsDesc->additiveConst = static_cast<MIRIntConst *>(mirconst)->GetValue();
-    if (op == OP_sub)
+    if (op == OP_sub) {
       subsDesc->additiveConst = - subsDesc->additiveConst;
+    }
     mainTerm = opnd0;
   }
   // process mainTerm
@@ -104,7 +106,7 @@ SubscriptDesc *DoloopInfo::BuildOneSubscriptDesc(BaseNode *subsX) {
       return subsDesc;
     }
     subsDesc->coeff = static_cast<MIRIntConst *>(mirconst)->GetValue();
-  } 
+  }
   // process varNode
   if (varNode->GetOpCode() == OP_dread) {
     DreadNode *dnode = static_cast<DreadNode *>(varNode);
@@ -141,7 +143,7 @@ void DoloopInfo::BuildOneArrayAccessDesc(ArrayNode *arr, bool isRHS) {
 
 void DoloopInfo::CreateRHSArrayAccessDesc(BaseNode *x) {
   if (x->GetOpCode() == OP_array) {
-    BuildOneArrayAccessDesc(static_cast<ArrayNode *>(x), true/*isRHS*/);
+    BuildOneArrayAccessDesc(static_cast<ArrayNode *>(x), true /* isRHS */);
   }
   for (size_t i = 0; i < x->NumOpnds(); i++) {
     CreateRHSArrayAccessDesc(x->Opnd(i));
@@ -178,7 +180,7 @@ void DoloopInfo::CreateArrayAccessDesc(BlockNode *block) {
       case OP_iassign: {
         IassignNode *iass = static_cast<IassignNode *>(stmt);
         if (iass->addrExpr->GetOpCode() == OP_array) {
-          BuildOneArrayAccessDesc(static_cast<ArrayNode *>(iass->addrExpr), false/*isRHS*/);
+          BuildOneArrayAccessDesc(static_cast<ArrayNode *>(iass->addrExpr), false /* isRHS */);
         } else {
           hasPtrAccess = true;
         }
@@ -192,6 +194,7 @@ void DoloopInfo::CreateArrayAccessDesc(BlockNode *block) {
         hasCall = true;
         // fall thru
       }
+      [[clang::fallthrough]];
       default: {
         for (size_t i = 0; i < stmt->NumOpnds(); i++) {
           CreateRHSArrayAccessDesc(stmt->Opnd(i));
@@ -204,8 +207,7 @@ void DoloopInfo::CreateArrayAccessDesc(BlockNode *block) {
 }
 
 void LfoDepInfo::CreateArrayAccessDesc(MapleMap<DoloopNode *, DoloopInfo *> *doloopInfoMap) {
-  MapleMap<DoloopNode *, DoloopInfo *>::iterator mapit = doloopInfoMap->begin();
-  for (; mapit != doloopInfoMap->end(); mapit++) {
+  for (auto mapit = doloopInfoMap->begin(); mapit != doloopInfoMap->end(); mapit++) {
     DoloopInfo *doloopInfo = mapit->second;
     if (!doloopInfo->children.empty()) {
       continue;  // only handling innermost doloops
