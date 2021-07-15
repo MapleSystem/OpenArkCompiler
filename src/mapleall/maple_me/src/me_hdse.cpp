@@ -59,7 +59,8 @@ void MeHDSE::ProcessWhileInfos() {
   }
   MapleMap<LabelIdx, LfoWhileInfo *>::iterator it = lfoFunc->label2WhileInfo.begin();
   for (; it != lfoFunc->label2WhileInfo.end(); it++) {
-    if (it->second->initExpr != nullptr && it->second->initExpr->GetMeOp() != maple::kMeOpConst) {
+    if (it->second->initExpr != nullptr && 
+        (it->second->initExpr->GetMeOp() == maple::kMeOpVar || it->second->initExpr->GetMeOp() == maple::kMeOpReg)) {
       workList.push_front(it->second->initExpr);
     }
   }
