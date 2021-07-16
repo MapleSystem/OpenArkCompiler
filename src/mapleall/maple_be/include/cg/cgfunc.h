@@ -744,6 +744,14 @@ class CGFunc {
     loops.emplace_back(&loop);
   }
 
+  MapleVector<BB*> &GetAllBBs() {
+    return bbVec;
+  }
+
+  BB *GetBBFromID(uint32 id) {
+    return bbVec[id];
+  }
+
 #if TARGARM32
   MapleVector<BB*> &GetSortedBBs() {
     return sortedBBs;
@@ -799,7 +807,9 @@ class CGFunc {
   }
 
   BB *CreateNewBB() {
-    return memPool->New<BB>(bbCnt++, *funcScopeAllocator);
+    BB *bb = memPool->New<BB>(bbCnt++, *funcScopeAllocator);
+    bbVec.emplace_back(bb);
+    return bb;
   }
 
   BB *CreateNewBB(bool unreachable, BB::BBKind kind, uint32 frequency) {
@@ -913,6 +923,7 @@ class CGFunc {
   uint32 maxRegCount;                     /* for the current virtual register number limit */
   size_t lSymSize;                        /* size of local symbol table imported */
   MapleVector<VirtualRegNode> vRegTable;  /* table of CG's virtual registers indexed by v_reg no */
+  MapleVector<BB*> bbVec;
   MapleUnorderedMap<regno_t, RegOperand*> vRegOperandTable;
   MapleUnorderedMap<PregIdx, MemOperand*> pRegSpillMemOperands;
   MapleUnorderedMap<regno_t, MemOperand*> spillRegMemOperands;

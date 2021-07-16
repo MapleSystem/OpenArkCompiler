@@ -976,6 +976,7 @@ void InitHandleStmtFactory() {
 CGFunc::CGFunc(MIRModule &mod, CG &cg, MIRFunction &mirFunc, BECommon &beCommon, MemPool &memPool,
                StackMemPool &stackMp, MapleAllocator &allocator, uint32 funcId)
     : vRegTable(allocator.Adapter()),
+      bbVec(allocator.Adapter()),
       vRegOperandTable(allocator.Adapter()),
       pRegSpillMemOperands(allocator.Adapter()),
       spillRegMemOperands(allocator.Adapter()),
@@ -1507,14 +1508,14 @@ void CGFunc::DumpCFG() const {
     if (!bb->GetPreds().empty()) {
       LogInfo::MapleLogger() << " pred [ ";
       for (auto *pred : bb->GetPreds()) {
-        LogInfo::MapleLogger() << std::hex << pred << std::dec << " ";
+        LogInfo::MapleLogger() << pred->GetId() << " ";
       }
       LogInfo::MapleLogger() << "]\n";
     }
     if (!bb->GetSuccs().empty()) {
       LogInfo::MapleLogger() << " succ [ ";
       for (auto *succ : bb->GetSuccs()) {
-        LogInfo::MapleLogger() << std::hex << succ << std::dec << " ";
+        LogInfo::MapleLogger() << succ->GetId() << " ";
       }
       LogInfo::MapleLogger() << "]\n";
     }
