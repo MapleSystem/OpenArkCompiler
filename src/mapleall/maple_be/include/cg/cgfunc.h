@@ -295,7 +295,8 @@ class CGFunc {
   virtual RegOperand *SelectVectorSetElement(Operand *eOp, PrimType eTyp, Operand *vOpd, PrimType vTyp, int32 lane) = 0;
   virtual RegOperand *SelectVectorShift(PrimType rType, Operand *o1, Operand *o2, Opcode opc) = 0;
   virtual RegOperand *SelectVectorShiftImm(PrimType rType, Operand *o1, Operand *imm, int32 sVal, Opcode opc) = 0;
-  virtual RegOperand *SelectVectorShiftRNarrow(PrimType rType, Operand *o1, PrimType oType, Operand *o2, bool isLow) = 0;
+  virtual RegOperand *SelectVectorShiftRNarrow(PrimType rType, Operand *o1, PrimType oType,
+                                               Operand *o2, bool isLow) = 0;
   virtual RegOperand *SelectVectorSum(PrimType rtype, Operand *o1, PrimType oType) = 0;
   virtual RegOperand *SelectVectorTableLookup(PrimType rType, Operand *o1, Operand *o2) = 0;
 
