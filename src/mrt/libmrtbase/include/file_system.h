@@ -20,11 +20,7 @@ namespace maple {
 namespace fs {
 #if defined(__aarch64__)
   static constexpr char kSystemLibPath[] = "/system/lib64/";
-#ifdef OPS_ANDROID
-  static constexpr char kLibcorePath[] = "/system/lib64/libcore-all.so";
-#else // OPS_ANDROID
   static constexpr char kLibcorePath[] = "/system/lib64/libmaplecore-all.so";
-#endif // OPS_ANDROID
 
   static constexpr char kLibframeworkPath[] = "/system/lib64/libmapleframework.so";
 #elif defined(__arm__)

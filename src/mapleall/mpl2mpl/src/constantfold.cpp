@@ -980,7 +980,7 @@ ConstvalNode *ConstantFold::FoldIntConstUnary(Opcode opcode, PrimType resultType
       if (useResult64) {
         result64 = -cst->GetValue();
       } else {
-        result32 = -static_cast<int32>(cst->GetValue());
+        result32 = static_cast<uint32>(-(cst->GetValue()));
       }
       break;
     }
@@ -1444,7 +1444,9 @@ std::pair<BaseNode*, int64> ConstantFold::FoldTypeCvt(TypeCvtNode *node) {
     }
   } else if (node->GetOpCode() == OP_cvt && GetPrimTypeSize(node->FromType()) == GetPrimTypeSize(node->GetPrimType())) {
     if ((IsPossible64BitAddress(node->FromType()) && IsPossible64BitAddress(node->GetPrimType())) ||
-        (IsPossible32BitAddress(node->FromType()) && IsPossible32BitAddress(node->GetPrimType()))) {
+        (IsPossible32BitAddress(node->FromType()) && IsPossible32BitAddress(node->GetPrimType())) ||
+         (IsPrimitivePureScalar(node->FromType()) && IsPrimitivePureScalar(node->GetPrimType()) &&
+          GetPrimTypeSize(node->FromType()) == GetPrimTypeSize(node->GetPrimType()))) {
       return p; // the cvt is redundant
     }
   } else if (node->GetOpCode() == OP_cvt && p.second != 0 &&

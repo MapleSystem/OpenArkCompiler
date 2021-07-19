@@ -1000,6 +1000,30 @@ void CGLowerer::LowerIassign(IassignNode &iassign, BlockNode &newBlk) {
   newBlk.AddStatement(newStmt);
 }
 
+static GStrIdx NewAsmTempStrIdx() {
+  static uint32 strIdxCount = 0;  // to create unique temporary symbol names
+  std::string asmTempStr("asm_tempvar");
+  (void)asmTempStr.append(std::to_string(++strIdxCount));
+  return GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(asmTempStr);
+}
+
+void CGLowerer::LowerAsmStmt(AsmNode *asmNode, BlockNode *newBlk) {
+  for (size_t i = 0; i < asmNode->NumOpnds(); i++) {
+    BaseNode *opnd = LowerExpr(*asmNode, *asmNode->Opnd(i), *newBlk);
+    if (opnd->NumOpnds() == 0) {
+      asmNode->SetOpnd(opnd, i);
+      continue;
+    }
+    // introduce a temporary to store the expression tree operand
+    MIRSymbol *st = mirModule.GetMIRBuilder()->CreateSymbol((TyIdx)opnd->GetPrimType(), NewAsmTempStrIdx(),
+        kStVar, kScAuto, mirModule.CurFunction(), kScopeLocal);
+    DassignNode *dass = mirModule.GetMIRBuilder()->CreateStmtDassign(*st, 0, opnd);
+    newBlk->AddStatement(dass);
+    asmNode->SetOpnd(mirModule.GetMIRBuilder()->CreateExprDread(*st), i);
+  }
+  newBlk->AddStatement(asmNode);
+}
+
 DassignNode *CGLowerer::SaveReturnValueInLocal(StIdx stIdx, uint16 fieldID) {
   MIRSymbol *var;
   if (stIdx.IsGlobal()) {
@@ -1422,6 +1446,19 @@ void CGLowerer::LowerStmt(StmtNode &stmt, BlockNode &newBlk) {
   }
 }
 
+void CGLowerer::LowerSwitchOpnd(StmtNode &stmt, BlockNode &newBlk) {
+  BaseNode *opnd = LowerExpr(stmt, *stmt.Opnd(0), newBlk);
+  if (CGOptions::GetInstance().GetOptimizeLevel() >= CGOptions::kLevel2 && opnd->GetOpCode() != OP_regread) {
+    PrimType ptyp = stmt.Opnd(0)->GetPrimType();
+    PregIdx pIdx = GetCurrentFunc()->GetPregTab()->CreatePreg(ptyp);
+    RegassignNode *regAss = mirBuilder->CreateStmtRegassign(ptyp, pIdx, opnd);
+    newBlk.AddStatement(regAss);
+    stmt.SetOpnd(mirBuilder->CreateExprRegread(ptyp, pIdx), 0);
+  } else {
+    stmt.SetOpnd(LowerExpr(stmt, *stmt.Opnd(0), newBlk), 0);
+  }
+}
+
 BlockNode *CGLowerer::LowerBlock(BlockNode &block) {
   BlockNode *newBlk = mirModule.CurFuncCodeMemPool()->New<BlockNode>();
   BlockNode *tmpBlockNode = nullptr;
@@ -1440,7 +1477,7 @@ BlockNode *CGLowerer::LowerBlock(BlockNode &block) {
 
     switch (stmt->GetOpCode()) {
       case OP_switch: {
-        LowerStmt(*stmt, *newBlk);
+        LowerSwitchOpnd(*stmt, *newBlk);
         auto switchMp = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, "switchlowere");
         MapleAllocator switchAllocator(switchMp.get());
         SwitchLowerer switchLowerer(mirModule, static_cast<SwitchNode&>(*stmt), switchAllocator);
@@ -1557,6 +1594,10 @@ BlockNode *CGLowerer::LowerBlock(BlockNode &block) {
          */
         CHECK_FATAL(CGOptions::IsGCOnly(), "OP_decrefreset is expected only in gconly.");
         LowerResetStmt(*stmt, *newBlk);
+        break;
+      }
+      case OP_asm: {
+        LowerAsmStmt(static_cast<AsmNode *>(stmt), newBlk);
         break;
       }
       default:

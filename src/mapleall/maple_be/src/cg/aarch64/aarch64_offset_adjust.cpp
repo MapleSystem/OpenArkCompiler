@@ -93,8 +93,6 @@ void AArch64FPLROffsetAdjustment::AdjustmentOffsetForImmOpnd(Insn &insn, uint32 
     }
   }
   immOpnd.SetVary(kAdjustVary);
-  ASSERT(aarchCGFunc.IsOperandImmValid(insn.GetMachineOpcode(), &immOpnd, index),
-      "Invalid imm operand appears before offset adjusted");
 }
 
 void AArch64FPLROffsetAdjustment::AdjustmentOffsetForFPLR() {

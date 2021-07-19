@@ -622,11 +622,7 @@ string GetSoNameFromCls(const MClass *elementClass) {
     string fullname = string(dlinfo.dli_fname);
     // trim to libmaplecore-all.so
     if (fullname == maple::fs::kLibcorePath) {
-#ifdef OPS_ANDROID
-      return "libcore-all.so";
-#else // OPS_ANDROID
-      return "libmaplecore-all.so";
-#endif // OPS_ANDROID
+    return "libmaplecore-all.so";
     }
     return fullname;
   } else {

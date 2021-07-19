@@ -149,6 +149,8 @@ class CGLowerer {
 
   void LowerStmt(StmtNode &stmt, BlockNode &block);
 
+  void LowerSwitchOpnd(StmtNode &stmt, BlockNode &block);
+
   MIRSymbol *CreateNewRetVar(const MIRType &ty, const std::string &prefix);
 
   void RegisterExternalLibraryFunctions();
@@ -175,6 +177,8 @@ class CGLowerer {
 
   StmtNode *LowerDassignBitfield(DassignNode &dassign, BlockNode &block);
   StmtNode *LowerIassignBitfield(IassignNode &iassign, BlockNode &block);
+
+  void LowerAsmStmt(AsmNode *asmNode, BlockNode *blk);
 
   bool ShouldOptarray() const {
     ASSERT(mirModule.CurFunction() != nullptr, "nullptr check");
