@@ -72,8 +72,9 @@ void AArch64LiveAnalysis::GetBBDefUse(BB &bb) {
       continue;
     }
 
+    bool isAsm = (insn->GetMachineOpcode() == MOP_asm);
     const AArch64MD *md = &AArch64CG::kMd[static_cast<AArch64Insn*>(insn)->GetMachineOpcode()];
-    if (insn->IsCall()) {
+    if (insn->IsCall() && isAsm == false) {
       ProcessCallInsnParam(bb);
     }
     uint32 opndNum = insn->GetOperandSize();
@@ -83,7 +84,11 @@ void AArch64LiveAnalysis::GetBBDefUse(BB &bb) {
       bool isDef = regProp->IsRegDef();
       bool isUse = regProp->IsRegUse();
       if (opnd.IsList()) {
-        ProcessListOpnd(bb, opnd);
+        if (isAsm) {
+          ProcessAsmListOpnd(bb, opnd, i);
+        } else {
+          ProcessListOpnd(bb, opnd);
+        }
       } else if (opnd.IsMemoryAccessOperand()) {
         ProcessMemOpnd(bb, opnd);
       } else if (opnd.IsConditionCode()) {
@@ -127,6 +132,26 @@ void AArch64LiveAnalysis::ProcessCallInsnParam(BB &bb) const {
     Operand &phyOpndV =
         aarchCGFunc->GetOrCreatePhysicalRegisterOperand(static_cast<AArch64reg>(V0 + i), k64BitSize, kRegTyFloat);
     CollectLiveInfo(bb, phyOpndV, true, false);
+  }
+}
+
+void AArch64LiveAnalysis::ProcessAsmListOpnd(BB &bb, Operand &opnd, uint32 idx) const {
+  bool isDef = false;
+  bool isUse = false;
+  switch (idx) {
+  case kAsmOutputListOpnd:
+  case kAsmClobberListOpnd:
+    isDef = true;
+    break;
+  case kAsmInputListOpnd:
+    isUse = true;
+    break;
+  default:
+    return;
+  }
+  ListOperand &listOpnd = static_cast<ListOperand&>(opnd);
+  for (auto op : listOpnd.GetOperands()) {
+    CollectLiveInfo(bb, *op, isDef, isUse);
   }
 }
 

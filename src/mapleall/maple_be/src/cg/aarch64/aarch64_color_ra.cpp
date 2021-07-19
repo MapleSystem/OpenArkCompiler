@@ -758,6 +758,13 @@ void GraphColorRegAllocator::ComputeLiveRangesForEachDefOperand(Insn &insn, bool
   const AArch64MD *md = &AArch64CG::kMd[static_cast<AArch64Insn&>(insn).GetMachineOpcode()];
   uint32 opndNum = insn.GetOperandSize();
   for (uint32 i = 0; i < opndNum; ++i) {
+    if (insn.GetMachineOpcode() == MOP_asm && (i == kAsmOutputListOpnd || i == kAsmClobberListOpnd)) {
+      for (auto opnd : static_cast<ListOperand &>(insn.GetOperand(i)).GetOperands()) {
+        SetupLiveRangeByOp(*static_cast<RegOperand *>(opnd), insn, true, numUses);
+        ++numDefs;
+      }
+      continue;
+    }
     if (!md->GetOperand(i)->IsRegDef()) {
       continue;
     }
@@ -777,6 +784,12 @@ void GraphColorRegAllocator::ComputeLiveRangesForEachUseOperand(Insn &insn) {
   const AArch64MD *md = &AArch64CG::kMd[static_cast<AArch64Insn&>(insn).GetMachineOpcode()];
   uint32 opndNum = insn.GetOperandSize();
   for (uint32 i = 0; i < opndNum; ++i) {
+    if (insn.GetMachineOpcode() == MOP_asm && i == kAsmInputListOpnd) {
+      for (auto opnd : static_cast<ListOperand &>(insn.GetOperand(i)).GetOperands()) {
+        SetupLiveRangeByOp(*static_cast<RegOperand *>(opnd), insn, false, numUses);
+      }
+      continue;
+    }
     if (md->GetOperand(i)->IsRegDef() && !md->GetOperand(i)->IsRegUse()) {
       continue;
     }
@@ -807,7 +820,7 @@ void GraphColorRegAllocator::ComputeLiveRangesForEachUseOperand(Insn &insn) {
 }
 
 void GraphColorRegAllocator::ComputeLiveRangesUpdateIfInsnIsCall(const Insn &insn) {
-  if (!insn.IsCall()) {
+  if (!insn.IsCall() || insn.GetMachineOpcode() == MOP_asm) {
     return;
   }
   /* def the return value */
@@ -869,23 +882,36 @@ void GraphColorRegAllocator::UpdateCallInfo(uint32 bbId, uint32 currPoint) {
   }
 }
 
+void GraphColorRegAllocator::SetLrMustAssign(RegOperand *regOpnd) {
+  regno_t regNO = regOpnd->GetRegisterNumber();
+  LiveRange *lr = lrVec[regNO];
+  if (lr != nullptr) {
+    lr->SetMustAssigned();
+    lr->SetIsNonLocal(true);
+  }
+}
+
 void GraphColorRegAllocator::SetupMustAssignedLiveRanges(const Insn &insn) {
   if (!insn.IsSpecialIntrinsic()) {
     return;
   }
+  if (insn.GetMachineOpcode() == MOP_asm) {
+    for (auto regOpnd : static_cast<ListOperand &>(insn.GetOperand(kAsmOutputListOpnd)).GetOperands()) {
+      SetLrMustAssign(regOpnd);
+    }
+    for (auto regOpnd : static_cast<ListOperand &>(insn.GetOperand(kAsmInputListOpnd)).GetOperands()) {
+      SetLrMustAssign(regOpnd);
+    }
+    return;
+  }
   uint32 opndNum = insn.GetOperandSize();
   for (uint32 i = 0; i < opndNum; ++i) {
-    Operand &opnd = insn.GetOperand(i);
-    if (!opnd.IsRegister()) {
+    Operand *opnd = &insn.GetOperand(i);
+    if (!opnd->IsRegister()) {
       continue;
     }
-    auto &regOpnd = static_cast<RegOperand&>(opnd);
-    regno_t regNO = regOpnd.GetRegisterNumber();
-    LiveRange *lr = lrVec[regNO];
-    if (lr != nullptr) {
-      lr->SetMustAssigned();
-      lr->SetIsNonLocal(true);
-    }
+    auto regOpnd = static_cast<RegOperand *>(opnd);
+    SetLrMustAssign(regOpnd);
   }
 }
 
@@ -3221,7 +3247,15 @@ uint64 GraphColorRegAllocator::FinalizeRegisterPreprocess(FinalizeRegisterInfo &
     ASSERT(md->GetOperand(i) != nullptr, "pointer is null in GraphColorRegAllocator::FinalizeRegisters");
 
     if (opnd.IsList()) {
-      /* For arm32, not arm64 */
+      if (insn.GetMachineOpcode() != MOP_asm) {
+        continue;
+      }
+      if (i == kAsmOutputListOpnd) {
+        fInfo.SetDefOperand(opnd, i);
+      }
+      if (i == kAsmInputListOpnd) {
+        fInfo.SetUseOperand(opnd, i);
+      }
     } else if (opnd.IsMemoryAccessOperand()) {
       auto &memOpnd = static_cast<MemOperand&>(opnd);
       Operand *base = memOpnd.GetBaseRegister();
@@ -3238,7 +3272,6 @@ uint64 GraphColorRegAllocator::FinalizeRegisterPreprocess(FinalizeRegisterInfo &
       bool isDef = md->GetOperand(i)->IsRegDef();
       if (isDef) {
         fInfo.SetDefOperand(opnd, i);
-
         /*
          * Need to exclude def also, since it will clobber the result when the
          * original value is reloaded.
@@ -3470,6 +3503,22 @@ void GraphColorRegAllocator::FinalizeRegisters() {
         }
       }
       for (size_t i = 0; i < fInfo->GetDefOperandsSize(); ++i) {
+        if (insn->GetMachineOpcode() == MOP_asm) {
+          const Operand *defOpnd = fInfo->GetDefOperandsElem(i);
+          if (defOpnd->IsList()) {
+            ListOperand *outList = const_cast<ListOperand *>(static_cast<const ListOperand *>(defOpnd));
+            auto *a64CGFunc = static_cast<AArch64CGFunc*>(cgFunc);
+            auto *srcOpndsNew =
+                  a64CGFunc->GetMemoryPool()->New<AArch64ListOperand>(*a64CGFunc->GetFuncScopeAllocator());
+            RegOperand *phyOpnd;
+            for (auto opnd : outList->GetOperands()) {
+              phyOpnd = GetReplaceOpnd(*insn, *opnd, useSpillIdx, usedRegMask, true);
+              srcOpndsNew->PushOpnd(*phyOpnd);
+            }
+            insn->SetOperand(kAsmOutputListOpnd, *srcOpndsNew);
+            continue;
+          }
+        }
         const Operand *opnd = fInfo->GetDefOperandsElem(i);
         RegOperand *phyOpnd = nullptr;
         if (insn->IsSpecialIntrinsic()) {
@@ -3482,6 +3531,22 @@ void GraphColorRegAllocator::FinalizeRegisters() {
         }
       }
       for (size_t i = 0; i < fInfo->GetUseOperandsSize(); ++i) {
+        if (insn->GetMachineOpcode() == MOP_asm) {
+          const Operand *useOpnd = fInfo->GetUseOperandsElem(i);
+          if (useOpnd->IsList()) {
+            ListOperand *inList = const_cast<ListOperand *>(static_cast<const ListOperand *>(useOpnd));
+            auto *a64CGFunc = static_cast<AArch64CGFunc*>(cgFunc);
+            auto *srcOpndsNew =
+                  a64CGFunc->GetMemoryPool()->New<AArch64ListOperand>(*a64CGFunc->GetFuncScopeAllocator());
+            RegOperand *phyOpnd;
+            for (auto opnd : inList->GetOperands()) {
+              phyOpnd = GetReplaceOpnd(*insn, *opnd, useSpillIdx, usedRegMask, false);
+              srcOpndsNew->PushOpnd(*phyOpnd);
+            }
+            insn->SetOperand(kAsmInputListOpnd, *srcOpndsNew);
+            continue;
+          }
+        }
         const Operand *opnd = fInfo->GetUseOperandsElem(i);
         RegOperand *phyOpnd = GetReplaceOpnd(*insn, *opnd, useSpillIdx, usedRegMask, false);
         if (phyOpnd != nullptr) {

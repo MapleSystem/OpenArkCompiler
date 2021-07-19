@@ -349,6 +349,9 @@ void PeepHoleOptimizer::PrePeepholeOpt1() {
 AnalysisResult *CgDoPrePeepHole::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
   (void)cgFuncResultMgr;
   ASSERT(cgFunc != nullptr, "nullptr check");
+  if (cgFunc->HasAsm()) {
+    return nullptr;
+  }
   auto memPool = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, "prePeepholeOpt");
   auto *peep = memPool->New<PeepHoleOptimizer>(cgFunc);
   CHECK_FATAL(peep != nullptr, "PeepHoleOptimizer instance create failure");
@@ -358,6 +361,9 @@ AnalysisResult *CgDoPrePeepHole::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResu
 
 AnalysisResult *CgDoPrePeepHole1::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
   (void)cgFuncResultMgr;
+  if (cgFunc->HasAsm()) {
+    return nullptr;
+  }
   ASSERT(cgFunc != nullptr, "nullptr check");
   auto memPool = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, "prePeepholeOpt1");
   auto *peep = memPool->New<PeepHoleOptimizer>(cgFunc);
@@ -368,6 +374,9 @@ AnalysisResult *CgDoPrePeepHole1::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncRes
 
 AnalysisResult *CgDoPeepHole0::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
   (void)cgFuncResultMgr;
+  if (cgFunc->HasAsm()) {
+    return nullptr;
+  }
   ASSERT(cgFunc != nullptr, "nullptr check");
   auto memPool = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, "peephole0");
   auto *peep = memPool->New<PeepHoleOptimizer>(cgFunc);
@@ -379,6 +388,9 @@ AnalysisResult *CgDoPeepHole0::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResult
 AnalysisResult *CgDoPeepHole::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
   (void)cgFuncResultMgr;
   ASSERT(cgFunc != nullptr, "nullptr check");
+  if (cgFunc->HasAsm()) {
+    return nullptr;
+  }
   auto memPool = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, "PeepHoleOptimizer");
   auto *peep = memPool->New<PeepHoleOptimizer>(cgFunc);
   CHECK_FATAL(peep != nullptr, "PeepHoleOptimizer instance create failure");
