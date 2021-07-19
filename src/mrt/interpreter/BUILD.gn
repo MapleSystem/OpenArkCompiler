@@ -17,8 +17,6 @@ static_library("libzterp") {
   cflags_cc = []
   configs = [ "${MAPLE_MRT_ROOT}:mrt_cxx_flags" ]
 
-  cflags_cc += [ "-DGCONLY=0" ]
-
   asmflags = cflags_cc
   sources = []
 }

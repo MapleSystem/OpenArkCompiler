@@ -423,7 +423,12 @@ void Emitter::EmitAsmLabel(const MIRSymbol &mirSymbol, AsmLabel label) {
     }
     case kAsmType: {
       Emit(asmInfo->GetType());
-      Emit(symName);
+      if (GetCG()->GetMIRModule()->IsCModule() && (symName == "sys_nerr" || symName == "sys_errlist")) {
+        /* eliminate warning from deprecated C name */
+        Emit("strerror");
+      } else {
+        Emit(symName);
+      }
       Emit(",");
       Emit(asmInfo->GetAtobt());
       Emit("\n");
@@ -2131,6 +2136,9 @@ void Emitter::EmitGlobalVariable() {
   for (size_t i = 0; i < size; ++i) {
     MIRSymbol *mirSymbol = GlobalTables::GetGsymTable().GetSymbolFromStidx(i);
     if (mirSymbol == nullptr || mirSymbol->IsDeleted() || mirSymbol->GetStorageClass() == kScUnused) {
+      continue;
+    }
+    if (GetCG()->GetMIRModule()->IsCModule() && mirSymbol->GetStorageClass() == kScExtern) {
       continue;
     }
     if (mirSymbol->GetName().find(VTAB_PREFIX_STR) == 0) {

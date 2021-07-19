@@ -63,14 +63,5 @@ static_library("libcore-static-binding-jni") {
     "-nostdlibinc",
     "-march=armv8-a",
   ]
-
-  if (OPS_ANDROID == 1) {
-    cflags_cc -= [ "-nostdlibinc" ]
-    include_dirs += [
-      "${GN_LIBRARY_OUTPUT_DIRECTORY}/host-x86_64-${OPT}/",
-      "${MAPLE_ROOT}/android/bionic/libc/private",
-    ]
-  }
-
   configs = [ "${MAPLE_MRT_ROOT}:mrt_cxx_flags" ]
 }

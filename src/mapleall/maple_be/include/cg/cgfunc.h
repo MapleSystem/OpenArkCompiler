@@ -295,7 +295,8 @@ class CGFunc {
   virtual RegOperand *SelectVectorSetElement(Operand *eOp, PrimType eTyp, Operand *vOpd, PrimType vTyp, int32 lane) = 0;
   virtual RegOperand *SelectVectorShift(PrimType rType, Operand *o1, Operand *o2, Opcode opc) = 0;
   virtual RegOperand *SelectVectorShiftImm(PrimType rType, Operand *o1, Operand *imm, int32 sVal, Opcode opc) = 0;
-  virtual RegOperand *SelectVectorShiftRNarrow(PrimType rType, Operand *o1, PrimType oType, Operand *o2, bool isLow) = 0;
+  virtual RegOperand *SelectVectorShiftRNarrow(PrimType rType, Operand *o1, PrimType oType,
+                                               Operand *o2, bool isLow) = 0;
   virtual RegOperand *SelectVectorSum(PrimType rtype, Operand *o1, PrimType oType) = 0;
   virtual RegOperand *SelectVectorTableLookup(PrimType rType, Operand *o1, Operand *o2) = 0;
 
@@ -746,6 +747,14 @@ class CGFunc {
     loops.emplace_back(&loop);
   }
 
+  MapleVector<BB*> &GetAllBBs() {
+    return bbVec;
+  }
+
+  BB *GetBBFromID(uint32 id) {
+    return bbVec[id];
+  }
+
 #if TARGARM32
   MapleVector<BB*> &GetSortedBBs() {
     return sortedBBs;
@@ -801,7 +810,9 @@ class CGFunc {
   }
 
   BB *CreateNewBB() {
-    return memPool->New<BB>(bbCnt++, *funcScopeAllocator);
+    BB *bb = memPool->New<BB>(bbCnt++, *funcScopeAllocator);
+    bbVec.emplace_back(bb);
+    return bb;
   }
 
   BB *CreateNewBB(bool unreachable, BB::BBKind kind, uint32 frequency) {
@@ -915,6 +926,7 @@ class CGFunc {
   uint32 maxRegCount;                     /* for the current virtual register number limit */
   size_t lSymSize;                        /* size of local symbol table imported */
   MapleVector<VirtualRegNode> vRegTable;  /* table of CG's virtual registers indexed by v_reg no */
+  MapleVector<BB*> bbVec;
   MapleUnorderedMap<regno_t, RegOperand*> vRegOperandTable;
   MapleUnorderedMap<PregIdx, MemOperand*> pRegSpillMemOperands;
   MapleUnorderedMap<regno_t, MemOperand*> spillRegMemOperands;

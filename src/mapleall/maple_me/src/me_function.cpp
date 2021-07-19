@@ -69,6 +69,9 @@ void MeFunction::DumpFunction() const {
 }
 
 void MeFunction::DumpFunctionNoSSA() const {
+  if (isLfo) {
+    return;
+  }
   auto eIt = theCFG->valid_end();
   for (auto bIt = theCFG->valid_begin(); bIt != eIt; ++bIt) {
     auto *bb = *bIt;
