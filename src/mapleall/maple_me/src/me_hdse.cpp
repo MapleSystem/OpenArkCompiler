@@ -100,7 +100,7 @@ void MeHDSE::BackwardSubstitution() {
   }
 }
 
-void MeDoHDSE::MakeEmptyTrysUnreachable(MeFunction &func) {
+void MakeEmptyTrysUnreachable(MeFunction &func) {
   auto cfg = func.GetCfg();
   auto eIt = cfg->valid_end();
   for (auto bIt = cfg->valid_begin(); bIt != eIt; ++bIt) {

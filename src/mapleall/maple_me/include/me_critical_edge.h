@@ -20,6 +20,19 @@
 
 namespace maple {
 // Split critical edge
+class MeSplitCEdge {
+ public:
+  explicit MeSplitCEdge(bool enableDebug) : isDebugFunc(enableDebug) {}
+  void BreakCriticalEdge(MeFunction &func, BB &pred, BB &succ) const;
+ private:
+  void UpdateGotoLabel(BB &newBB, MeFunction &func, BB &pred, BB &succ) const;
+  void UpdateCaseLabel(BB &newBB, MeFunction &func, BB &pred, BB &succ) const;
+  void UpdateNewBBInTry(MeFunction &func, BB &newBB, const BB &pred) const;
+  void DealWithTryBB(MeFunction &func, BB &pred, BB &succ, BB *&newBB, bool &isInsertAfterPred) const;
+
+  bool isDebugFunc = false;
+};
+
 class MeDoSplitCEdge : public MeFuncPhase {
  public:
   explicit MeDoSplitCEdge(MePhaseID id) : MeFuncPhase(id) {}
@@ -30,13 +43,6 @@ class MeDoSplitCEdge : public MeFuncPhase {
   std::string PhaseName() const override {
     return "splitcriticaledge";
   }
-
- private:
-  void UpdateGotoLabel(BB &newBB, MeFunction &func, BB &pred, BB &succ) const;
-  void UpdateCaseLabel(BB &newBB, MeFunction &func, BB &pred, BB &succ) const;
-  void BreakCriticalEdge(MeFunction &func, BB &pred, BB &succ) const;
-  void UpdateNewBBInTry(MeFunction &func, BB &newBB, const BB &pred) const;
-  void DealWithTryBB(MeFunction &func, BB &pred, BB &succ, BB *&newBB, bool &isInsertAfterPred) const;
 };
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_MECRITICALEDGE_H

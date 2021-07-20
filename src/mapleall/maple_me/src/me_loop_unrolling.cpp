@@ -21,8 +21,8 @@
 #include "mir_builder.h"
 
 namespace maple {
-bool MeDoLoopUnrolling::enableDebug = false;
-bool MeDoLoopUnrolling::enableDump = false;
+bool LoopUnrollingExecutor::enableDebug = false;
+bool LoopUnrollingExecutor::enableDump = false;
 constexpr uint32 kOneInsn = 1;
 constexpr uint32 kTwoInsn = 2;
 constexpr uint32 kThreeInsn = 3;
@@ -231,7 +231,7 @@ void LoopUnrolling::ComputeCodeSize(const MeStmt &meStmt, uint32 &cost) {
       break;
     }
     default:
-      if (MeDoLoopUnrolling::enableDebug) {
+      if (LoopUnrollingExecutor::enableDebug) {
         LogInfo::MapleLogger() << "consider this op :"<< meStmt.GetOp() << "\n";
       }
       canUnroll = false;
@@ -651,10 +651,6 @@ LoopUnrolling::ReturnKindOfFullyUnroll LoopUnrolling::LoopFullyUnroll(int64 trip
     CopyAndInsertBB(false);
   }
   RemoveCondGoto();
-  mgr->InvalidAnalysisResult(MeFuncPhase_DOMINANCE, func);
-  dom = static_cast<Dominance*>(mgr->GetAnalysisResult(MeFuncPhase_DOMINANCE, func));
-  MeSSAUpdate ssaUpdate(*func, *func->GetMeSSATab(), *dom, cands, *memPool);
-  ssaUpdate.Run();
   return kCanFullyUnroll;
 }
 
@@ -741,7 +737,7 @@ bool LoopUnrolling::DetermineUnrollTimes(uint32 &index, bool isConst) {
       }
     }
   }
-  if (MeDoLoopUnrolling::enableDebug) {
+  if (LoopUnrollingExecutor::enableDebug) {
     LogInfo::MapleLogger() << "CodeSize: " << costResult << "\n";
   }
   return true;
@@ -781,7 +777,7 @@ void LoopUnrolling::AddPreHeader(BB *oldPreHeader, BB *head) {
 bool LoopUnrolling::LoopPartialUnrollWithConst(uint32 tripCount) {
   uint32 index = 0;
   if (!DetermineUnrollTimes(index, true)) {
-    if (MeDoLoopUnrolling::enableDebug) {
+    if (LoopUnrollingExecutor::enableDebug) {
       LogInfo::MapleLogger() << "CodeSize is too large" << "\n";
     }
     return false;
@@ -794,7 +790,7 @@ bool LoopUnrolling::LoopPartialUnrollWithConst(uint32 tripCount) {
   if (!SplitCondGotoBB()) {
     return false;
   }
-  if (MeDoLoopUnrolling::enableDebug) {
+  if (LoopUnrollingExecutor::enableDebug) {
     LogInfo::MapleLogger() << "Unrolltime: " << unrollTime << "\n";
     LogInfo::MapleLogger() << "Remainder: " << remainder << "\n";
   }
@@ -823,10 +819,6 @@ bool LoopUnrolling::LoopPartialUnrollWithConst(uint32 tripCount) {
     replicatedLoopNum = unrollTime;
     InsertCondGotoBB();
   }
-  mgr->InvalidAnalysisResult(MeFuncPhase_DOMINANCE, func);
-  dom = static_cast<Dominance*>(mgr->GetAnalysisResult(MeFuncPhase_DOMINANCE, func));
-  MeSSAUpdate ssaUpdate(*func, *func->GetMeSSATab(), *dom, cands, *memPool);
-  ssaUpdate.Run();
   return true;
 }
 
@@ -1103,27 +1095,27 @@ void LoopUnrolling::CopyLoopForPartial(CR &cr, CRNode &varNode, uint32 j, uint32
   }
 }
 
-void LoopUnrolling::LoopPartialUnrollWithVar(CR &cr, CRNode &varNode, uint32 j) {
+bool LoopUnrolling::LoopPartialUnrollWithVar(CR &cr, CRNode &varNode, uint32 j) {
   uint32 index = 0;
   if (!DetermineUnrollTimes(index, false)) {
-    if (MeDoLoopUnrolling::enableDebug) {
+    if (LoopUnrollingExecutor::enableDebug) {
       LogInfo::MapleLogger() << "codesize is too large" << "\n";
     }
-    return;
+    return false;
   }
-  if (MeDoLoopUnrolling::enableDebug) {
+  if (LoopUnrollingExecutor::enableDebug) {
     LogInfo::MapleLogger() << "partial unrolling with var" << "\n";
   }
-  if (MeDoLoopUnrolling::enableDump) {
+  if (LoopUnrollingExecutor::enableDump) {
     irMap->Dump();
     profValid ? cfg->DumpToFile("cfgIncludeFreqInfobeforeLoopPartialWithVarUnrolling", false, true) :
                 cfg->DumpToFile("cfgbeforeLoopPartialWithVarUnrolling");
   }
   if (!SplitCondGotoBB()) {
-    return;
+    return false;
   }
   uint32 unrollTime = unrollTimes[index];
-  if (MeDoLoopUnrolling::enableDebug) {
+  if (LoopUnrollingExecutor::enableDebug) {
     LogInfo::MapleLogger() << "unrolltime: " << unrollTime << "\n";
   }
   CopyLoopForPartial(cr, varNode, j, unrollTime);
@@ -1136,18 +1128,16 @@ void LoopUnrolling::LoopPartialUnrollWithVar(CR &cr, CRNode &varNode, uint32 j) 
     }
     CopyAndInsertBB(false);
   }
-  mgr->InvalidAnalysisResult(MeFuncPhase_DOMINANCE, func);
-  dom = static_cast<Dominance*>(mgr->GetAnalysisResult(MeFuncPhase_DOMINANCE, func));
-  MeSSAUpdate ssaUpdate(*func, *func->GetMeSSATab(), *dom, cands, *memPool);
-  ssaUpdate.Run();
-  if (MeDoLoopUnrolling::enableDump) {
+  if (LoopUnrollingExecutor::enableDump) {
     irMap->Dump();
     profValid ? cfg->DumpToFile("cfgIncludeFreqInfoafterLoopPartialWithVarUnrolling", false, true) :
                 cfg->DumpToFile("cfgafterLoopPartialWithVarUnrolling");
   }
+  return true;
 }
 
-void MeDoLoopUnrolling::SetNestedLoop(const IdentifyLoops &meLoop) {
+void LoopUnrollingExecutor::SetNestedLoop(const IdentifyLoops &meLoop,
+                                          std::unordered_map<LoopDesc*, std::set<LoopDesc*>> &parentLoop) const {
   for (auto loop : meLoop.GetMeLoops()) {
     if (loop->nestDepth == 0) {
       continue;
@@ -1162,7 +1152,7 @@ void MeDoLoopUnrolling::SetNestedLoop(const IdentifyLoops &meLoop) {
   }
 }
 
-bool MeDoLoopUnrolling::IsDoWhileLoop(MeFunction &func, LoopDesc &loop) const {
+bool LoopUnrollingExecutor::IsDoWhileLoop(MeFunction &func, LoopDesc &loop) const {
   for (auto succ : loop.head->GetSucc()) {
     if (!loop.Has(*succ)) {
       return false;
@@ -1177,7 +1167,7 @@ bool MeDoLoopUnrolling::IsDoWhileLoop(MeFunction &func, LoopDesc &loop) const {
   return true;
 }
 
-bool MeDoLoopUnrolling::PredIsOutOfLoopBB(MeFunction &func, LoopDesc &loop) const {
+bool LoopUnrollingExecutor::PredIsOutOfLoopBB(MeFunction &func, LoopDesc &loop) const {
   MeCFG *cfg = func.GetCfg();
   for (auto bbID : loop.loopBBs) {
     auto bb = cfg->GetBBFromID(bbID);
@@ -1194,7 +1184,8 @@ bool MeDoLoopUnrolling::PredIsOutOfLoopBB(MeFunction &func, LoopDesc &loop) cons
   return false;
 }
 
-bool MeDoLoopUnrolling::IsCanonicalAndOnlyOneExitLoop(MeFunction &func, LoopDesc &loop) const {
+bool LoopUnrollingExecutor::IsCanonicalAndOnlyOneExitLoop(MeFunction &func, LoopDesc &loop,
+    const std::unordered_map<LoopDesc*, std::set<LoopDesc*>> &parentLoop) const {
   // Only handle one nested loop.
   if (parentLoop.find(&loop) != parentLoop.end()) {
     return false;
@@ -1225,115 +1216,134 @@ bool MeDoLoopUnrolling::IsCanonicalAndOnlyOneExitLoop(MeFunction &func, LoopDesc
   return true;
 }
 
-void MeDoLoopUnrolling::ExcuteLoopUnrollingWithConst(uint32 tripCount, MeFunction &func, MeIRMap &irMap,
-                                                     LoopUnrolling &loopUnrolling) {
+bool LoopUnrolling::LoopUnrollingWithConst(uint32 tripCount) {
   if (tripCount == 0) {
-    if (enableDebug) {
+    if (LoopUnrollingExecutor::enableDebug) {
       LogInfo::MapleLogger() << "tripCount is zero" << "\n";
     }
-    return;
+    return false;
   }
-  if (enableDebug) {
+  if (LoopUnrollingExecutor::enableDebug) {
     LogInfo::MapleLogger() << "start unrolling with const" << "\n";
     LogInfo::MapleLogger() << "tripCount: " << tripCount << "\n";
   }
-  if (enableDump) {
-    irMap.Dump();
-    func.IsIRProfValid() ? func.GetCfg()->DumpToFile("cfgIncludeFreqInfobeforLoopUnrolling", false, true) :
-                           func.GetCfg()->DumpToFile("cfgbeforLoopUnrolling");
+  if (LoopUnrollingExecutor::enableDebug) {
+    irMap->Dump();
+    func->IsIRProfValid() ? func->GetCfg()->DumpToFile("cfgIncludeFreqInfobeforLoopUnrolling", false, true) :
+                            func->GetCfg()->DumpToFile("cfgbeforLoopUnrolling");
   }
   // fully unroll
-  LoopUnrolling::ReturnKindOfFullyUnroll returnKind = loopUnrolling.LoopFullyUnroll(tripCount);
+  ReturnKindOfFullyUnroll returnKind = LoopFullyUnroll(tripCount);
   if (returnKind == LoopUnrolling::kCanNotSplitCondGoto) {
-    return;
+    return false;
   }
   if (returnKind == LoopUnrolling::kCanFullyUnroll) {
-    if (enableDebug) {
+    if (LoopUnrollingExecutor::enableDebug) {
       LogInfo::MapleLogger() << "fully unrolling" << "\n";
     }
-    if (enableDump) {
-      irMap.Dump();
-      func.IsIRProfValid() ? func.GetCfg()->DumpToFile("cfgIncludeFreqInfoafterLoopFullyUnrolling", false, true) :
-                             func.GetCfg()->DumpToFile("cfgafterLoopFullyUnrolling");
+    if (LoopUnrollingExecutor::enableDebug) {
+      irMap->Dump();
+      func->IsIRProfValid() ? func->GetCfg()->DumpToFile("cfgIncludeFreqInfoafterLoopFullyUnrolling", false, true) :
+                              func->GetCfg()->DumpToFile("cfgafterLoopFullyUnrolling");
     }
-    return;
+    return true;
   }
   // partial unroll with const
-  if (loopUnrolling.LoopPartialUnrollWithConst(tripCount)) {
-    if (enableDebug) {
+  if (LoopPartialUnrollWithConst(tripCount)) {
+    if (LoopUnrollingExecutor::enableDebug) {
       LogInfo::MapleLogger() << "partial unrolling with const" << "\n";
     }
-    if (enableDump) {
-      irMap.Dump();
-      func.IsIRProfValid() ? func.GetCfg()->DumpToFile("cfgIncludeFreqInfoafterLoopPartialWithConst", false, true) :
-                             func.GetCfg()->DumpToFile("cfgafterLoopPartialWithConstUnrolling");
+    if (LoopUnrollingExecutor::enableDebug) {
+      irMap->Dump();
+      func->IsIRProfValid() ? func->GetCfg()->DumpToFile("cfgIncludeFreqInfoafterLoopPartialWithConst", false, true) :
+                              func->GetCfg()->DumpToFile("cfgafterLoopPartialWithConstUnrolling");
     }
-    return;
+    return true;
   }
+  return false;
 }
 
-void MeDoLoopUnrolling::ExecuteLoopUnrolling(MeFunction &func, MeFuncResultMgr &m, MeIRMap &irMap) {
+void LoopUnrollingExecutor::ExecuteLoopUnrolling(MeFunction &func, MeIRMap &irMap,
+    MapleMap<OStIdx, MapleSet<BBId>*> &cands, IdentifyLoops &meLoop, MapleAllocator &alloc) {
   enableDebug = false;
   enableDump = false;
   if (enableDebug) {
     LogInfo::MapleLogger() << func.GetName() << "\n";
   }
-  IdentifyLoops *meLoop = static_cast<IdentifyLoops*>(m.GetAnalysisResult(MeFuncPhase_MELOOP, &func));
-  if (meLoop == nullptr) {
-    return;
-  }
-  SetNestedLoop(*meLoop);
+  std::unordered_map<LoopDesc*, std::set<LoopDesc*>> parentLoop;
+  SetNestedLoop(meLoop, parentLoop);
   uint32 i = 0;
-  for (auto loop : meLoop->GetMeLoops()) {
-    auto *dom = static_cast<Dominance*>(m.GetAnalysisResult(MeFuncPhase_DOMINANCE, &func));
-    if (!IsCanonicalAndOnlyOneExitLoop(func, *loop)) {
+  for (auto loop : meLoop.GetMeLoops()) {
+    if (!IsCanonicalAndOnlyOneExitLoop(func, *loop, parentLoop)) {
       continue;
     }
-    if (enableDebug) {
-      LogInfo::MapleLogger() << "start unrolling" << "\n";
-      LogInfo::MapleLogger() << "IRProf Valid : "  << func.IsIRProfValid() << "\n";
-    }
     LoopScalarAnalysisResult sa(irMap, *loop);
-    LoopUnrolling loopUnrolling(func, m, *loop, irMap, *NewMemPool(), dom);
+    LoopUnrolling loopUnrolling(func, *loop, irMap, *innerMp, alloc, cands);
     uint32 tripCount = 0;
     CRNode *conditionCRNode = nullptr;
     CR *itCR = nullptr;
     TripCountType type = sa.ComputeTripCount(func, tripCount, conditionCRNode, itCR);
-    if (enableDebug) {
-      LogInfo::MapleLogger() << "tripcount type is " << type << "\n";
-    }
     if (type == kConstCR) {
-      ExcuteLoopUnrollingWithConst(tripCount, func, irMap, loopUnrolling);
+      if (loopUnrolling.LoopUnrollingWithConst(tripCount)) {
+        isCFGChange = true;
+      }
     } else if ((type == kVarCR || type == kVarCondition) && itCR->GetOpndsSize() == kOperandNum) {
-      loopUnrolling.LoopPartialUnrollWithVar(*itCR, *conditionCRNode, i);
+      if (loopUnrolling.LoopPartialUnrollWithVar(*itCR, *conditionCRNode, i)) {
+        isCFGChange = true;
+      }
       ++i;
     }
   }
 }
 
-AnalysisResult *MeDoLoopUnrolling::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) {
-  auto &profile = func->GetMIRModule().GetProfile();
+bool ProfileCheck(maple::MeFunction &f) {
+  auto &profile = f.GetMIRModule().GetProfile();
   if (!profile.IsValid()) {
-    if (enableDebug) {
+    if (LoopUnrollingExecutor::enableDebug) {
       LogInfo::MapleLogger() << "DeCompress failed in loopUnrolling" << "\n";
     }
-    return nullptr;
+    return false;
   }
-  if (!profile.CheckFuncHot(func->GetName())) {
-    if (enableDebug) {
+  if (!profile.CheckFuncHot(f.GetName())) {
+    if (LoopUnrollingExecutor::enableDebug) {
       LogInfo::MapleLogger() << "func is not hot" << "\n";
     }
+    return false;
+  }
+  return true;
+}
+
+AnalysisResult *MeDoLoopUnrolling::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) {
+  // Do loop unrolling only when the function is hot in profile.
+  if (!ProfileCheck(*func)) {
     return nullptr;
   }
-  if (enableDebug) {
-    LogInfo::MapleLogger() << "func is hot" << "\n";
+
+  IdentifyLoops *meLoop = static_cast<IdentifyLoops*>(m->GetAnalysisResult(MeFuncPhase_MELOOP, func));
+  if (meLoop == nullptr) {
+    return nullptr;
   }
+  auto *loopunrollMemPool = NewMemPool();
+  MapleAllocator loopUnrollingAlloc = MapleAllocator(loopunrollMemPool);
+  MapleMap<OStIdx, MapleSet<BBId>*> cands((std::less<OStIdx>(), loopUnrollingAlloc.Adapter()));
   CHECK_NULL_FATAL(m);
   auto *irMap = static_cast<MeIRMap*>(m->GetAnalysisResult(MeFuncPhase_IRMAPBUILD, func));
   CHECK_NULL_FATAL(irMap);
-  ExecuteLoopUnrolling(*func, *m, *irMap);
-  m->InvalidAnalysisResult(MeFuncPhase_DOMINANCE, func);
-  m->InvalidAnalysisResult(MeFuncPhase_MELOOP, func);
+  LoopUnrollingExecutor loopUnrollingExe = LoopUnrollingExecutor(*NewMemPool());
+  loopUnrollingExe.ExecuteLoopUnrolling(*func, *irMap, cands, *meLoop, loopUnrollingAlloc);
+  if (DEBUGFUNC(func)) {
+    func->GetCfg()->DumpToFile("beforeloopunrolling", false);
+  }
+  if (loopUnrollingExe.IsCFGChange()) {
+    m->InvalidAnalysisResult(MeFuncPhase_DOMINANCE, func);
+    auto dom = static_cast<Dominance*>(m->GetAnalysisResult(MeFuncPhase_DOMINANCE, func));
+    MeSSAUpdate ssaUpdate(*func, *func->GetMeSSATab(), *dom, cands, *loopunrollMemPool);
+    ssaUpdate.Run();
+    m->InvalidAnalysisResult(MeFuncPhase_MELOOP, func);
+  }
+  if (DEBUGFUNC(func)) {
+    func->GetCfg()->DumpToFile("afterloopunrolling", false);
+  }
   return nullptr;
 }
 }  // namespace maple

@@ -47,7 +47,6 @@ class MeDoHDSE : public MeFuncPhase {
   explicit MeDoHDSE(MePhaseID id) : MeFuncPhase(id) {}
 
   virtual ~MeDoHDSE() = default;
-  void MakeEmptyTrysUnreachable(MeFunction &func);
   AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr *mrm) override;
   std::string PhaseName() const override {
     return "hdse";

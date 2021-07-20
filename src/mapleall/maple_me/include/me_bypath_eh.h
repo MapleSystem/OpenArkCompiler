@@ -21,6 +21,15 @@
 #include "mir_builder.h"
 
 namespace maple {
+class MeBypathEH {
+ public:
+  void BypathException(MeFunction &func, const KlassHierarchy &kh) const;
+ private:
+  StmtNode *IsSyncExit(BB &syncBB, MeFunction &func, LabelIdx secondLabel) const;
+  bool DoBypathException(BB *tryBB, BB *catchBB, const Klass *catchClass, const StIdx &stIdx,
+                         const KlassHierarchy &kh, MeFunction &func, const StmtNode *syncExitStmt) const;
+};
+
 class MeDoBypathEH : public MeFuncPhase {
  public:
   explicit MeDoBypathEH(MePhaseID id) : MeFuncPhase(id) {}
@@ -30,12 +39,6 @@ class MeDoBypathEH : public MeFuncPhase {
   std::string PhaseName() const override {
     return "bypatheh";
   }
-
- private:
-  bool DoBypathException(BB *tryBB, BB *catchBB, const Klass *catchClass, const StIdx &stIdx,
-                         const KlassHierarchy &kh, MeFunction &func, const StmtNode *syncExitStmt) const;
-  StmtNode *IsSyncExit(BB &syncBB, MeFunction &func, LabelIdx secondLabel) const;
-  void BypathException(MeFunction &func, const KlassHierarchy &kh) const;
 };
 }  // namespace maple
 #endif
