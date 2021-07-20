@@ -69,6 +69,7 @@ class ConstantFold : public FuncOptimizeImpl {
   StmtNode *SimplifyIf(IfStmtNode *node);
   StmtNode *SimplifySwitch(SwitchNode *node);
   StmtNode *SimplifyUnary(UnaryStmtNode *node);
+  StmtNode *SimplifyAsm(AsmNode* node);
   StmtNode *SimplifyWhile(WhileStmtNode *node);
   std::pair<BaseNode*, int64> FoldArray(ArrayNode *node);
   std::pair<BaseNode*, int64> FoldBase(BaseNode *node) const;
