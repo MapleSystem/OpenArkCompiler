@@ -171,6 +171,9 @@ ln -s -f ${MAPLE_ROOT}/tools/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04/bin
 ln -s -f ${MAPLE_ROOT}/tools/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04/bin/llvm-ar ${TOOL_BIN_PATH}/llvm-ar
 ln -s -f ${MAPLE_ROOT}/tools/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04/bin/llvm-ranlib ${TOOL_BIN_PATH}/llvm-ranlib
 ln -s -f ${MAPLE_ROOT}/tools/qemu/package/usr/bin/qemu-aarch64 ${TOOL_BIN_PATH}/qemu-aarch64
+if [ -f /usr/bin/qemu-aarch64 ];then
+  ln -s -f /usr/bin/qemu-aarch64 ${TOOL_BIN_PATH}/qemu-aarch64
+fi
 
 mkdir -p ${MAPLE_ROOT}/testsuite/tools
 mkdir -p ${MAPLE_ROOT}/testsuite/tools/bin
