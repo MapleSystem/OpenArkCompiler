@@ -53,7 +53,7 @@ O2 = {
     "run": [
         Mplsh(
             qemu="${TOOL_BIN_PATH}/qemu-aarch64",
-            qemu_libc="/usr/aarch64-linux-gnu",
+            qemu_libc="${OUT_ROOT}/tools/gcc-linaro-7.5.0/aarch64-linux-gnu/libc",
             qemu_ld_lib=[
                 "${OUT_ROOT}/${MAPLE_BUILD_TYPE}/ops/third_party",
                 "${OUT_ROOT}/${MAPLE_BUILD_TYPE}/ops/host-x86_64-O2",
