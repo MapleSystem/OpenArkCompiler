@@ -1208,6 +1208,7 @@ class GraphColorRegAllocator : public AArch64RegAllocator {
   void ClassifyOperand(std::unordered_set<regno_t> &pregs, std::unordered_set<regno_t> &vregs, const Operand &opnd);
   void SetOpndConflict(const Insn &insn, bool onlyDef);
   void UpdateOpndConflict(const Insn &insn, bool multiDef);
+  void SetLrMustAssign(RegOperand *regOpnd);
   void SetupMustAssignedLiveRanges(const Insn &insn);
   void ComputeLiveRangesForEachDefOperand(Insn &insn, bool &multiDef);
   void ComputeLiveRangesForEachUseOperand(Insn &insn);

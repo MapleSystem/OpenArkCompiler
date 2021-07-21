@@ -919,6 +919,10 @@ class CGFunc {
     return dbgCallFrameLocations;
   }
 
+  bool HasAsm() {
+    return hasAsm;
+  }
+
  protected:
   uint32 firstMapleIrVRegNO = 200;        /* positioned after physical regs */
   uint32 firstNonPregVRegNO;
@@ -1005,6 +1009,10 @@ class CGFunc {
     return false;
   }
 
+  void SetHasAsm() {
+    hasAsm = true;
+  }
+
  private:
   CGFunc &operator=(const CGFunc &cgFunc);
   CGFunc(const CGFunc&);
@@ -1039,6 +1047,7 @@ class CGFunc {
   uint32 nextSpillLocation = 0;
   static constexpr int kRegIncrStepLen = 80; /* reg number increate step length */
   const MapleString shortFuncName;
+  bool hasAsm = false;
 };  /* class CGFunc */
 
 CGFUNCPHASE(CgDoLayoutSF, "layoutstackframe")
