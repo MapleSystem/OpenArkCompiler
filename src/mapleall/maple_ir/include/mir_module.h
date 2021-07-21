@@ -511,6 +511,10 @@ class MIRModule {
     importPaths.push_back(path);
   }
 
+  MapleVector<MapleString> &GetAsmDecls() {
+    return asmDecls;
+  }
+
   const MapleSet<uint32> &GetClassList() const {
     return classList;
   }
@@ -633,6 +637,7 @@ class MIRModule {
   uint32 numFuncs = 0;  // because puIdx 0 is reserved, numFuncs is also the highest puIdx
   MapleVector<GStrIdx> importFiles;
   MapleVector<GStrIdx> importPaths;
+  MapleVector<MapleString> asmDecls;
   MapleSet<uint32> classList;
 
   std::map<PUIdx, std::vector<CallInfo*>> method2TargetMap;

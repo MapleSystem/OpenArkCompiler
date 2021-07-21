@@ -1734,6 +1734,26 @@ bool MIRParser::ParseDeclareVar(MIRSymbol &symbol) {
     return false;
   }
   symbol.SetTyIdx(tyIdx);
+  if (lexer.GetTokenKind() == TK_section) {  // parse section attribute
+    lexer.NextToken();
+    if (lexer.GetTokenKind() != TK_lparen) {
+      Error("expect ( for section attribute but get ");
+      return false;
+    }
+    lexer.NextToken();
+    if (lexer.GetTokenKind() != TK_string) {
+      Error("expect string literal for section attribute but get ");
+      return false;
+    }
+    UStrIdx literalStrIdx = GlobalTables::GetUStrTable().GetOrCreateStrIdxFromName(lexer.GetName());
+    symbol.sectionAttr = literalStrIdx;
+    lexer.NextToken();
+    if (lexer.GetTokenKind() != TK_rparen) {
+      Error("expect ) for section attribute but get ");
+      return false;
+    }
+    lexer.NextToken();
+  }
   if (!ParseVarTypeAttrs(symbol)) {
     Error("bad type attribute in variable declaration at ");
     return false;
@@ -2432,6 +2452,7 @@ std::map<TokenKind, MIRParser::FuncPtrParseMIRForElem> MIRParser::InitFuncPtrMap
   funcPtrMap[TK_srcfileinfo] = &MIRParser::ParseMIRForSrcFileInfo;
   funcPtrMap[TK_import] = &MIRParser::ParseMIRForImport;
   funcPtrMap[TK_importpath] = &MIRParser::ParseMIRForImportPath;
+  funcPtrMap[TK_asmdecl] = &MIRParser::ParseMIRForAsmdecl;
   funcPtrMap[TK_LOC] = &MIRParser::ParseLoc;
   return funcPtrMap;
 }
@@ -2476,10 +2497,14 @@ bool MIRParser::ParseMIRForVar() {
       if (prevSt->GetStorageClass() == kScExtern) {
         prevSt->SetStorageClass(st.GetStorageClass());
       }
+      if (prevSt->sectionAttr == UStrIdx(0)) {
+        prevSt->sectionAttr = st.sectionAttr;
+      }
     } else if (prevSt->GetSKind() == maple::kStVar && prevSt->GetStorageClass() ==  maple::kScInvalid) {
       prevSt->SetStorageClass(kScGlobal);
       prevSt->SetAttrs(st.GetAttrs());
       prevSt->SetNameStrIdx(st.GetNameStrIdx());
+      prevSt->sectionAttr = st.sectionAttr;
       prevSt->SetValue(st.GetValue());
       prevSt->SetTyIdx(st.GetTyIdx());
       SetSrcPos(prevSt->GetSrcPosition(), lexer.GetLineNum());
@@ -2497,6 +2522,7 @@ bool MIRParser::ParseMIRForVar() {
     }
     newst->SetAttrs(st.GetAttrs());
     newst->SetNameStrIdx(st.GetNameStrIdx());
+    newst->sectionAttr = st.sectionAttr;
     newst->SetValue(st.GetValue());
     SetSrcPos(newst->GetSrcPosition(), lexer.GetLineNum());
     if (!ParseDeclareVarInitValue(*newst)) {
@@ -2799,6 +2825,17 @@ bool MIRParser::ParseMIRForImportPath() {
   }
   GStrIdx litStrIdx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(lexer.GetName());
   mod.PushbackImportPath(litStrIdx);
+  lexer.NextToken();
+  return true;
+}
+
+bool MIRParser::ParseMIRForAsmdecl() {
+  lexer.NextToken();
+  if (lexer.GetTokenKind() != TK_string) {
+    Error("expect asm string after iasm but get ");
+    return false;
+  }
+  mod.GetAsmDecls().push_back(MapleString(lexer.GetName(), mod.GetMemPool()));
   lexer.NextToken();
   return true;
 }

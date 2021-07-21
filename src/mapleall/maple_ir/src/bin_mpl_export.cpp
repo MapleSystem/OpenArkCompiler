@@ -620,6 +620,7 @@ void BinaryMplExport::OutputSymbol(MIRSymbol *sym) {
   WriteNum(kBinSymbol);
   WriteNum(sym->GetScopeIdx());
   OutputStr(sym->GetNameStrIdx());
+  OutputUsrStr(sym->sectionAttr);
   WriteNum(sym->GetSKind());
   WriteNum(sym->GetStorageClass());
   size_t mark = symMark.size();
@@ -749,6 +750,12 @@ void BinaryMplExport::WriteHeaderField(uint64 contentIdx) {
   WriteNum(mod.GetImportFiles().size());
   for (GStrIdx strIdx : mod.GetImportFiles()) {
     OutputStr(strIdx);
+  }
+
+  WriteNum(mod.GetAsmDecls().size());
+  for (MapleString mapleStr : mod.GetAsmDecls()) {
+    std::string str(mapleStr.c_str());
+    WriteAsciiStr(str);
   }
 
   Fixup(totalSizeIdx, buf.size() - totalSizeIdx);

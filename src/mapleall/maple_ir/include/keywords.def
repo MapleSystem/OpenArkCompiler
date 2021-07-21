@@ -99,3 +99,7 @@
   // storage class
   KEYWORD(pstatic)
   KEYWORD(fstatic)
+  // file-scope asm
+  KEYWORD(asmdecl)
+  // section attribute
+  KEYWORD(section)

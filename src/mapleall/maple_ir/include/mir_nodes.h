@@ -29,6 +29,8 @@
 
 namespace maple {
 extern MIRModule *theMIRModule;
+extern void EmitStr(const MapleString &mplStr);
+
 class MIRPregTable;  // circular dependency exists, no other choice
 class TypeTable;  // circular dependency exists, no other choice
 class VerifyResult;  // circular dependency exists, no other choice
