@@ -16,6 +16,7 @@
 #include "cgbb.h"
 #include "cg.h"
 #include "cg_option.h"
+#include "loop.h"
 #include "securec.h"
 
 /* This file provides common class and function for cfgo and ico. */
@@ -102,12 +103,42 @@ std::string DotGenerator::GetFileName(const MIRModule &mirModule, const std::str
   return fileName;
 }
 
+static bool IsBackEdgeForLoop(const CGFuncLoops *loop, const BB *from, const BB *to) {
+  const BB *header = loop->GetHeader();
+  if (header->GetId() == to->GetId()) {
+    for (auto *be : loop->GetBackedge()) {
+      if (be->GetId() == from->GetId()) {
+        return true;
+      }
+    }
+  }
+  for (auto *inner : loop->GetInnerLoops()) {
+    if (IsBackEdgeForLoop(inner, from, to)) {
+      return true;
+    }
+  }
+  return false;
+}
+bool DotGenerator::IsBackEdge(const CGFunc &cgFunction, const BB *from, const BB *to) {
+  for (const auto *loop : cgFunction.GetLoops()) {
+    if (IsBackEdgeForLoop(loop, from, to)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void DotGenerator::DumpEdge(const CGFunc &cgFunction, std::ofstream &cfgFileOfStream, bool isIncludeEH) {
   FOR_ALL_BB_CONST(bb, &cgFunction) {
     for (auto *succBB : bb->GetSuccs()) {
       cfgFileOfStream << "BB" << bb->GetId();
       cfgFileOfStream << " -> "
               << "BB" << succBB->GetId();
+      if (IsBackEdge(cgFunction, bb, succBB)) {
+        cfgFileOfStream << " [color=red]";
+      } else {
+        cfgFileOfStream << " [color=green]";
+      }
       cfgFileOfStream << ";\n";
     }
     if (isIncludeEH) {
@@ -211,12 +242,12 @@ void DotGenerator::DumpBBInstructions(const CGFunc &cgFunction, regno_t vReg, st
 
 /* Generate dot file for cfg */
 void DotGenerator::GenerateDot(const std::string &preFix, CGFunc &cgFunc, const MIRModule &mod, bool includeEH,
-                               regno_t vReg) {
+                               const std::string fname, regno_t vReg) {
   std::ofstream cfgFile;
   std::streambuf *coutBuf = std::cout.rdbuf(); /* keep original cout buffer */
   std::streambuf *buf = cfgFile.rdbuf();
   std::cout.rdbuf(buf);
-  std::string fileName = GetFileName(mod, preFix);
+  std::string fileName = GetFileName(mod, (preFix + "-" + fname));
 
   cfgFile.open(fileName, std::ios::trunc);
   CHECK_FATAL(cfgFile.is_open(), "Failed to open output file: %s", fileName.c_str());
