@@ -68,6 +68,13 @@ MeExpr *IRMap::CreateIvarMeExpr(MeExpr &expr, TyIdx tyIdx, MeExpr &base) {
   return HashMeExpr(ivarMeExpr);
 }
 
+NaryMeExpr *IRMap::CreateNaryMeExpr(const NaryMeExpr &nMeExpr) {
+  NaryMeExpr tmpNaryMeExpr(&(irMapAlloc), kInvalidExprID, nMeExpr);
+  tmpNaryMeExpr.SetBoundCheck(false);
+  MeExpr *newNaryMeExpr = HashMeExpr(tmpNaryMeExpr);
+  return static_cast<NaryMeExpr*>(newNaryMeExpr);
+}
+
 VarMeExpr *IRMap::CreateNewVar(GStrIdx strIdx, PrimType pType, bool isGlobal) {
   MIRSymbol *st =
       mirModule.GetMIRBuilder()->CreateSymbol((TyIdx)pType, strIdx, kStVar,

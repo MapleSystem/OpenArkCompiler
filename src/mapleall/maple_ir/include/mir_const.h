@@ -516,6 +516,11 @@ class MIRAggConst : public MIRConst {
     return constVec[index];
   }
 
+  void SetConstVecItem(size_t index, MIRConst& st) {
+    CHECK_FATAL(index < constVec.size(), "index out of range");
+    constVec[index] = &st;
+  }
+
   uint32 GetFieldIdItem(size_t index) const {
     ASSERT(index < fieldIdVec.size(), "index out of range");
     return fieldIdVec[index];

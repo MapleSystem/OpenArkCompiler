@@ -259,6 +259,12 @@ class MeCFG : public AnalysisResult {
     auto it = endTryBB2TryBB.find(endTryBB);
     return it == endTryBB2TryBB.end() ? nullptr : it->second;
   }
+
+  BB *GetTryBBFromEndTryBB(BB *endTryBB) {
+    auto it = endTryBB2TryBB.find(endTryBB);
+    return it == endTryBB2TryBB.end() ? nullptr : it->second;
+  }
+
   void SetBBTryBBMap(BB *currBB, BB *tryBB) {
     endTryBB2TryBB[currBB] = tryBB;
   }

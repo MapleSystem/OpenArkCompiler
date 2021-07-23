@@ -139,15 +139,17 @@ void AArch64LiveAnalysis::ProcessAsmListOpnd(BB &bb, Operand &opnd, uint32 idx) 
   bool isDef = false;
   bool isUse = false;
   switch (idx) {
-  case kAsmOutputListOpnd:
-  case kAsmClobberListOpnd:
-    isDef = true;
-    break;
-  case kAsmInputListOpnd:
-    isUse = true;
-    break;
-  default:
-    return;
+    case kAsmOutputListOpnd:
+    case kAsmClobberListOpnd: {
+      isDef = true;
+      break;
+    }
+    case kAsmInputListOpnd: {
+      isUse = true;
+      break;
+    }
+    default:
+      return;
   }
   ListOperand &listOpnd = static_cast<ListOperand&>(opnd);
   for (auto op : listOpnd.GetOperands()) {

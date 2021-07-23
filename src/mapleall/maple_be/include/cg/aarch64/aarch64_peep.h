@@ -62,6 +62,24 @@ class CombineContiLoadAndStoreAArch64 : public PeepPattern {
   void Run(BB &bb, Insn &insn) override;
 };
 
+/*
+ * add xt, xn, #imm               add  xt, xn, xm
+ * ldr xd, [xt]                   ldr xd, [xt]
+ * =====================>
+ * ldr xd, [xn, #imm]             ldr xd, [xn, xm]
+ *
+ * load/store can do extend shift as well
+ */
+class EnhanceStrLdrAArch64 : public PeepPattern {
+ public:
+  explicit EnhanceStrLdrAArch64(CGFunc &cgFunc) : PeepPattern(cgFunc) {}
+  ~EnhanceStrLdrAArch64() override = default;
+  void Run(BB &bb, Insn &insn) override;
+
+ private:
+  bool IsEnhanceAddImm(MOperator prevMop);
+};
+
 /* Eliminate the sxt[b|h|w] w0, w0;, when w0 is satisify following:
  * i)  mov w0, #imm (#imm is not out of range)
  * ii) ldrs[b|h] w0, [MEM]
@@ -713,6 +731,7 @@ class AArch64PrePeepHole : public PeepPatternMatch {
     kComplexMemOperandOptLabel,
     kWriteFieldCallOpt,
     kDuplicateExtensionOpt,
+    kEnhanceStrLdrAArch64Opt,
     kPeepholeOptsNum
   };
 };

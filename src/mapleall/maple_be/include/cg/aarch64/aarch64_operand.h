@@ -989,6 +989,7 @@ class ExtendShiftOperand : public Operand {
 class BitShiftOperand : public Operand {
  public:
   enum ShiftOp : uint8 {
+    kUndef,
     kLSL, /* logical shift left */
     kLSR, /* logical shift right */
     kASR, /* arithmetic shift right */
@@ -1015,6 +1016,7 @@ class BitShiftOperand : public Operand {
   }
 
   void Dump() const override {
+    CHECK_FATAL((shiftOp != kUndef), "shift is undef!");
     LogInfo::MapleLogger() << ((shiftOp == kLSL) ? "LSL: " : ((shiftOp == kLSR) ? "LSR: " : "ASR: "));
     LogInfo::MapleLogger() << shiftAmount;
   }

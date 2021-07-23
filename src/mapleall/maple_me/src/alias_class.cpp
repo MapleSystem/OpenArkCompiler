@@ -338,7 +338,7 @@ AliasInfo AliasClass::CreateAliasElemsExpr(BaseNode &expr) {
 
       auto *opnd = expr.Opnd(1);
       if (!opnd->IsConstval() || !IsAddress(expr.GetPrimType())) {
-        return AliasInfo(aliasInfo.ae, aliasInfo.fieldID, OffsetType::InvalidOffset());
+        return AliasInfo(aliasInfo.ae, 0, OffsetType::InvalidOffset());
       }
       auto mirConst = static_cast<ConstvalNode*>(opnd)->GetConstVal();
       CHECK_FATAL(mirConst->GetKind() == kConstInt, "array index must be integer");
@@ -350,7 +350,7 @@ AliasInfo AliasClass::CreateAliasElemsExpr(BaseNode &expr) {
       }
       constexpr int64 bitsPerByte = 8;
       OffsetType newOffset = aliasInfo.offset + static_cast<uint64>(constVal) * bitsPerByte;
-      return AliasInfo(aliasInfo.ae, aliasInfo.fieldID, newOffset);
+      return AliasInfo(aliasInfo.ae, 0, newOffset);
     }
     case OP_array: {
       for (size_t i = 1; i < expr.NumOpnds(); ++i) {
@@ -551,9 +551,19 @@ void AliasClass::ApplyUnionForDassignCopy(AliasElem &lhsAe, AliasElem *rhsAe, Ba
   if (SetNextLevNADSForEscapePtr(lhsAe, rhs)) {
     return;
   }
-  if (rhsAe == nullptr || rhsAe->GetOriginalSt().GetIndirectLev() > 0 || rhsAe->IsNotAllDefsSeen()) {
+  if (rhsAe == nullptr) {
     lhsAe.SetNextLevNotAllDefsSeen(true);
     return;
+  }
+  if (rhsAe->GetOriginalSt().GetIndirectLev() > 0 || rhsAe->IsNotAllDefsSeen()) {
+    unionFind.Union(lhsAe.GetClassID(), rhsAe->GetClassID());
+    lhsAe.SetNextLevNotAllDefsSeen(true);
+    return;
+  }
+  if (rhsAe->GetOriginalSt().GetIndirectLev() < 0) {
+    for (auto *ost : rhsAe->GetOriginalSt().GetNextLevelOsts()) {
+      osym2Elem[ost->GetIndex()]->SetNextLevNotAllDefsSeen(true);
+    }
   }
   if (mirModule.IsCModule()) {
     TyIdx lhsTyIdx = lhsAe.GetOriginalSt().GetTyIdx();
@@ -595,6 +605,76 @@ void AliasClass::SetPtrOpndsNextLevNADS(unsigned int start, unsigned int end,
   }
 }
 
+void AliasClass::SetAggPtrFieldsNextLevNADS(OriginalSt &ost) {
+  MIRTypeKind typeKind = ost.GetType()->GetKind();
+  if (typeKind == kTypeStruct || typeKind == kTypeUnion || typeKind == kTypeStructIncomplete) {
+    auto *structType = static_cast<MIRStructType*>(ost.GetType());
+    OriginalSt *prevOst = ost.GetPrevLevelOst();
+    // if prevOst exist, all ptr nextLev ost should be set NextLevNADS
+    if (prevOst != nullptr) {
+      for (auto *nextOst : prevOst->GetNextLevelOsts()) {
+        AliasElem *nextAe = FindOrCreateAliasElem(*nextOst);
+        if (nextAe->IsNextLevNotAllDefsSeen()) {
+          continue; // has been set before
+        }
+        // pointer arithmetic may cause ptr escape from no address type
+        // e.g.
+        // struct Node {
+        //   int val;
+        //   Node *next;
+        // } node;
+        // *((int*)&node + 1) <- ptr :
+        // LHS is next, and ptr will escape, but LHS's primtype is agg, not an address type.
+        //
+        // Hence we should not skip for this case
+        if (!IsPotentialAddress(nextOst->GetType()->GetPrimType(), &mirModule)) {
+          MIRType *prevType = static_cast<MIRPtrType*>(prevOst->GetType())->GetPointedType();
+          int64 bitOffset = prevType->GetBitOffsetFromBaseAddr(nextOst->GetFieldID());
+          if (nextOst->GetOffset().val == bitOffset) {
+            continue;
+          }
+        }
+        nextAe->SetNextLevNotAllDefsSeen(true);
+      }
+      return;
+    }
+    // if prevOst not exist, all ptr field should be set NextLevNADS
+    size_t numFieldIDs = structType->NumberOfFieldIDs();
+    for (uint32 fieldID = 1; fieldID <= numFieldIDs; fieldID++) {
+      MIRType *fieldType = structType->GetFieldType(fieldID);
+      if (!IsPotentialAddress(fieldType->GetPrimType(), &mirModule)) {
+        continue;
+      }
+      int64 bitOffset = structType->GetBitOffsetFromBaseAddr(fieldID);
+      OffsetType offset(bitOffset);
+      MapleUnorderedMap<SymbolFieldPair, OStIdx, HashSymbolFieldPair> &mirSt2Ost =
+          ssaTab.GetOriginalStTable().mirSt2Ost;
+      auto fldOstIt = mirSt2Ost.find(
+          SymbolFieldPair(ost.GetMIRSymbol()->GetStIdx(), fieldID, fieldType->GetTypeIndex(), offset));
+      if (fldOstIt != mirSt2Ost.end()) {
+        OriginalSt *fldOst = ssaTab.GetOriginalStFromID(fldOstIt->second);
+        AliasElem *fldAe = FindOrCreateAliasElem(*fldOst);
+        fldAe->SetNextLevNotAllDefsSeen(true);
+      }
+    }
+  }
+}
+
+void AliasClass::SetAggOpndPtrFieldsNextLevNADS(MapleVector<BaseNode*> &opnds) {
+  for (size_t i = 0; i < opnds.size(); ++i) {
+    BaseNode *opnd = opnds[i];
+    if (opnd->GetPrimType() != PTY_agg) {
+      continue;
+    }
+    AliasInfo aInfo = CreateAliasElemsExpr(*opnd);
+    if (aInfo.ae == nullptr ||
+        (aInfo.ae->IsNextLevNotAllDefsSeen() && aInfo.ae->GetOriginalSt().GetIndirectLev() > 0)) {
+      continue;
+    }
+    SetAggPtrFieldsNextLevNADS(aInfo.ae->GetOriginalSt());
+  }
+}
+
 // based on ost1's extra level ost's, ensure corresponding ones exist for ost2
 void AliasClass::CreateMirroringAliasElems(const OriginalSt *ost1, OriginalSt *ost2) {
   if (ost1->IsSameSymOrPreg(ost2)) {
@@ -633,13 +713,6 @@ void AliasClass::ApplyUnionForCopies(StmtNode &stmt) {
       AliasElem *lhsAe = FindOrCreateAliasElem(*ost);
       ASSERT_NOT_NULL(lhsAe);
       ApplyUnionForDassignCopy(*lhsAe, rhsAinfo.ae, *stmt.Opnd(0));
-      // at p = x, if the next level of either side exists, create other
-      // side's next level
-      if (mirModule.IsCModule() && rhsAinfo.ae &&
-          (lhsAe->GetOriginalSt().GetTyIdx() == rhsAinfo.ae->GetOriginalSt().GetTyIdx())) {
-        CreateMirroringAliasElems(&rhsAinfo.ae->GetOriginalSt(), &lhsAe->GetOriginalSt());
-        CreateMirroringAliasElems(&lhsAe->GetOriginalSt(), &rhsAinfo.ae->GetOriginalSt());
-      }
       return;
     }
     case OP_iassign: {
@@ -668,6 +741,7 @@ void AliasClass::ApplyUnionForCopies(StmtNode &stmt) {
       if (mirModule.IsCModule() || CallHasSideEffect(&call)) {
         SetPtrOpndsNextLevNADS(0, static_cast<unsigned int>(call.NumOpnds()), call.GetNopnd(),
                                CallHasNoPrivateDefEffect(&call));
+        SetAggOpndPtrFieldsNextLevNADS(call.GetNopnd());
       }
       break;
     }
@@ -710,6 +784,7 @@ void AliasClass::ApplyUnionForCopies(StmtNode &stmt) {
       }
       auto &call = static_cast<NaryStmtNode&>(stmt);
       SetPtrOpndsNextLevNADS(1, static_cast<unsigned int>(call.NumOpnds()), call.GetNopnd(), false);
+      SetAggOpndPtrFieldsNextLevNADS(call.GetNopnd());
       break;
     }
     case OP_intrinsiccall:
@@ -766,6 +841,7 @@ void AliasClass::CreateAssignSets() {
       if (id2Elem[rootID]->GetAssignSet() == nullptr) {
         id2Elem[rootID]->assignSet = acMemPool.New<MapleSet<unsigned int>>(acAlloc.Adapter());
       }
+      id2Elem[id]->assignSet = id2Elem[rootID]->assignSet;
       id2Elem[rootID]->AddAssignToSet(id);
     }
   }
@@ -805,6 +881,68 @@ void AliasClass::UnionAllPointedTos() {
     unionFind.Union(pointedTos[0]->GetClassID(), pointedTos[i]->GetClassID());
   }
 }
+
+void AliasClass::UnionNextLevelOfAliasOst(std::set<AliasElem *> &aesToUnionNextLev) {
+  while (!aesToUnionNextLev.empty()) {
+    auto tmpSet = aesToUnionNextLev;
+    aesToUnionNextLev.clear();
+    for (auto *aliasElem : tmpSet) {
+      auto aeId = aliasElem->GetClassID();
+      if (unionFind.Root(aeId) != aeId) {
+        continue;
+      }
+
+      std::set<OriginalSt *> mayAliasOsts;
+      for (uint32 id = 0; id < id2Elem.size(); ++id) {
+        if (unionFind.Root(id) != aeId) {
+          continue;
+        }
+        auto *ost = id2Elem[id]->GetOst();
+        auto &nextLevOsts = ost->GetNextLevelOsts();
+        (void)mayAliasOsts.insert(nextLevOsts.begin(), nextLevOsts.end());
+
+        auto *assignSet = id2Elem[id]->GetAssignSet();
+        if (assignSet == nullptr) {
+          continue;
+        }
+        for (auto valAliasId : *assignSet) {
+          if (valAliasId == id) {
+            continue;
+          }
+          auto &nextLevOsts = id2Elem[valAliasId]->GetOst()->GetNextLevelOsts();
+          (void)mayAliasOsts.insert(nextLevOsts.begin(), nextLevOsts.end());
+        }
+      }
+
+      if (mayAliasOsts.empty()) {
+        continue;
+      }
+
+      for (auto itA = mayAliasOsts.begin(); itA != mayAliasOsts.end(); ++itA) {
+        auto *ostA = *itA;
+        if (ostA->IsFinal()) {
+          continue;
+        }
+        auto itB = itA;
+        ++itB;
+        for (; itB != mayAliasOsts.end(); ++itB) {
+          auto *ostB = *itB;
+          if (ostB->IsFinal()) {
+            continue;
+          }
+
+          auto idA = FindAliasElem(*ostA)->GetClassID();
+          auto idB = FindAliasElem(*ostB)->GetClassID();
+          if (unionFind.Root(idA) != unionFind.Root(idB)) {
+            unionFind.Union(idA, idB);
+            aesToUnionNextLev.insert(id2Elem[unionFind.Root(idA)]);
+          }
+        }
+      }
+    }
+  }
+}
+
 // process the union among the pointed's of assignsets
 void AliasClass::ApplyUnionForPointedTos() {
   // first, process nextLevNotAllDefsSeen for alias elems until no change
@@ -825,7 +963,7 @@ void AliasClass::ApplyUnionForPointedTos() {
         }
       }
     }
-  };
+  }
   // only for c language
   // base ptr may add/sub an offset to point to any field
   if (mirModule.IsCModule()) {
@@ -837,9 +975,10 @@ void AliasClass::ApplyUnionForPointedTos() {
     UnionForAggAndFields();
   }
 
+  std::vector<bool> aliasElemProcessed(id2Elem.size(), false);
   MapleSet<uint> tempset(std::less<uint>(), acAlloc.Adapter());
   for (AliasElem *aliaselem : id2Elem) {
-    if (aliaselem->GetAssignSet() == nullptr) {
+    if (aliaselem->GetAssignSet() == nullptr || aliasElemProcessed[aliaselem->GetClassID()]) {
       continue;
     }
 
@@ -853,6 +992,7 @@ void AliasClass::ApplyUnionForPointedTos() {
         hasNextLevNotAllDefsSeen = true;
         break;
       }
+      aliasElemProcessed[*setit] = true;
     }
     if (hasNextLevNotAllDefsSeen) {
       // make all pointedto's in this assignSet notAllDefsSeen
@@ -872,6 +1012,7 @@ void AliasClass::ApplyUnionForPointedTos() {
     }
 
     // apply union among the assignSet elements
+    std::set<AliasElem *> aesToUnionNextLev;
     tempset = *(aliaselem->GetAssignSet());
     while (tempset.size() > 1) { // At least two elements in the same assignSet so that we can connect their next level
       // pick one alias element
@@ -888,13 +1029,19 @@ void AliasClass::ApplyUnionForPointedTos() {
             if (!MayAliasBasicAA(*ost1it, *ost2it)) {
               continue;
             }
-            AliasElem *indae1 = FindAliasElem(**ost1it);
-            AliasElem *indae2 = FindAliasElem(**ost2it);
-            unionFind.Union(indae1->GetClassID(), indae2->GetClassID());
+            uint32 idA = FindAliasElem(**ost1it)->GetClassID();
+            uint32 idB = FindAliasElem(**ost2it)->GetClassID();
+            if (unionFind.Root(idA) != unionFind.Root(idB)) {
+              unionFind.Union(idA, idB);
+              aesToUnionNextLev.insert(id2Elem[unionFind.Root(idA)]);
+            }
           }
         }
       }
     }
+
+    // union next-level-osts of aliased osts
+    UnionNextLevelOfAliasOst(aesToUnionNextLev);
   }
 }
 
@@ -930,9 +1077,14 @@ void AliasClass::UnionForNotAllDefsSeen() {
   if (!rootIDOfNADSs.empty()) {
     unsigned int elemIdA = *(rootIDOfNADSs.begin());
     rootIDOfNADSs.erase(rootIDOfNADSs.begin());
+    std::set<AliasElem *> aesToUnionNextLev;
     for (size_t elemIdB : rootIDOfNADSs) {
-      unionFind.Union(elemIdA, elemIdB);
+      if (unionFind.Root(elemIdA) != unionFind.Root(elemIdB)) {
+        unionFind.Union(elemIdA, elemIdB);
+        aesToUnionNextLev.insert(id2Elem[unionFind.Root(elemIdA)]);
+      }
     }
+    UnionNextLevelOfAliasOst(aesToUnionNextLev);
     for (auto *aliasElem : id2Elem) {
       if (unionFind.Root(aliasElem->GetClassID()) == unionFind.Root(elemIdA)) {
         aliasElem->SetNotAllDefsSeen(true);
@@ -957,9 +1109,16 @@ void AliasClass::UnionForNotAllDefsSeenCLang() {
   // Union notAllDefsSeenAe with the other notAllDefsSeen aes.
   AliasElem *notAllDefsSeenAe = notAllDefsSeenAes[0];
   (void)notAllDefsSeenAes.erase(notAllDefsSeenAes.begin());
+  std::set<AliasElem *> aesToUnionNextLev;
   for (AliasElem *ae : notAllDefsSeenAes) {
-    unionFind.Union(notAllDefsSeenAe->GetClassID(), ae->GetClassID());
+    auto idA = notAllDefsSeenAe->GetClassID();
+    auto idB = ae->GetClassID();
+    if (unionFind.Root(idA) != unionFind.Root(idB)) {
+      unionFind.Union(idA, idB);
+      aesToUnionNextLev.insert(id2Elem[unionFind.Root(idA)]);
+    }
   }
+  UnionNextLevelOfAliasOst(aesToUnionNextLev);
 
   uint rootIdOfNotAllDefsSeenAe = unionFind.Root(notAllDefsSeenAe->GetClassID());
   for (AliasElem *ae : id2Elem) {
@@ -1806,12 +1965,9 @@ void AliasClass::CollectMayUseForCallOpnd(const StmtNode &stmt, std::set<Origina
   size_t opndId = kOpcodeInfo.IsICall(stmt.GetOpCode()) ? 1 : 0;
   for (; opndId < stmt.NumOpnds(); ++opndId) {
     BaseNode *expr = stmt.Opnd(opndId);
+    expr = RemoveTypeConvertionIfExist(expr);
     if (!IsPotentialAddress(expr->GetPrimType(), &mirModule)) {
-      if (expr->GetOpCode() != OP_cvt) {
-        continue;
-      } else if (!IsPotentialAddress(static_cast<TypeCvtNode*>(expr)->FromType(), &mirModule)) {
-        continue;
-      }
+      continue;
     }
 
     AliasInfo aInfo = CreateAliasElemsExpr(*expr);

@@ -401,6 +401,9 @@ void MeLoopCanon::AddPreheader(MeFunction &func, const std::map<BBId, std::vecto
     }
     head->AddPred(*preheader);
     isCFGChange = true;
+    if (preheader->GetPred().size() > 1) {
+      (void)func.GetOrCreateBBLabel(*preheader);
+    }
   }
 }
 

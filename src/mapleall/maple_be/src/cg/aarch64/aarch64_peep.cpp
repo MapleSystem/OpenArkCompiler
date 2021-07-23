@@ -211,6 +211,7 @@ void AArch64PrePeepHole::InitOpts() {
   optimizations[kComplexMemOperandOptLabel] = optOwnMemPool->New<ComplexMemOperandLabelAArch64>(cgFunc);
   optimizations[kWriteFieldCallOpt] = optOwnMemPool->New<WriteFieldCallAArch64>(cgFunc);
   optimizations[kDuplicateExtensionOpt] = optOwnMemPool->New<ElimDuplicateExtensionAArch64>(cgFunc);
+  optimizations[kEnhanceStrLdrAArch64Opt] = optOwnMemPool->New<EnhanceStrLdrAArch64>(cgFunc);
 }
 
 void AArch64PrePeepHole::Run(BB &bb, Insn &insn) {
@@ -268,6 +269,17 @@ void AArch64PrePeepHole::Run(BB &bb, Insn &insn) {
     }
     case MOP_xldli: {
       (static_cast<ComplexMemOperandLabelAArch64*>(optimizations[kComplexMemOperandOptLabel]))->Run(bb, insn);
+      break;
+    }
+    case MOP_xldr:
+    case MOP_xstr:
+    case MOP_wldr:
+    case MOP_wstr:
+    case MOP_dldr:
+    case MOP_dstr:
+    case MOP_sldr:
+    case MOP_sstr: {
+      (static_cast<EnhanceStrLdrAArch64*>(optimizations[kEnhanceStrLdrAArch64Opt]))->Run(bb, insn);
       break;
     }
     default:
@@ -393,6 +405,41 @@ void RemoveMovingtoSameRegAArch64::Run(BB &bb, Insn &insn) {
   if ((reg1.GetRegisterNumber() == reg2.GetRegisterNumber()) && (reg1.GetSize() == reg2.GetSize())) {
     bb.RemoveInsn(insn);
   }
+}
+
+void EnhanceStrLdrAArch64::Run(BB &bb, Insn &insn) {
+  Insn *prevInsn = insn.GetPrev();
+  if (!cgFunc.GetMirModule().IsCModule()) {
+    return;
+  }
+
+  if (prevInsn == nullptr) {
+    return;
+  }
+  Operand &memOpnd = insn.GetOperand(kInsnSecondOpnd);
+  CHECK_FATAL(memOpnd.GetKind() == Operand::kOpdMem, "Unexpected operand in EnhanceStrLdrAArch64");
+  auto &a64MemOpnd = static_cast<AArch64MemOperand&>(memOpnd);
+  RegOperand *baseOpnd = a64MemOpnd.GetBaseRegister();
+  MOperator prevMop = prevInsn->GetMachineOpcode();
+  if (IsEnhanceAddImm(prevMop) && a64MemOpnd.GetAddrMode() == AArch64MemOperand::kAddrModeBOi &&
+      a64MemOpnd.GetOffsetImmediate()->GetValue() == 0) {
+    auto &addDestOpnd = static_cast<RegOperand&>(prevInsn->GetOperand(kInsnFirstOpnd));
+    if (baseOpnd == &addDestOpnd && !IfOperandIsLiveAfterInsn(addDestOpnd, insn)) {
+      ASSERT(static_cast<AArch64CGFunc&>(cgFunc).IsOperandImmValid(insn.GetMachineOpcode(), &memOpnd, kInsnSecondOpnd),
+          "Check Imm valid");
+      static_cast<AArch64MemOperand&>(memOpnd).SetBaseRegister(
+          static_cast<AArch64RegOperand&>(prevInsn->GetOperand(kInsnSecondOpnd)));
+      auto &ofstOpnd = static_cast<ImmOperand&>(prevInsn->GetOperand(kInsnThirdOpnd));
+      AArch64OfstOperand &offOpnd = static_cast<AArch64CGFunc&>(cgFunc).GetOrCreateOfstOpnd(
+          ofstOpnd.GetValue(), k32BitSize);
+      static_cast<AArch64MemOperand&>(memOpnd).SetOffsetImmediate(offOpnd);
+      bb.RemoveInsn(*prevInsn);
+    }
+  }
+}
+
+bool EnhanceStrLdrAArch64::IsEnhanceAddImm(MOperator prevMop) {
+  return prevMop == MOP_xaddrri12 ||  prevMop == MOP_waddrri12;
 }
 
 /* Combining 2 STRs into 1 stp or 2 LDRs into 1 ldp */

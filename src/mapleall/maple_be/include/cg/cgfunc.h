@@ -34,6 +34,7 @@
 #include "mempool_allocator.h"
 
 namespace maplebe {
+constexpr int32 kBBLimit = 10000;
 constexpr int32 kFreqBase = 10000;
 struct MemOpndCmp {
   bool operator()(const MemOperand *lhs, const MemOperand *rhs) const {
@@ -727,12 +728,16 @@ class CGFunc {
     return funcScopeAllocator;
   }
 
-  const MapleVector<MIRSymbol*> GetEmitStVec() const {
+  const MapleMap<uint32, MIRSymbol*> GetEmitStVec() const {
     return emitStVec;
   }
 
-  void AddEmitSt(MIRSymbol &symbol) {
-    emitStVec.emplace_back(&symbol);
+  MIRSymbol* GetEmitSt(uint32 id) {
+    return emitStVec[id];
+  }
+
+  void AddEmitSt(uint32 id, MIRSymbol &symbol) {
+    emitStVec[id] = &symbol;
   }
 
   MapleVector<CGFuncLoops*> &GetLoops() {
@@ -1037,7 +1042,7 @@ class CGFunc {
   BECommon &beCommon;
   MemLayout *memLayout = nullptr;
   MapleAllocator *funcScopeAllocator;
-  MapleVector<MIRSymbol*> emitStVec;  /* symbol that needs to be emit as a local symbol. i.e, switch table */
+  MapleMap<uint32, MIRSymbol*> emitStVec;  /* symbol that needs to be emit as a local symbol. i.e, switch table */
 #if TARGARM32
   MapleVector<BB*> sortedBBs;
   MapleVector<LiveRange*> lrVec;

@@ -1119,6 +1119,10 @@ class CGOptions : public MapleDriverOptionBase {
     ((maplebe::CGOptions::GetDumpPhases().find(PhaseName()) != maplebe::CGOptions::GetDumpPhases().end()) && \
      maplebe::CGOptions::IsDumpFunc((f)->GetName()))
 
+#define CG_DEBUG_FUNC_(f)                                                 \
+    ((maplebe::CGOptions::GetDumpPhases().find(PhaseName()) != maplebe::CGOptions::GetDumpPhases().end()) && \
+     maplebe::CGOptions::IsDumpFunc((f).GetName()))
+
 #ifndef TRACE_PHASE
 #define TRACE_PHASE (IS_STR_IN_SET(maplebe::CGOptions::GetDumpPhases(), PhaseName()))
 #endif

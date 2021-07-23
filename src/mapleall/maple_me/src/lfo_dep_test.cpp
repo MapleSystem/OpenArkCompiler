@@ -167,7 +167,7 @@ SubscriptDesc *DoloopInfo::BuildOneSubscriptDesc(BaseNode *subsX) {
       subsDesc->tooMessy = true;
       return subsDesc;
     }
-  } 
+  }
   // process varNode
   if (varNode->GetOpCode() == OP_dread) {
     DreadNode *dnode = static_cast<DreadNode *>(varNode);
@@ -197,7 +197,6 @@ ArrayAccessDesc *DoloopInfo::BuildOneArrayAccessDesc(ArrayNode *arr, bool isRHS)
   if (arrayMeExpr->GetOpnd(0)->GetMeOp() == kMeOpAddrof) {
     AddrofMeExpr *addrof = static_cast<AddrofMeExpr *>(arrayMeExpr->GetOpnd(0));
     arryOst = depInfo->lfoFunc->meFunc->GetMeSSATab()->GetOriginalStFromID(addrof->GetOstIdx());
-
   } else {
     ScalarMeExpr *scalar = dynamic_cast<ScalarMeExpr *>(arrayMeExpr->GetOpnd(0));
     if (scalar) {
@@ -259,7 +258,7 @@ void DoloopInfo::CreateArrayAccessDesc(BlockNode *block) {
       case OP_iassign: {
         IassignNode *iass = static_cast<IassignNode *>(stmt);
         if (iass->addrExpr->GetOpCode() == OP_array) {
-          ArrayAccessDesc *adesc = BuildOneArrayAccessDesc(static_cast<ArrayNode *>(iass->addrExpr), false/*isRHS*/);
+          ArrayAccessDesc *adesc = BuildOneArrayAccessDesc(static_cast<ArrayNode *>(iass->addrExpr), false /* isRHS */);
           if (adesc == nullptr) {
             hasMayDef = true;
           } else {
@@ -310,7 +309,7 @@ void DoloopInfo::CreateArrayAccessDesc(BlockNode *block) {
 void DoloopInfo::CreateDepTestLists() {
   size_t i, j;
   for (i = 0; i < lhsArrays.size(); i++) {
-    for (j = i+1; j < lhsArrays.size(); j++) {
+    for (j = i + 1; j < lhsArrays.size(); j++) {
       if (lhsArrays[i]->arrayOst->IsSameSymOrPreg(lhsArrays[j]->arrayOst)) {
         outputDepTestList.push_back(DepTestPair(i, j));
       }
@@ -327,8 +326,9 @@ void DoloopInfo::CreateDepTestLists() {
 
 static int64 Gcd(int64 a, int64 b) {
   CHECK_FATAL(a > 0 && b >= 0, "Gcd: NYI");
-  if (b == 0)
+  if (b == 0) {
     return a;
+  }
   return Gcd(b, a % b);
 }
 
@@ -373,7 +373,7 @@ void DoloopInfo::TestDependences(MapleVector<DepTestPair> *depTestList, bool bot
         }
         continue;
       }
-      // gcd test 
+      // gcd test
       if ((subs1->additiveConst - subs2->additiveConst) % Gcd(subs1->coeff, subs2->coeff) == 0) {
         testPair->dependent = true;
         testPair->unknownDist = true;
@@ -391,13 +391,13 @@ bool DoloopInfo::Parallelizable() {
     DepTestPair *testPair = &outputDepTestList[i];
     if (testPair->dependent && (testPair->unknownDist || testPair->depDist != 0)) {
       return false;
-    } 
+    }
   }
   for (size_t i = 0; i < flowDepTestList.size(); i++) {
     DepTestPair *testPair = &flowDepTestList[i];
     if (testPair->dependent && (testPair->unknownDist || testPair->depDist != 0)) {
       return false;
-    } 
+    }
   }
   return true;
 }

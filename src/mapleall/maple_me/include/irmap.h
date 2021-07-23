@@ -48,6 +48,7 @@ class IRMap : public AnalysisResult {
   MeExpr *CreateAddrofMeExprFromSymbol(MIRSymbol& sym, PUIdx  puIdx);
   MeExpr *CreateIaddrofMeExpr(FieldID fieldId, TyIdx tyIdx, MeExpr *base);
   MeExpr *CreateIvarMeExpr(MeExpr &expr, TyIdx tyIdx, MeExpr &base);
+  NaryMeExpr *CreateNaryMeExpr(const NaryMeExpr &nMeExpr);
 
   // for creating VarMeExpr
   VarMeExpr *CreateVarMeExprVersion(OriginalSt *ost);

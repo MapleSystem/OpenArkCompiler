@@ -50,6 +50,7 @@ class SequentialJumpPattern : public OptimizationPattern {
 
  protected:
   void SkipSucBB(BB &curBB, BB &sucBB);
+  void UpdateSwitchSucc(BB &curBB, BB &sucBB);
 };
 
 class FlipBRPattern : public OptimizationPattern {

@@ -661,7 +661,7 @@ void AArch64CGFunc::SelectCopyRegOpnd(Operand &dest, PrimType dtype, Operand::Op
   if (!GetMirModule().IsCModule()) {
     isInRange = IsImmediateValueInRange(strMop, immVal, is64Bits, isIntactIndexed, isPostIndexed, isPreIndexed);
   } else {
-    isInRange = !IsPrimitiveFloat(stype) && IsOperandImmValid(strMop, memOpnd, kInsnSecondOpnd);
+    isInRange = IsOperandImmValid(strMop, memOpnd, kInsnSecondOpnd);
   }
   bool isMopStr = IsStoreMop(strMop);
   if (isInRange || !isMopStr) {
@@ -3241,22 +3241,28 @@ void AArch64CGFunc::SelectSub(Operand &resOpnd, Operand &opnd0, Operand &opnd1, 
      * SUB Xd|SP,  Xn|SP,  #imm{, shift} ; 64-bit general registers
      * imm : 0 ~ 4095, shift: none, LSL #0, or LSL #12
      * aarch64 assembly takes up to 24-bits, if the lower 12 bits is all 0
+     * large offset is treated as sub (higher 12 bits + 4096) + add
+     * it gives opportunities for combining add + ldr due to the characteristics of aarch64's load/store
      */
     MOperator mOpCode = MOP_undef;
+    bool isSplitSub = false;
     if (!(immOpnd->IsInBitSize(kMaxImmVal12Bits, 0) ||
           immOpnd->IsInBitSize(kMaxImmVal12Bits, kMaxImmVal12Bits))) {
+      isSplitSub = true;
+      int64 higher12BitVal = static_cast<int64>(static_cast<uint64>(immOpnd->GetValue()) >> kMaxImmVal12Bits);
       /* process higher 12 bits */
       ImmOperand &immOpnd2 =
-          CreateImmOperand(static_cast<int64>(static_cast<uint64>(immOpnd->GetValue()) >> kMaxImmVal12Bits),
-                           immOpnd->GetSize(), immOpnd->IsSignedValue());
+          CreateImmOperand(higher12BitVal + 1, immOpnd->GetSize(), immOpnd->IsSignedValue());
+
       mOpCode = is64Bits ? MOP_xsubrri24 : MOP_wsubrri24;
       Insn &newInsn = GetCG()->BuildInstruction<AArch64Insn>(mOpCode, resOpnd, *opnd0Bak, immOpnd2, addSubLslOperand);
       GetCurBB()->AppendInsn(newInsn);
       immOpnd->ModuloByPow2(static_cast<int64>(kMaxImmVal12Bits));
+      immOpnd->SetValue(static_cast<int64>(kMax12UnsignedImm) - immOpnd->GetValue());
       opnd0Bak = &resOpnd;
     }
     /* process lower 12 bits */
-    mOpCode = is64Bits ? MOP_xsubrri12 : MOP_wsubrri12;
+    mOpCode = isSplitSub ? (is64Bits ? MOP_xaddrri12 : MOP_waddrri12) : (is64Bits ? MOP_xsubrri12 : MOP_wsubrri12);
     Insn &newInsn = GetCG()->BuildInstruction<AArch64Insn>(mOpCode, resOpnd, *opnd0Bak, *immOpnd);
     GetCurBB()->AppendInsn(newInsn);
     return;
@@ -4946,7 +4952,7 @@ void AArch64CGFunc::SelectRangeGoto(RangeGotoNode &rangeGotoNode, Operand &srcOp
   lblStr.append(funcSt->GetName()).append(std::to_string(labelIdxTmp++));
   SetLabelIdx(labelIdxTmp);
   lblSt->SetNameStrIdx(lblStr);
-  AddEmitSt(*lblSt);
+  AddEmitSt(GetCurBB()->GetId(), *lblSt);
 
   PrimType itype = rangeGotoNode.Opnd(0)->GetPrimType();
   Operand &opnd0 = LoadIntoRegister(srcOpnd, itype);

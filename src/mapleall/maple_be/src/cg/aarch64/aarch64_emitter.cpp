@@ -486,8 +486,9 @@ void AArch64AsmEmitter::Run(FuncEmitInfo &funcEmitInfo) {
     }
   }
 
-  for (auto *st : cgFunc.GetEmitStVec()) {
+  for (auto &it : cgFunc.GetEmitStVec()) {
     /* emit switch table only here */
+    MIRSymbol *st = it.second;
     ASSERT(st->IsReadOnly(), "NYI");
     emitter.Emit("\n");
     emitter.Emit("\t.align 3\n");
