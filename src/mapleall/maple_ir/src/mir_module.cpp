@@ -49,6 +49,7 @@ MIRModule::MIRModule(const std::string &fn)
       srcFileInfo(memPoolAllocator.Adapter()),
       importFiles(memPoolAllocator.Adapter()),
       importPaths(memPoolAllocator.Adapter()),
+      asmDecls(memPoolAllocator.Adapter()),
       classList(memPoolAllocator.Adapter()),
       optimizedFuncs(memPoolAllocator.Adapter()),
       puIdxFieldInitializedMap(std::less<PUIdx>(), memPoolAllocator.Adapter()),
@@ -163,6 +164,13 @@ void MIRModule::DumpGlobals(bool emitStructureType) const {
     for (size_t i = 0; i < size; ++i) {
       LogInfo::MapleLogger() << "importpath \"" << GlobalTables::GetStrTable().GetStringFromStrIdx(importPaths[i])
                              << "\"\n";
+    }
+  }
+  if (!asmDecls.empty()) {
+    size_t size = asmDecls.size();
+    for (size_t i = 0; i < size; ++i) {
+      LogInfo::MapleLogger() << "asmdecl ";
+      EmitStr(asmDecls[i]);
     }
   }
   if (entryFuncName.length()) {

@@ -463,6 +463,9 @@ class MIRSymbol {
   StIdx stIdx { 0, 0 };
   TypeAttrs typeAttrs;
   GStrIdx nameStrIdx{ 0 };
+ public:
+  UStrIdx sectionAttr { 0 }; // if not 0, the string for the name in C's section attribute
+ private:
   SymbolType value = { nullptr };
   SrcPosition srcPosition;      // where the symbol is defined
   // following cannot be assumed final even though they are declared final
