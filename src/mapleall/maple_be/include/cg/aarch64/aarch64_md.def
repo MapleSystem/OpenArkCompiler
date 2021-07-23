@@ -358,6 +358,14 @@ DEFINE_MOP(MOP_wasrrrr, {mopdReg32ID,mopdReg32IS,mopdReg32IS},0,kLtAluShiftReg,"
 DEFINE_MOP(MOP_xlsrrrr, {mopdReg64ID,mopdReg64IS,mopdReg64IS},0,kLtAluShiftReg,"lsr","0,1,2",1)
 /* MOP_wlsrrrr */
 DEFINE_MOP(MOP_wlsrrrr, {mopdReg32ID,mopdReg32IS,mopdReg32IS},0,kLtAluShiftReg,"lsr","0,1,2",1)
+/* MOP_wtstri32 */
+DEFINE_MOP(MOP_wtstri32, {mopdRegCCD,mopdReg32ID,mopdImm32},0,kLtAlu,"tst","1,2",1)
+/* MOP_xtstri64 */
+DEFINE_MOP(MOP_xtstri64, {mopdRegCCD,mopdReg64ID,mopdImm64},0,kLtAlu,"tst","1,2",1)
+/* MOP_wtstrr */
+DEFINE_MOP(MOP_wtstrr, {mopdRegCCD,mopdReg32ID,mopdReg32IS},0,kLtAlu,"tst","1,2",1)
+/* MOP_xtstrr */
+DEFINE_MOP(MOP_xtstrr, {mopdRegCCD,mopdReg64ID,mopdReg64IS},0,kLtAlu,"tst","1,2",1)
 
 /* MOP_wsfmovri imm8->s */
 DEFINE_MOP(MOP_wsfmovri, {mopdReg32FD,mopdImm8},ISMOVE,kLtFconst,"fmov","0,1",1)

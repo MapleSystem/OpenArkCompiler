@@ -231,6 +231,35 @@ class ReplaceDivToMultiAArch64 : public PeepPattern {
 
 /*
  * Optimize the following patterns:
+ *  and  w0, w0, #imm  ====> tst  w0, #imm
+ *  cmp  w0, #0              beq/bne  .label
+ *  beq/bne  .label
+ *
+ *  and  x0, x0, #imm  ====> tst  x0, #imm
+ *  cmp  x0, #0              beq/bne  .label
+ *  beq/bne  .label
+ */
+class AndCmpBranchesToTstAArch64 : public PeepPattern {
+ public:
+  explicit AndCmpBranchesToTstAArch64(CGFunc &cgFunc) : PeepPattern(cgFunc) {}
+  ~AndCmpBranchesToTstAArch64() override = default;
+  void Run(BB &bb, Insn &insn) override;
+};
+
+/*
+ * Optimize the following patterns:
+ *  and  w0, w0, #imm  ====> tst  w0, #imm
+ *  cbz/cbnz  .label         beq/bne  .label
+ */
+class AndCbzBranchesToTstAArch64 : public PeepPattern {
+ public:
+  explicit AndCbzBranchesToTstAArch64(CGFunc &cgFunc) : PeepPattern(cgFunc) {}
+  ~AndCbzBranchesToTstAArch64() override = default;
+  void Run(BB &bb, Insn &insn) override;
+};
+
+/*
+ * Optimize the following patterns:
  *  and  w0, w0, #1  ====> and  w0, w0, #1
  *  cmp  w0, #1
  *  cset w0, EQ
@@ -255,7 +284,6 @@ class AndCmpBranchesToCsetAArch64 : public PeepPattern {
   ~AndCmpBranchesToCsetAArch64() override = default;
   void Run(BB &bb, Insn &insn) override;
 };
-
 /*
  * We optimize the following pattern in this function:
  * cmp w[0-9]*, wzr  ====> tbz w[0-9]*, #31, .label
@@ -688,6 +716,8 @@ class AArch64PeepHole : public PeepPatternMatch {
     kInlineReadBarriersOpt,
     kReplaceDivToMultiOpt,
     kAndCmpBranchesToCsetOpt,
+    kAndCmpBranchesToTstOpt,
+    kAndCbzBranchesToTstOpt,
     kZeroCmpBranchesOpt,
     kPeepholeOptsNum
   };
