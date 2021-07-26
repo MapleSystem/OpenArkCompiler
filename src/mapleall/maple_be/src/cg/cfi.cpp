@@ -132,4 +132,10 @@ AnalysisResult *CgDoGenCfi::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr
   cgFunc->GenerateCfiPrologEpilog();
   return nullptr;
 }
+
+bool CgGenCfi::PhaseRun(maplebe::CGFunc &f) {
+  f.GenerateCfiPrologEpilog();
+  return false;
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgGenCfi, gencfi)
 }  /* namespace maplebe */

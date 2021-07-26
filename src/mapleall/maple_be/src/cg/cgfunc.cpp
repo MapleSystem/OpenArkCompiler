@@ -328,7 +328,7 @@ Operand *HandleVectorMerge(IntrinsicopNode &intrnNode, CGFunc &cgFunc) {
   BaseNode *index = intrnNode.Opnd(2);                                 /* index operand */
   int32 iNum = 0;
   if (index->GetOpCode() == OP_constval) {
-    MIRConst *mirConst = static_cast<ConstvalNode*>(index)->GetConstVal();
+    MIRConst *mirConst = static_cast<ConstvalNode *>(index)->GetConstVal();
     iNum = safe_cast<MIRIntConst>(mirConst)->GetValue();
     PrimType ty = intrnNode.Opnd(0)->GetPrimType();
     iNum *= GetPrimTypeSize(ty) / GetPrimTypeLanes(ty);                /* 64x2: 0-1 -> 0-8 */
@@ -1663,11 +1663,29 @@ AnalysisResult *CgDoHandleFunc::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResul
   return nullptr;
 }
 
-AnalysisResult *CgFixCFLocOsft::Run(CGFunc *cgFunc, CgFuncResultMgr *m) {
+bool CgHandleFunction::PhaseRun(maplebe::CGFunc &f) {
+  f.HandleFunction();
+  if (!f.GetCG()->GetCGOptions().DoEmitCode() || f.GetCG()->GetCGOptions().DoDumpCFG()) {
+    f.DumpCFG();
+  }
+  return false;
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgHandleFunction, handlefunction)
+
+
+AnalysisResult *CgDoFixCFLocOsft::Run(CGFunc *cgFunc, CgFuncResultMgr *m) {
   (void)m;
   if (cgFunc->GetCG()->GetCGOptions().WithDwarf()) {
     cgFunc->DBGFixCallFrameLocationOffsets();
   }
   return nullptr;
 }
+
+bool CgFixCFLocOsft::PhaseRun(maplebe::CGFunc &f) {
+  if (f.GetCG()->GetCGOptions().WithDwarf()) {
+    f.DBGFixCallFrameLocationOffsets();
+  }
+  return false;
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgFixCFLocOsft, dbgfixcallframeoffsets)
 }  /* namespace maplebe */

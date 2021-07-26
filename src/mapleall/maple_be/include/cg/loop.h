@@ -18,6 +18,7 @@
 #include "cg_phase.h"
 #include "cgbb.h"
 #include "insn.h"
+#include "maple_phase.h"
 
 namespace maplebe {
 class LoopHierarchy {
@@ -223,6 +224,9 @@ struct CGFuncLoopCmp {
 };
 
 CGFUNCPHASE(CgDoLoopAnalysis, "loopanalysis")
+
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgLoopAnalysis, maplebe::CGFunc);
+MAPLE_FUNC_PHASE_DECLARE_END
 }  /* namespace maplebe */
 
 #endif  /* MAPLEBE_INCLUDE_CG_LOOP_H */

@@ -18,6 +18,7 @@
 #include "cg_phase.h"
 #include "cgbb.h"
 #include "live.h"
+#include "loop.h"
 
 namespace maplebe {
 namespace {
@@ -240,6 +241,10 @@ class Ebo {
 CGFUNCPHASE_CANSKIP(CgDoEbo, "ebo")
 CGFUNCPHASE_CANSKIP(CgDoEbo1, "ebo1")
 CGFUNCPHASE_CANSKIP(CgDoPostEbo, "postebo")
+
+MAPLE_FUNC_PHASE_DECLARE(CgEbo0, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE(CgEbo1, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE(CgPostEbo, maplebe::CGFunc)
 }  /* namespace maplebe */
 
 #endif  /* MAPLEBE_INCLUDE_CG_EBO_H */

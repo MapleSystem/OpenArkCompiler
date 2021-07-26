@@ -34,6 +34,7 @@ namespace maplebe {
 using namespace maple;
 
 #define EBO_DUMP CG_DEBUG_FUNC(cgFunc)
+#define EBO_DUMP_NEWPM CG_DEBUG_FUNC_NEWPM(f, PhaseName())
 #define TRUE_OPND cgFunc->GetTrueOpnd()
 
 constexpr uint32 kEboOpndHashLength = 521;
@@ -1378,4 +1379,74 @@ AnalysisResult *CgDoPostEbo::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMg
   cgFuncResultMgr->InvalidAnalysisResult(kCGFuncPhaseLIVE, cgFunc);
   return nullptr;
 }
+
+/* === new pm === */
+bool CgEbo0::PhaseRun(maplebe::CGFunc &f) {
+  if (EBO_DUMP_NEWPM) {
+    DotGenerator::GenerateDot("ebo0", f, f.GetMirModule());
+  }
+  LiveAnalysis *live = GET_ANALYSIS(CgLiveAnalysis);
+  MemPool *eboMp = GetPhaseMemPool();
+  Ebo *ebo = nullptr;
+#if TARGAARCH64 || TARGRISCV64
+  ebo = eboMp->New<AArch64Ebo>(f, *eboMp, live, true, PhaseName());
+#endif
+#if TARGARM32
+  ebo = eboMp->New<Arm32Ebo>(f, *eboMp, live, true, "ebo0");
+#endif
+  ebo->Run();
+  return true;
+}
+
+void CgEbo0::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<CgLiveAnalysis>();
+  aDep.AddPreserved<CgLoopAnalysis>();
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgEbo0, ebo);
+
+bool CgEbo1::PhaseRun(maplebe::CGFunc &f) {
+  if (EBO_DUMP_NEWPM) {
+    DotGenerator::GenerateDot(PhaseName(), f, f.GetMirModule(), true);
+  }
+  LiveAnalysis *live = GET_ANALYSIS(CgLiveAnalysis);
+  MemPool *eboMp = GetPhaseMemPool();
+  Ebo *ebo = nullptr;
+#if TARGAARCH64 || TARGRISCV64
+  ebo = eboMp->New<AArch64Ebo>(f, *eboMp, live, true, PhaseName());
+#endif
+#if TARGARM32
+  ebo = eboMp->New<Arm32Ebo>(f, *eboMp, live, true, "ebo1");
+#endif
+  ebo->Run();
+  return true;
+}
+
+void CgEbo1::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<CgLiveAnalysis>();
+  aDep.AddPreserved<CgLoopAnalysis>();
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgEbo1, ebo1)
+
+bool CgPostEbo::PhaseRun(maplebe::CGFunc &f) {
+  if (EBO_DUMP_NEWPM) {
+    DotGenerator::GenerateDot(PhaseName(), f, f.GetMirModule());
+  }
+  LiveAnalysis *live = GET_ANALYSIS(CgLiveAnalysis);
+  MemPool *eboMp = GetPhaseMemPool();
+  Ebo *ebo = nullptr;
+#if TARGAARCH64 || TARGRISCV64
+  ebo = eboMp->New<AArch64Ebo>(f, *eboMp, live, false, PhaseName());
+#endif
+#if TARGARM32
+  ebo = eboMp->New<Arm32Ebo>(f, *eboMp, live, false, "postebo");
+#endif
+  ebo->Run();
+  return true;
+}
+
+void CgPostEbo::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<CgLiveAnalysis>();
+  aDep.AddPreserved<CgLoopAnalysis>();
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgPostEbo, postebo)
 }  /* namespace maplebe */

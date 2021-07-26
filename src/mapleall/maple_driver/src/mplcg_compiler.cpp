@@ -197,6 +197,7 @@ ErrorCode MplcgCompiler::Compile(MplOptions &options, std::unique_ptr<MIRModule>
     CgFuncPhaseManager::parserTime = timer.ElapsedMicroseconds();
   }
   SetOutputFileName(options, *theModule);
+  theModule->SetInputFileName(fileName);
   LogInfo::MapleLogger() << "Starting mplcg\n";
   DriverRunner runner(theModule.get(), options.GetSelectedExes(), options.GetInputFileType(), fileName,
                       options.WithDwarf(), optMp, fileRead, options.HasSetTimePhases());
@@ -205,8 +206,13 @@ ErrorCode MplcgCompiler::Compile(MplOptions &options, std::unique_ptr<MIRModule>
   }
   runner.SetPrintOutExe(kBinNameMplcg);
   runner.SetCGInfo(&cgOption, fileName);
-  runner.ProcessCGPhase(outputFile, baseName);
 
+  if (cgOption.UseNewPM()) {
+    // == new pm ==
+    runner.ProcessCGPhase2(outputFile, baseName);
+  } else {
+    runner.ProcessCGPhase(outputFile, baseName);
+  }
   delete optMp;
   return kErrorNoError;
 }

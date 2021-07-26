@@ -70,6 +70,7 @@ static_library("libmplir") {
     "${MAPLEALL_ROOT}/maple_driver:libdriver_option",
     "${MAPLEALL_ROOT}/maple_driver:liboption_parser",
     "${MAPLEALL_ROOT}/maple_util:libmplutil",
+    "${MAPLEALL_ROOT}/maple_phase:libmplphase",
   ]
 }
 
@@ -84,6 +85,7 @@ executable("irbuild") {
     "${MAPLEALL_ROOT}/maple_phase:libmplphase",
     "${MAPLEALL_ROOT}/mempool:libmempool",
     "${MAPLEALL_ROOT}/maple_util:libmplutil",
+    "${MAPLEALL_ROOT}/maple_phase:libmplphase",
   ]
 }
 

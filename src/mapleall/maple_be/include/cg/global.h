@@ -16,6 +16,7 @@
 #define MAPLEBE_INCLUDE_CG_GLOBAL_H
 
 #include "cg_phase.h"
+#include "maple_phase.h"
 
 namespace maplebe {
 class GlobalOpt {
@@ -35,6 +36,7 @@ class GlobalOpt {
 };
 
 CGFUNCPHASE_CANSKIP(CgDoGlobalOpt, "globalopt")
+MAPLE_FUNC_PHASE_DECLARE(CgGlobalOpt, maplebe::CGFunc)
 }  /* namespace maplebe */
 
 #endif  /* MAPLEBE_INCLUDE_CG_GLOBAL_H */

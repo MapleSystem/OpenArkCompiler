@@ -62,6 +62,7 @@ executable("maple") {
     ":libdriver_option",
     ":liboption_parser",
     "${THIRD_PARTY_ROOT}/bounds_checking_function:libHWSecureC",
+    "${MAPLEALL_ROOT}/maple_phase:libmplphase",
     "${MAPLEALL_ROOT}/maple_be:libcg",
     "${MAPLEALL_ROOT}/maple_be:libmplad",
     "${MAPLEALL_ROOT}/maple_be:libmplbe",

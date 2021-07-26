@@ -1056,9 +1056,19 @@ class CGFunc {
 
 CGFUNCPHASE(CgDoLayoutSF, "layoutstackframe")
 CGFUNCPHASE(CgDoHandleFunc, "handlefunction")
-CGFUNCPHASE(CgFixCFLocOsft, "dbgfixcallframeoffsets")
+CGFUNCPHASE(CgDoFixCFLocOsft, "dbgfixcallframeoffsets")
 CGFUNCPHASE(CgDoGenCfi, "gencfi")
 CGFUNCPHASE(CgDoEmission, "emit")
-}  /* namespace maplebe */
 
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgLayoutFrame, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE_END
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgHandleFunction, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE_END
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgFixCFLocOsft, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE_END
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgGenCfi, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE_END
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgEmission, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE_END
+}  /* namespace maplebe */
 #endif  /* MAPLEBE_INCLUDE_CG_CGFUNC_H */

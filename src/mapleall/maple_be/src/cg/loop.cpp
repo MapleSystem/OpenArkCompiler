@@ -18,6 +18,7 @@
 
 namespace maplebe {
 #define LOOP_ANALYSIS_DUMP CG_DEBUG_FUNC(cgFunc)
+#define LOOP_ANALYSIS_DUMP_NEWPM CG_DEBUG_FUNC_NEWPM(f, PhaseName())
 
 static void PrintLoopInfo(const LoopHierarchy &loop) {
   LogInfo::MapleLogger() << "header " << loop.GetHeader()->GetId();
@@ -561,4 +562,23 @@ AnalysisResult *CgDoLoopAnalysis::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncRes
 
   return loopFinder;
 }
+
+bool CgLoopAnalysis::PhaseRun(maplebe::CGFunc &f) {
+  if (LOOP_ANALYSIS_DUMP_NEWPM) {
+    DotGenerator::GenerateDot("buildloop", f, f.GetMirModule());
+  }
+  f.ClearLoopInfo();
+  MemPool *loopMemPool = GetPhaseMemPool();
+  LoopFinder *loopFinder = loopMemPool->New<LoopFinder>(f, *loopMemPool);
+  loopFinder->FormLoopHierarchy();
+
+#if DEBUG
+  for (const auto *lp : f.GetLoops()) {
+    lp->CheckLoops();
+  }
+#endif
+
+  return false;
+}
+MAPLE_ANALYSIS_PHASE_REGISTER(CgLoopAnalysis, loopanalysis)
 }  /* namespace maplebe */

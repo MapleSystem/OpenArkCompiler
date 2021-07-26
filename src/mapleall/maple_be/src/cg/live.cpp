@@ -36,6 +36,7 @@
  */
 namespace maplebe {
 #define LIVE_ANALYZE_DUMP CG_DEBUG_FUNC(cgFunc)
+#define LIVE_ANALYZE_DUMP_NEWPM CG_DEBUG_FUNC_NEWPM(f, PhaseName())
 
 void LiveAnalysis::InitAndGetDefUse() {
   FOR_ALL_BB(bb, cgFunc) {
@@ -320,4 +321,20 @@ AnalysisResult *CgDoLiveAnalysis::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncRes
   }
   return liveAnalysis;
 }
+
+bool CgLiveAnalysis::PhaseRun(maplebe::CGFunc &f) {
+  MemPool *liveMemPool = GetPhaseMemPool();
+#if TARGAARCH64 || TARGRISCV64
+  live = liveMemPool->New<AArch64LiveAnalysis>(f, *liveMemPool);
+#endif
+#if TARGARM32
+  live = liveMemPool->New<Arm32LiveAnalysis>(f, *liveMemPool);
+#endif
+  live->AnalysisLive();
+  if (LIVE_ANALYZE_DUMP_NEWPM) {
+    live->Dump();
+  }
+  return false;
+}
+MAPLE_ANALYSIS_PHASE_REGISTER(CgLiveAnalysis, liveanalysis)
 }  /* namespace maplebe */

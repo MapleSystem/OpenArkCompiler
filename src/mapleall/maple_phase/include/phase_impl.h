@@ -119,8 +119,18 @@ class FuncOptimizeIterator : public MplScheduler {
   ASSERT_NOT_NULL(kh);                                                                               \
   std::unique_ptr<FuncOptimizeImpl> funcOptImpl = std::make_unique<OPT_NAME>(*mod, kh, TRACE_PHASE); \
   ASSERT_NOT_NULL(funcOptImpl);                                                                      \
-  FuncOptimizeIterator opt(PhaseName(), std::move(funcOptImpl));                                          \
+  FuncOptimizeIterator opt(PhaseName(), std::move(funcOptImpl));                                     \
   opt.Init();                                                                                        \
+  opt.Run();
+
+
+#define OPT_TEMPLATE_NEWPM(OPT_NAME)                                                                         \
+  auto *kh = GET_ANALYSIS(M2MKlassHierarchy);                                                                \
+  ASSERT_NOT_NULL((kh));                                                                                     \
+  std::unique_ptr<FuncOptimizeImpl> funcOptImpl = std::make_unique<OPT_NAME>(m, (kh), TRACE_MAPLE_PHASE);    \
+  ASSERT_NOT_NULL(funcOptImpl);                                                                              \
+  FuncOptimizeIterator opt(PhaseName(), std::move(funcOptImpl));                                             \
+  opt.Init();                                                                                                \
   opt.Run();
 }  // namespace maple
 #endif  // MAPLE_PHASE_INCLUDE_PHASE_IMPL_H

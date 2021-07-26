@@ -55,4 +55,17 @@ AnalysisResult *CgDoGenProEpiLog::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncRes
   genPE->Run();
   return nullptr;
 }
+
+bool CgGenProEpiLog::PhaseRun(maplebe::CGFunc &f) {
+  GenProEpilog *genPE = nullptr;
+#if TARGAARCH64 || TARGRISCV64
+  genPE = GetPhaseAllocator()->New<AArch64GenProEpilog>(f);
+#endif
+#if TARGARM32
+  genPE = GetPhaseAllocator()->New<Arm32GenProEpilog>(f);
+#endif
+  genPE->Run();
+  return false;
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgGenProEpiLog, generateproepilog)
 }  /* namespace maplebe */

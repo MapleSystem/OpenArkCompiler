@@ -18,6 +18,7 @@
 #include "mir_function.h"
 #include "lsda.h"
 #include "cg_phase.h"
+#include "maple_phase.h"
 
 namespace maplebe {
 class EHTry {
@@ -196,6 +197,9 @@ class EHFunc {
 };
 
 CGFUNCPHASE(CgDoBuildEHFunc, "buildehfunc")
+
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgBuildEHFunc, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE_END
 }  /* namespace maplebe */
 
 #endif  /* MAPLEBE_INCLUDE_EH_EH_FUNC_H */

@@ -8938,7 +8938,7 @@ RegOperand *AArch64CGFunc::SelectVectorMerge(PrimType rTyp, Operand *o1, Operand
 
   ImmOperand *imm = &CreateImmOperand(index, k8BitSize, true);
 
-  MOperator mOp = size > k8ByteSize ? MOP_vextvvvi: MOP_vextuuui;
+  MOperator mOp = (size > k8ByteSize) ? MOP_vextvvvi : MOP_vextuuui;
   Insn *insn = &GetCG()->BuildInstruction<AArch64VectorInsn>(mOp, *res, *o1, *o2, *imm);
   static_cast<AArch64VectorInsn*>(insn)->PushRegSpecEntry(vecSpecDest);
   static_cast<AArch64VectorInsn*>(insn)->PushRegSpecEntry(vecSpecOpd1);

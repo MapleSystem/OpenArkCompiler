@@ -58,6 +58,8 @@ class GenProEpilog {
 };
 
 CGFUNCPHASE(CgDoGenProEpiLog, "generateproepilog")
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgGenProEpiLog, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE_END
 }  /* namespace maplebe */
 
 #endif  /* MAPLEBE_INCLUDE_CG_PROEPILOG_H */

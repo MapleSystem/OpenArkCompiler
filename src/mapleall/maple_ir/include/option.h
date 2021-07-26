@@ -149,4 +149,8 @@ class Options : public MapleDriverOptionBase {
 #ifndef TRACE_PHASE
 #define TRACE_PHASE (Options::dumpPhase.compare(PhaseName()) == 0)
 #endif
+
+#ifndef TRACE_MAPLE_PHASE
+#define TRACE_MAPLE_PHASE (Options::dumpPhase.compare(PhaseName()) == 0)
+#endif
 #endif  // MAPLE_IR_INCLUDE_OPTION_H

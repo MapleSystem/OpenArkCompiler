@@ -397,4 +397,37 @@ AnalysisResult *CgDoPeepHole::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultM
   peep->PeepholeOpt();
   return nullptr;
 }
+
+/* === new pm === */
+bool CgPrePeepHole0::PhaseRun(maplebe::CGFunc &f) {
+  auto *peep = GetPhaseMemPool()->New<PeepHoleOptimizer>(&f);
+  CHECK_FATAL(peep != nullptr, "PeepHoleOptimizer instance create failure");
+  peep->PrePeepholeOpt();
+  return false;
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgPrePeepHole0, prepeephole)
+
+bool CgPrePeepHole1::PhaseRun(maplebe::CGFunc &f) {
+  auto *peep = GetPhaseMemPool()->New<PeepHoleOptimizer>(&f);
+  CHECK_FATAL(peep != nullptr, "PeepHoleOptimizer instance create failure");
+  peep->PrePeepholeOpt1();
+  return false;
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgPrePeepHole1, prepeephole1)
+
+bool CgPeepHole0::PhaseRun(maplebe::CGFunc &f) {
+  auto *peep = GetPhaseMemPool()->New<PeepHoleOptimizer>(&f);
+  CHECK_FATAL(peep != nullptr, "PeepHoleOptimizer instance create failure");
+  peep->Peephole0();
+  return false;
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgPeepHole0, peephole0)
+
+bool CgPeepHole1::PhaseRun(maplebe::CGFunc &f) {
+  auto *peep = GetPhaseMemPool()->New<PeepHoleOptimizer>(&f);
+  CHECK_FATAL(peep != nullptr, "PeepHoleOptimizer instance create failure");
+  peep->PeepholeOpt();
+  return false;
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgPeepHole1, peephole)
 }  /* namespace maplebe */

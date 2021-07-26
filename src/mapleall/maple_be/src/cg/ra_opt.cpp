@@ -41,4 +41,20 @@ AnalysisResult *CgDoRaOpt::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr)
   }
   return nullptr;
 }
+
+bool CgRaOpt::PhaseRun(maplebe::CGFunc &f) {
+  MemPool *memPool = GetPhaseMemPool();
+  RaOpt *raOpt = nullptr;
+#if TARGAARCH64
+  raOpt = memPool->New<AArch64RaOpt>(f);
+#elif || TARGRISCV64
+  raOpt = memPool->New<Riscv64RaOpt>(f);
+#endif
+
+  if (raOpt) {
+    raOpt->Run();
+  }
+  return false;
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgRaOpt, raopt)
 }  /* namespace maplebe */

@@ -90,4 +90,35 @@ AnalysisResult *CgDoGlobalOpt::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResult
   cgFuncResultMgr->InvalidAnalysisResult(kCGFuncPhaseLIVE, cgFunc);
   return nullptr;
 }
+
+bool CgGlobalOpt::PhaseRun(maplebe::CGFunc &f) {
+  ReachingDefinition *reachingDef = nullptr;
+  LiveAnalysis *live = nullptr;
+  if (Globals::GetInstance()->GetOptimLevel() >= CGOptions::kLevel2) {
+    reachingDef = GET_ANALYSIS(CgReachingDefinition);
+    live = GET_ANALYSIS(CgLiveAnalysis);
+  }
+  if (reachingDef == nullptr || !f.GetRDStatus()) {
+    return false;
+  }
+  reachingDef->SetAnalysisMode(kRDAllAnalysis);
+  GlobalOpt *globalOpt = nullptr;
+#if TARGAARCH64 || TARGRISCV64
+  globalOpt = GetPhaseAllocator()->New<AArch64GlobalOpt>(f);
+#endif
+#if TARGARM32
+  globalOpt = GetPhaseAllocator()->New<Arm32GlobalOpt>(f);
+#endif
+  globalOpt->Run();
+  if (live != nullptr) {
+    live->ClearInOutDataInfo();
+  }
+  return true;
+}
+void CgGlobalOpt::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<CgReachingDefinition>();
+  aDep.AddRequired<CgLiveAnalysis>();
+  aDep.AddPreserved<CgReachingDefinition>();
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgGlobalOpt, globalopt)
 }  /* namespace maplebe */

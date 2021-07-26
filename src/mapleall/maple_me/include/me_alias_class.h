@@ -22,10 +22,10 @@
 namespace maple {
 class MeAliasClass : public AliasClass {
  public:
-  MeAliasClass(MemPool &memPool, MIRModule &mod, SSATab &ssaTab, MeFunction &func, bool lessAliasAtThrow,
-               bool ignoreIPA, bool debug, bool setCalleeHasSideEffect, KlassHierarchy *kh)
+  MeAliasClass(MemPool &memPool, MemPool &localMemPool, MIRModule &mod, SSATab &ssaTab, MeFunction &func,
+               bool lessAliasAtThrow, bool ignoreIPA, bool debug, bool setCalleeHasSideEffect, KlassHierarchy *kh)
       : AliasClass(memPool, mod, ssaTab, lessAliasAtThrow, ignoreIPA, setCalleeHasSideEffect, kh),
-        func(func), cfg(func.GetCfg()), enabledDebug(debug) {}
+        func(func), cfg(func.GetCfg()), localMemPool(&localMemPool), enabledDebug(debug) {}
 
   virtual ~MeAliasClass() = default;
 
@@ -44,9 +44,11 @@ class MeAliasClass : public AliasClass {
   }
 
   bool HasWriteToStaticFinal() const;
+  void PerformDemandDrivenAliasAnalysis();
 
   MeFunction &func;
   MeCFG *cfg;
+  MemPool *localMemPool;
   bool enabledDebug;
 };
 
