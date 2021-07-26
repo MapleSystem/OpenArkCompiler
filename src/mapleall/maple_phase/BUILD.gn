@@ -31,11 +31,11 @@ include_libmplphase = [
 ]
 
 src_libmplphase = [
-    "src/phase_impl.cpp",
-    "src/maple_phase.cpp",
-    "src/maple_phase_manager.cpp",
-    "src/phase_driver.cpp",
-    "src/maple_phase_support.cpp"
+  "src/phase_impl.cpp",
+  "src/maple_phase.cpp",
+  "src/maple_phase_manager.cpp",
+  "src/phase_driver.cpp",
+  "src/maple_phase_support.cpp",
 ]
 
 configs = [ "${MAPLEALL_ROOT}:mapleallcompilecfg" ]
