@@ -240,7 +240,8 @@ class CGFunc {
   virtual Operand *SelectRound(TypeCvtNode &node, Operand &opnd0) = 0;
   virtual Operand *SelectCvt(const BaseNode &parent, TypeCvtNode &node, Operand &opnd0) = 0;
   virtual Operand *SelectTrunc(TypeCvtNode &node, Operand &opnd0) = 0;
-  virtual Operand *SelectSelect(TernaryNode &node, Operand &opnd0, Operand &opnd1, Operand &opnd2) = 0;
+  virtual Operand *SelectSelect(TernaryNode &node, Operand &opnd0, Operand &opnd1, Operand &opnd2,
+      bool isCompare = false) = 0;
   virtual Operand *SelectMalloc(UnaryNode &call, Operand &opnd0) = 0;
   virtual RegOperand &SelectCopy(Operand &src, PrimType srcType, PrimType dstType) = 0;
   virtual Operand *SelectAlloca(UnaryNode &call, Operand &opnd0) = 0;

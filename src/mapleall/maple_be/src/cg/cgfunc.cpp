@@ -286,8 +286,13 @@ Operand *HandleTrunc(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
 Operand *HandleSelect(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   (void)parent;
   /* 0,1,2 represent the first opnd and the second opnd and the third opnd of expr */
+  bool isCompare = false;
+  if (kOpcodeInfo.IsCompare(expr.Opnd(1)->GetOpCode()) || kOpcodeInfo.IsCompare(expr.Opnd(2)->GetOpCode())) {
+    isCompare = true;
+  }
   return cgFunc.SelectSelect(static_cast<TernaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)),
-                             *cgFunc.HandleExpr(expr, *expr.Opnd(1)), *cgFunc.HandleExpr(expr, *expr.Opnd(2)));
+                             *cgFunc.HandleExpr(expr, *expr.Opnd(1)), *cgFunc.HandleExpr(expr, *expr.Opnd(2)),
+                             isCompare);
 }
 
 Operand *HandleCmp(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
