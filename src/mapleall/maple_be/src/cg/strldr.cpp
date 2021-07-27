@@ -31,9 +31,6 @@ using namespace maple;
 #define SCHD_DUMP_NEWPM CG_DEBUG_FUNC_NEWPM(f, PhaseName())
 
 AnalysisResult *CgDoStoreLoadOpt::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResMgr) {
-  if (cgFunc->HasAsm()) {
-    return nullptr;
-  }
   if (SCHD_DUMP) {
     DotGenerator::GenerateDot("storeloadopt", *cgFunc, cgFunc->GetMirModule(), true);
   }
