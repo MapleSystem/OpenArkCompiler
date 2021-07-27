@@ -243,6 +243,9 @@ void LibAstFile::CollectAttrs(const clang::NamedDecl &decl, GenericAttrs &genAtt
   if (decl.isUsed()) {
     genAttrs.SetAttr(GENATTR_used);
   }
+  if (decl.hasAttr<clang::WeakAttr>()) {
+    genAttrs.SetAttr(GENATTR_weak);
+  }
 }
 
 void LibAstFile::CollectFuncAttrs(const clang::FunctionDecl &decl, GenericAttrs &genAttrs, AccessKind access) {
