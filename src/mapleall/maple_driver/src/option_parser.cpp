@@ -91,6 +91,7 @@ void OptionParser::RegisteUsages(const MapleDriverOptionBase &base) {
       InsertOption(usage.longOption, usage);
     }
     // Insert usage for extra options
+    // Code_exp: Inserting options with extras like jbc2mpl and dex2mpl
     InsertExtraUsage(usage);
     // Add --no-opt for boolean option
     if (usage.checkPolicy == kArgCheckPolicyBool) {
@@ -165,8 +166,11 @@ bool OptionParser::HandleKeyValue(const std::string &key, const std::string &val
     nonOptionsArgs.push_back(value);
     return true;
   }
+  // Code_exp: in map of keys and descriptors count current key
   size_t count = usages.count(key);
+  // Code_exp: find element with this key
   auto item = usages.find(key);
+  // Code_exp: get option with correct exeName
   while (count > 0 && item->second.exeName != exeName) {
     ++item;
     --count;
@@ -175,6 +179,7 @@ bool OptionParser::HandleKeyValue(const std::string &key, const std::string &val
     LogInfo::MapleLogger(kLlErr) << ("Unknown Option: " + key) << '\n';
     return false;
   }
+  // Code_exp: now check required args
   switch (item->second.checkPolicy) {
     case kArgCheckPolicyUnknown:
       LogInfo::MapleLogger(kLlErr) << ("Unknown option " + key) << '\n';
@@ -266,9 +271,12 @@ bool OptionParser::CheckOpt(const std::string option, std::string &lastKey,
     }
   }
   size_t pos = option.find('=');
+  // Code_exp: options args can be specified either by = i.e. --run=jbc2mpl or with a space bar:
+  // Code_exp: --infile file1,file2 that's why we need to take that into account
   if (pos != std::string::npos) {
     ASSERT(pos > 0, "option should not begin with symbol '='");
     isLastMatch = false;
+    // Code_exp: here we get option name, its string after = and whether it's empty or not
     std::string key = option.substr(0, pos);
     std::string value = option.substr(pos + 1);
     isValueEmpty = value.empty();
@@ -276,6 +284,7 @@ bool OptionParser::CheckOpt(const std::string option, std::string &lastKey,
   } else {
     auto item = usages.find(option);
     if (item != usages.end()) {
+      // Code_exp: if there is no = in string, but key is found in map check arg policy and act accordingly
       if (item->second.checkPolicy == kArgCheckPolicyRequired || item->second.checkPolicy == kArgCheckPolicyNumeric) {
         lastKey = option;
         isLastMatch = true;
@@ -293,13 +302,17 @@ bool OptionParser::CheckOpt(const std::string option, std::string &lastKey,
 
 ErrorCode OptionParser::HandleInputArgs(const std::vector<std::string> &inputArgs, const std::string &exeName,
                                         std::vector<mapleOption::Option> &inputOption, bool isAllOption) {
+  // Code_exp: previous option flag
   bool isLastMatchOpt = false;
+  // Code_exp: previous key
   std::string lastKey = "";
   bool ret = true;
   for (size_t i = 0; i < inputArgs.size(); ++i) {
+   // Code_exp: if arg is empty - skip it
     if (inputArgs[i] == "") {
       continue;
     }
+    // Code_exp: check for - or --
     bool isMatchLongOpt = false;
     bool isMatchShortOpt = false;
     MatchedIndex index = kMatchNone;
@@ -309,6 +322,7 @@ ErrorCode OptionParser::HandleInputArgs(const std::vector<std::string> &inputArg
         index = kMatchLongOpt;
       }
     }
+    // Code_exp: here we remove - or -- marker
     if (index == kMatchShortOpt) {
       isMatchShortOpt = true;
     } else if (index == kMatchLongOpt) {
@@ -345,6 +359,7 @@ ErrorCode OptionParser::Parse(int argc, char **argv, const std::string exeName) 
     --argc;
     ++argv;  // skip program name argv[0] if present
   }
+  // Code_exp: if there are no args print how to use and return error
   if (argc == 0 || *argv == nullptr) {
     PrintUsage(exeName);
     LogInfo::MapleLogger(kLlErr) << "No input files!" << '\n';

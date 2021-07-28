@@ -32,6 +32,7 @@
 namespace maple {
 const std::string kBinNameNone = "";
 const std::string kBinNameJbc2mpl = "jbc2mpl";
+const std::string kBinNameCpp2mpl = "mplfe";
 const std::string kBinNameDex2mpl = "dex2mpl";
 const std::string kBinNameMplipa = "mplipa";
 const std::string kBinNameMe = "me";

@@ -34,6 +34,7 @@ CompilerFactory::CompilerFactory() {
   // Supported compilers
   ADD_COMPILER("jbc2mpl", Jbc2MplCompiler)
   ADD_COMPILER("dex2mpl", Dex2MplCompiler)
+  ADD_COMPILER("cpp2mpl", Cpp2MplCompiler)
   ADD_COMPILER("mplipa", IpaCompiler)
   ADD_COMPILER("me", MapleCombCompiler)
   ADD_COMPILER("mpl2mpl", MapleCombCompiler)
@@ -84,6 +85,9 @@ ErrorCode CompilerFactory::DeleteTmpFiles(const MplOptions &mplOptions, const st
 }
 
 ErrorCode CompilerFactory::Compile(MplOptions &mplOptions) {
+  // Code_exp: GetInstance triggered constructor, which added compilers and CompilerSelectorImpl
+  // Code_exp: constructor also filled supported compilers
+  // Code_exp: using SupportedCompilers = std::unordered_map<std::string, Compiler*>;
   if (compileFinished) {
     LogInfo::MapleLogger() <<
         "Failed! Compilation has been completed in previous time and multi-instance compilation is not supported\n";
