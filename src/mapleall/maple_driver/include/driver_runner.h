@@ -23,6 +23,7 @@
 #include "cg.h"
 #include "cg_option.h"
 #include "cg_phasemanager.h"
+#include "maple_phase_manager.h"
 namespace maple {
 using namespace maplebe;
 
@@ -64,7 +65,11 @@ class DriverRunner final {
   ~DriverRunner() = default;
 
   ErrorCode Run();
+#ifdef NEW_PM
+  void RunNewPM(const std::string &outputFile, const std::string &vtableImplFile);
+#endif
   void ProcessCGPhase(const std::string &outputFile, const std::string &oriBasenam);
+  void ProcessCGPhase2(const std::string &outputFile, const std::string &oriBasenam);
   void SetCGInfo(CGOptions *cgOptions, const std::string &cgInput) {
     this->cgOptions = cgOptions;
     this->cgInput = cgInput;
@@ -90,7 +95,7 @@ class DriverRunner final {
   void AddPhases(InterleavedManager &mgr, const std::vector<std::string> &phases,
                  const PhaseManager &phaseManager) const;
   void AddPhase(std::vector<std::string> &phases, const std::string phase, const PhaseManager &phaseManager) const;
-  void ProcessMpl2mplAndMePhases(const std::string &outputFile, const std::string &vtableImplFile) const;
+  void ProcessMpl2mplAndMePhases(const std::string &outputFile, const std::string &vtableImplFile);
   CGOptions *cgOptions = nullptr;
   std::string cgInput;
   BECommon *beCommon = nullptr;

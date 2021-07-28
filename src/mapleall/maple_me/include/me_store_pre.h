@@ -22,9 +22,14 @@ class MeStorePre : public MeSSUPre {
  public:
   MeStorePre(MeFunction &f, Dominance &dom, AliasClass &ac, MemPool &memPool, bool enabledDebug)
       : MeSSUPre(f, dom, memPool, kStorePre, enabledDebug), aliasClass(&ac), curTemp(nullptr),
-        bbCurTempMap(spreAllocator.Adapter()) {}
+        bbCurTempMap(spreAllocator.Adapter()),
+        candsForSSAUpdate(spreAllocator.Adapter()) {}
 
   virtual ~MeStorePre() = default;
+
+  MapleMap<OStIdx, MapleSet<BBId>*> &CandsForSSAUpdate() {
+    return candsForSSAUpdate;
+  }
 
  private:
   inline bool IsJavaLang() const {
@@ -46,10 +51,18 @@ class MeStorePre : public MeSSUPre {
     bbCurTempMap.clear();
   }
 
+  void AddCandsForSSAUpdate(OStIdx ostIdx, BBId id) {
+    if (candsForSSAUpdate[ostIdx] == nullptr) {
+      candsForSSAUpdate[ostIdx] = spreMp->New<MapleSet<BBId>>(spreAllocator.Adapter());
+    }
+    (void)candsForSSAUpdate[ostIdx]->insert(id);
+  }
+
   AliasClass *aliasClass;
   // step 6 code motion
   RegMeExpr *curTemp;                               // the preg for the RHS of inserted stores
   MapleUnorderedMap<BB*, RegMeExpr*> bbCurTempMap;  // map bb to curTemp version
+  MapleMap<OStIdx, MapleSet<BBId>*> candsForSSAUpdate;
 };
 
 class MeDoStorePre : public MeFuncPhase {

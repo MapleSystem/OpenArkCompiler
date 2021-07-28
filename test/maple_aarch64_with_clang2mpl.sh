@@ -17,6 +17,8 @@ set -e
 
 [ -n "$MAPLE_ROOT" ] || { echo MAPLE_ROOT not set. Please source envsetup.sh.; exit 1; }
 
+[ -f "$MAPLE_EXECUTE_BIN/clang2mpl" ] || { echo; echo ">>>>>> clang2mpl not built. Please make clang2mpl"; echo; exit 1; }
+
 CURRDIR=`pwd`
 rel=`realpath --relative-to=$MAPLE_ROOT $CURRDIR`
 
@@ -51,11 +53,13 @@ else
   $MAPLE_EXECUTE_BIN/maple --run=mplcg --option="-O2 -quiet" $src.mpl >> doit.log 2>&1
 fi
 
-echo $MAPLE_ROOT/tools/gcc-linaro-7.5.0/bin/aarch64-linux-gnu-gcc -o $src.out $src.s >> cmd.log
-$MAPLE_ROOT/tools/gcc-linaro-7.5.0/bin/aarch64-linux-gnu-gcc -o $src.out $src.s
+LINARO=$MAPLE_ROOT/tools/gcc-linaro-7.5.0
 
-echo $MAPLE_ROOT/tools/bin/qemu-aarch64 -L /usr/aarch64-linux-gnu/ $src.out >> cmd.log
-$MAPLE_ROOT/tools/bin/qemu-aarch64 -L /usr/aarch64-linux-gnu/ $src.out > output.log
+echo $LINARO/bin/aarch64-linux-gnu-gcc -o $src.out $src.s >> cmd.log
+$LINARO/bin/aarch64-linux-gnu-gcc -o $src.out $src.s
+
+echo $MAPLE_ROOT/tools/bin/qemu-aarch64 -L $LINARO/aarch64-linux-gnu/libc $src.out >> cmd.log
+$MAPLE_ROOT/tools/bin/qemu-aarch64 -L $LINARO/aarch64-linux-gnu/libc $src.out > output.log
 
 cat cmd.log >> allcmd.log
 

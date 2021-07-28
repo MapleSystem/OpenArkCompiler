@@ -57,6 +57,10 @@ class OptimizePattern {
   static bool InsnDefOne(Insn &insn);
   static bool InsnDefZero(Insn &insn);
   static bool InsnDefOneOrZero(Insn &insn);
+
+  std::string PhaseName() const {
+    return "globalopt";
+  }
  protected:
   virtual void Init() = 0;
   CGFunc &cgFunc;
@@ -260,6 +264,31 @@ class LocalVarSaveInsnPattern : public OptimizePattern {
   Operand *secondInsnDestOpnd = nullptr;
   Insn *useInsn = nullptr;
   Insn *secondInsn = nullptr;
+};
+
+class ExtendShiftOptPattern : public OptimizePattern {
+ public:
+  explicit ExtendShiftOptPattern(CGFunc &cgFunc) : OptimizePattern(cgFunc) {}
+  ~ExtendShiftOptPattern() override = default;
+  bool CheckCondition(Insn &insn) final;
+  void Optimize(Insn &insn) final;
+  void Run() final;
+
+ protected:
+  void Init() final;
+
+ private:
+  bool CheckCurrMop(Insn &insn);
+  void SelectExtenOp(const Insn &def);
+  bool CheckDefUseInfo(const Insn &use, const Insn &def);
+  void ReplaceUseInsn(Insn &use, Insn &def, uint32 amount);
+  void SelectReplaceOp(Insn &use);
+
+  MOperator replaceOp;
+  uint32 replaceIdx;
+  ExtendShiftOperand::ExtendOp extendOp;
+  BitShiftOperand::ShiftOp shiftOp;
+  Insn *defInsn;
 };
 }  /* namespace maplebe */
 

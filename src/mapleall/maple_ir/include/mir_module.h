@@ -511,6 +511,10 @@ class MIRModule {
     importPaths.push_back(path);
   }
 
+  MapleVector<MapleString> &GetAsmDecls() {
+    return asmDecls;
+  }
+
   const MapleSet<uint32> &GetClassList() const {
     return classList;
   }
@@ -552,7 +556,7 @@ class MIRModule {
     eaSummary[funcNameIdx] = eaCg;
   }
 
-  DebugInfo *GetDbgInfo() {
+  DebugInfo *GetDbgInfo() const {
     return dbgInfo;
   }
 
@@ -575,6 +579,25 @@ class MIRModule {
   void InitPartO2List(const std::string &list);
   bool IsInPartO2List(GStrIdx idx) {
     return partO2FuncList.count(idx) > 0;
+  }
+
+  void SetBaseName(const std::string &curbaseName) {
+    baseName = curbaseName;
+  }
+  const std::string &GetBaseName() const {
+    return baseName;
+  }
+  void SetOutputFileName(const std::string &curOFileName) {
+    outputFileName = curOFileName;
+  }
+  const std::string &GetOutputFileName() const {
+    return outputFileName;
+  }
+  void SetInputFileName(const std::string &curInFileName) {
+    inputFileName = curInFileName;
+  }
+  const std::string &GetInputFileName() const {
+    return inputFileName;
   }
 
  private:
@@ -633,6 +656,7 @@ class MIRModule {
   uint32 numFuncs = 0;  // because puIdx 0 is reserved, numFuncs is also the highest puIdx
   MapleVector<GStrIdx> importFiles;
   MapleVector<GStrIdx> importPaths;
+  MapleVector<MapleString> asmDecls;
   MapleSet<uint32> classList;
 
   std::map<PUIdx, std::vector<CallInfo*>> method2TargetMap;
@@ -660,6 +684,9 @@ class MIRModule {
   MapleSet<uint32_t> inliningGlobals;  // global symbols accessed, used for inlining
   bool hasPartO2List = false;
   MapleSet<GStrIdx> partO2FuncList;
+  std::string inputFileName = "";
+  std::string baseName = "";
+  std::string outputFileName = "";
 };
 #endif  // MIR_FEATURE_FULL
 }  // namespace maple

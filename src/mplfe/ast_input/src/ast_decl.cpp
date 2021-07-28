@@ -55,6 +55,7 @@ std::unique_ptr<FEIRVar> ASTVar::Translate2FEIRVar() const {
   feirVar->SetGlobal(isGlobalDecl);
   feirVar->SetAttrs(const_cast<GenericAttrs&>(genAttrs));
   feirVar->SetSrcLOC(srcFileIdx, srcFileLineNum);
+  feirVar->SetSectionAttr(sectionAttr);
   return feirVar;
 }
 
@@ -136,6 +137,9 @@ MIRSymbol *ASTVar::Translate2MIRSymbol() const {
   if (initExpr != nullptr && initExpr->IsConstantFolded() && genAttrs.GetAttr(GENATTR_static)) {
     MIRConst *cst = initExpr->GenerateMIRConst();
     mirSymbol->SetKonst(cst);
+  }
+  if (!sectionAttr.empty()) {
+    mirSymbol->sectionAttr = GlobalTables::GetUStrTable().GetOrCreateStrIdxFromName(sectionAttr);
   }
   return mirSymbol;
 }

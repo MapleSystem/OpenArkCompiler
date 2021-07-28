@@ -345,6 +345,12 @@ class BB {
   bool IsLastInsn(const Insn *insn) const{
     return (lastInsn == insn);
   }
+  void InsertPred(MapleList<BB*>::iterator it, BB &bb) {
+    preds.insert(it, &bb);
+  }
+  void InsertSucc(MapleList<BB*>::iterator it, BB &bb) {
+    succs.insert(it, &bb);
+  }
   const MapleList<BB*> &GetPreds() const {
     return preds;
   }
@@ -569,6 +575,9 @@ class BB {
   }
   const MapleVector<LabelIdx> &GetRangeGotoLabelVec() const {
     return rangeGotoLabelVec;
+  }
+  void SetRangeGotoLabel(uint32 index, LabelIdx labelIdx) {
+    rangeGotoLabelVec[index] = labelIdx;
   }
   void PushBackRangeGotoLabel(LabelIdx labelIdx) {
     rangeGotoLabelVec.emplace_back(labelIdx);

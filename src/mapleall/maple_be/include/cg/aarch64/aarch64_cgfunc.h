@@ -207,13 +207,14 @@ class AArch64CGFunc : public CGFunc {
   Operand *SelectRound(TypeCvtNode &node, Operand &opnd0) override;
   Operand *SelectCvt(const BaseNode &parent, TypeCvtNode &node, Operand &opnd0) override;
   Operand *SelectTrunc(TypeCvtNode &node, Operand &opnd0) override;
-  Operand *SelectSelect(TernaryNode &node, Operand &opnd0, Operand &opnd1, Operand &opnd2) override;
+  Operand *SelectSelect(TernaryNode &node, Operand &opnd0, Operand &opnd1, Operand &opnd2,
+      bool isCompare = false) override;
   Operand *SelectMalloc(UnaryNode &call, Operand &opnd0) override;
   Operand *SelectAlloca(UnaryNode &call, Operand &opnd0) override;
   Operand *SelectGCMalloc(GCMallocNode &call) override;
   Operand *SelectJarrayMalloc(JarrayMallocNode &call, Operand &opnd0) override;
   void SelectSelect(Operand &resOpnd, Operand &condOpnd, Operand &trueOpnd, Operand &falseOpnd, PrimType dtype,
-                    PrimType ctype);
+                    PrimType ctype, bool isCompare = false, AArch64CC_t cc = CC_NE);
   void SelectAArch64Select(Operand &dest, Operand &opnd0, Operand &opnd1, CondOperand &cond, bool isIntType,
                            uint32 is64bits);
   void SelectRangeGoto(RangeGotoNode &rangeGotoNode, Operand &opnd0) override;
@@ -255,8 +256,7 @@ class AArch64CGFunc : public CGFunc {
   RegOperand *SelectVectorGetLow(PrimType rType, Operand *src) override;
   RegOperand *SelectVectorMadd(Operand *o1, PrimType oTyp1, Operand *o2, PrimType oTyp2,
                                Operand *o3, PrimType oTyp3) override;
-  RegOperand *SelectVectorMerge(PrimType rTyp, Operand *o1, PrimType typ1, Operand *o2,
-                                PrimType typ2, Operand *o3) override;
+  RegOperand *SelectVectorMerge(PrimType rTyp, Operand *o1, Operand *o2, int32 iNum) override;
   RegOperand *SelectVectorMull(PrimType rType, Operand *o1, PrimType oTyp1, Operand *o2, PrimType oTyp2) override;
   RegOperand *SelectVectorNarrow(PrimType rType, Operand *o1, PrimType otyp, bool isLow) override;
   RegOperand *SelectVectorNeg(PrimType rType, Operand *o1) override;

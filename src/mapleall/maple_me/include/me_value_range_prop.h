@@ -21,15 +21,15 @@
 #include "me_dominance.h"
 #include "me_loop_analysis.h"
 namespace maple {
-constexpr int64 kMin = std::numeric_limits<int64_t>::min();
-constexpr int64 kMax = std::numeric_limits<int64_t>::max();
+int64 GetMinNumber(PrimType primType);
+int64 GetMaxNumber(PrimType primType);
 
 class Bound {
  public:
   Bound() = default;
-  Bound(MeExpr *argVar, int64 argConstant) : var(argVar), constant(argConstant) {}
-  Bound(MeExpr *argVar) : var(argVar), constant(0) {}
-  Bound(int64 argConstant) : var(nullptr), constant(argConstant) {}
+  Bound(MeExpr *argVar, int64 argConstant, PrimType pType) : var(argVar), constant(argConstant), primType(pType) {}
+  Bound(MeExpr *argVar, PrimType pType) : var(argVar), constant(0), primType(pType) {}
+  Bound(int64 argConstant, PrimType pType) : var(nullptr), constant(argConstant), primType(pType) {}
   ~Bound() = default;
 
   const MeExpr *GetVar() const {
@@ -44,9 +44,18 @@ class Bound {
     return constant;
   }
 
+  PrimType GetPrimType() const {
+    return primType;
+  }
+
+  void SetPrimType(PrimType type) {
+    primType = type;
+  }
+
  private:
   MeExpr *var;
   int64 constant;
+  PrimType primType;
 };
 
 enum RangeType {
@@ -130,7 +139,7 @@ class ValueRange {
       case kEqual:
         return range.bound;
       case kOnlyHasLowerBound:
-        return MaxBound();
+        return MaxBound(range.bound.GetPrimType());
       case kNotEqual:
         CHECK_FATAL(false, "can not be here");
     }
@@ -146,7 +155,7 @@ class ValueRange {
       case kEqual:
         return range.bound;
       case kOnlyHasUpperBound:
-        return MinBound();
+        return MinBound(range.bound.GetPrimType());
       case kNotEqual:
         CHECK_FATAL(false, "can not be here");
     }
@@ -196,11 +205,11 @@ class ValueRange {
             range.pair.upper.GetVar() == nullptr);
   }
 
-  static Bound MinBound() {
-    return Bound(nullptr, std::numeric_limits<int64_t>::min());
+  static Bound MinBound(PrimType pType) {
+    return Bound(nullptr, GetMinNumber(pType), pType);
   }
-  static Bound MaxBound() {
-    return Bound(nullptr, std::numeric_limits<int64_t>::max());
+  static Bound MaxBound(PrimType pType) {
+    return Bound(nullptr, GetMaxNumber(pType), pType);
   }
 
  private:
@@ -216,25 +225,73 @@ class ValueRangePropagation {
  public:
   static bool isDebug;
 
-  ValueRangePropagation(MeFunction &meFunc, MeIRMap &argIRMap, Dominance &argDom, IdentifyLoops *argLoops)
-      : func(meFunc), irMap(argIRMap), dom(argDom), loops(argLoops), caches(meFunc.GetCfg()->GetAllBBs().size()),
-        analysisedArrayChecks(meFunc.GetCfg()->GetAllBBs().size()){}
+  ValueRangePropagation(MeFunction &meFunc, MeIRMap &argIRMap, Dominance &argDom,
+                        IdentifyLoops *argLoops, MemPool &pool, MapleMap<OStIdx, MapleSet<BBId>*> &candsTem)
+      : func(meFunc), irMap(argIRMap), dom(argDom), memPool(pool), mpAllocator(&pool), loops(argLoops),
+        caches(meFunc.GetCfg()->GetAllBBs().size()), analysisedArrayChecks(meFunc.GetCfg()->GetAllBBs().size()),
+        cands(candsTem) {}
   ~ValueRangePropagation() = default;
 
   void DumpCahces();
   void Execute();
 
+  bool IsCFGChange() const {
+    return isCFGChange;
+  }
+
+  bool NeedUpdateSSA() const {
+    return needUpdateSSA;
+  }
+
  private:
-  void Insert2Caches(BBId bbID, int32 exprID, std::unique_ptr<ValueRange> valueRange) {
-    caches.at(bbID)[exprID] = std::move(valueRange);
+  bool IsBiggerThanMaxInt64(ValueRange &valueRange) const {
+    PrimType lowerPrim = valueRange.GetLower().GetPrimType();
+    PrimType upperPrim = valueRange.GetUpper().GetPrimType();
+
+    if (IsUnsignedInteger(lowerPrim) && GetPrimTypeSize(lowerPrim) == 4) { // 32bit
+      lowerPrim = PTY_u32;
+    }
+    if (IsUnsignedInteger(upperPrim) && GetPrimTypeSize(upperPrim) == 4) { // 32bit
+      upperPrim = PTY_u32;
+    }
+    if (IsUnsignedInteger(lowerPrim) && GetPrimTypeSize(lowerPrim) == 8) { // 64bit
+      lowerPrim = PTY_u64;
+    }
+    if (IsUnsignedInteger(upperPrim) && GetPrimTypeSize(upperPrim) == 8) { // 64bit
+      upperPrim = PTY_u64;
+    }
+
+    if (lowerPrim == PTY_u32) {
+      if (static_cast<uint32>(valueRange.GetLower().GetConstant()) > GetMaxNumber(PTY_i64)) {
+        return true;
+      }
+    } else if (lowerPrim == PTY_u64) {
+      if (static_cast<uint64>(valueRange.GetLower().GetConstant()) > GetMaxNumber(PTY_i64)) {
+        return true;
+      }
+    }
+
+    if (upperPrim == PTY_u32) {
+      if (static_cast<uint32>(valueRange.GetUpper().GetConstant()) > GetMaxNumber(PTY_i64)) {
+        return true;
+      }
+    } else if (upperPrim == PTY_u64) {
+      if (static_cast<uint64>(valueRange.GetUpper().GetConstant()) > GetMaxNumber(PTY_i64)) {
+        return true;
+      }
+    }
+    return false;
   }
 
-  void UpdateCaches(BBId &bbID, int32 exprID, std::unique_ptr<ValueRange> valueRange) {
-    CHECK_FATAL(caches.at(bbID).find(exprID) != caches.at(bbID).end(), "must found");
+  bool Insert2Caches(BBId bbID, int32 exprID, std::unique_ptr<ValueRange> valueRange) {
+    if (IsBiggerThanMaxInt64(*valueRange)) {
+      return false;
+    }
     caches.at(bbID)[exprID] = std::move(valueRange);
+    return true;
   }
 
-  ValueRange *FindValueRangeInCaches(BBId bbID, int32 exprID) {
+  ValueRange *FindValueRangeInCaches(BBId bbID, int32 exprID) const {
     auto it = caches.at(bbID).find(exprID);
     if (it != caches.at(bbID).end()) {
       return it->second.get();
@@ -252,14 +309,14 @@ class ValueRangePropagation {
     }
   }
 
-  void DealWithPhi(const BB &bb, MePhiNode &mePhiNode);
-  void DealWithCondGoto(const BB &bb, MeStmt &stmt);
-  bool OverflowOrUnderflow(int64 lhs, int64 rhs);
+  void DealWithPhi(BB &bb, MePhiNode &mePhiNode);
+  void DealWithCondGoto(BB &bb, MeStmt &stmt);
+  bool OverflowOrUnderflow(PrimType primType, int64 lhs, int64 rhs);
   void DealWithAssign(const BB &bb, const MeStmt &stmt);
   bool IsConstant(const BB &bb, MeExpr &expr, int64 &constant);
   std::unique_ptr<ValueRange> CreateValueRangeForPhi(
-      LoopDesc &loop, const BB &bb, ScalarMeExpr &init, ScalarMeExpr &backedge, ScalarMeExpr &lhsOfPhi);
-  bool AddOrSubWithConstant(Opcode op, int64 lhsConstant, int64 rhsConstant, int64 &res);
+      LoopDesc &loop, BB &bb, ScalarMeExpr &init, ScalarMeExpr &backedge, ScalarMeExpr &lhsOfPhi);
+  bool AddOrSubWithConstant(PrimType primType, Opcode op, int64 lhsConstant, int64 rhsConstant, int64 &res);
   std::unique_ptr<ValueRange> AddOrSubWithValueRange(Opcode op, ValueRange &valueRange, int64 rhsConstant);
   void DealWithAddOrSub(const BB &bb, const MeExpr &lhsVar, OpMeExpr &opMeExpr);
   bool CanComputeLoopIndVar(MeExpr &phiLHS, MeExpr &expr, int &constant);
@@ -271,35 +328,52 @@ class ValueRangePropagation {
   void DealWithArrayCheck(BB &bb, MeStmt &meStmt, MeExpr &meExpr);
   void DealWithArrayCheck();
   bool IfAnalysisedBefore(BB &bb, MeStmt &stmt, NaryMeExpr &nMeExpr);
-  MeExpr *ReplaceArrayExpr(MeExpr &rhs, MeExpr &naryMeExpr, MeStmt *ivarStmt);
-  bool CleanABCInStmt(MeStmt &meStmt, NaryMeExpr &naryMeExpr);
   std::unique_ptr<ValueRange> MergeValueRangeOfPhiOperands(const BB &bb, MePhiNode &mePhiNode);
   void ReplaceBoundForSpecialLoopRangeValue(LoopDesc &loop, ValueRange &valueRangeOfIndex, bool upperIsSpecial);
   std::unique_ptr<ValueRange> CreateValueRangeForMonotonicIncreaseVar(
-      const BB &bb, OpMeExpr &opMeExpr, MeExpr &opnd1, Bound &initBound);
-  std::unique_ptr<ValueRange> CreateValueRangeForMonotonicDecreaseVar(const BB &bb, OpMeExpr &opMeExpr, MeExpr &opnd1,
-                                                      Bound &initBound);
-  void DealWithOPLeOrLt(const BB &bb, ValueRange *leftRange, Bound newRightUpper, Bound newRightLower,
+      LoopDesc &loop, BB &exitBB, BB &bb, OpMeExpr &opMeExpr, MeExpr &opnd1, Bound &initBound);
+  std::unique_ptr<ValueRange> CreateValueRangeForMonotonicDecreaseVar(
+      LoopDesc &loop, BB &exitBB, BB &bb, OpMeExpr &opMeExpr, MeExpr &opnd1, Bound &initBound);
+  void DealWithOPLeOrLt(BB &bb, ValueRange *leftRange, Bound newRightUpper, Bound newRightLower,
                         const CondGotoMeStmt &brMeStmt);
-  void DealWithOPGeOrGt(const BB &bb, ValueRange *leftRange, Bound newRightUpper, Bound newRightLower,
+  void DealWithOPGeOrGt(BB &bb, ValueRange *leftRange, Bound newRightUpper, Bound newRightLower,
                         const CondGotoMeStmt &brMeStmt);
-  void DealWithCondGoto(const BB &bb, MeExpr &opMeExpr, ValueRange *leftRange, ValueRange &rightRange,
+  void DealWithCondGoto(BB &bb, MeExpr &opMeExpr, ValueRange *leftRange, ValueRange &rightRange,
                         const CondGotoMeStmt &brMeStmt);
   bool CreateNewBoundWhenAddOrSub(Opcode op, Bound bound, int64 rhsConstant, Bound &res);
-  std::unique_ptr<ValueRange> CopyValueRange(ValueRange &valueRange);
+  std::unique_ptr<ValueRange> CopyValueRange(ValueRange &valueRange, PrimType primType = PTY_begin);
   bool LowerInRange(const BB &bb, Bound lowerTemp, Bound lower, bool lowerIsZero);
-  bool UpperInRange(const BB &bb, Bound upperTemp, Bound upper);
+  bool UpperInRange(const BB &bb, Bound upperTemp, Bound upper, bool upperIsArrayLength);
+  void InsertCandsForSSAUpdate(OStIdx ostIdx, const BB &bb);
+  void AnalysisUnreachableBBOrEdge(BB &bb, BB &unreachableBB, BB &succBB);
+  void DealWithOPNeOrEq(Opcode op, BB &bb, ValueRange *leftRange, ValueRange &rightRange,
+                        const CondGotoMeStmt &brMeStmt);
+  void CreateValueRangeForNeOrEq(MeExpr &opnd, ValueRange &rightRange, BB &trueBranch);
+  void DeleteUnreachableBBs();
+  bool BrStmtInRange(BB &bb, ValueRange &leftRange, ValueRange &rightRange, Opcode op) const;
+  void ChangeLoop2WontExit(LoopDesc &loop, BB &bb, BB &succBB, BB &unreachableBB);
+  int64 GetRealValue(int64 value, PrimType primType) const;
+  void UpdateTryAttribute(BB &bb);
+  void GetTrueAndFalseBranch(Opcode op, BB &bb, BB *&trueBranch, BB *&falseBranch) const;
+  Opcode GetTheOppositeOp(Opcode op) const;
+  bool GetValueRangeOfCondGotoOpnd(BB &bb, OpMeExpr &opMeExpr, MeExpr &opnd, ValueRange *&valueRange,
+                                   std::unique_ptr<ValueRange> &rightRangePtr);
 
   MeFunction &func;
   MeIRMap &irMap;
   Dominance &dom;
+  MemPool &memPool;
+  MapleAllocator mpAllocator;
   IdentifyLoops *loops;
   std::vector<std::map<int32, std::unique_ptr<ValueRange>>> caches;
   std::set<MeExpr*> lengthSet;
   std::vector<std::pair<MeStmt*, NaryMeExpr*>> arrayChecks;
   std::vector<std::map<MeExpr*, std::set<MeExpr*>>> analysisedArrayChecks;
-  std::map<NaryMeExpr*, NaryMeExpr*> old2newArrays;
   std::map<MeExpr*, MeExpr*> length2Def;
+  std::set<BB*> unreachableBBs;
+  MapleMap<OStIdx, MapleSet<BBId>*> &cands;
+  bool isCFGChange = false;
+  bool needUpdateSSA = false;
 };
 
 class MeDoValueRangePropagation : public MeFuncPhase {

@@ -101,7 +101,6 @@ ErrorCode DriverRunner::Run() {
     originBaseName.append(postFix);
     ProcessMpl2mplAndMePhases(outputFile, vtableImplFile);
   }
-  ProcessCGPhase(outputFile, originBaseName);
   return kErrorNoError;
 }
 
@@ -211,7 +210,28 @@ ErrorCode DriverRunner::ParseInput() const {
   return ret;
 }
 
-void DriverRunner::ProcessMpl2mplAndMePhases(const std::string &outputFile, const std::string &vtableImplFile) const {
+#ifdef NEW_PM
+void DriverRunner::RunNewPM(const std::string &outputFile, const std::string &vtableImplFile) {
+  auto PMMemPool = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, "PM module mempool");
+  const MaplePhaseInfo *curPhase = MaplePhaseRegister::GetMaplePhaseRegister()->GetPhaseByID(&MEBETopLevelManager::id);
+  auto *topLevelPhaseManager = static_cast<MEBETopLevelManager*>(curPhase->GetConstructor()(PMMemPool.get()));
+  MPLTimer timer;
+  timer.Start();
+  topLevelPhaseManager->Run(*theModule);
+
+  // emit after module phase
+  if (printOutExe == kMpl2mpl || printOutExe == kMplMe) {
+    theModule->Emit(outputFile);
+  } else if (genVtableImpl || Options::emitVtableImpl) {
+    theModule->Emit(vtableImplFile);
+  }
+  PMMemPool.reset();
+  timer.Stop();
+  LogInfo::MapleLogger() << " Mpl2mpl&mplme consumed " << timer.Elapsed() << "s" << '\n';
+}
+#endif
+
+void DriverRunner::ProcessMpl2mplAndMePhases(const std::string &outputFile, const std::string &vtableImplFile) {
   CHECK_MODULE();
   theMIRModule = theModule;
   if (withDwarf && !theModule->IsWithDbgInfo()) {
@@ -219,6 +239,13 @@ void DriverRunner::ProcessMpl2mplAndMePhases(const std::string &outputFile, cons
     theMIRModule->GetDbgInfo()->BuildDebugInfo();
   }
   if (mpl2mplOptions != nullptr || meOptions != nullptr) {
+#ifdef NEW_PM
+    if (MeOption::threads <= 1) {
+      // main entry of newpm for me&mpl2mpl
+      RunNewPM(outputFile, vtableImplFile);
+      return;
+    }
+#endif
     LogInfo::MapleLogger() << "Processing maplecomb" << '\n';
 
     InterleavedManager mgr(optMp, theModule, meInput, timePhases);
@@ -296,6 +323,39 @@ void DriverRunner::AddPhase(std::vector<std::string> &phases, const std::string 
   } else {
     CHECK_FATAL(false, "Should not reach here, phase should be handled");
   }
+}
+
+void DriverRunner::ProcessCGPhase2(const std::string &outputFile, const std::string &originBaseName) {
+  CHECK_MODULE();
+  theMIRModule = theModule;
+  if (withDwarf && !theModule->IsWithDbgInfo()) {
+    LogInfo::MapleLogger() << "set up debug info " << '\n';
+    theMIRModule->GetDbgInfo()->BuildDebugInfo();
+  }
+  if (cgOptions == nullptr) {
+    return;
+  }
+  LogInfo::MapleLogger() << "Processing mplcg in new phaseManager" << '\n';
+  MPLTimer timer;
+  timer.Start();
+  theModule->SetBaseName(originBaseName);
+  theModule->SetOutputFileName(outputFile);
+  cgOptions->SetDefaultOptions(*theModule);
+  if (timePhases) {
+    CGOptions::EnableTimePhases();
+  }
+  Globals::GetInstance()->SetOptimLevel(cgOptions->GetOptimizeLevel());
+  MAD mad;
+  Globals::GetInstance()->SetMAD(mad);
+
+  auto cgPhaseManager = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, "cg function phasemanager");
+  const MaplePhaseInfo *cgPMInfo = MaplePhaseRegister::GetMaplePhaseRegister()->GetPhaseByID(&CgFuncPM::id);
+  auto *cgfuncNewPhaseManager = static_cast<CgFuncPM*>(cgPMInfo->GetConstructor()(cgPhaseManager.get()));
+  /* It is a specifc work around  (need refactor) */
+  cgfuncNewPhaseManager->SetCGOptions(cgOptions);
+  (void) cgfuncNewPhaseManager->PhaseRun(*theModule);
+  timer.Stop();
+  LogInfo::MapleLogger() << "Mplcg consumed " << timer.ElapsedMilliseconds() << "ms" << '\n';
 }
 
 void DriverRunner::ProcessCGPhase(const std::string &outputFile, const std::string &originBaseName) {

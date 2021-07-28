@@ -71,6 +71,12 @@ class LiveAnalysis : public AnalysisResult {
 };
 
 CGFUNCPHASE(CgDoLiveAnalysis, "liveanalysis")
-}  /* namespace maplebe */
 
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgLiveAnalysis, maplebe::CGFunc)
+  LiveAnalysis *GetResult() {
+    return live;
+  }
+  LiveAnalysis *live = nullptr;
+MAPLE_FUNC_PHASE_DECLARE_END
+}  /* namespace maplebe */
 #endif  /* MAPLEBE_INCLUDE_CG_LIVE_H */

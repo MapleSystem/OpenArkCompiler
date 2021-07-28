@@ -34,6 +34,7 @@ class AstExprTest : public FEIRTestBase {
   }
 
   static void TearDownTestCase() {
+    FEManager::GetManager().GetModule().SetSrcLang(kSrcLangUnknown);
     delete mp;
     mp = nullptr;
   }

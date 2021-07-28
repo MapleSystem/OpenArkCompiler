@@ -490,7 +490,8 @@ bool CGCFG::InSwitchTable(LabelIdx label, const CGFunc &func) {
   if (!label) {
     return false;
   }
-  for (auto *st : func.GetEmitStVec()) {
+  for (auto &it : func.GetEmitStVec()) {
+    MIRSymbol *st = it.second;
     CHECK_FATAL(st->GetKonst()->GetKind() == kConstAggConst, "not a kConstAggConst");
     MIRAggConst *arrayConst = safe_cast<MIRAggConst>(st->GetKonst());
     for (size_t i = 0; i < arrayConst->GetConstVec().size(); ++i) {

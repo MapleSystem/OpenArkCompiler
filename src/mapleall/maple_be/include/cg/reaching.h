@@ -18,6 +18,7 @@
 #include "cg_phase.h"
 #include "cgbb.h"
 #include "datainfo.h"
+#include "maple_phase.h"
 
 namespace maplebe {
 enum VisitStatus : uint8 {
@@ -160,6 +161,15 @@ class ReachingDefinition : public AnalysisResult {
 
 CGFUNCPHASE(CgDoReachingDefinition, "reachingdefinition")
 CGFUNCPHASE(CgDoClearRDInfo, "clearrdinfo")
+
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgReachingDefinition, maplebe::CGFunc)
+  ReachingDefinition *GetResult() {
+    return reachingDef;
+  }
+  ReachingDefinition *reachingDef = nullptr;
+MAPLE_FUNC_PHASE_DECLARE_END
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgClearRDInfo, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE_END
 }  /* namespace maplebe */
 
 #endif  /* MAPLEBE_INCLUDE_CG_REACHING_H */

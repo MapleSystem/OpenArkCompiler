@@ -235,6 +235,7 @@ class MIRParser {
   bool ParseMIRForSrcFileInfo();
   bool ParseMIRForImport();
   bool ParseMIRForImportPath();
+  bool ParseMIRForAsmdecl();
 
   // func for ParseExpr
   using FuncPtrParseExpr = bool (MIRParser::*)(BaseNodePtr &ptr);

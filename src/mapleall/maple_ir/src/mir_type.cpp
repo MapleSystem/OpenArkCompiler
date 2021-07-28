@@ -1979,8 +1979,10 @@ TyIdxFieldAttrPair MIRPtrType::GetPointedTyIdxFldAttrPairWithFieldID(FieldID fld
   }
   MIRType *ty = GlobalTables::GetTypeTable().GetTypeFromTyIdx(pointedTyIdx);
   MIRStructType *structTy = ty->EmbeddedStructType();
-  CHECK_FATAL(structTy,
-      "MIRPtrType::GetPointedTyidxWithFieldId(): cannot have non-zero fieldID for something other than a struct");
+  if (structTy == nullptr) {
+    // this can happen due to casting in C; just return the pointed to type
+    return TyIdxFieldAttrPair(pointedTyIdx, FieldAttrs());
+  }
   return structTy->TraverseToField(fldId).second;
 }
 

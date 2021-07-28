@@ -1978,6 +1978,19 @@ std::list<StmtNode*> FEIRStmtIntrinsicCallAssign::GenMIRStmtsImpl(MIRBuilder &mi
       }
     }
     stmtCall = mirBuilder.CreateStmtIntrinsicCall(INTRN_C_memset, std::move(args), TyIdx(0));
+  } else if (intrinsicId >= INTRN_vector_zip_v2i32 && intrinsicId <= INTRN_vector_zip_v2f32) {
+    MapleVector<BaseNode*> args(mirBuilder.GetCurrentFuncCodeMpAllocator()->Adapter());
+    if (exprList != nullptr) {
+      for (const auto &expr : *exprList) {
+        BaseNode *node = expr->GenMIRNode(mirBuilder);
+        args.push_back(node);
+      }
+    }
+    MIRSymbol *retVarSym = nullptr;
+    if ((var != nullptr) && (var.get() != nullptr)) {
+      retVarSym = var->GenerateLocalMIRSymbol(mirBuilder);
+    }
+    stmtCall = mirBuilder.CreateStmtIntrinsicCallAssigned(intrinsicId, std::move(args), retVarSym);
   }
   // other intrinsic call should be implemented
   ans.emplace_back(stmtCall);

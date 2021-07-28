@@ -20,6 +20,19 @@
 #include "me_ir.h"
 
 namespace maple {
+// The order matters
+enum CastKind {
+  CAST_intTrunc = 0,
+  CAST_zext = 1,
+  CAST_sext = 2,
+  CAST_int2fp = 3,
+  CAST_fp2int = 4,
+  CAST_fpTrunc = 5,
+  CAST_fpExt = 6,
+  CAST_retype = 7,
+  CAST_unknown = 8
+};
+
 class IRMapBuild; // circular dependency exists, no other choice
 
 class IRMap : public AnalysisResult {
@@ -48,6 +61,7 @@ class IRMap : public AnalysisResult {
   MeExpr *CreateAddrofMeExprFromSymbol(MIRSymbol& sym, PUIdx  puIdx);
   MeExpr *CreateIaddrofMeExpr(FieldID fieldId, TyIdx tyIdx, MeExpr *base);
   MeExpr *CreateIvarMeExpr(MeExpr &expr, TyIdx tyIdx, MeExpr &base);
+  NaryMeExpr *CreateNaryMeExpr(const NaryMeExpr &nMeExpr);
 
   // for creating VarMeExpr
   VarMeExpr *CreateVarMeExprVersion(OriginalSt *ost);
@@ -117,6 +131,7 @@ class IRMap : public AnalysisResult {
   MeExpr *CreateMeExprCompare(Opcode, PrimType, PrimType, MeExpr&, MeExpr&);
   MeExpr *CreateMeExprSelect(PrimType, MeExpr&, MeExpr&, MeExpr&);
   MeExpr *CreateMeExprTypeCvt(PrimType, PrimType, MeExpr&);
+  MeExpr *CreateMeExprExt(Opcode, PrimType, uint32, MeExpr&);
   UnaryMeStmt *CreateUnaryMeStmt(Opcode op, MeExpr *opnd);
   UnaryMeStmt *CreateUnaryMeStmt(Opcode op, MeExpr *opnd, BB *bb, const SrcPosition *src);
   IntrinsiccallMeStmt *CreateIntrinsicCallMeStmt(MIRIntrinsicID idx, std::vector<MeExpr*> &opnds,
@@ -134,6 +149,11 @@ class IRMap : public AnalysisResult {
   MeExpr *SimplifyMulExpr(OpMeExpr *mulExpr);
   MeExpr *SimplifyOpMeExpr(OpMeExpr *opmeexpr);
   MeExpr *SimplifyMeExpr(MeExpr *x);
+  void SimplifyCastForAssign(MeStmt *assignStmt);
+  MeExpr *SimplifyCast(MeExpr *expr);
+  MeExpr *SimplifyCastSingle(MeExpr *castExpr);
+  MeExpr *SimplifyCastPair(MeExpr *firstCastExpr, MeExpr *secondCastExpr, bool isFirstCastImplicit);
+  MeExpr *CreateMeExprByCastKind(CastKind castKind, PrimType fromType, PrimType toType, MeExpr *opnd);
   static void SimplifyIvar(IvarMeExpr *ivar);
 
   template <class T, typename... Arguments>

@@ -46,6 +46,7 @@ class FEUtils {
   static MIRType *GetStructFieldType(MIRStructType *type, FieldID feildID);
   static MIRConst *CreateImplicitConst(MIRType *type);
   static PrimType GetVectorElementPrimType(PrimType vectorPrimType);
+  static bool EndsWith(const std::string &value, const std::string &ending);
 
   static const std::string kBoolean;
   static const std::string kByte;

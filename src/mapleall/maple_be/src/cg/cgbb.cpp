@@ -19,6 +19,7 @@ const std::string BB::bbNames[BB::kBBLast] = {
   "BB_ft",
   "BB_if",
   "BB_goto",
+  "BB_igoto",
   "BB_ret",
   "BB_intrinsic",
   "BB_rangegoto",

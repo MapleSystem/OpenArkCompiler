@@ -69,6 +69,10 @@ class AliasElem {
     classSet->emplace(id);
   }
 
+  void SetClassSet(MapleSet<unsigned int> *newClassSet) {
+    classSet = newClassSet;
+  }
+
   const MapleSet<unsigned int> *GetAssignSet() const {
     return assignSet;
   }
@@ -114,6 +118,8 @@ class AliasClass : public AnalysisResult {
         notAllDefsSeenClassSetRoots(acAlloc.Adapter()),
         globalsAffectedByCalls(std::less<unsigned int>(), acAlloc.Adapter()),
         globalsMayAffectedByClinitCheck(acAlloc.Adapter()),
+        aggsToUnion(acAlloc.Adapter()),
+        nadsOsts(acAlloc.Adapter()),
         lessThrowAlias(lessThrowAliasParam),
         ignoreIPA(ignoreIPA),
         calleeHasSideEffect(setCalleeHasSideEffect),
@@ -147,7 +153,13 @@ class AliasClass : public AnalysisResult {
     unionFind.Reinit();
   }
 
+  UnionFind &GetUnionFind() {
+    return unionFind;
+  }
+
   void ApplyUnionForCopies(StmtNode &stmt);
+  void ApplyUnionForFieldsInCopiedAgg(OriginalSt *lhsOst, OriginalSt *rhsOst);
+  void ApplyUnionForFieldsInCopiedAgg();
   void UnionAddrofOstOfUnionFields();
   void CreateAssignSets();
   void DumpAssignSets();
@@ -163,7 +175,6 @@ class AliasClass : public AnalysisResult {
   bool AliasAccordingToFieldID(const OriginalSt &ostA, const OriginalSt &ostB);
   void ReconstructAliasGroups();
   void CollectNotAllDefsSeenAes();
-  void UnionNextLevelOfAliasOst();
   void CreateClassSets();
   void DumpClassSets();
   void InsertMayDefUseCall(StmtNode &stmt, BBId bbid, bool hasSideEffect, bool hasNoPrivateDefEffect);
@@ -175,6 +186,14 @@ class AliasClass : public AnalysisResult {
   static OffsetType OffsetInBitOfArrayElement(const ArrayNode *arrayNode);
   static OriginalSt *FindOrCreateExtraLevOst(SSATab *ssaTab, OriginalSt *prevLevOst, const TyIdx &tyIdx,
                                              FieldID fld, OffsetType offset);
+  const MapleVector<AliasElem*> &Id2AliasElem() {
+    return id2Elem;
+  }
+
+  MapleAllocator &GetMapleAllocator() {
+    return acAlloc;
+  }
+
  protected:
   virtual bool InConstructorLikeFunc() const {
     return true;
@@ -192,10 +211,13 @@ class AliasClass : public AnalysisResult {
   void SetPtrOpndNextLevNADS(const BaseNode &opnd, AliasElem *aliasElem, bool hasNoPrivateDefEffect);
   void SetPtrOpndsNextLevNADS(unsigned int start, unsigned int end, MapleVector<BaseNode*> &opnds,
                               bool hasNoPrivateDefEffect);
+  void SetAggPtrFieldsNextLevNADS(OriginalSt &ost);
+  void SetAggOpndPtrFieldsNextLevNADS(MapleVector<BaseNode*> &opnds);
   void ApplyUnionForFieldsInAggCopy(const OriginalSt *lhsost, const OriginalSt *rhsost);
   void ApplyUnionForDassignCopy(AliasElem &lhsAe, AliasElem *rhsAe, BaseNode &rhs);
   bool SetNextLevNADSForEscapePtr(AliasElem &lhsAe, BaseNode &rhs);
   void CreateMirroringAliasElems(const OriginalSt *ost1, OriginalSt *ost2);
+  void UnionNextLevelOfAliasOst(std::set<AliasElem *> &aesToUnionNextLev);
   AliasElem *FindOrCreateDummyNADSAe();
   AliasElem &FindOrCreateAliasElemOfAddrofOSt(OriginalSt &oSt);
   void CollectMayDefForMustDefs(const StmtNode &stmt, std::set<OriginalSt*> &mayDefOsts);
@@ -206,7 +228,6 @@ class AliasClass : public AnalysisResult {
                                StmtNode &stmt, BBId bbid, bool hasNoPrivateDefEffect);
   void InsertMayUseExpr(BaseNode &expr);
   void CollectMayUseFromGlobalsAffectedByCalls(std::set<OriginalSt*> &mayUseOsts);
-  void CollectMayUseFromNADS(std::set<OriginalSt*> &mayUseOsts);
   void CollectMayUseFromDefinedFinalField(std::set<OriginalSt*> &mayUseOsts);
   void InsertMayUseNode(std::set<OriginalSt*> &mayUseOsts, AccessSSANodes *ssaPart);
   void InsertMayUseReturn(const StmtNode &stmt);
@@ -240,6 +261,8 @@ class AliasClass : public AnalysisResult {
   MapleSet<unsigned int> globalsAffectedByCalls;                // set of class ids of globals
   // aliased at calls; needed only when wholeProgramScope is true
   MapleSet<OStIdx> globalsMayAffectedByClinitCheck;
+  MapleMap<OriginalSt*, OriginalSt*> aggsToUnion; // aggs are copied, their fields should be unioned
+  MapleSet<OriginalSt *> nadsOsts;
   bool lessThrowAlias;
   bool ignoreIPA;        // whether to ignore information provided by IPA
   bool calleeHasSideEffect;

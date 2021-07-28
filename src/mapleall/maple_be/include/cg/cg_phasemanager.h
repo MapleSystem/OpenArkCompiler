@@ -16,14 +16,19 @@
 #define MAPLEBE_INCLUDE_CG_CG_PHASEMANAGER_H
 #include <vector>
 #include <string>
+#include <sys/stat.h>
 #include "mempool.h"
 #include "mempool_allocator.h"
 #include "phase_manager.h"
 #include "mir_module.h"
+#include "mir_lower.h"
+#include "lower.h"
+#include "constantfold.h"
 #include "cgfunc.h"
 #include "cg_phase.h"
 #include "cg_option.h"
 namespace maplebe {
+using cgFuncOptTy = MapleFunctionPhase<CGFunc>;
 enum CgPhaseType : uint8 {
   kCgPhaseInvalid,
   kCgPhaseMainOpt,
@@ -76,6 +81,62 @@ class CgFuncPhaseManager : public PhaseManager {
   CgFuncResultMgr arFuncManager;
   MIRModule &module;
   MapleMap<std::string, time_t> extraPhasesTimer;
+};
+
+/* =================== new phase manager ===================  */
+class CgFuncPM : public FunctionPM {
+ public:
+  explicit CgFuncPM(MemPool *mp) : FunctionPM(mp, &id) {}
+  PHASECONSTRUCTOR(CgFuncPM);
+  std::string PhaseName() const override;
+  ~CgFuncPM() override {
+    cgOptions = nullptr;
+    cg = nullptr;
+    beCommon = nullptr;
+    if (CGOptions::IsEnableTimePhases()) {
+      DumpPhaseTime();
+    }
+  }
+  bool PhaseRun(MIRModule &m) override;
+
+  void SetCGOptions(CGOptions *curCGOptions) {
+    cgOptions = curCGOptions;
+  }
+
+  CG *GetCG() {
+    return cg;
+  }
+  BECommon *GetBECommon() {
+    return beCommon;
+  }
+ private:
+  bool FuncLevelRun(CGFunc &cgFunc, AnalysisDataManager &serialADM, unsigned long &rangeNum);
+  void GenerateOutPutFile(MIRModule &m);
+  void CreateCGAndBeCommon(MIRModule &m);
+  void PrepareLower(MIRModule &m);
+  void PostOutPut(MIRModule &m);
+  void DoFuncCGLower(const MIRModule &m, MIRFunction &mirFunc);
+  void DoPhasesPopulate(const MIRModule &m);
+  /* Tool functions */
+  void DumpFuncCGIR(CGFunc &f, const std::string phaseName, bool isBefore);
+  /* For Emit */
+  void InitProfile(MIRModule &m) const;
+  void EmitGlobalInfo(MIRModule &m) const;
+  void EmitDuplicatedAsmFunc(MIRModule &m) const;
+  void EmitDebugInfo(const MIRModule &m) const;
+  void EmitFastFuncs(const MIRModule &m) const;
+  bool IsFramework(MIRModule &m) const;
+
+  CG *cg = nullptr;
+  BECommon *beCommon = nullptr;
+  MIRLower *mirLower = nullptr;
+  CGLowerer *cgLower = nullptr;
+  /* module options */
+  CGOptions *cgOptions = nullptr;
+
+  /* phase time */
+  time_t extraPhaseTime = 0;
+  time_t analysisPhaseTempTime = 0; /* record analysis phase time before a transform phase */
 };
 }  /* namespace maplebe */
 

@@ -151,6 +151,10 @@ class FEIRVar {
     genAttrs = argGenericAttrs;
   }
 
+  void SetSectionAttr(const std::string &str) {
+    sectionAttr = str;
+  }
+
   void SetSrcLOC(uint32 fileIdx, uint32 lineNum) {
     srcFileIdx = fileIdx;
     srcFileLineNum = lineNum;
@@ -182,6 +186,7 @@ class FEIRVar {
   GenericAttrs genAttrs;
   uint32 srcFileIdx = 0;
   uint32 srcFileLineNum = 0;
+  std::string sectionAttr;
 };
 
 using UniqueFEIRVar = std::unique_ptr<FEIRVar>;

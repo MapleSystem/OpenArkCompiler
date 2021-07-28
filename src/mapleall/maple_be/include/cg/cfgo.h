@@ -50,6 +50,7 @@ class SequentialJumpPattern : public OptimizationPattern {
 
  protected:
   void SkipSucBB(BB &curBB, BB &sucBB);
+  void UpdateSwitchSucc(BB &curBB, BB &sucBB);
 };
 
 class FlipBRPattern : public OptimizationPattern {
@@ -123,6 +124,11 @@ class CFGOptimizer : public Optimizer {
 
 CGFUNCPHASE_CANSKIP(CgDoCfgo, "cfgo")
 CGFUNCPHASE_CANSKIP(CgDoPostCfgo, "postcfgo")
+
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgCfgo, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE_END
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgPostCfgo, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE_END
 }  /* namespace maplebe */
 
 #endif  /* MAPLEBE_INCLUDE_CG_CFGO_H */

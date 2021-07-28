@@ -22,7 +22,7 @@ bool CfgOpt::IsShortCircuitBB(LabelIdx labelIdx) {
     return false;
   }
   std::string labelName = meFunc.GetMirFunc()->GetLabelTabItem(labelIdx);
-  return !StringUtils::EndsWith(labelName, "_end") && StringUtils::StartsWith(labelName, "shortCircuit_label");
+  return labelName.find("_end") == std::string::npos && labelName.find("shortCircuit_label") != std::string::npos;
 }
 
 bool CfgOpt::IsShortCircuitStIdx(StIdx stIdx) {
@@ -89,6 +89,9 @@ void CfgOpt::PropagateBB(BB &bb, BB *trueBranchBB, BB *falseBranchBB) {
         if (!IsShortCircuitBB(predBB->GetBBLabel())) {
           continue;
         }
+        if (trueBranchBBForPred == falseBranchBBForPred) {
+          trueBranchBBForPred = falseBranchBBForPred = predBB;
+        }
         break;
       }
       default: {
@@ -102,7 +105,7 @@ void CfgOpt::PropagateBB(BB &bb, BB *trueBranchBB, BB *falseBranchBB) {
       falseBranchBBForPred = temp;
     }
     if (!IsAssignToShortCircuit(predBB->GetFirst())) {
-      return;
+      continue;
     }
     PropagateBB(*predBB, trueBranchBBForPred, falseBranchBBForPred);
   }

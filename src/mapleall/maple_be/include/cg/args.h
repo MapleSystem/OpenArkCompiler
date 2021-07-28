@@ -40,6 +40,8 @@ class MoveRegArgs {
 };
 
 CGFUNCPHASE(CgDoMoveRegArgs, "moveargs")
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgMoveRegArgs, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE_END
 }  /* namespace maplebe */
 
 #endif  /* MAPLEBE_INCLUDE_CG_ARGS_H */

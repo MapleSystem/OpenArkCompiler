@@ -3509,7 +3509,7 @@ void GraphColorRegAllocator::FinalizeRegisters() {
             ListOperand *outList = const_cast<ListOperand *>(static_cast<const ListOperand *>(defOpnd));
             auto *a64CGFunc = static_cast<AArch64CGFunc*>(cgFunc);
             auto *srcOpndsNew =
-                  a64CGFunc->GetMemoryPool()->New<AArch64ListOperand>(*a64CGFunc->GetFuncScopeAllocator());
+                a64CGFunc->GetMemoryPool()->New<AArch64ListOperand>(*a64CGFunc->GetFuncScopeAllocator());
             RegOperand *phyOpnd;
             for (auto opnd : outList->GetOperands()) {
               phyOpnd = GetReplaceOpnd(*insn, *opnd, useSpillIdx, usedRegMask, true);
@@ -3537,11 +3537,15 @@ void GraphColorRegAllocator::FinalizeRegisters() {
             ListOperand *inList = const_cast<ListOperand *>(static_cast<const ListOperand *>(useOpnd));
             auto *a64CGFunc = static_cast<AArch64CGFunc*>(cgFunc);
             auto *srcOpndsNew =
-                  a64CGFunc->GetMemoryPool()->New<AArch64ListOperand>(*a64CGFunc->GetFuncScopeAllocator());
+                a64CGFunc->GetMemoryPool()->New<AArch64ListOperand>(*a64CGFunc->GetFuncScopeAllocator());
             RegOperand *phyOpnd;
             for (auto opnd : inList->GetOperands()) {
-              phyOpnd = GetReplaceOpnd(*insn, *opnd, useSpillIdx, usedRegMask, false);
-              srcOpndsNew->PushOpnd(*phyOpnd);
+              if ((static_cast<const RegOperand *>(opnd))->GetRegisterNumber() < kAllRegNum) {
+                srcOpndsNew->PushOpnd(*opnd);
+              } else {
+                phyOpnd = GetReplaceOpnd(*insn, *opnd, useSpillIdx, usedRegMask, false);
+                srcOpndsNew->PushOpnd(*phyOpnd);
+              }
             }
             insn->SetOperand(kAsmInputListOpnd, *srcOpndsNew);
             continue;

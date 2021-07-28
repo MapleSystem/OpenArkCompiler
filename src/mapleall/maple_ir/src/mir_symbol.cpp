@@ -352,6 +352,11 @@ void MIRSymbol::Dump(bool isLocal, int32 indent, bool suppressInit, const MIRSym
   if (GetTyIdx() != 0u) {
     GlobalTables::GetTypeTable().GetTypeFromTyIdx(GetTyIdx())->Dump(indent + 1);
   }
+  if (sectionAttr != UStrIdx(0)) {
+    LogInfo::MapleLogger() << " section (";
+    PrintString(GlobalTables::GetUStrTable().GetStringFromStrIdx(sectionAttr));
+    LogInfo::MapleLogger() << " )";
+  }
   typeAttrs.DumpAttributes();
   if (sKind == kStJavaClass || sKind == kStJavaInterface || GetStorageClass() == kScTypeInfoName ||
       GetStorageClass() == kScTypeInfo || GetStorageClass() == kScTypeCxxAbi) {

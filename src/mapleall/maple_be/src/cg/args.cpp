@@ -40,4 +40,18 @@ AnalysisResult *CgDoMoveRegArgs::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResu
 
   return nullptr;
 }
+
+bool CgMoveRegArgs::PhaseRun(maplebe::CGFunc &f) {
+  MemPool *memPool = GetPhaseMemPool();
+  MoveRegArgs *movRegArgs = nullptr;
+#if TARGAARCH64 || TARGRISCV64
+  movRegArgs = memPool->New<AArch64MoveRegArgs>(f);
+#endif
+#if TARGARM32
+  movRegArgs = memPool->New<Arm32MoveRegArgs>(f);
+#endif
+  movRegArgs->Run();
+  return true;
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgMoveRegArgs, moveargs)
 }  /* namespace maplebe */
