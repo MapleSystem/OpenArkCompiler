@@ -59,6 +59,7 @@ class MeOption : public MapleDriverOptionBase {
   static bool setCalleeHasSideEffect;
   static bool noSteensgaard;
   static bool noTBAA;
+  static bool noDDAA;
   static uint8 aliasAnalysisLevel;
   static bool noDot;
   static bool stmtNum;

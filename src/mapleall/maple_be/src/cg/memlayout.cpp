@@ -84,4 +84,13 @@ AnalysisResult *CgDoLayoutSF::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultM
 
   return nullptr;
 }
+
+bool CgLayoutFrame::PhaseRun(maplebe::CGFunc &f) {
+  if (CGOptions::IsPrintFunction()) {
+    LogInfo::MapleLogger() << f.GetName() << "\n";
+  }
+  f.LayoutStackFrame();
+  return false;
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgLayoutFrame, layoutstackframe)
 }  /* namespace maplebe */

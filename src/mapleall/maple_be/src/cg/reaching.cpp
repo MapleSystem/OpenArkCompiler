@@ -1160,4 +1160,25 @@ AnalysisResult *CgDoClearRDInfo::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResu
   }
   return nullptr;
 }
+
+bool CgReachingDefinition::PhaseRun(maplebe::CGFunc &f) {
+#if TARGAARCH64 || TARGRISCV64
+  reachingDef = GetPhaseAllocator()->New<AArch64ReachingDefinition>(f, *GetPhaseMemPool());
+#endif
+#if TARGARM32
+  reachingDef = GetPhaseAllocator()->New<Arm32ReachingDefinition>(f, *GetPhaseMemPool());
+#endif
+  reachingDef->SetAnalysisMode(kRDAllAnalysis);
+  reachingDef->AnalysisStart();
+  return false;
+}
+MAPLE_ANALYSIS_PHASE_REGISTER(CgReachingDefinition, reachingdefinition)
+
+bool CgClearRDInfo::PhaseRun(maplebe::CGFunc &f) {
+  if (f.GetRDStatus()) {
+    f.GetRD()->ClearDefUseInfo();
+  }
+  return false;
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgClearRDInfo, clearrdinfo)
 }  /* namespace maplebe */

@@ -35,7 +35,10 @@ class YieldPointInsertion {
   CGFunc *cgFunc;
 };
 
-CGFUNCPHASE(CgYieldPointInsertion, "yieldpoint")
+CGFUNCPHASE(CgDoYieldPointInsertion, "yieldpoint")
+
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgYieldPointInsertion, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE_END
 }  /* namespace maplebe */
 
 #endif  /* MAPLEBE_INCLUDE_CG_YIELDPOINT_H */

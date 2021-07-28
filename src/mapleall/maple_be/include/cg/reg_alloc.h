@@ -19,6 +19,7 @@
 #include <stack>
 #include "isa.h"
 #include "cg_phase.h"
+#include "maple_phase_manager.h"
 
 namespace maplebe {
 class VirtualRegNode {
@@ -60,6 +61,8 @@ class RegAllocator {
 };
 
 CGFUNCPHASE(CgDoRegAlloc, "regalloc")
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgRegAlloc, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE_END
 }  /* namespace maplebe */
 
 #endif  /* MAPLEBE_INCLUDE_CG_REG_ALLOC_H */

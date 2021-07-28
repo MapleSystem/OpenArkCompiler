@@ -4878,26 +4878,54 @@ Operand *AArch64CGFunc::SelectTrunc(TypeCvtNode &node, Operand &opnd0) {
 }
 
 void AArch64CGFunc::SelectSelect(Operand &resOpnd, Operand &condOpnd, Operand &trueOpnd, Operand &falseOpnd,
-                                 PrimType dtype, PrimType ctype) {
+                                 PrimType dtype, PrimType ctype, bool isCompare, AArch64CC_t cc) {
   ASSERT(&resOpnd != &condOpnd, "resOpnd cannot be the same as condOpnd");
   Operand &newCondOpnd = LoadIntoRegister(condOpnd, ctype);
   Operand &newTrueOpnd = LoadIntoRegister(trueOpnd, dtype);
   Operand &newFalseOpnd = LoadIntoRegister(falseOpnd, dtype);
 
   bool isIntType = IsPrimitiveInteger(dtype);
-
-  SelectAArch64Cmp(newCondOpnd, CreateImmOperand(0, ctype, false), true, GetPrimTypeBitSize(ctype));
+  if (isCompare) {
+    SelectAArch64Cmp(newCondOpnd, CreateImmOperand(0, ctype, false), true, GetPrimTypeBitSize(ctype));
+    cc = CC_NE;
+  }
   ASSERT((IsPrimitiveInteger(dtype) || IsPrimitiveFloat(dtype)), "unknown type for select");
   Operand &newResOpnd = LoadIntoRegister(resOpnd, dtype);
   SelectAArch64Select(newResOpnd, newTrueOpnd, newFalseOpnd,
-                      GetCondOperand(CC_NE), isIntType, GetPrimTypeBitSize(dtype));
+                      GetCondOperand(cc), isIntType, GetPrimTypeBitSize(dtype));
 }
 
-Operand *AArch64CGFunc::SelectSelect(TernaryNode &node, Operand &opnd0, Operand &opnd1, Operand &opnd2) {
+Operand *AArch64CGFunc::SelectSelect(TernaryNode &node, Operand &opnd0, Operand &opnd1, Operand &opnd2,
+    bool isCompare) {
   PrimType dtype = node.GetPrimType();
   PrimType ctype = node.Opnd(0)->GetPrimType();
+
   RegOperand &resOpnd = CreateRegisterOperandOfType(dtype);
-  SelectSelect(resOpnd, opnd0, opnd1, opnd2, dtype, ctype);
+  AArch64CC_t cc = CC_NE;
+  Opcode opcode = node.Opnd(0)->GetOpCode();
+  bool isFloat = IsPrimitiveFloat(dtype);
+  bool unsignedIntegerComparison = !isFloat && !IsSignedInteger(dtype);
+  switch (opcode) {
+    case OP_eq:
+      cc = CC_EQ;
+          break;
+    case OP_ne:
+      cc = CC_NE;
+          break;
+    case OP_le:
+      cc = unsignedIntegerComparison ? CC_LS : CC_LE;
+          break;
+    case OP_ge:
+      cc = unsignedIntegerComparison ? CC_HS : CC_GE;
+          break;
+    case OP_gt:
+      cc = unsignedIntegerComparison ? CC_HI : CC_GT;
+          break;
+    default:
+      isCompare = true;
+      break;
+  }
+  SelectSelect(resOpnd, opnd0, opnd1, opnd2, dtype, ctype, isCompare, cc);
   return &resOpnd;
 }
 
@@ -7718,7 +7746,7 @@ MemOperand *AArch64CGFunc::AdjustMemOperandIfOffsetOutOfRange(
   if (vrNum >= vRegTable.size()) {
     CHECK_FATAL(false, "index out of range in AArch64CGFunc::AdjustMemOperandIfOffsetOutOfRange");
   }
-  uint32 dataSize = vRegTable[vrNum].GetSize() * kBitsPerByte;
+  uint32 dataSize = GetOrCreateVirtualRegisterOperand(vrNum).GetSize();
   auto *a64MemOpnd = static_cast<AArch64MemOperand*>(memOpnd);
   if (IsImmediateOffsetOutOfRange(*a64MemOpnd, dataSize)) {
     if (CheckIfSplitOffsetWithAdd(*a64MemOpnd, dataSize)) {
@@ -7776,7 +7804,7 @@ MemOperand *AArch64CGFunc::GetOrCreatSpillMem(regno_t vrNum) {
     if (vrNum >= vRegTable.size()) {
       CHECK_FATAL(false, "index out of range in AArch64CGFunc::FreeSpillRegMem");
     }
-    uint32 dataSize = vRegTable[vrNum].GetSize() * kBitsPerByte;
+    uint32 dataSize = GetOrCreateVirtualRegisterOperand(vrNum).GetSize();
     auto it = reuseSpillLocMem.find(dataSize);
     if (it != reuseSpillLocMem.end()) {
       MemOperand *memOpnd = it->second->GetOne();
@@ -8926,21 +8954,20 @@ RegOperand *AArch64CGFunc::SelectVectorSetElement(Operand *eOpnd, PrimType eType
   return static_cast<RegOperand*>(vOpnd);
 }
 
-RegOperand *AArch64CGFunc::SelectVectorMerge(PrimType rTyp, Operand *o1, PrimType typ1, Operand *o2,
-                                             PrimType typ2, Operand *o3) {
+RegOperand *AArch64CGFunc::SelectVectorMerge(PrimType rTyp, Operand *o1, Operand *o2, int32 index) {
   RegOperand *res = &CreateRegisterOperandOfType(rTyp);
+  int32 size = GetPrimTypeSize(rTyp);                                      /* 8b or 16b */
   VectorRegSpec *vecSpecDest = GetMemoryPool()->New<VectorRegSpec>();
-  vecSpecDest->vecLaneMax = GetPrimTypeLanes(rTyp);
+  vecSpecDest->vecLaneMax = size;
   VectorRegSpec *vecSpecOpd1 = GetMemoryPool()->New<VectorRegSpec>();
-  vecSpecOpd1->vecLaneMax = GetPrimTypeLanes(typ1);
+  vecSpecOpd1->vecLaneMax = size;
   VectorRegSpec *vecSpecOpd2 = GetMemoryPool()->New<VectorRegSpec>();
-  vecSpecOpd2->vecLaneMax = GetPrimTypeLanes(typ2);
+  vecSpecOpd2->vecLaneMax = size;
 
-  if (!o3->IsConstImmediate()) {
-    CHECK_FATAL(0, "VectorMerge does not have lane const");
-  }
+  ImmOperand *imm = &CreateImmOperand(index, k8BitSize, true);
 
-  Insn *insn = &GetCG()->BuildInstruction<AArch64VectorInsn>(MOP_vextvvv, *res, *o1, *o2, *o3);
+  MOperator mOp = (size > k8ByteSize) ? MOP_vextvvvi : MOP_vextuuui;
+  Insn *insn = &GetCG()->BuildInstruction<AArch64VectorInsn>(mOp, *res, *o1, *o2, *imm);
   static_cast<AArch64VectorInsn*>(insn)->PushRegSpecEntry(vecSpecDest);
   static_cast<AArch64VectorInsn*>(insn)->PushRegSpecEntry(vecSpecOpd1);
   static_cast<AArch64VectorInsn*>(insn)->PushRegSpecEntry(vecSpecOpd2);

@@ -40,6 +40,8 @@ class RaOpt {
 };
 
 CGFUNCPHASE(CgDoRaOpt, "raopt")
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgRaOpt, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE_END
 }  /* namespace maplebe */
 
 #endif  /* MAPLEBE_INCLUDE_CG_RAOPT_H */

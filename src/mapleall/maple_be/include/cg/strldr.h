@@ -15,6 +15,7 @@
 #ifndef MAPLEBE_INCLUDE_CG_STRLDR_H
 #define MAPLEBE_INCLUDE_CG_STRLDR_H
 #include "cg_phase.h"
+#include "maple_phase.h"
 
 namespace maplebe {
 class StoreLoadOpt {
@@ -35,6 +36,7 @@ class StoreLoadOpt {
 };
 
 CGFUNCPHASE_CANSKIP(CgDoStoreLoadOpt, "storeloadopt")
+MAPLE_FUNC_PHASE_DECLARE(CgStoreLoadOpt, maplebe::CGFunc)
 }  /* namespace maplebe */
 
 #endif  /* MAPLEBE_INCLUDE_CG_STRLDR_H */

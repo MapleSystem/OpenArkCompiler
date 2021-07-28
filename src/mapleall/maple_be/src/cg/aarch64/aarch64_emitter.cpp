@@ -551,4 +551,16 @@ AnalysisResult *CgDoEmission::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultM
   static_cast<AArch64AsmEmitter*>(emitter)->Run(funcEmitInfo);
   return nullptr;
 }
+
+/* new phase manager */
+bool CgEmission::PhaseRun(maplebe::CGFunc &f) {
+  Emitter *emitter = f.GetCG()->GetEmitter();
+  CHECK_NULL_FATAL(emitter);
+  AsmFuncEmitInfo funcEmitInfo(f);
+  emitter->EmitLocalVariable(f);
+  static_cast<AArch64AsmEmitter*>(emitter)->Run(funcEmitInfo);
+  emitter->EmitHugeSoRoutines();
+  return false;
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgEmission, emit)
 }  /* namespace maplebe */

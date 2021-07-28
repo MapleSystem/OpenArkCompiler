@@ -31,6 +31,7 @@ bool MeOption::quiet = false;
 bool MeOption::setCalleeHasSideEffect = false;
 bool MeOption::noSteensgaard = false;
 bool MeOption::noTBAA = false;
+bool MeOption::noDDAA = false;
 uint8 MeOption::aliasAnalysisLevel = 3;
 bool MeOption::noDot = false;
 bool MeOption::stmtNum = false;
@@ -131,6 +132,7 @@ enum OptionIndex {
   kSetCalleeHasSideEffect,
   kNoSteensgaard,
   kNoTBAA,
+  kNoDDAA,
   kAliasAnalysisLevel,
   kStmtNum,
   kRcLower,
@@ -393,6 +395,16 @@ const Descriptor kUsage[] = {
     kArgCheckPolicyBool,
     "  --noTBAA                    \tDisable type-based alias analysis\n"
     "  --no-noTBAA                 \tEnable type-based alias analysis\n",
+    "me",
+    {} },
+  { kNoDDAA,
+    kEnable,
+    "",
+    "noDDAA",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --noDDAA                    \tDisable demand driven alias analysis\n"
+    "  --no-noDDAA                 \tEnable demand driven alias analysis\n",
     "me",
     {} },
   { kAliasAnalysisLevel,
@@ -1198,6 +1210,10 @@ bool MeOption::SolveOptions(const std::vector<mapleOption::Option> &opts, bool i
       case kNoTBAA:
         noTBAA = (opt.Type() == kEnable);
         break;
+      case kNoDDAA: {
+        noDDAA = (opt.Type() == kEnable);
+        break;
+      }
       case kAliasAnalysisLevel:
         aliasAnalysisLevel = std::stoul(opt.Args(), nullptr);
         if (aliasAnalysisLevel > kLevelThree) {

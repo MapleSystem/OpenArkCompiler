@@ -734,4 +734,10 @@ AnalysisResult *CgDoBuildEHFunc::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResu
   cgFunc->BuildEHFunc();
   return nullptr;
 }
+
+bool CgBuildEHFunc::PhaseRun(maplebe::CGFunc &f) {
+  f.BuildEHFunc();
+  return false;
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgBuildEHFunc, buildehfunc)
 }  /* namespace maplebe */

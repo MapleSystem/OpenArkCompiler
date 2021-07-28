@@ -44,6 +44,7 @@ class ICOPattern : public OptimizationPattern {
 };
 
 CGFUNCPHASE_CANSKIP(CgDoIco, "ico")
+MAPLE_FUNC_PHASE_DECLARE(CgIco, maplebe::CGFunc)
 }  /* namespace maplebe */
 
 #endif  /* MAPLEBE_INCLUDE_CG_ICO_H */

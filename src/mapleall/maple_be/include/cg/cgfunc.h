@@ -240,7 +240,8 @@ class CGFunc {
   virtual Operand *SelectRound(TypeCvtNode &node, Operand &opnd0) = 0;
   virtual Operand *SelectCvt(const BaseNode &parent, TypeCvtNode &node, Operand &opnd0) = 0;
   virtual Operand *SelectTrunc(TypeCvtNode &node, Operand &opnd0) = 0;
-  virtual Operand *SelectSelect(TernaryNode &node, Operand &opnd0, Operand &opnd1, Operand &opnd2) = 0;
+  virtual Operand *SelectSelect(TernaryNode &node, Operand &opnd0, Operand &opnd1, Operand &opnd2,
+      bool isCompare = false) = 0;
   virtual Operand *SelectMalloc(UnaryNode &call, Operand &opnd0) = 0;
   virtual RegOperand &SelectCopy(Operand &src, PrimType srcType, PrimType dstType) = 0;
   virtual Operand *SelectAlloca(UnaryNode &call, Operand &opnd0) = 0;
@@ -285,8 +286,7 @@ class CGFunc {
   virtual RegOperand *SelectVectorGetElement(PrimType rType, Operand *src, PrimType sType, int32 lane) = 0;
   virtual RegOperand *SelectVectorMadd(Operand *o1, PrimType oTyp1, Operand *o2, PrimType oTyp2, Operand *o3,
                                        PrimType oTyp3) = 0;
-  virtual RegOperand *SelectVectorMerge(PrimType rTyp, Operand *o1, PrimType typ1, Operand *o2, PrimType typ2,
-                                        Operand *o3) = 0;
+  virtual RegOperand *SelectVectorMerge(PrimType rTyp, Operand *o1, Operand *o2, int32 iNum) = 0;
   virtual RegOperand *SelectVectorMull(PrimType rType, Operand *o1, PrimType oTyp1, Operand *o2, PrimType oTyp2) = 0;
   virtual RegOperand *SelectVectorNarrow(PrimType rType, Operand *o1, PrimType otyp, bool isLow) = 0;
   virtual RegOperand *SelectVectorNeg(PrimType rType, Operand *o1) = 0;
@@ -409,7 +409,7 @@ class CGFunc {
 
   uint32 GetVRegSize(regno_t vregNum) {
     CHECK(vregNum < vRegTable.size(), "index out of range in GetVRegSize");
-    return vRegTable[vregNum].GetSize();
+    return GetOrCreateVirtualRegisterOperand(vregNum).GetSize() / kBitsPerByte;
   }
 
   MIRSymbol *GetRetRefSymbol(BaseNode &expr);
@@ -1057,9 +1057,19 @@ class CGFunc {
 
 CGFUNCPHASE(CgDoLayoutSF, "layoutstackframe")
 CGFUNCPHASE(CgDoHandleFunc, "handlefunction")
-CGFUNCPHASE(CgFixCFLocOsft, "dbgfixcallframeoffsets")
+CGFUNCPHASE(CgDoFixCFLocOsft, "dbgfixcallframeoffsets")
 CGFUNCPHASE(CgDoGenCfi, "gencfi")
 CGFUNCPHASE(CgDoEmission, "emit")
-}  /* namespace maplebe */
 
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgLayoutFrame, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE_END
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgHandleFunction, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE_END
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgFixCFLocOsft, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE_END
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgGenCfi, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE_END
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgEmission, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE_END
+}  /* namespace maplebe */
 #endif  /* MAPLEBE_INCLUDE_CG_CGFUNC_H */

@@ -22,6 +22,7 @@
 
 namespace maplebe {
 #define LIST_SCHED_DUMP CG_DEBUG_FUNC(cgFunc)
+#define LIST_SCHED_DUMP_NEWPM CG_DEBUG_FUNC_NEWPM(f, PhaseName())
 #define LIST_SCHED_DUMP_REF CG_DEBUG_FUNC(&cgFunc)
 
 class RegPressureSchedule {
@@ -134,6 +135,9 @@ class Schedule {
 
 CGFUNCPHASE_CANSKIP(CgDoPreScheduling, "prescheduling")
 CGFUNCPHASE_CANSKIP(CgDoScheduling, "scheduling")
+
+MAPLE_FUNC_PHASE_DECLARE(CgPreScheduling, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE(CgScheduling, maplebe::CGFunc)
 }  /* namespace maplebe */
 
 #endif  /* MAPLEBE_INCLUDE_CG_SCHEDULE_H */

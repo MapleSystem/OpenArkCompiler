@@ -124,7 +124,7 @@ void AArch64FixShortBranch::FixShortBranches() {
   }
 }
 
-AnalysisResult *CgFixShortBranch::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
+AnalysisResult *CgDoFixShortBranch::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
   (void)cgFuncResultMgr;
   ASSERT(cgFunc != nullptr, "nullptr check");
   auto memPool = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, "FixShortBranches");
@@ -133,5 +133,13 @@ AnalysisResult *CgFixShortBranch::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncRes
   fixShortBranch->FixShortBranches();
   return nullptr;
 }
+
+bool CgFixShortBranch::PhaseRun(maplebe::CGFunc &f) {
+  auto *fixShortBranch = GetPhaseAllocator()->New<AArch64FixShortBranch>(&f);
+  CHECK_FATAL(fixShortBranch != nullptr, "AArch64FixShortBranch instance create failure");
+  fixShortBranch->FixShortBranches();
+  return false;
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgFixShortBranch, fixshortbranch)
 }  /* namespace maplebe */
 

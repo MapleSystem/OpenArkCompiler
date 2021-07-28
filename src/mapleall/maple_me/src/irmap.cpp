@@ -52,6 +52,14 @@ static uint32 GetPrimTypeActualBitSize(PrimType primType) {
   return GetPrimTypeSize(primType) << 3;
 }
 
+static bool IsCompareMeExpr(const MeExpr &expr) {
+  Opcode op = expr.GetOp();
+  if (op == OP_eq || op == OP_ne || op == OP_ge || op == OP_gt || op == OP_le || op == OP_lt) {
+    return true;
+  }
+  return false;
+}
+
 // This interface is conservative, which means that some op are explicit type cast but
 // the interface returns false.
 static bool IsCastMeExprExplicit(const MeExpr &expr) {
@@ -399,6 +407,30 @@ MeExpr *IRMap::SimplifyCastSingle(MeExpr *castExpr) {
   }
   CastInfo castInfo;
   ComputeCastInfoForExpr(*castExpr, castInfo);
+  // cast to integer + compare  ==>  compare
+  if (castInfo.kind != CAST_unknown && IsPrimitiveInteger(castInfo.dstType) && IsCompareMeExpr(*opnd)) {
+    // exclude the following castExpr:
+    //   sext xx 1 <expr>
+    bool excluded = (castExpr->GetOp() == OP_sext && static_cast<OpMeExpr*>(castExpr)->GetBitsSize() == 1);
+    if (!excluded) {
+      opnd->SetPtyp(castExpr->GetPrimType());
+      return HashMeExpr(*opnd);
+    }
+  }
+  if (opnd->GetOp() == OP_dread && (castInfo.kind == CAST_zext || castInfo.kind == CAST_sext)) {
+    auto *varExpr = static_cast<VarMeExpr*>(opnd);
+    if (varExpr->GetPrimType() == PTY_u1) {
+      // zext/sext + dread u1 %var ==>  dread u1 %var
+      return opnd;
+    }
+    if (varExpr->GetDefBy() == kDefByStmt) {
+      MeStmt *defStmt = varExpr->GetDefByMeStmt();
+      if (defStmt->GetOp() == OP_dassign && IsCompareMeExpr(*static_cast<DassignMeStmt*>(defStmt)->GetRHS())) {
+        // zext/sext + dread non-u1 %var (%var is defined by compare op)  ==>  dread non-u1 %var
+        return opnd;
+      }
+    }
+  }
   if (castInfo.dstType == opnd->GetPrimType() &&
       GetPrimTypeActualBitSize(castInfo.srcType) >= GetPrimTypeActualBitSize(opnd->GetPrimType())) {
     return opnd;
@@ -473,6 +505,14 @@ MeExpr *IRMap::SimplifyCast(MeExpr *expr) {
   if (opnd == nullptr) {
     return nullptr;
   }
+  // Convert `cvt u1 xx <expr>` to `ne u1 xx (<expr>, constval xx 0)`
+  if (expr->GetOp() == OP_cvt && expr->GetPrimType() == PTY_u1) {
+    auto *opExpr = static_cast<OpMeExpr*>(expr);
+    PrimType fromType = opExpr->GetOpndType();
+    if (fromType != PTY_u1) {  // No need to convert `cvt u1 u1 <expr>`
+      return CreateMeExprCompare(OP_ne, PTY_u1, fromType, *opnd, *CreateIntConstMeExpr(0, fromType));
+    }
+  }
   // If the opnd is a iread/regread, it's OK because it may be a implicit zext or sext
   bool isFirstCastImplicit = IsCastMeExprImplicit(*opnd);
   if (!IsCastMeExprExplicit(*opnd) && !isFirstCastImplicit) {
@@ -480,7 +520,13 @@ MeExpr *IRMap::SimplifyCast(MeExpr *expr) {
     // Exmaple: cvt i32 i64 (add i32)  ==>  add i32
     return SimplifyCastSingle(expr);
   }
-  return SimplifyCastPair(opnd, expr, isFirstCastImplicit);
+  MeExpr *simplified1 = SimplifyCastPair(opnd, expr, isFirstCastImplicit);
+  MeExpr *simplified2 = nullptr;
+  if (simplified1 != nullptr && IsCastMeExprExplicit(*simplified1)) {
+    // Simplify cast further
+    simplified2 = SimplifyCastSingle(simplified1);
+  }
+  return (simplified2 != nullptr ? simplified2 : simplified1);
 }
 
 // Try remove redundant intTrunc for dassgin and iassign

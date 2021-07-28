@@ -569,4 +569,59 @@ AnalysisResult* CgDoScheduling::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResMg
 
   return nullptr;
 }
+
+/* === new pm === */
+bool CgPreScheduling::PhaseRun(maplebe::CGFunc &f) {
+  if (LIST_SCHED_DUMP_NEWPM) {
+    LogInfo::MapleLogger() << "Before CgDoPreScheduling : " << f.GetName() << "\n";
+    DotGenerator::GenerateDot("preschedule", f, f.GetMirModule(), true);
+  }
+  auto *live = GET_ANALYSIS(CgLiveAnalysis);
+  /* revert liveanalysis result container. */
+  ASSERT(live != nullptr, "nullptr check");
+  live->ResetLiveSet();
+
+  Schedule *schedule = nullptr;
+#if TARGAARCH64
+  schedule = GetPhaseAllocator()->New<AArch64Schedule>(f, *GetPhaseMemPool(), *live, PhaseName());
+#endif
+#if TARGARM32
+  schedule = GetPhaseAllocator()->New<Arm32Schedule>(f, *GetPhaseMemPool(), *live, PhaseName());
+#endif
+  schedule->ListScheduling(true);
+  live->ClearInOutDataInfo();
+
+  return true;
+}
+void CgPreScheduling::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<CgLiveAnalysis>();
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgPreScheduling, prescheduling)
+
+bool CgScheduling::PhaseRun(maplebe::CGFunc &f) {
+  if (LIST_SCHED_DUMP_NEWPM) {
+    LogInfo::MapleLogger() << "Before CgDoScheduling : " << f.GetName() << "\n";
+    DotGenerator::GenerateDot("scheduling", f, f.GetMirModule(), true);
+  }
+  auto *live = GET_ANALYSIS(CgLiveAnalysis);
+  /* revert liveanalysis result container. */
+  ASSERT(live != nullptr, "nullptr check");
+  live->ResetLiveSet();
+
+  Schedule *schedule = nullptr;
+#if TARGAARCH64
+  schedule = GetPhaseAllocator()->New<AArch64Schedule>(f, *GetPhaseMemPool(), *live, PhaseName());
+#endif
+#if TARGARM32
+  schedule = GetPhaseAllocator()->New<Arm32Schedule>(f, *GetPhaseMemPool(), *live, PhaseName());
+#endif
+  schedule->ListScheduling(false);
+  live->ClearInOutDataInfo();
+
+  return true;
+}
+void CgScheduling::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<CgLiveAnalysis>();
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgScheduling, scheduling)
 }  /* namespace maplebe */

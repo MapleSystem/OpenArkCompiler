@@ -36,6 +36,8 @@ class AArch64FixShortBranch {
   void SetInsnId();
 };  /* class AArch64ShortBranch */
 
-CGFUNCPHASE(CgFixShortBranch, "fixshortbranch")
+CGFUNCPHASE(CgDoFixShortBranch, "fixshortbranch")
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgFixShortBranch, maplebe::CGFunc)
+MAPLE_FUNC_PHASE_DECLARE_END
 }  /* namespace maplebe */
 #endif  /* MAPLEBE_INCLUDE_CG_AARCH64_AARCH64_FIXSHORTBRANCH_H */

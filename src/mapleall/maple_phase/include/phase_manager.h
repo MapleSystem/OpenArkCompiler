@@ -33,7 +33,7 @@ class PhaseManager {
 
   void AddPhase(const std::string &paseName) {
     for (auto it = RegPhaseBegin(); it != RegPhaseEnd(); ++it) {
-      if (GetPhaseName(it) == paseName) {
+      if (PhaseName(it) == paseName) {
         phaseSequences.push_back(GetPhaseId(it));
         phaseTimers.push_back(0);
         return;
@@ -48,7 +48,7 @@ class PhaseManager {
 
   Phase *GetPhaseFromName(const std::string &phaseName) {
     for (auto it = RegPhaseBegin(); it != RegPhaseEnd(); ++it) {
-      if (GetPhaseName(it) == phaseName) {
+      if (PhaseName(it) == phaseName) {
         return GetPhase(GetPhaseId(it));
       }
     }
@@ -95,7 +95,7 @@ class PhaseManager {
     return registeredPhases.end();
   }
 
-  const std::string GetPhaseName(iterator it) {
+  const std::string PhaseName(iterator it) {
     return it->second->PhaseName();
   }
 
@@ -123,7 +123,7 @@ class PhaseManager {
 
   bool ExistPhase(const std::string &name) {
     for (auto it = RegPhaseBegin(); it != RegPhaseEnd(); ++it) {
-      if (GetPhaseName(it) == name) {
+      if (PhaseName(it) == name) {
         return true;
       }
     }

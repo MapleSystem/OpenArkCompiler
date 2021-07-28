@@ -40,4 +40,17 @@ AnalysisResult *CgDoFPLROffsetAdjustment::Run(CGFunc *cgFunc, CgFuncResultMgr *c
   offsetAdjustment->Run();
   return nullptr;
 }
+
+bool CgFPLROffsetAdjustment::PhaseRun(maplebe::CGFunc &f) {
+  FPLROffsetAdjustment *offsetAdjustment = nullptr;
+#if TARGAARCH64 || TARGRISCV64
+  offsetAdjustment = GetPhaseAllocator()->New<AArch64FPLROffsetAdjustment>(f);
+#endif
+#if TARGARM32
+  offsetAdjustment = GetPhaseAllocator()->New<Arm32FPLROffsetAdjustment>(f);
+#endif
+  offsetAdjustment->Run();
+  return false;
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgFPLROffsetAdjustment, offsetadjustforfplr)
 }  /* namespace maplebe */

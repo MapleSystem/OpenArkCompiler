@@ -455,6 +455,7 @@ class MIRFunction {
 
   void ReleaseCodeMemory() {
     if (codeMemPool != nullptr) {
+      codeMemPoolAllocator.SetMemPool(nullptr);
       delete codeMemPool;
       SetMemPool(nullptr);
     }

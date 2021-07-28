@@ -10,8 +10,17 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
  * FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v1 for more details.
+ * See the Mulan PSL v2 for more details.
  */
-// option name, option value, append maple root path?
-{ "--quiet", "", false  },
-{ "--fpic", "", false  },
+#include "maple_phase_support.h"
+namespace maple {
+const MapleVector<MaplePhaseID> &AnalysisDep::GetRequiredPhase() const {
+  return required;
+}
+const MapleSet<MaplePhaseID> &AnalysisDep::GetPreservedPhase() const {
+  return preserved;
+}
+const MapleSet<MaplePhaseID> &AnalysisDep::GetPreservedExceptPhase() const {
+  return preservedExcept;
+}
+}

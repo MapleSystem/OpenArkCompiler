@@ -34,6 +34,7 @@
  * which tries to convert conditional branches into cset/csel instructions
  */
 #define ICO_DUMP CG_DEBUG_FUNC(cgFunc)
+#define ICO_DUMP_NEWPM CG_DEBUG_FUNC_NEWPM(f, PhaseName())
 namespace maplebe {
 Insn *ICOPattern::FindLastCmpInsn(BB &bb) const {
   if (bb.GetKind() != BB::kBBIf) {
@@ -119,4 +120,35 @@ AnalysisResult *CgDoIco::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
   cgFuncResultMgr->InvalidAnalysisResult(kCGFuncPhaseLIVE, cgFunc);
   return nullptr;
 }
+
+bool CgIco::PhaseRun(maplebe::CGFunc &f) {
+  LiveAnalysis *live = GET_ANALYSIS(CgLiveAnalysis);
+  if (ICO_DUMP_NEWPM) {
+    DotGenerator::GenerateDot("ico-before", f, f.GetMirModule());
+  }
+  MemPool *memPool = GetPhaseMemPool();
+  IfConversionOptimizer *ico = nullptr;
+#if TARGAARCH64
+  ico = memPool->New<AArch64IfConversionOptimizer>(f, *memPool);
+#endif
+#if TARGARM32
+  ico = memPool->New<Arm32IfConversionOptimizer>(f, *memPool);
+#endif
+  const std::string &funcClass = f.GetFunction().GetBaseClassName();
+  const std::string &funcName = f.GetFunction().GetBaseFuncName();
+  std::string name = funcClass + funcName;
+  ico->Run(name);
+  if (ICO_DUMP_NEWPM) {
+    DotGenerator::GenerateDot("ico-after", f, f.GetMirModule());
+  }
+  /* the live range info may changed, so invalid the info. */
+  if (live != nullptr) {
+    live->ClearInOutDataInfo();
+  }
+  return false;
+}
+void CgIco::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<CgLiveAnalysis>();
+}
+MAPLE_TRANSFORM_PHASE_REGISTER(CgIco, ico)
 }  /* namespace maplebe */
