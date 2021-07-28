@@ -41,6 +41,7 @@ CompilerFactory::CompilerFactory() {
   ADD_COMPILER("mplcg", MplcgCompiler)
   ADD_COMPILER("as", AsCompiler)
   ADD_COMPILER("ld", LdCompiler)
+//  ADD_COMPILER("cpp2mpl", Cpp2MplCompiler)
   compilerSelector = new CompilerSelectorImpl();
 }
 
@@ -84,6 +85,8 @@ ErrorCode CompilerFactory::DeleteTmpFiles(const MplOptions &mplOptions, const st
 }
 
 ErrorCode CompilerFactory::Compile(MplOptions &mplOptions) {
+  // Code_exp: GetInstance triggered constructor, which triggered adding of compilers and new CompilerSelectorImpl
+  // Code_exp: Constructor also filled supported compilers
   if (compileFinished) {
     LogInfo::MapleLogger() <<
         "Failed! Compilation has been completed in previous time and multi-instance compilation is not supported\n";
@@ -94,6 +97,7 @@ ErrorCode CompilerFactory::Compile(MplOptions &mplOptions) {
     LogInfo::MapleLogger() << "Failed! Compiler is null." << "\n";
     return kErrorCompileFail;
   }
+  // Code_exp: Selecting compiler chain user wants into compilers vector
   ErrorCode ret = compilerSelector->Select(supportedCompilers, mplOptions, compilers);
   if (ret != kErrorNoError) {
     return ret;

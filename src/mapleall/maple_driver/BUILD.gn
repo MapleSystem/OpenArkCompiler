@@ -46,6 +46,7 @@ executable("maple") {
     "src/driver_runner.cpp",
     "src/file_utils.cpp",
     "src/jbc2mpl_compiler.cpp",
+# "src/cpp2mpl_compiler.cpp",
     "src/maple.cpp",
     "src/maple_comb_compiler.cpp",
     "src/mpl_options.cpp",

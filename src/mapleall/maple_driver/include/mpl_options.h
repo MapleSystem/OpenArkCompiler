@@ -33,6 +33,7 @@ enum InputFileType {
   kFileTypeNone,
   kFileTypeClass,
   kFileTypeJar,
+  kFileTypeAst, // Code_exp: ast file type
   kFileTypeDex,
   kFileTypeMpl,
   kFileTypeVtableImplMpl,
