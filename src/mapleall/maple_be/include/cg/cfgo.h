@@ -122,9 +122,6 @@ class CFGOptimizer : public Optimizer {
   void InitOptimizePatterns() override;
 };
 
-CGFUNCPHASE_CANSKIP(CgDoCfgo, "cfgo")
-CGFUNCPHASE_CANSKIP(CgDoPostCfgo, "postcfgo")
-
 MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgCfgo, maplebe::CGFunc)
 MAPLE_FUNC_PHASE_DECLARE_END
 MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgPostCfgo, maplebe::CGFunc)

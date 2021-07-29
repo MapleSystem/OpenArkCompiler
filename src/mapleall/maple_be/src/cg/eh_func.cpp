@@ -728,13 +728,6 @@ void EHFunc::CreateLSDAAction() {
   }
 }
 
-AnalysisResult *CgDoBuildEHFunc::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
-  (void)cgFuncResultMgr;
-  CHECK_FATAL(cgFunc != nullptr, "expect a cgFunc in CgDoBuildEHFunc");
-  cgFunc->BuildEHFunc();
-  return nullptr;
-}
-
 bool CgBuildEHFunc::PhaseRun(maplebe::CGFunc &f) {
   f.BuildEHFunc();
   return false;

@@ -159,9 +159,6 @@ class ReachingDefinition : public AnalysisResult {
   uint32 maxInsnNO = 0;
 };
 
-CGFUNCPHASE(CgDoReachingDefinition, "reachingdefinition")
-CGFUNCPHASE(CgDoClearRDInfo, "clearrdinfo")
-
 MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgReachingDefinition, maplebe::CGFunc)
   ReachingDefinition *GetResult() {
     return reachingDef;

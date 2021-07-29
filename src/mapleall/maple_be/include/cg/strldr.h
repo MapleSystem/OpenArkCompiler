@@ -35,7 +35,6 @@ class StoreLoadOpt {
   static constexpr uint32 kMaxInsnNum = 9000;
 };
 
-CGFUNCPHASE_CANSKIP(CgDoStoreLoadOpt, "storeloadopt")
 MAPLE_FUNC_PHASE_DECLARE(CgStoreLoadOpt, maplebe::CGFunc)
 }  /* namespace maplebe */
 

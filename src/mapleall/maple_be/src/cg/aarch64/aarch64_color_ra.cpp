@@ -54,7 +54,7 @@ constexpr uint32 kLoopWeight = 20;
 constexpr uint32 kAdjustWeight = 2;
 constexpr uint32 kInsnStep = 2;
 
-#define GCRA_DUMP CG_DEBUG_FUNC(cgFunc)
+#define GCRA_DUMP CG_DEBUG_FUNC(*cgFunc, PhaseName())
 
 void LiveUnit::PrintLiveUnit() const {
   LogInfo::MapleLogger() << "[" << begin << "," << end << "]"

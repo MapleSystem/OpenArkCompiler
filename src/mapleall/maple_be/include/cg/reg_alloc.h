@@ -60,7 +60,6 @@ class RegAllocator {
   CGFunc *cgFunc;
 };
 
-CGFUNCPHASE(CgDoRegAlloc, "regalloc")
 MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgRegAlloc, maplebe::CGFunc)
 MAPLE_FUNC_PHASE_DECLARE_END
 }  /* namespace maplebe */

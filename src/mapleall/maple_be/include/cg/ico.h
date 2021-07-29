@@ -43,7 +43,6 @@ class ICOPattern : public OptimizationPattern {
   Insn *FindLastCmpInsn(BB &bb) const;
 };
 
-CGFUNCPHASE_CANSKIP(CgDoIco, "ico")
 MAPLE_FUNC_PHASE_DECLARE(CgIco, maplebe::CGFunc)
 }  /* namespace maplebe */
 

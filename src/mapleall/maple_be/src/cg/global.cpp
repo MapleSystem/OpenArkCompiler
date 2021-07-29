@@ -59,38 +59,6 @@
 namespace maplebe {
 using namespace maple;
 
-AnalysisResult *CgDoGlobalOpt::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
-  if (cgFunc->HasAsm()) {
-    return nullptr;
-  }
-  ReachingDefinition *reachingDef = nullptr;
-  LiveAnalysis *live = nullptr;
-  if (Globals::GetInstance()->GetOptimLevel() >= CGOptions::kLevel2) {
-    reachingDef = static_cast<ReachingDefinition*>(cgFuncResultMgr->GetAnalysisResult(kCGFuncPhaseREACHDEF, cgFunc));
-    live = static_cast<LiveAnalysis*>(cgFuncResultMgr->GetAnalysisResult(kCGFuncPhaseLIVE, cgFunc));
-  }
-  if (reachingDef == nullptr || !cgFunc->GetRDStatus()) {
-    cgFuncResultMgr->InvalidAnalysisResult(kCGFuncPhaseREACHDEF, cgFunc);
-    return nullptr;
-  }
-  reachingDef->SetAnalysisMode(kRDAllAnalysis);
-  MemPool *globalMemPool = NewMemPool();
-  GlobalOpt *globalOpt = nullptr;
-#if TARGAARCH64 || TARGRISCV64
-  globalOpt = globalMemPool->New<AArch64GlobalOpt>(*cgFunc);
-#endif
-#if TARGARM32
-  globalOpt = globalMemPool->New<Arm32GlobalOpt>(*cgFunc);
-#endif
-  globalOpt->Run();
-
-  if (live != nullptr) {
-    live->ClearInOutDataInfo();
-  }
-  cgFuncResultMgr->InvalidAnalysisResult(kCGFuncPhaseLIVE, cgFunc);
-  return nullptr;
-}
-
 bool CgGlobalOpt::PhaseRun(maplebe::CGFunc &f) {
   ReachingDefinition *reachingDef = nullptr;
   LiveAnalysis *live = nullptr;
@@ -99,6 +67,7 @@ bool CgGlobalOpt::PhaseRun(maplebe::CGFunc &f) {
     live = GET_ANALYSIS(CgLiveAnalysis);
   }
   if (reachingDef == nullptr || !f.GetRDStatus()) {
+    GetAnalysisInfoHook()->ForceEraseAnalysisPhase(&CgReachingDefinition::id);
     return false;
   }
   reachingDef->SetAnalysisMode(kRDAllAnalysis);
@@ -118,7 +87,7 @@ bool CgGlobalOpt::PhaseRun(maplebe::CGFunc &f) {
 void CgGlobalOpt::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
   aDep.AddRequired<CgReachingDefinition>();
   aDep.AddRequired<CgLiveAnalysis>();
-  aDep.AddPreserved<CgReachingDefinition>();
+  aDep.PreservedAllExcept<CgLiveAnalysis>();
 }
 MAPLE_TRANSFORM_PHASE_REGISTER(CgGlobalOpt, globalopt)
 }  /* namespace maplebe */

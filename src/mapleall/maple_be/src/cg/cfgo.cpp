@@ -33,8 +33,7 @@
 namespace maplebe {
 using namespace maple;
 
-#define CFGO_DUMP CG_DEBUG_FUNC(cgFunc)
-#define CFGO_DUMP_NEWPM CG_DEBUG_FUNC_NEWPM(f, PhaseName())
+#define CFGO_DUMP_NEWPM CG_DEBUG_FUNC(f, PhaseName())
 
 void CFGOptimizer::InitOptimizePatterns() {
   /* Initialize cfg optimization patterns */
@@ -813,55 +812,12 @@ bool DuplicateBBPattern::Optimize(BB &curBB) {
   return false;
 }
 
-AnalysisResult *CgDoCfgo::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
-  (void)cgFuncResultMgr;
-  MemPool *cfgMemPool = NewMemPool();
-  CFGOptimizer *cfgOptimizer = cfgMemPool->New<CFGOptimizer>(*cgFunc, *cfgMemPool);
-  std::string funcClass = cgFunc->GetFunction().GetBaseClassName();
-  std::string funcName = cgFunc->GetFunction().GetBaseFuncName();
-  std::string name = funcClass + funcName;
-  const std::string phaseName = PhaseName();
-
-  if (CFGO_DUMP) {
-    DotGenerator::GenerateDot("before-cfgo", *cgFunc, cgFunc->GetMirModule());
-  }
-
-  cfgOptimizer->Run(name);
-
-  if (CFGO_DUMP) {
-    DotGenerator::GenerateDot("after-cfgo", *cgFunc, cgFunc->GetMirModule());
-  }
-
-  return nullptr;
-}
-
-AnalysisResult *CgDoPostCfgo::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
-  (void)cgFuncResultMgr;
-  MemPool *cfgMemPool = NewMemPool();
-  CFGOptimizer *cfgOptimizer = cfgMemPool->New<CFGOptimizer>(*cgFunc, *cfgMemPool);
-  std::string funcClass = cgFunc->GetFunction().GetBaseClassName();
-  std::string funcName = cgFunc->GetFunction().GetBaseFuncName();
-  std::string name = funcClass + funcName;
-  const std::string phaseName = PhaseName();
-
-  if (CFGO_DUMP) {
-    DotGenerator::GenerateDot("before-postcfgo", *cgFunc, cgFunc->GetMirModule());
-  }
-
-  cfgOptimizer->Run(name);
-
-  if (CFGO_DUMP) {
-    DotGenerator::GenerateDot("after-postcfgo", *cgFunc, cgFunc->GetMirModule());
-  }
-  return nullptr;
-}
-
 /* === new pm === */
 bool CgCfgo::PhaseRun(maplebe::CGFunc &f) {
-  CFGOptimizer *cfgOptimizer = GetPhaseAllocator()->New<CFGOptimizer>(f, *GetPhaseAllocator()->GetMemPool());
-  std::string funcClass = f.GetFunction().GetBaseClassName();
-  std::string funcName = f.GetFunction().GetBaseFuncName();
-  std::string name = funcClass + funcName;
+  CFGOptimizer *cfgOptimizer = GetPhaseAllocator()->New<CFGOptimizer>(f, *GetPhaseMemPool());
+  const std::string &funcClass = f.GetFunction().GetBaseClassName();
+  const std::string &funcName = f.GetFunction().GetBaseFuncName();
+  const std::string &name = funcClass + funcName;
   if (CFGO_DUMP_NEWPM) {
     DotGenerator::GenerateDot("before-cfgo", f, f.GetMirModule());
   }
@@ -874,10 +830,10 @@ bool CgCfgo::PhaseRun(maplebe::CGFunc &f) {
 MAPLE_TRANSFORM_PHASE_REGISTER(CgCfgo, cfgo)
 
 bool CgPostCfgo::PhaseRun(maplebe::CGFunc &f) {
-  CFGOptimizer *cfgOptimizer = GetPhaseAllocator()->New<CFGOptimizer>(f, *GetPhaseAllocator()->GetMemPool());
-  std::string funcClass = f.GetFunction().GetBaseClassName();
-  std::string funcName = f.GetFunction().GetBaseFuncName();
-  std::string name = funcClass + funcName;
+  CFGOptimizer *cfgOptimizer = GetPhaseAllocator()->New<CFGOptimizer>(f, *GetPhaseMemPool());
+  const std::string &funcClass = f.GetFunction().GetBaseClassName();
+  const std::string &funcName = f.GetFunction().GetBaseFuncName();
+  const std::string &name = funcClass + funcName;
   if (CFGO_DUMP_NEWPM) {
     DotGenerator::GenerateDot("before-postcfgo", f, f.GetMirModule());
   }

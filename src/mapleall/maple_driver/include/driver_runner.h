@@ -69,7 +69,6 @@ class DriverRunner final {
   void RunNewPM(const std::string &outputFile, const std::string &vtableImplFile);
 #endif
   void ProcessCGPhase(const std::string &outputFile, const std::string &oriBasenam);
-  void ProcessCGPhase2(const std::string &outputFile, const std::string &oriBasenam);
   void SetCGInfo(CGOptions *cgOptions, const std::string &cgInput) {
     this->cgOptions = cgOptions;
     this->cgInput = cgInput;
@@ -99,17 +98,9 @@ class DriverRunner final {
   CGOptions *cgOptions = nullptr;
   std::string cgInput;
   BECommon *beCommon = nullptr;
-  CG *CreateCGAndBeCommon(const std::string &outputFile, const std::string &oriBasename);
   void InitProfile() const;
-  void RunCGFunctions(CG &cg, CgFuncPhaseManager &cgNormalfpm,
-                      CgFuncPhaseManager &cgO0fpm,
-                      std::vector<long> &extraPhasesTime,
-                      std::vector<std::string> &extraPhasesName) const;
-  void EmitGlobalInfo(CG &cg) const;
   void EmitDuplicatedAsmFunc(const CG &cg) const;
   void EmitFastFuncs(const CG &cg) const;
-  void ProcessExtraTime(const std::vector<long> &extraPhasesTime, const std::vector<std::string> &extraPhasesName,
-                        CgFuncPhaseManager &cgfpm) const;
   MIRModule *theModule;
   std::vector<std::string> exeNames = {};
   Options *mpl2mplOptions = nullptr;

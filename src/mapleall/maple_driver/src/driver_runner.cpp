@@ -15,18 +15,14 @@
 #include "compiler.h"
 #include "driver_runner.h"
 #include <iostream>
-#include <typeinfo>
 #include <sys/stat.h>
 #include "mpl_timer.h"
 #include "mir_function.h"
 #include "mir_parser.h"
 #include "file_utils.h"
-#include "debug_info.h"
-#include "mir_lower.h"
 #include "constantfold.h"
 #include "lower.h"
 #if TARGAARCH64 || TARGRISCV64
-#include "aarch64/aarch64_cg.h"
 #include "aarch64/aarch64_emitter.h"
 #elif TARGARM32
 #include "arm32/arm32_cg.h"
@@ -102,19 +98,6 @@ ErrorCode DriverRunner::Run() {
     ProcessMpl2mplAndMePhases(outputFile, vtableImplFile);
   }
   return kErrorNoError;
-}
-
-bool DriverRunner::IsFramework() const {
-  MapleVector<MIRFunction*> funcList = theModule->GetFunctionList();
-  for (auto it = funcList.begin(); it != funcList.end(); ++it) {
-    MIRFunction *mirFunc = *it;
-    ASSERT(mirFunc != nullptr, "nullptr check");
-    if (mirFunc->GetBody() != nullptr &&
-        mirFunc->GetName() == "Landroid_2Fos_2FParcel_3B_7CnativeWriteString_7C_28JLjava_2Flang_2FString_3B_29V") {
-      return true;
-    }
-  }
-  return false;
 }
 
 std::string DriverRunner::GetPostfix() {
@@ -325,7 +308,7 @@ void DriverRunner::AddPhase(std::vector<std::string> &phases, const std::string 
   }
 }
 
-void DriverRunner::ProcessCGPhase2(const std::string &outputFile, const std::string &originBaseName) {
+void DriverRunner::ProcessCGPhase(const std::string &outputFile, const std::string &originBaseName) {
   CHECK_MODULE();
   theMIRModule = theModule;
   if (withDwarf && !theModule->IsWithDbgInfo()) {
@@ -358,125 +341,6 @@ void DriverRunner::ProcessCGPhase2(const std::string &outputFile, const std::str
   LogInfo::MapleLogger() << "Mplcg consumed " << timer.ElapsedMilliseconds() << "ms" << '\n';
 }
 
-void DriverRunner::ProcessCGPhase(const std::string &outputFile, const std::string &originBaseName) {
-  CHECK_MODULE();
-  theMIRModule = theModule;
-  if (withDwarf && !theModule->IsWithDbgInfo()) {
-    LogInfo::MapleLogger() << "set up debug info " << '\n';
-    theMIRModule->GetDbgInfo()->BuildDebugInfo();
-  }
-  if (cgOptions == nullptr) {
-    return;
-  }
-
-  LogInfo::MapleLogger() << "Processing mplcg" << '\n';
-  MPLTimer timer;
-  timer.Start();
-
-  cgOptions->SetDefaultOptions(*theModule);
-  if (timePhases) {
-    CGOptions::EnableTimePhases();
-  }
-
-  // store lower time, emit time and so on.
-  std::vector<long> extraPhasesTime;
-  std::vector<std::string> extraPhasesName;
-
-  Globals::GetInstance()->SetOptimLevel(cgOptions->GetOptimizeLevel());
-  MAD mad;
-  Globals::GetInstance()->SetMAD(mad);
-
-  CgFuncPhaseManager cgfpm(*optMp, *theModule);
-  cgfpm.RegisterFuncPhases();
-  cgfpm.SetCGPhase(kCgPhaseMainOpt);
-  cgfpm.AddPhases(cgOptions->GetSequence());
-
-  std::chrono::system_clock::time_point timeStart = std::chrono::system_clock::now();
-  CG *cg = CreateCGAndBeCommon(outputFile, originBaseName);
-  ADD_EXTRA_PHASE("createcg&becommon", CGOptions::IsEnableTimePhases(), timeStart);
-  if (cgOptions->IsRunCG()) {
-    // Generate the output file
-    CHECK_FATAL(cg != nullptr, "cg is null");
-    CHECK_FATAL(cg->GetEmitter(), "emitter is null");
-    if (!cgOptions->SuppressFileInfo()) {
-      cg->GetEmitter()->EmitFileInfo(actualInput);
-    }
-    if (cgOptions->WithDwarf()) {
-      cg->GetEmitter()->EmitDIHeader();
-    }
-    InitProfile();
-    // Run the cg optimizations phases
-    if (theModule->HasPartO2List()) {
-      CHECK_FATAL(cgOptions->GetOptimizeLevel() == CGOptions::kLevel2, "partO2 need coroperate with O2");
-      CgFuncPhaseManager cgO0fpm(*optMp, *theModule);
-      cgO0fpm.RegisterFuncPhases();
-      cgO0fpm.SetCGPhase(kCgPhaseMainOpt);
-      cgOptions->EnableO0();
-      std::vector<std::string> phases;
-      cgO0fpm.AddPhases(phases);
-      RunCGFunctions(*cg, cgfpm, cgO0fpm, extraPhasesTime, extraPhasesName);
-    } else {
-      RunCGFunctions(*cg, cgfpm, cgfpm, extraPhasesTime, extraPhasesName);
-    }
-    if (withDwarf) {
-       cg->GetEmitter()->EmitDIFooter();
-    }
-    // Emit global info
-    timeStart = std::chrono::system_clock::now();
-    EmitGlobalInfo(*cg);
-    ADD_EXTRA_PHASE("emitglobalinfo", CGOptions::IsEnableTimePhases(), timeStart);
-  } else {
-    LogInfo::MapleLogger(kLlErr) << "Skipped generating .s because -no-cg is given" << '\n';
-  }
-
-  ProcessExtraTime(extraPhasesTime, extraPhasesName, cgfpm);
-
-  RELEASE(cg);
-  RELEASE(beCommon);
-
-  timer.Stop();
-  LogInfo::MapleLogger() << "Mplcg consumed " << timer.Elapsed() << "s" << '\n';
-}
-
-CG *DriverRunner::CreateCGAndBeCommon(const std::string &outputFile, const std::string &originBaseName) {
-  CG *cg = nullptr;
-
-#if TARGAARCH64 || TARGRISCV64
-  cg = new AArch64CG(*theModule, *cgOptions, cgOptions->GetEHExclusiveFunctionNameVec(),
-                     CGOptions::GetCyclePatternMap());
-  cg->SetEmitter(*theModule->GetMemPool()->New<AArch64AsmEmitter>(*cg, outputFile));
-#elif TARGARM32
-  cg = new Arm32CG(*theModule, *cgOptions, cgOptions->GetEHExclusiveFunctionNameVec(),
-                   CGOptions::GetCyclePatternMap());
-  cg->SetEmitter(*theModule->GetMemPool()->New<Arm32AsmEmitter>(*cg, outputFile));
-#else
-#error "unknown platform"
-#endif
-
-  // Must be done before creating any BECommon instances.
-  //
-  // BECommon, when constructed, will calculate the type, size and align of all types.  As a side effect, it will also
-  // lower ptr and ref types into a64. That will drop the information of what a ptr or ref points to.
-  //
-  // All metadata generation passes which depend on the pointed-to type must be done here.
-  cg->GenPrimordialObjectList(originBaseName);
-
-  // We initialize a couple of BECommon's tables using the size information of GlobalTables.type_table_.
-  // So, BECommon must be allocated after all the parsing is done and user-defined types are all acounted.
-  beCommon = new BECommon(*theModule);
-  Globals::GetInstance()->SetBECommon(*beCommon);
-
-  // If a metadata generation pass depends on object layout it must be done after creating BECommon.
-  cg->GenExtraTypeMetadata(cgOptions->GetClassListFile(), originBaseName);
-
-  if (cg->NeedInsertInstrumentationFunction()) {
-    CHECK_FATAL(cgOptions->IsInsertCall(), "handling of --insert-call is not correct");
-    cg->SetInstrumentationFunction(cgOptions->GetInstrumentationFunction());
-  }
-
-  return cg;
-}
-
 void DriverRunner::InitProfile() const {
   if (!cgOptions->IsProfileDataEmpty()) {
     uint32 dexNameIdx = theModule->GetFileinfo(GlobalTables::GetStrTable().GetOrCreateStrIdxFromName("INFO_filename"));
@@ -485,221 +349,6 @@ void DriverRunner::InitProfile() const {
     if (!deCompressSucc) {
       LogInfo::MapleLogger() << "WARN: DeCompress() " << cgOptions->GetProfileData() << "failed in mplcg()\n";
     }
-  }
-}
-
-void DriverRunner::RunCGFunctions(CG &cg, CgFuncPhaseManager &cgNormalfpm, CgFuncPhaseManager &cgO0fpm,
-                                  std::vector<long> &extraPhasesTime,
-                                  std::vector<std::string> &extraPhasesName) const {
-  MPLTimer timer;
-  long lowerTime = 0;
-  long constFoldTime = 0;
-  timer.Start();
-  MIRLower mirLowerer(*theModule, nullptr);
-  mirLowerer.Init();
-  CGLowerer theLowerer(*theModule, *beCommon, cg.GenerateExceptionHandlingCode(), cg.GenerateVerboseCG());
-  theLowerer.RegisterBuiltIns();
-  if (JAVALANG) {
-    theLowerer.InitArrayClassCacheTableIndex();
-  }
-  theLowerer.RegisterExternalLibraryFunctions();
-  theLowerer.SetCheckLoadStore(CGOptions::IsCheckArrayStore());
-  timer.Stop();
-  lowerTime += timer.ElapsedMicroseconds();
-
-  if (cg.AddStackGuard() || theModule->HasPartO2List()) {
-    cg.AddStackGuardvar();
-  }
-
-  ConstantFold cf(*theModule);
-
-  unsigned long rangeNum = 0;
-  uint32 countFuncId = 0;
-  for (auto it = theModule->GetFunctionList().begin(); it != theModule->GetFunctionList().end(); ++it) {
-    MIRFunction *mirFunc = *it;
-    if (mirFunc->GetBody() == nullptr) {
-      continue;
-    }
-    CgFuncPhaseManager *cgfpm = nullptr;
-    if (&cgNormalfpm == &cgO0fpm) {
-      cgfpm = &cgNormalfpm;
-    } else {
-      if (theModule->HasPartO2List() && theModule->IsInPartO2List(mirFunc->GetNameStrIdx())) {
-        cgfpm = &cgNormalfpm;
-        cgOptions->EnableO2();
-      } else {
-        cgfpm = &cgO0fpm;
-        cgOptions->EnableO0();
-      }
-      cg.UpdateCGOptions(*cgOptions);
-      Globals::GetInstance()->SetOptimLevel(cgOptions->GetOptimizeLevel());
-    }
-    // LowerIR.
-    theModule->SetCurFunction(mirFunc);
-    if (cg.DoConstFold()) {
-      timer.Start();
-      cf.Simplify(mirFunc->GetBody());
-      timer.Stop();
-      constFoldTime += timer.ElapsedMicroseconds();
-    }
-    timer.Start();
-    // if maple_me not run, needs extra lowering
-    if (theModule->GetFlavor() <= kFeProduced) {
-      mirLowerer.SetLowerCG();
-      mirLowerer.LowerFunc(*mirFunc);
-    }
-
-    bool dumpAll = (CGOptions::GetDumpPhases().find("*") != CGOptions::GetDumpPhases().end());
-    bool dumpFunc = CGOptions::FuncFilter(mirFunc->GetName());
-    if (!cg.IsQuiet() || (dumpAll && dumpFunc)) {
-      LogInfo::MapleLogger() << "************* before CGLowerer **************" << '\n';
-      mirFunc->Dump();
-    }
-
-    theLowerer.LowerFunc(*mirFunc);
-
-    if (!cg.IsQuiet() || (dumpAll && dumpFunc)) {
-      LogInfo::MapleLogger() << "************* after  CGLowerer **************" << '\n';
-      mirFunc->Dump();
-      LogInfo::MapleLogger() << "************* end    CGLowerer **************" << '\n';
-    }
-    timer.Stop();
-    lowerTime += timer.ElapsedMicroseconds();
-
-    MIRSymbol *funcSt = GlobalTables::GetGsymTable().GetSymbolFromStidx(mirFunc->GetStIdx().Idx());
-    auto funcMp = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, funcSt->GetName());
-    MapleAllocator funcScopeAllocator(funcMp.get());
-
-    // Create CGFunc
-    mirFunc->SetPuidxOrigin(++countFuncId);
-    auto stackMp = std::make_unique<StackMemPool>(funcMp->GetCtrler(), "");
-    CGFunc *cgFunc = cg.CreateCGFunc(*theModule, *mirFunc, *beCommon, *funcMp, *stackMp,
-                                     funcScopeAllocator, countFuncId);
-    CHECK_FATAL(cgFunc != nullptr, "nullptr check");
-    CG::SetCurCGFunc(*cgFunc);
-    if (withDwarf) {
-      cgFunc->SetDebugInfo(theModule->GetDbgInfo());
-    }
-
-    // Run the cg optimizations phases.
-    if (CGOptions::UseRange() &&
-        rangeNum >= CGOptions::GetRangeBegin() && rangeNum <= CGOptions::GetRangeEnd()) {
-      CGOptions::EnableInRange();
-    }
-    cgfpm->Run(*cgFunc);
-
-    cg.GetEmitter()->EmitLocalVariable(*cgFunc);
-
-    // Invalid all analysis result.
-    cgfpm->Emit(*cgFunc);
-    cg.GetEmitter()->EmitHugeSoRoutines();
-    cgfpm->GetAnalysisResultManager()->InvalidIRbaseAnalysisResult(*cgFunc);
-    cgfpm->ClearPhaseNameInfo();
-
-    // Delete mempool.
-    mirFunc->ReleaseCodeMemory();
-
-    ++rangeNum;
-    CGOptions::DisableInRange();
-  }
-  cg.GetEmitter()->EmitHugeSoRoutines(true);
-  extraPhasesTime.push_back(lowerTime);
-  std::string lowerName = "lowerir";
-  extraPhasesName.push_back(lowerName);
-  extraPhasesTime.push_back(constFoldTime);
-  std::string constFoldName = "constFold";
-  extraPhasesName.push_back(constFoldName);
-}
-
-void DriverRunner::EmitGlobalInfo(CG &cg) const {
-  EmitDuplicatedAsmFunc(cg);
-  EmitFastFuncs(cg);
-  if (cgOptions->IsGenerateObjectMap()) {
-    cg.GenerateObjectMaps(*beCommon);
-  }
-  cg.GetEmitter()->EmitGlobalVariable();
-  if (withDwarf) {
-    cg.GetEmitter()->SetupDBGInfo(theModule->GetDbgInfo());
-    cg.GetEmitter()->EmitDIHeaderFileInfo();
-    cg.GetEmitter()->EmitDIDebugInfoSection(theModule->GetDbgInfo());
-    cg.GetEmitter()->EmitDIDebugAbbrevSection(theModule->GetDbgInfo());
-    cg.GetEmitter()->EmitDIDebugARangesSection();
-    cg.GetEmitter()->EmitDIDebugRangesSection();
-    cg.GetEmitter()->EmitDIDebugLineSection();
-    cg.GetEmitter()->EmitDIDebugStrSection();
-  }
-  cg.GetEmitter()->CloseOutput();
-}
-
-void DriverRunner::EmitDuplicatedAsmFunc(const CG &cg) const {
-  if (cgOptions->IsDuplicateAsmFileEmpty()) {
-    return;
-  }
-
-  struct stat buffer;
-  if (stat(cgOptions->GetDuplicateAsmFile().c_str(), &buffer) != 0) {
-    return;
-  }
-
-  std::ifstream duplicateAsmFileFD(cgOptions->GetDuplicateAsmFile());
-
-  if (!duplicateAsmFileFD.is_open()) {
-    duplicateAsmFileFD.close();
-    ERR(kLncErr, " %s open failed!", cgOptions->GetDuplicateAsmFile().c_str());
-    return;
-  }
-  std::string contend;
-  bool onlyForFramework = false;
-  bool isFramework = IsFramework();
-
-  while (getline(duplicateAsmFileFD, contend)) {
-    if (!contend.compare("#Libframework_start")) {
-      onlyForFramework = true;
-    }
-
-    if (!contend.compare("#Libframework_end")) {
-      onlyForFramework = false;
-    }
-
-    if (onlyForFramework && !isFramework) {
-      continue;
-    }
-
-    cg.GetEmitter()->Emit(contend + "\n");
-  }
-  duplicateAsmFileFD.close();
-}
-
-void DriverRunner::EmitFastFuncs(const CG &cg) const {
-  if (cgOptions->IsFastFuncsAsmFileEmpty() || !(JAVALANG)) {
-    return;
-  }
-
-  struct stat buffer;
-  if (stat(cgOptions->GetFastFuncsAsmFile().c_str(), &buffer) != 0) {
-    return;
-  }
-
-  std::ifstream fastFuncsAsmFileFD(cgOptions->GetFastFuncsAsmFile());
-  if (fastFuncsAsmFileFD.is_open()) {
-    std::string contend;
-    cg.GetEmitter()->Emit("#define ENABLE_LOCAL_FAST_FUNCS 1\n");
-
-    while (getline(fastFuncsAsmFileFD, contend)) {
-      cg.GetEmitter()->Emit(contend + "\n");
-    }
-  }
-  fastFuncsAsmFileFD.close();
-}
-
-void DriverRunner::ProcessExtraTime(const std::vector<long> &extraPhasesTime,
-                                    const std::vector<std::string> &extraPhasesName, CgFuncPhaseManager &cgfpm) const {
-  if (!CGOptions::IsEnableTimePhases()) {
-    return;
-  }
-
-  for (size_t i = 0; i < extraPhasesTime.size(); ++i) {
-    cgfpm.GetExtraPhasesTimer().insert({ extraPhasesName[i], extraPhasesTime[i] });
   }
 }
 }  // namespace maple
