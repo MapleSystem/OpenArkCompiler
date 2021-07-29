@@ -97,8 +97,8 @@ class LfoPreEmitter : public AnalysisResult {
   MIRFunction *GetMirFunction() { return mirFunc; }
   MemPool *GetCodeMP()  { return codeMP; }
   MapleAllocator* GetCodeMPAlloc() { return codeMPAlloc; }
-  MapleMap<uint32_t, LfoPart*> *GetLfoStmtMap() { return &lfoStmtParts; }
-  MapleMap<BaseNode*, LfoPart*> *GetLfoExprMap() { return &lfoExprParts; }
+  MapleMap<uint32_t, LfoPart *> *GetLfoStmtMap() { return &lfoStmtParts; }
+  MapleMap<BaseNode *, LfoPart *> *GetLfoExprMap() { return &lfoExprParts; }
 };
 
 /* emit ir to specified file */

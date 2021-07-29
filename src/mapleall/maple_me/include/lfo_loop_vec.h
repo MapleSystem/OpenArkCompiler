@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -22,7 +22,6 @@
 #include "lfo_dep_test.h"
 
 namespace maple {
-
 class LoopBound {
 public:
   LoopBound() : lowNode(nullptr), upperNode(nullptr), incrNode(nullptr) {};
@@ -34,25 +33,21 @@ public:
 
 class LoopVecInfo {
 public:
-  LoopVecInfo(MapleAllocator &alloc) : vecStmtIDs(alloc.Adapter()) {
-   // smallestPrimType = PTY_i64;
+  explicit LoopVecInfo(MapleAllocator &alloc) : vecStmtIDs(alloc.Adapter()) {
     largestPrimType = PTY_i8;
   }
   void UpdatePrimType(PrimType ctype);
 
-  //PrimType smallestPrimType; // smallest size type in vectorizable stmtnodes
   PrimType largestPrimType;  // largest size type in vectorizable stmtnodes
   // list of vectorizable stmtnodes in current loop, others can't be vectorized
   MapleSet<uint32_t> vecStmtIDs;
-  //MapleMap<stidx, uint32_t> scalarStmt; // dup scalar to vector stmt may insert before stmt
-  //MapleMap<stidx, uint32_t> uniformStmt; // loop invariable scalar
 };
 
 // tranform plan for current loop
 class LoopTransPlan {
 public:
-  LoopTransPlan(MemPool *mp, MemPool *localmp, LoopVecInfo *info) : vBound(nullptr), eBound(nullptr),
-                                                 codeMP(mp), localMP(localmp), vecInfo(info) {
+  LoopTransPlan(MemPool *mp, MemPool *localmp, LoopVecInfo *info)
+      : vBound(nullptr), eBound(nullptr), codeMP(mp), localMP(localmp), vecInfo(info) {
     vecFactor = 1;
   }
   ~LoopTransPlan() = default;
@@ -67,15 +62,14 @@ public:
   LoopVecInfo *vecInfo; // collect loop information
 
   // function
-  void Generate(DoloopNode *, DoloopInfo*);
+  void Generate(DoloopNode *, DoloopInfo *);
   void GenerateBoundInfo(DoloopNode *, DoloopInfo *);
 };
 
 class LoopVectorization {
  public:
-  LoopVectorization(MemPool *localmp, LfoPreEmitter *lfoEmit, LfoDepInfo *depinfo, bool debug = false) :
-      localAlloc(localmp),
-      vecPlans(localAlloc.Adapter()) {
+  LoopVectorization(MemPool *localmp, LfoPreEmitter *lfoEmit, LfoDepInfo *depinfo, bool debug = false)
+      : localAlloc(localmp), vecPlans(localAlloc.Adapter()) {
     mirFunc = lfoEmit->GetMirFunction();
     lfoStmtParts = lfoEmit->GetLfoStmtMap();
     lfoExprParts = lfoEmit->GetLfoExprMap();
@@ -104,12 +98,14 @@ class LoopVectorization {
 
  private:
   MIRFunction *mirFunc;
-  MapleMap<uint32_t, LfoPart*>  *lfoStmtParts; // point to lfoStmtParts of lfopreemit, map lfoinfo for StmtNode, key is stmtID
-  MapleMap<BaseNode*, LfoPart*> *lfoExprParts; // point to lfoexprparts of lfopreemit, map lfoinfo for exprNode, key is mirnode
-  LfoDepInfo  *depInfo;
-  MemPool     *codeMP;    // point to mirfunction codeMp
+  // point to lfoStmtParts of lfopreemit, map lfoinfo for StmtNode, key is stmtID
+  MapleMap<uint32_t, LfoPart *>  *lfoStmtParts;
+  // point to lfoexprparts of lfopreemit, map lfoinfo for exprNode, key is mirnode
+  MapleMap<BaseNode *, LfoPart *> *lfoExprParts;
+  LfoDepInfo *depInfo;
+  MemPool *codeMP;    // point to mirfunction codeMp
   MapleAllocator *codeMPAlloc;
-  MemPool     *localMP;   // local mempool
+  MemPool *localMP;   // local mempool
   MapleAllocator localAlloc;
   MapleMap<DoloopNode *, LoopTransPlan *> vecPlans; // each vectoriable loopnode has its best vectorization plan
   bool enableDebug;

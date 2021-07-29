@@ -305,7 +305,6 @@ void DoloopInfo::CreateArrayAccessDesc(BlockNode *block) {
         CreateRHSArrayAccessDesc(stmt->Opnd(0));
         break;
       }
-      [[clang::fallthrough]];
       default: {
         for (size_t i = 0; i < stmt->NumOpnds(); i++) {
           CreateRHSArrayAccessDesc(stmt->Opnd(i));

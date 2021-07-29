@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -21,7 +21,6 @@
 #include "lfo_loop_vec.h"
 
 namespace maple {
-
 void LoopVecInfo::UpdatePrimType(PrimType cptype) {
   if (GetPrimTypeSize(largestPrimType) < GetPrimTypeSize(cptype)) {
     largestPrimType = cptype;
@@ -34,6 +33,7 @@ void LoopVecInfo::UpdatePrimType(PrimType cptype) {
 // vectorization loop: <initnode, uppernode/vectorFactor * vectorFactor, incrNode*vectFact>
 // epilog loop: < uppernode/vectorFactor*vectorFactor, uppernode, incrnode>
 void LoopTransPlan::GenerateBoundInfo(DoloopNode *doloop, DoloopInfo *li) {
+  (void) li;
   BaseNode *initNode = doloop->GetStartExpr();
   BaseNode *incrNode = doloop->GetIncrExpr();
   BaseNode *condNode = doloop->GetCondExpr();
@@ -45,22 +45,23 @@ void LoopTransPlan::GenerateBoundInfo(DoloopNode *doloop, DoloopInfo *li) {
     constOnenode = codeMP->New<ConstvalNode>(PTY_i32, constOne);
   }
   ASSERT(incrNode->IsConstval(), "too complex, incrNode should be const");
-  ConstvalNode *icn = static_cast<ConstvalNode*>(incrNode);
-  MIRIntConst *incrConst = static_cast<MIRIntConst*>(icn->GetConstVal());
+  ConstvalNode *icn = static_cast<ConstvalNode *>(incrNode);
+  MIRIntConst *incrConst = static_cast<MIRIntConst *>(icn->GetConstVal());
   ASSERT(condNode->IsBinaryNode(), "cmp node should be binary node");
-  BaseNode *upNode = condNode->Opnd(1); // TODO:: verify opnd(1) is upper while opnd(0) is index variable
+  BaseNode *upNode = condNode->Opnd(1);
 
-  MIRIntConst *newIncr = GlobalTables::GetIntConstTable().GetOrCreateIntConst(vecFactor*incrConst->GetValue(), *typeInt);
+  MIRIntConst *newIncr = GlobalTables::GetIntConstTable().GetOrCreateIntConst(
+      vecFactor * incrConst->GetValue(), *typeInt);
   ConstvalNode *newIncrNode = codeMP->New<ConstvalNode>(PTY_i32, newIncr);
   // check initNode is alignment
   if (initNode->IsConstval()) {
-    ConstvalNode *lcn = static_cast<ConstvalNode*>(initNode);
-    MIRIntConst *lowConst = static_cast<MIRIntConst*>(lcn->GetConstVal());
+    ConstvalNode *lcn = static_cast<ConstvalNode *>(initNode);
+    MIRIntConst *lowConst = static_cast<MIRIntConst *>(lcn->GetConstVal());
     int64 lowvalue = lowConst->GetValue();
     // upNode is constant
     if (upNode->IsConstval()) {
-      ConstvalNode *ucn = static_cast<ConstvalNode*>(upNode);
-      MIRIntConst *upConst = static_cast<MIRIntConst*>(ucn->GetConstVal());
+      ConstvalNode *ucn = static_cast<ConstvalNode *>(upNode);
+      MIRIntConst *upConst = static_cast<MIRIntConst *>(ucn->GetConstVal());
       int64 upvalue = upConst->GetValue();
       if (condOpHasEqual) {
         upvalue += 1;
@@ -70,8 +71,6 @@ void LoopTransPlan::GenerateBoundInfo(DoloopNode *doloop, DoloopInfo *li) {
         vBound = localMP->New<LoopBound>(nullptr, nullptr, newIncrNode);
       } else {
         // trip count is not vector lane aligned
-        // vectorized loop < initnode, (up - low)/newIncr *newincr + init, newincr>
-        // TODO: the vectorized loop need unalignment instruction.
         int32_t newupval = (upvalue - lowvalue) / (newIncr->GetValue()) * (newIncr->GetValue()) + lowvalue;
         MIRIntConst *newUpConst = GlobalTables::GetIntConstTable().GetOrCreateIntConst(newupval, *typeInt);
         ConstvalNode *newUpNode = codeMP->New<ConstvalNode>(PTY_i32, newUpConst);
@@ -82,7 +81,7 @@ void LoopTransPlan::GenerateBoundInfo(DoloopNode *doloop, DoloopInfo *li) {
     } else if (upNode->GetOpCode() == OP_dread) {
       // upNode is symbol variable, TODO::op_regread
       // step 1: generate vectorized loop bound
-      AddrofNode *dreadnode = static_cast<AddrofNode*>(upNode);
+      AddrofNode *dreadnode = static_cast<AddrofNode *>(upNode);
       // upNode of vBound is uppnode / newIncr * newIncr
       BinaryNode *divnode;
       BaseNode *addnode = upNode;
@@ -123,7 +122,7 @@ void LoopTransPlan::GenerateBoundInfo(DoloopNode *doloop, DoloopInfo *li) {
 }
 
 // generate best plan for current doloop
-void LoopTransPlan::Generate(DoloopNode *doloop, DoloopInfo* li) {
+void LoopTransPlan::Generate(DoloopNode *doloop, DoloopInfo *li) {
   // hack values of vecFactor and vecLanes
   vecLanes = 128 / ((GetPrimTypeSize(vecInfo->largestPrimType)) * 8);
   vecFactor = vecLanes; // vectory length / type
@@ -131,11 +130,12 @@ void LoopTransPlan::Generate(DoloopNode *doloop, DoloopInfo* li) {
   GenerateBoundInfo(doloop, li);
 }
 
-MIRType* LoopVectorization::GenVecType(PrimType sPrimType, uint8 lanes) {
+MIRType* LoopVectorization::GenVecType(
+    PrimType sPrimType, uint8 lanes) {
    MIRType *vecType = nullptr;
    CHECK_FATAL(IsPrimitiveInteger(sPrimType), "primtype should be integer");
-   switch(sPrimType) {
-     case PTY_i32:  {
+   switch (sPrimType) {
+     case PTY_i32: {
        if (lanes == 4) {
          vecType = GlobalTables::GetTypeTable().GetV4Int32();
        } else if (lanes == 2) {
@@ -195,7 +195,7 @@ MIRType* LoopVectorization::GenVecType(PrimType sPrimType, uint8 lanes) {
        }
        break;
      }
-     case PTY_i64:  {
+     case PTY_i64: {
        if (lanes == 2) {
          vecType = GlobalTables::GetTypeTable().GetV2Int64();
        } else {
@@ -203,7 +203,7 @@ MIRType* LoopVectorization::GenVecType(PrimType sPrimType, uint8 lanes) {
        }
        break;
      }
-     case PTY_u64:  {
+     case PTY_u64: {
        if (lanes == 2) {
          vecType = GlobalTables::GetTypeTable().GetV2UInt64();
        } else {
@@ -222,7 +222,7 @@ StmtNode *LoopVectorization::GenIntrinNode(BaseNode *scalar, PrimType vecPrimTyp
   PrimType intrnPrimtype = PTY_v4i32;
   MIRIntrinsicID intrnID = INTRN_vector_from_scalar_v4i32;
   MIRType *vecType = nullptr;
-  switch(vecPrimType) {
+  switch (vecPrimType) {
     case PTY_v4i32: {
       intrnPrimtype = PTY_v4i32;
       intrnID = INTRN_vector_from_scalar_v4i32;
@@ -352,7 +352,7 @@ void LoopVectorization::widenDoloop(DoloopNode *doloop, LoopTransPlan *tp) {
       doloop->SetStartExpr(tp->vBound->lowNode);
     }
     if (tp->vBound->upperNode) {
-      BinaryNode *cmpn = static_cast<BinaryNode*>(doloop->GetCondExpr());
+      BinaryNode *cmpn = static_cast<BinaryNode *>(doloop->GetCondExpr());
       cmpn->SetBOpnd(tp->vBound->upperNode, 1);
     }
   }
@@ -367,12 +367,9 @@ void LoopVectorization::VectorizeDoLoop(DoloopNode *doloop, LoopTransPlan *tp) {
   // step 2: widen vectorizable stmt in doloop
   BlockNode *loopbody = doloop->GetDoBody();
   for (auto &stmt : loopbody->GetStmtNodes()) {
-    //if (stmt need to be vectoried in vectorized list) {
     VectorizeNode(&stmt, tp->vecFactor);
-    //} else {
      // stmt could not be widen directly, unroll instruction with vecFactor
      // move value from vector type if need (need def-use information from plan)
-     //}
   }
 }
 
@@ -423,7 +420,8 @@ void LoopVectorization::TransformLoop() {
   }
 }
 
-bool LoopVectorization::ExprVectorizable(DoloopInfo *doloopInfo, BaseNode *x) {
+bool LoopVectorization::ExprVectorizable(
+    DoloopInfo *doloopInfo, BaseNode *x) {
   if (!IsPrimitiveInteger(x->GetPrimType())) {
     return false;
   }
@@ -438,7 +436,7 @@ bool LoopVectorization::ExprVectorizable(DoloopInfo *doloopInfo, BaseNode *x) {
       if (parent && parent->GetOpCode() == OP_array) {
         return true;
       }
-      return false; // TODO::NIY
+      return false;
     }
     // supported binary ops
     case OP_add:
@@ -513,7 +511,8 @@ bool LoopVectorization::Vectorizable(DoloopInfo *doloopInfo, BlockNode *block, L
           CHECK_FATAL(mirType.GetKind() == kTypePointer, "iassign must have pointer type");
           MIRPtrType *ptrType = static_cast<MIRPtrType*>(&mirType);
           PrimType stmtpt = ptrType->GetPointedType()->GetPrimType();
-          CHECK_FATAL(IsPrimitiveInteger(stmtpt) && (!IsPrimitivePoint(stmtpt)), "iassign ptr type should be integer now");
+          CHECK_FATAL(IsPrimitiveInteger(stmtpt) && (!IsPrimitivePoint(stmtpt)),
+              "iassign ptr type should be integer now");
           vecInfo->UpdatePrimType(stmtpt);
           vecInfo->vecStmtIDs.insert((stmt)->GetStmtID());
         }
