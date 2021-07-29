@@ -24,7 +24,6 @@
  * This phase implements if-conversion optimization,
  * which tries to convert conditional branches into cset/csel instructions
  */
-#define ICO_DUMP CG_DEBUG_FUNC(cgFunc)
 namespace maplebe {
 void AArch64IfConversionOptimizer::InitOptimizePatterns() {
   singlePassPatterns.emplace_back(memPool->New<AArch64ICOPattern>(*cgFunc));
