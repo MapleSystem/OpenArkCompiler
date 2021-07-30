@@ -165,17 +165,17 @@ PEGBuilder::PtrValueRecorder PEGBuilder::BuildPEGNodeOfIread(const IreadSSANode 
     return PtrValueRecorder(nullptr, 0, OffsetType(0));
   }
 
-  auto *ostOfBase = ptrNode.pegNode->ost;
-  FieldID fieldId = iread->GetFieldID() + ptrNode.fieldId;
-
   MIRType *mirType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(iread->GetTyIdx());
   CHECK_FATAL(mirType->GetKind() == kTypePointer, "CreateAliasElemsExpr: ptr type expected in iread");
-  bool typeHasBeenCasted =
-      static_cast<MIRPtrType*>(mirType)->GetPointedType()->GetSize() != GetPrimTypeSize(iread->GetPrimType());
+  auto *pointedType = static_cast<MIRPtrType*>(mirType)->GetPointedType();
+  if (iread->GetFieldID() > 0) {
+    pointedType = static_cast<MIRStructType *>(pointedType)->GetFieldType(iread->GetFieldID());
+  }
+  bool typeHasBeenCasted = pointedType->GetSize() != GetPrimTypeSize(iread->GetPrimType());
   OffsetType offset = typeHasBeenCasted ? OffsetType::InvalidOffset() : ptrNode.offset;
-
+  auto *ostOfBase = ptrNode.pegNode->ost;
   auto *mayUsedOst =
-      AliasClass::FindOrCreateExtraLevOst(ssaTab, ostOfBase, iread->GetTyIdx(), fieldId, offset);
+      AliasClass::FindOrCreateExtraLevOst(ssaTab, ostOfBase, iread->GetTyIdx(), iread->GetFieldID(), offset);
   // build prevLev-nextLev relationship
   auto *pegNodeOfMayUsedOSt = peg->GetOrCreateNodeOf(mayUsedOst);
 
@@ -419,12 +419,14 @@ void PEGBuilder::AddAssignEdge(const StmtNode *stmt, PEGNode *lhsNode, PEGNode *
         // the OriginalSt of at least one side has appearance in code
         if (fieldOstLHS == nullptr) {
           auto *ptrType = GlobalTables::GetTypeTable().GetOrCreatePointerType(lhsOst->GetTyIdx());
-          fieldOstLHS = ssaTab->FindOrCreateExtraLevOriginalSt(preLevOfLHSOst, ptrType->GetTypeIndex(), fieldId);
+          fieldOstLHS = ssaTab->GetOriginalStTable().FindOrCreateExtraLevOriginalSt(
+              preLevOfLHSOst, ptrType->GetTypeIndex(), fieldId, offset);
         }
 
         if (fieldOstRHS == nullptr) {
           auto *ptrType = GlobalTables::GetTypeTable().GetOrCreatePointerType(rhsOst->GetTyIdx());
-          fieldOstRHS = ssaTab->FindOrCreateExtraLevOriginalSt(preLevOfRHSOst, ptrType->GetTypeIndex(), fieldId);
+          fieldOstRHS = ssaTab->GetOriginalStTable().FindOrCreateExtraLevOriginalSt(
+              preLevOfRHSOst, ptrType->GetTypeIndex(), fieldId, offset);
         }
 
         auto pegNodeOfLhsField = peg->GetOrCreateNodeOf(fieldOstLHS);
@@ -493,10 +495,8 @@ void PEGBuilder::BuildPEGNodeInIassign(const IassignNode *iassign) {
   }
 
   auto *ostOfBase = baseAddrValNode.pegNode->ost;
-  FieldID fieldId = iassign->GetFieldID() + baseAddrValNode.fieldId;
-
   OriginalSt *defedOst = AliasClass::FindOrCreateExtraLevOst(
-      ssaTab, ostOfBase, iassign->GetTyIdx(), fieldId, baseAddrValNode.offset);
+      ssaTab, ostOfBase, iassign->GetTyIdx(), iassign->GetFieldID(), baseAddrValNode.offset);
   PEGNode *lhsNode = peg->GetOrCreateNodeOf(defedOst);
 
   // build prevLev-nextLev relation

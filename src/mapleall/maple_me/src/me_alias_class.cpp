@@ -52,10 +52,6 @@ void MeAliasClass::PerformDemandDrivenAliasAnalysis() {
 
   DemandDrivenAliasAnalysis ddAlias(&func, func.GetMeSSATab(), localMemPool, enabledDebug);
   for (auto ae : Id2AliasElem()) {
-    if (ae->GetClassID() != GetUnionFind().Root(ae->GetClassID())) {
-      continue;
-    }
-
     if (ae->GetClassSet() != nullptr) {
       auto *oldAliasSet = ae->GetClassSet();
       MapleSet<unsigned int> *newAliasSet = nullptr;
