@@ -1366,8 +1366,8 @@ bool ArithResTypeVerify(PrimType pTyp) {
   }
 
   // Arithmetic operations on all vector types are allowed
-  PrimitiveType PT(pTyp);
-  if (PT.IsVector()) return true;
+  PrimitiveType pt(pTyp);
+  if (pt.IsVector()) return true;
 
   return false;
 }
