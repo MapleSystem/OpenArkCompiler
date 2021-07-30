@@ -194,7 +194,6 @@ ErrorCode MplcgCompiler::Compile(MplOptions &options, std::unique_ptr<MIRModule>
     }
     timer.Stop();
     LogInfo::MapleLogger() << "Mplcg Parser consumed " << timer.ElapsedMilliseconds() << "ms\n";
-    CgFuncPhaseManager::parserTime = timer.ElapsedMicroseconds();
   }
   SetOutputFileName(options, *theModule);
   theModule->SetInputFileName(fileName);
@@ -206,13 +205,7 @@ ErrorCode MplcgCompiler::Compile(MplOptions &options, std::unique_ptr<MIRModule>
   }
   runner.SetPrintOutExe(kBinNameMplcg);
   runner.SetCGInfo(&cgOption, fileName);
-
-  if (cgOption.UseNewPM()) {
-    // == new pm ==
-    runner.ProcessCGPhase2(outputFile, baseName);
-  } else {
-    runner.ProcessCGPhase(outputFile, baseName);
-  }
+  runner.ProcessCGPhase(outputFile, baseName);
   delete optMp;
   return kErrorNoError;
 }

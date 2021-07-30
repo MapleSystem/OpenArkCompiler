@@ -93,11 +93,6 @@ class PeepOptimizer {
   MemPool *peepOptMemPool;
 };
 
-CGFUNCPHASE_CANSKIP(CgDoPrePeepHole, "prepeephole")
-CGFUNCPHASE_CANSKIP(CgDoPrePeepHole1, "prepeephole1")
-CGFUNCPHASE_CANSKIP(CgDoPeepHole0, "peephole0")
-CGFUNCPHASE_CANSKIP(CgDoPeepHole, "peephole")
-
 MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgPrePeepHole0, maplebe::CGFunc)
 MAPLE_FUNC_PHASE_DECLARE_END
 MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgPrePeepHole1, maplebe::CGFunc)

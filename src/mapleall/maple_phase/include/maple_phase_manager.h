@@ -174,7 +174,7 @@ class AnalysisInfoHook {
     (void)bindingPM->RunTransformPhase<PHASEType, IRTemplate>(*curPhase, adManager, irUnit);
   }
 
-  /* Use In O2  carefully */
+  /* Use In O2 carefully */
   void ForceEraseAnalysisPhase(MaplePhaseID anaPid) {
     adManager.EraseAnalysisPhase(anaPid);
   }

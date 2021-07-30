@@ -35,8 +35,7 @@
  * 3. deal with cleanup BB.
  */
 namespace maplebe {
-#define LIVE_ANALYZE_DUMP CG_DEBUG_FUNC(cgFunc)
-#define LIVE_ANALYZE_DUMP_NEWPM CG_DEBUG_FUNC_NEWPM(f, PhaseName())
+#define LIVE_ANALYZE_DUMP_NEWPM CG_DEBUG_FUNC(f, PhaseName())
 
 void LiveAnalysis::InitAndGetDefUse() {
   FOR_ALL_BB(bb, cgFunc) {
@@ -302,24 +301,6 @@ void LiveAnalysis::EnlargeSpaceForLiveAnalysis(BB &currBB) {
       bb->LiveOutEnlargeCapacity(currMaxVRegNO);
     }
   }
-}
-
-AnalysisResult *CgDoLiveAnalysis::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
-  (void)cgFuncResultMgr;
-  ASSERT(cgFunc != nullptr, "expect a cgFunc in CgDoLiveAnalysis");
-  MemPool *liveMemPool = NewMemPool();
-  LiveAnalysis *liveAnalysis = nullptr;
-#if TARGAARCH64 || TARGRISCV64
-  liveAnalysis = liveMemPool->New<AArch64LiveAnalysis>(*cgFunc, *liveMemPool);
-#endif
-#if TARGARM32
-  liveAnalysis = liveMemPool->New<Arm32LiveAnalysis>(*cgFunc, *liveMemPool);
-#endif
-  liveAnalysis->AnalysisLive();
-  if (LIVE_ANALYZE_DUMP) {
-    liveAnalysis->Dump();
-  }
-  return liveAnalysis;
 }
 
 bool CgLiveAnalysis::PhaseRun(maplebe::CGFunc &f) {

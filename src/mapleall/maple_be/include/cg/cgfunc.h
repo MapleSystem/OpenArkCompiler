@@ -409,7 +409,7 @@ class CGFunc {
 
   uint32 GetVRegSize(regno_t vregNum) {
     CHECK(vregNum < vRegTable.size(), "index out of range in GetVRegSize");
-    return vRegTable[vregNum].GetSize();
+    return GetOrCreateVirtualRegisterOperand(vregNum).GetSize() / kBitsPerByte;
   }
 
   MIRSymbol *GetRetRefSymbol(BaseNode &expr);
@@ -1054,12 +1054,6 @@ class CGFunc {
   const MapleString shortFuncName;
   bool hasAsm = false;
 };  /* class CGFunc */
-
-CGFUNCPHASE(CgDoLayoutSF, "layoutstackframe")
-CGFUNCPHASE(CgDoHandleFunc, "handlefunction")
-CGFUNCPHASE(CgDoFixCFLocOsft, "dbgfixcallframeoffsets")
-CGFUNCPHASE(CgDoGenCfi, "gencfi")
-CGFUNCPHASE(CgDoEmission, "emit")
 
 MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgLayoutFrame, maplebe::CGFunc)
 MAPLE_FUNC_PHASE_DECLARE_END

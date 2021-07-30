@@ -25,22 +25,6 @@
 
 namespace maplebe {
 using namespace maple;
-AnalysisResult *CgDoMoveRegArgs::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
-  (void)cgFuncResultMgr;
-  MemPool *memPool = NewMemPool();
-  MoveRegArgs *movRegArgs = nullptr;
-  ASSERT(cgFunc != nullptr, "expect a cgfunc in CgDoMoveRegArgs");
-#if TARGAARCH64 || TARGRISCV64
-  movRegArgs = memPool->New<AArch64MoveRegArgs>(*cgFunc);
-#endif
-#if TARGARM32
-  movRegArgs = memPool->New<Arm32MoveRegArgs>(*cgFunc);
-#endif
-  movRegArgs->Run();
-
-  return nullptr;
-}
-
 bool CgMoveRegArgs::PhaseRun(maplebe::CGFunc &f) {
   MemPool *memPool = GetPhaseMemPool();
   MoveRegArgs *movRegArgs = nullptr;

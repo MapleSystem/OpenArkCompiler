@@ -242,8 +242,6 @@ struct CGFuncLoopCmp {
   }
 };
 
-CGFUNCPHASE(CgDoLoopAnalysis, "loopanalysis")
-
 MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgLoopAnalysis, maplebe::CGFunc);
 MAPLE_FUNC_PHASE_DECLARE_END
 }  /* namespace maplebe */

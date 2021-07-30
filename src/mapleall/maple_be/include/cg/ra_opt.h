@@ -43,7 +43,6 @@ class RaOpt {
   MemPool *memPool;
 };
 
-CGFUNCPHASE(CgDoRaOpt, "raopt")
 MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgRaOpt, maplebe::CGFunc)
 MAPLE_FUNC_PHASE_DECLARE_END
 }  /* namespace maplebe */

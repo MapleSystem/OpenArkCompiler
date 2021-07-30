@@ -235,6 +235,8 @@ void Emitter::EmitFileInfo(const std::string &fileName) {
     }
   }
   free(curDirName);
+
+  EmitInlineAsmSection();
 #if TARGARM32
   Emit("\t.syntax unified\n");
   /*
@@ -263,6 +265,16 @@ void Emitter::EmitFileInfo(const std::string &fileName) {
 #endif /* TARGARM32 */
 }
 
+void Emitter::EmitInlineAsmSection() {
+  MapleVector<MapleString> &asmSections = cg->GetMIRModule()->GetAsmDecls();
+  Emit("#APP\n");
+  for (auto &singleSection : asmSections) {
+    Emit("\t");
+    Emit(singleSection);
+    Emit("\n");
+  }
+  Emit("#NO_APP\n");
+}
 void Emitter::EmitAsmLabel(AsmLabel label) {
   switch (label) {
     case kAsmData: {
@@ -2035,7 +2047,13 @@ void Emitter::EmitLocalVariable(const CGFunc &cgfunc) {
 
 void Emitter::EmitGlobalVar(const MIRSymbol &globalVar) {
   EmitAsmLabel(globalVar, kAsmType);
-  EmitAsmLabel(globalVar, kAsmLocal);
+  if (globalVar.sectionAttr != UStrIdx(0)) { /* check section info if it is from inline asm */
+    Emit("\t.section\t");
+    Emit(GlobalTables::GetUStrTable().GetStringFromStrIdx(globalVar.sectionAttr));
+    Emit(",\"aw\",%progbits\n");
+  } else {
+    EmitAsmLabel(globalVar, kAsmLocal);
+  }
   EmitAsmLabel(globalVar, kAsmComm);
 }
 
@@ -2139,8 +2157,14 @@ void Emitter::EmitGlobalVariable() {
       continue;
     }
     if (GetCG()->GetMIRModule()->IsCModule() && mirSymbol->GetStorageClass() == kScExtern) {
-      continue;
+      /* only emit weak extern at present */
+      if (mirSymbol->IsWeak()) {
+        EmitAsmLabel(*mirSymbol, kAsmWeak);
+      } else {
+        continue;
+      }
     }
+
     if (mirSymbol->GetName().find(VTAB_PREFIX_STR) == 0) {
       vtabVec.emplace_back(mirSymbol);
       continue;
@@ -2308,7 +2332,13 @@ void Emitter::EmitGlobalVariable() {
         secName.erase(0, 2);
         Emit("\t.section\t." + secName + ",\"a\",%progbits\n");
       } else {
-        (void)Emit("\t.section\t." + std::string(kMapleGlobalVariable) + ",\"aw\", %progbits\n");
+        if (mirSymbol->sectionAttr != UStrIdx(0)) {  /* inline assembly section */
+          const std::string &inlineAsmSecName = GlobalTables::GetUStrTable().GetStringFromStrIdx(
+              mirSymbol->sectionAttr);
+          (void)Emit("\t.section\t" + inlineAsmSecName + ",\"aw\", %progbits\n");
+        } else {
+          (void)Emit("\t.section\t." + std::string(kMapleGlobalVariable) + ",\"aw\", %progbits\n");
+        }
       }
       /* Emit size and align by type */
       if (mirSymbol->GetStorageClass() == kScGlobal) {
@@ -2319,7 +2349,9 @@ void Emitter::EmitGlobalVariable() {
         }
         EmitAsmLabel(*mirSymbol, kAsmHidden);
       } else if (mirSymbol->GetStorageClass() == kScFstatic) {
-        EmitAsmLabel(*mirSymbol, kAsmLocal);
+        if (mirSymbol->sectionAttr == UStrIdx(0)) {
+          EmitAsmLabel(*mirSymbol, kAsmLocal);
+        }
       }
       if (mirSymbol->IsReflectionStrTab()) {
         Emit("\t.align 3\n");  /* reflection-string-tab also aligned to 8B boundaries. */

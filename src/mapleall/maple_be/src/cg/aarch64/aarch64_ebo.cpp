@@ -17,7 +17,7 @@
 #include "mpl_logging.h"
 namespace maplebe {
 using namespace maple;
-#define EBO_DUMP CG_DEBUG_FUNC(cgFunc)
+#define EBO_DUMP CG_DEBUG_FUNC(*cgFunc, PhaseName())
 
 uint8 extIndexTable[AArch64Ebo::ExtTableSize][2] = {
  /* extInsnPairTable row index, valid columns */
@@ -125,6 +125,29 @@ bool AArch64Ebo::LiveOutOfBB(const Operand &opnd, const BB &bb) const {
 
 bool AArch64Ebo::IsLastAndBranch(BB &bb, Insn &insn) const {
   return (bb.GetLastInsn() == &insn) && insn.IsBranch();
+}
+
+bool AArch64Ebo::IsSameRedefine(BB &bb, Insn &insn, OpndInfo &opndInfo) const {
+  MOperator mOp = insn.GetMachineOpcode();
+  if (!(mOp == MOP_xmovri32 || mOp == MOP_xmovri64 || mOp == MOP_wsfmovri || mOp == MOP_xdfmovri)) {
+    return false;
+  }
+  OpndInfo *sameInfo = opndInfo.same;
+  if (sameInfo == nullptr || sameInfo->insn == nullptr || sameInfo->bb != &bb ||
+      sameInfo->insn->GetMachineOpcode() != mOp) {
+    return false;
+  }
+  Insn *prevInsn = sameInfo->insn;
+  if (!prevInsn->GetOperand(kInsnSecondOpnd).IsImmediate()) {
+    return false;
+  }
+  auto &sameOpnd = static_cast<AArch64ImmOperand&>(prevInsn->GetOperand(kInsnSecondOpnd));
+  auto &opnd = static_cast<AArch64ImmOperand&>(insn.GetOperand(kInsnSecondOpnd));
+  if (sameOpnd.GetValue() == opnd.GetValue()) {
+    sameInfo->refCount += opndInfo.refCount;
+    return true;
+  }
+  return false;
 }
 
 const RegOperand &AArch64Ebo::GetRegOperand(const Operand &opnd) const {
