@@ -452,6 +452,15 @@ class ASTIntegerLiteralStmt : public ASTStmt {
   std::list<UniqueFEIRStmt> Emit2FEStmtImpl() const override;
 };
 
+class ASTFloatingLiteralStmt : public ASTStmt {
+ public:
+  ASTFloatingLiteralStmt() : ASTStmt(kASTStmtFloatingLiteral) {}
+  ~ASTFloatingLiteralStmt() override = default;
+
+ private:
+  std::list<UniqueFEIRStmt> Emit2FEStmtImpl() const override;
+};
+
 class ASTVAArgExprStmt : public ASTStmt {
  public:
   ASTVAArgExprStmt() : ASTStmt(kASTStmtVAArgExpr) {}

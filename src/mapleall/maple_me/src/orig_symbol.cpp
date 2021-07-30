@@ -188,13 +188,6 @@ OriginalSt *OriginalStTable::FindOrCreateAddrofSymbolOriginalSt(OriginalSt *ost)
 
 OriginalSt *OriginalStTable::FindOrCreateExtraLevSymOrRegOriginalSt(OriginalSt *ost, TyIdx tyIdx,
     FieldID fld, const OffsetType &offset, const KlassHierarchy *klassHierarchy) {
-  TyIdx ptyIdxOfOst = ost->GetTyIdx();
-  FieldID fldIDInOst = fld;
-  if (ptyIdxOfOst != tyIdx && klassHierarchy != nullptr) {
-    (void)klassHierarchy->UpdateFieldID(tyIdx, ptyIdxOfOst, fldIDInOst);
-  }
-
-  auto nextLevelOsts = ost->GetNextLevelOsts();
   MIRType *typeOfExtraLevOst = GlobalTables::GetTypeTable().GetVoid();
   OffsetType offsetOfNextLevOst(kOffsetUnknown);
   tyIdx = (tyIdx == 0u) ? ost->GetTyIdx() : tyIdx;
@@ -215,7 +208,17 @@ OriginalSt *OriginalStTable::FindOrCreateExtraLevSymOrRegOriginalSt(OriginalSt *
     }
   }
 
-  OriginalSt *nextLevOst = FindExtraLevOriginalSt(nextLevelOsts, typeOfExtraLevOst, fldIDInOst, offsetOfNextLevOst);
+  TyIdx ptyIdxOfOst = ost->GetTyIdx();
+  FieldID fldIDInOst = fld;
+  if (ptyIdxOfOst != tyIdx) {
+    if (klassHierarchy != nullptr) {
+      (void)klassHierarchy->UpdateFieldID(tyIdx, ptyIdxOfOst, fldIDInOst);
+    } else {
+      fldIDInOst = 0;
+    }
+  }
+  OriginalSt *nextLevOst =
+      FindExtraLevOriginalSt(ost->GetNextLevelOsts(), typeOfExtraLevOst, fldIDInOst, offsetOfNextLevOst);
   if (nextLevOst != nullptr) {
     return nextLevOst;
   }
@@ -264,9 +267,10 @@ OriginalSt *OriginalStTable::FindOrCreateExtraLevOriginalSt(OriginalSt *ost, TyI
 OriginalSt *OriginalStTable::FindExtraLevOriginalSt(const MapleVector<OriginalSt*> &nextLevelOsts, MIRType *type,
                                                     FieldID fld, const OffsetType &offset) {
   for (OriginalSt *nextLevelOst : nextLevelOsts) {
-    if (nextLevelOst->GetFieldID() == fld && nextLevelOst->GetOffset() == offset &&
-        nextLevelOst->GetType()->GetSize() == type->GetSize()) {
-      return nextLevelOst;
+    if (nextLevelOst->GetOffset() == offset && nextLevelOst->GetType() == type) {
+      if (nextLevelOst->GetFieldID() == fld || fld == 0) {
+        return nextLevelOst;
+      }
     }
   }
   return nullptr;

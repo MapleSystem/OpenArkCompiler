@@ -93,7 +93,7 @@ void Simplify::SimplifyCallAssigned(const StmtNode &stmt, BlockNode &block) {
   }
 }
 
-void Simplify::SplitAggCopy(StmtNode *stmt, BlockNode *block, MIRFunction *func) {
+StmtNode *Simplify::SplitAggCopy(StmtNode *stmt, BlockNode *block, MIRFunction *func) {
   if (stmt->GetOpCode() == OP_dassign && stmt->Opnd(0)->GetPrimType() == PTY_agg) {
     if (stmt->Opnd(0)->GetOpCode() == OP_dread) {
       auto *dassign = static_cast<const DassignNode *>(stmt);
@@ -103,6 +103,9 @@ void Simplify::SplitAggCopy(StmtNode *stmt, BlockNode *block, MIRFunction *func)
 
       auto lhsSymbol = func->GetLocalOrGlobalSymbol(lhsStIdx);
       auto lhsMIRType = lhsSymbol->GetType();
+      if (lhsMIRType->GetKind() == kTypeUnion) {  // no need to split union's field
+        return nullptr;
+      }
       auto lhsFieldID = dassign->GetFieldID();
       if (lhsFieldID != 0) {
         CHECK_FATAL(lhsMIRType->IsStructType(), "only struct has non-zero fieldID");
@@ -118,18 +121,18 @@ void Simplify::SplitAggCopy(StmtNode *stmt, BlockNode *block, MIRFunction *func)
       }
 
       if (!lhsSymbol->IsLocal() && !rhsSymbol->IsLocal()) {
-        return;
+        return nullptr;
       }
 
       if (lhsMIRType != rhsMIRType) {
-        return;
+        return nullptr;
       }
 
       if (lhsMIRType->IsStructType()) {
         auto *structType = static_cast<MIRStructType *>(lhsMIRType);
         constexpr uint32 upperLimitOfFieldNum = 10;
         if (lhsMIRType->NumberOfFieldIDs() > upperLimitOfFieldNum) {
-          return;
+          return nullptr;
         }
         auto mirBuiler = func->GetModule()->GetMIRBuilder();
         for (uint id = 1; id <= lhsMIRType->NumberOfFieldIDs(); ++id) {
@@ -144,9 +147,11 @@ void Simplify::SplitAggCopy(StmtNode *stmt, BlockNode *block, MIRFunction *func)
           newRHS->SetFieldID(id + rhsFieldID);
           auto newDassign = mirBuiler->CreateStmtDassign(lhsStIdx, lhsFieldID + id, newRHS);
           newDassign->SetSrcPos(stmt->GetSrcPos());
-          block->InsertBefore(stmt, newDassign);
+          block->InsertAfter(stmt, newDassign);
         }
+        auto newAssign = stmt->GetNext();
         block->RemoveStmt(stmt);
+        return newAssign;
       }
     } else if (stmt->Opnd(0)->GetOpCode() == OP_iread) {
       auto *dassign = static_cast<const DassignNode *>(stmt);
@@ -155,6 +160,9 @@ void Simplify::SplitAggCopy(StmtNode *stmt, BlockNode *block, MIRFunction *func)
 
       auto lhsSymbol = func->GetLocalOrGlobalSymbol(lhsStIdx);
       auto lhsMIRType = lhsSymbol->GetType();
+      if (lhsMIRType->GetKind() == kTypeUnion) {  // no need to split union's field
+        return nullptr;
+      }
       auto lhsFieldID = dassign->GetFieldID();
       if (lhsFieldID != 0) {
         CHECK_FATAL(lhsMIRType->IsStructType(), "only struct has non-zero fieldID");
@@ -170,14 +178,14 @@ void Simplify::SplitAggCopy(StmtNode *stmt, BlockNode *block, MIRFunction *func)
       }
 
       if (lhsMIRType != rhsMIRType) {
-        return;
+        return nullptr;
       }
 
       if (lhsMIRType->IsStructType()) {
         auto *structType = static_cast<MIRStructType *>(lhsMIRType);
         constexpr uint32 upperLimitOfFieldNum = 10;
         if (lhsMIRType->NumberOfFieldIDs() > upperLimitOfFieldNum) {
-          return;
+          return nullptr;
         }
         auto mirBuiler = func->GetModule()->GetMIRBuilder();
         for (uint id = 1; id <= lhsMIRType->NumberOfFieldIDs(); ++id) {
@@ -195,10 +203,13 @@ void Simplify::SplitAggCopy(StmtNode *stmt, BlockNode *block, MIRFunction *func)
           newDassign->SetSrcPos(stmt->GetSrcPos());
           block->InsertBefore(stmt, newDassign);
         }
+        auto newAssign = stmt->GetNext();
         block->RemoveStmt(stmt);
+        return newAssign;
       }
     }
   }
+  return nullptr;
 }
 
 void Simplify::ProcessFunc(MIRFunction *func) {
@@ -244,7 +255,8 @@ void Simplify::ProcessFuncStmt(MIRFunction &func, StmtNode *stmt, BlockNode *blo
         break;
       }
       case OP_dassign: {
-        SplitAggCopy(stmt, block, &func);
+        auto newNext = SplitAggCopy(stmt, block, &func);
+        next = newNext == nullptr ? next : newNext;
         break;
       }
       default: {
