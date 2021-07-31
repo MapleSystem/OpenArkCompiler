@@ -14,6 +14,7 @@
  */
 #include "func_emit.h"
 #include "mir_function.h"
+#include "ssa_mir_nodes.h"
 
 namespace maple {
 void FuncEmit::EmitLabelForBB(MIRFunction &func, BB &bb) const {
@@ -48,8 +49,22 @@ void FuncEmit::EmitLabelForBB(MIRFunction &func, BB &bb) const {
   }
 }
 
-static void ConvertMaydassign(BB &bb) {
+static BaseNode *ConvertSSANode(BaseNode *node) {
+  if (node->IsSSANode()) {
+    node = static_cast<SSANode *>(node)->GetNoSSANode();
+  }
+  if (node->IsLeaf()) {
+    return node;
+  }
+  for (uint32 opndId = 0; opndId < node->GetNumOpnds(); ++opndId) {
+    node->SetOpnd(ConvertSSANode(node->Opnd(opndId)), opndId);
+  }
+  return node;
+}
+
+static void ConvertStmt(BB &bb) {
   for (auto &stmt : bb.GetStmtNodes()) {
+    ConvertSSANode(&stmt);
     if (stmt.GetOpCode() == OP_maydassign) {
       stmt.SetOpCode(OP_dassign);
     }
@@ -65,7 +80,7 @@ void FuncEmit::EmitBeforeHSSA(MIRFunction &func, const MapleVector<BB*> &bbList)
     if (bb == nullptr) {
       continue;
     }
-    ConvertMaydassign(*bb);
+    ConvertStmt(*bb);
     if (bb->GetBBLabel() != 0) {
       EmitLabelForBB(func, *bb);
     }
