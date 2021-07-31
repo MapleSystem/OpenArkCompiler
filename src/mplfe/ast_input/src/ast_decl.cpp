@@ -141,6 +141,9 @@ MIRSymbol *ASTVar::Translate2MIRSymbol() const {
   if (!sectionAttr.empty()) {
     mirSymbol->sectionAttr = GlobalTables::GetUStrTable().GetOrCreateStrIdxFromName(sectionAttr);
   }
+  if (!asmAttr.empty()) {
+    mirSymbol->SetAsmAttr(GlobalTables::GetUStrTable().GetOrCreateStrIdxFromName(asmAttr));
+  }
   return mirSymbol;
 }
 

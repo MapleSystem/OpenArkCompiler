@@ -169,6 +169,9 @@ bool ASTGlobalVar2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
   if (!astVar.GetSectionAttr().empty()) {
     mirSymbol->sectionAttr = GlobalTables::GetUStrTable().GetOrCreateStrIdxFromName(astVar.GetSectionAttr());
   }
+  if (!astVar.GetAsmAttr().empty()) {
+    mirSymbol->SetAsmAttr(GlobalTables::GetUStrTable().GetOrCreateStrIdxFromName(astVar.GetAsmAttr()));
+  }
   ASTExpr *initExpr = astVar.GetInitExpr();
   if (initExpr == nullptr) {
     return true;

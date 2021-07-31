@@ -2297,6 +2297,10 @@ ASTDecl *ASTParser::ProcessDeclVarDecl(MapleAllocator &allocator, const clang::V
   if (sa != nullptr && !sa->isImplicit()) {
     astVar->SetSectionAttr(sa->getName().str());
   }
+  clang::AsmLabelAttr *ala = varDecl.getAttr<clang::AsmLabelAttr>();
+  if (ala != nullptr) {
+    astVar->SetAsmAttr(ala->getLabel().str());
+  }
   if (varDecl.hasInit()) {
     astVar->SetDeclPos(astFile->GetDeclPosInfo(varDecl));
     auto initExpr = varDecl.getInit();
