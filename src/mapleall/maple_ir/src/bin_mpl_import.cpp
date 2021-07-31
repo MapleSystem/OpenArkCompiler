@@ -974,12 +974,16 @@ MIRSymbol *BinaryMplImport::InSymbol(MIRFunction *func) {
     int64 scope = ReadNum();
     GStrIdx stridx = ImportStr();
     UStrIdx secAttr = ImportUsrStr();
+    UStrIdx asmAttr = ImportUsrStr();
     auto skind = static_cast<MIRSymKind>(ReadNum());
     auto sclass = static_cast<MIRStorageClass>(ReadNum());
     TyIdx tyTmp(0);
     MIRSymbol *sym = GetOrCreateSymbol(tyTmp, stridx, skind, sclass, func, scope);
     if (secAttr != 0) {
       sym->sectionAttr = secAttr;
+    }
+    if (asmAttr != 0) {
+      sym->SetAsmAttr(asmAttr);
     }
     symTab.push_back(sym);
     sym->SetAttrs(ImportTypeAttrs());
