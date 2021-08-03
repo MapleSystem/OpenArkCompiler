@@ -37,8 +37,6 @@ class LabelCreation {
   void CreateStartEndLabel();
 };
 
-CGFUNCPHASE(CgDoCreateLabel, "createstartendlabel")
-
 MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgCreateLabel, maplebe::CGFunc)
 MAPLE_FUNC_PHASE_DECLARE_END
 }  /* namespace maplebe */

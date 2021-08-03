@@ -220,28 +220,6 @@ OffsetType AliasClass::OffsetInBitOfArrayElement(const ArrayNode *arrayNode) {
 
 OriginalSt *AliasClass::FindOrCreateExtraLevOst(SSATab *ssaTab, OriginalSt *prevLevOst, const TyIdx &tyIdx,
     FieldID fld, OffsetType offset) {
-  if (!offset.IsInvalid() && prevLevOst->GetIndirectLev() < 0) {
-    auto mirType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx);
-    ASSERT(mirType->IsMIRPtrType(), "must be pointer type");
-    auto typeOfOst = static_cast<MIRPtrType*>(mirType)->GetPointedType();
-    if (fld != 0 && fld <= typeOfOst->NumberOfFieldIDs()) {
-      typeOfOst = static_cast<MIRStructType*>(typeOfOst)->GetFieldType(fld);
-    }
-    const auto &ostPair = ssaTab->GetOriginalStTable().FindOrCreateSymbolOriginalSt(*prevLevOst->GetMIRSymbol(),
-        prevLevOst->GetPuIdx(), fld, typeOfOst->GetTypeIndex(), offset);
-    auto *newOst = ostPair.first;
-    newOst->SetPrevLevelOst(prevLevOst);
-    if (ostPair.second) {
-      prevLevOst->AddNextLevelOst(newOst, true);
-    }
-    return newOst;
-  }
-
-  const TyIdx &tyIdxOfBaseOst = prevLevOst->GetTyIdx();
-  if (ssaTab->GetModule().IsCModule() && tyIdxOfBaseOst != tyIdx) {
-    return ssaTab->GetOriginalStTable().FindOrCreateExtraLevOriginalSt(prevLevOst, tyIdx, 0, offset);
-  }
-
   return ssaTab->GetOriginalStTable().FindOrCreateExtraLevOriginalSt(prevLevOst, tyIdx, fld, offset);
 }
 
@@ -252,12 +230,12 @@ AliasElem *AliasClass::FindOrCreateExtraLevAliasElem(BaseNode &baseAddress, cons
   if (aliasInfoOfBaseAddress.ae == nullptr) {
     return FindOrCreateDummyNADSAe();
   }
-  if (mirModule.IsCModule() && IsNullOrDummySymbolOst(aliasInfoOfBaseAddress.ae->GetOst())) {
+  auto *baseOst = aliasInfoOfBaseAddress.ae->GetOst();
+  if (mirModule.IsCModule() && IsNullOrDummySymbolOst(baseOst)) {
     return FindOrCreateDummyNADSAe();
   }
 
-  auto newOst = FindOrCreateExtraLevOst(&ssaTab, aliasInfoOfBaseAddress.ae->GetOst(), tyIdx,
-      aliasInfoOfBaseAddress.fieldID + fieldId,
+  auto newOst = FindOrCreateExtraLevOst(&ssaTab, baseOst, tyIdx, fieldId,
       typeHasBeenCasted ? OffsetType(kOffsetUnknown) : aliasInfoOfBaseAddress.offset);
 
   CHECK_FATAL(newOst != nullptr, "null ptr check");
@@ -320,8 +298,11 @@ AliasInfo AliasClass::CreateAliasElemsExpr(BaseNode &expr) {
       auto &iread = static_cast<IreadSSANode&>(expr);
       MIRType *mirType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(iread.GetTyIdx());
       CHECK_FATAL(mirType->GetKind() == kTypePointer, "CreateAliasElemsExpr: ptr type expected in iread");
-      bool typeHasBeenCasted =
-          static_cast<MIRPtrType*>(mirType)->GetPointedType()->GetSize() != GetPrimTypeSize(iread.GetPrimType());
+      auto *typeOfField = static_cast<MIRPtrType *>(mirType)->GetPointedType();
+      if (iread.GetFieldID() > 0) {
+        typeOfField = static_cast<MIRStructType *>(typeOfField)->GetFieldType(iread.GetFieldID());
+      }
+      bool typeHasBeenCasted = (typeOfField->GetSize() != GetPrimTypeSize(iread.GetPrimType()));
       return AliasInfo(FindOrCreateExtraLevAliasElem(
           *iread.Opnd(0), iread.GetTyIdx(), iread.GetFieldID(), typeHasBeenCasted), 0, OffsetType(0));
     }
@@ -458,12 +439,14 @@ void AliasClass::ApplyUnionForFieldsInCopiedAgg() {
 
       if (fieldOstLHS == nullptr) {
         auto ptrType = GlobalTables::GetTypeTable().GetOrCreatePointerType(lhsost->GetTyIdx());
-        fieldOstLHS = ssaTab.FindOrCreateExtraLevOriginalSt(preLevOfLHSOst, ptrType->GetTypeIndex(), fieldID);
+        fieldOstLHS = ssaTab.GetOriginalStTable().FindOrCreateExtraLevOriginalSt(
+            preLevOfLHSOst, ptrType->GetTypeIndex(), fieldID, offset);
       }
 
       if (fieldOstRHS == nullptr) {
         auto ptrType = GlobalTables::GetTypeTable().GetOrCreatePointerType(rhsost->GetTyIdx());
-        fieldOstRHS = ssaTab.FindOrCreateExtraLevOriginalSt(preLevOfRHSOst, ptrType->GetTypeIndex(), fieldID);
+        fieldOstRHS = ssaTab.GetOriginalStTable().FindOrCreateExtraLevOriginalSt(
+            preLevOfRHSOst, ptrType->GetTypeIndex(), fieldID, offset);
       }
 
       if (fieldOstLHS->GetIndex() == osym2Elem.size()) {
@@ -1203,11 +1186,19 @@ void AliasClass::UnionAllNodes(MapleVector<OriginalSt *> *nextLevOsts) {
   OriginalSt *ostA = *it;
   AliasElem *aeA = FindAliasElem(*ostA);
   ++it;
+  std::set<AliasElem *> aesToUnionNextLev;
   for (; it != nextLevOsts->end(); ++it) {
     OriginalSt *ostB = *it;
     AliasElem *aeB = FindAliasElem(*ostB);
-    unionFind.Union(aeA->GetClassID(), aeB->GetClassID());
+    auto idA = aeA->GetClassID();
+    auto idB = aeB->GetClassID();
+    if (unionFind.Root(idA) != unionFind.Root(idB)) {
+      unionFind.Union(idA, idB);
+      aesToUnionNextLev.insert(id2Elem[unionFind.Root(idA)]);
+    }
   }
+  // union next-level-osts of aliased osts
+  UnionNextLevelOfAliasOst(aesToUnionNextLev);
 }
 
 // This is applicable only for C language.  For each ost that is a struct,

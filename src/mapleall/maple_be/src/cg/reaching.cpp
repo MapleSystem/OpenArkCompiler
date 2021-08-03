@@ -39,7 +39,6 @@
  * optimization phase conveniently.
  */
 namespace maplebe {
-#define REACHING_DEFINITION_DUMP CG_DEBUG_FUNC(cgFunc)
 ReachingDefinition::ReachingDefinition(CGFunc &func, MemPool &memPool)
     : AnalysisResult(&memPool), cgFunc(&func), rdAlloc(&memPool), stackMp(func.GetStackMemPool()),
       pseudoInsns(rdAlloc.Adapter()), kMaxBBNum(cgFunc->NumBBs() + 1), normalBBSet(rdAlloc.Adapter()),
@@ -1131,34 +1130,6 @@ void ReachingDefinition::Dump(uint32 flag) const {
     }
   }
   LogInfo::MapleLogger() << "------------------------------------------------------\n";
-}
-
-AnalysisResult *CgDoReachingDefinition::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
-  (void)cgFuncResultMgr;
-  ASSERT(cgFunc != nullptr, "expect a cgfunc in CgDoReachingDefinition");
-  CHECK_NULL_FATAL(cgFuncResultMgr);
-  MemPool *memPool = NewMemPool();
-  ReachingDefinition *reachingDef = nullptr;
-#if TARGAARCH64 || TARGRISCV64
-  reachingDef = memPool->New<AArch64ReachingDefinition>(*cgFunc, *memPool);
-#endif
-#if TARGARM32
-  reachingDef = memPool->New<Arm32ReachingDefinition>(*cgFunc, *memPool);
-#endif
-  reachingDef->SetAnalysisMode(kRDAllAnalysis);
-  reachingDef->AnalysisStart();
-  return reachingDef;
-}
-
-AnalysisResult *CgDoClearRDInfo::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
-  (void)cgFuncResultMgr;
-  ASSERT(cgFunc != nullptr, "expect a cgfunc in CgDoClearRDInfo");
-  if (cgFunc->GetRDStatus()) {
-    cgFunc->GetRD()->ClearDefUseInfo();
-    CHECK_NULL_FATAL(cgFuncResultMgr);
-    cgFuncResultMgr->InvalidAnalysisResult(kCGFuncPhaseREACHDEF, cgFunc);
-  }
-  return nullptr;
 }
 
 bool CgReachingDefinition::PhaseRun(maplebe::CGFunc &f) {

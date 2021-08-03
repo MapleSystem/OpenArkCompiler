@@ -29,59 +29,6 @@
 #include "cg_option.h"
 namespace maplebe {
 using cgFuncOptTy = MapleFunctionPhase<CGFunc>;
-enum CgPhaseType : uint8 {
-  kCgPhaseInvalid,
-  kCgPhaseMainOpt,
-  kCgPhaseLno
-};
-
-/* driver of Cg */
-class CgFuncPhaseManager : public PhaseManager {
- public:
-  CgFuncPhaseManager(MemPool &memPool, MIRModule &mod)
-      : PhaseManager(memPool, "cg manager"),
-        cgPhaseType(kCgPhaseInvalid),
-        arFuncManager(GetMemAllocator()),
-        module(mod),
-        extraPhasesTimer(GetMemAllocator()->Adapter()) {}
-
-  ~CgFuncPhaseManager() {
-    arFuncManager.InvalidAllResults();
-    if (CGOptions::IsEnableTimePhases()) {
-      DumpCGTimers();
-    }
-  }
-
-  void RunFuncPhase(CGFunc &func, FuncPhase &phase);
-  void RegisterFuncPhases();
-  void AddPhases(std::vector<std::string> &phases);
-
-  void SetCGPhase(CgPhaseType cgPhase) {
-    cgPhaseType = cgPhase;
-  }
-  void ClearPhaseNameInfo();
-  void Emit(CGFunc &func);
-  void Run(CGFunc &func);
-  void Run() override {}
-
-  auto &GetExtraPhasesTimer() {
-    return extraPhasesTimer;
-  }
-  int64 GetOptimizeTotalTime() const;
-  int64 GetExtraPhasesTotalTime() const;
-  int64 DumpCGTimers();
-
-  CgFuncResultMgr *GetAnalysisResultManager() {
-    return &arFuncManager;
-  }
-  CgPhaseType cgPhaseType;
-  static time_t parserTime;
- private:
-  /* analysis phase result manager */
-  CgFuncResultMgr arFuncManager;
-  MIRModule &module;
-  MapleMap<std::string, time_t> extraPhasesTimer;
-};
 
 /* =================== new phase manager ===================  */
 class CgFuncPM : public FunctionPM {

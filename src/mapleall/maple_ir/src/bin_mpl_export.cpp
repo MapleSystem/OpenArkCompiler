@@ -621,6 +621,7 @@ void BinaryMplExport::OutputSymbol(MIRSymbol *sym) {
   WriteNum(sym->GetScopeIdx());
   OutputStr(sym->GetNameStrIdx());
   OutputUsrStr(sym->sectionAttr);
+  OutputUsrStr(sym->GetAsmAttr());
   WriteNum(sym->GetSKind());
   WriteNum(sym->GetStorageClass());
   size_t mark = symMark.size();

@@ -196,8 +196,6 @@ class EHFunc {
   MapleVector<EHThrow*> rethrowVec;       /* EHRethrow */
 };
 
-CGFUNCPHASE(CgDoBuildEHFunc, "buildehfunc")
-
 MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgBuildEHFunc, maplebe::CGFunc)
 MAPLE_FUNC_PHASE_DECLARE_END
 }  /* namespace maplebe */

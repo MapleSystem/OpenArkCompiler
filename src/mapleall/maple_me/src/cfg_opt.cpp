@@ -65,6 +65,9 @@ void CfgOpt::PropagateBB(BB &bb, BB *trueBranchBB, BB *falseBranchBB) {
     return;
   }
   for (auto predBB : bb.GetPred()) {
+    if (predBB->IsEmpty()) {
+      continue;
+    }
     BB *trueBranchBBForPred = trueBranchBB;
     BB *falseBranchBBForPred = falseBranchBB;
     switch (predBB->GetKind()) {

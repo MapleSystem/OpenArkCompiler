@@ -88,7 +88,6 @@ bool CGOptions::simulateSched = false;
 CGOptions::ABIType CGOptions::abiType = kABIHard;
 CGOptions::EmitFileType CGOptions::emitFileType = kAsm;
 bool CGOptions::genLongCalls = false;
-bool CGOptions::useNewPM = true;
 bool CGOptions::gcOnly = false;
 bool CGOptions::quiet = false;
 bool CGOptions::doPatchLongBranch = false;
@@ -185,7 +184,6 @@ enum OptionIndex : uint64 {
   kCrossLoc,
   kABIType,
   kEmitFileType,
-  kNewPM,
   kLongCalls,
 };
 
@@ -996,16 +994,6 @@ const Descriptor kUsage[] = {
     "                              \tname=null: not support yet\n",
     "mplcg",
     {} },
-  { kNewPM,
-    kEnable,
-    "",
-    "new-pm",
-    kBuildTypeProduct,
-    kArgCheckPolicyBool,
-    "  --new-pm               \tUse new pm.\n"
-    "  --no-verbose-asm\n",
-    "mplcg",
-    {} },
   { kLongCalls,
     kEnable,
     "",
@@ -1373,9 +1361,6 @@ bool CGOptions::SolveOptions(const std::vector<Option> &opts, bool isDebug) {
         break;
       case kLongCalls:
         (opt.Type() == kEnable) ? EnableLongCalls() : DisableLongCalls();
-        break;
-      case kNewPM:
-        (opt.Type() == kEnable) ? EnableNewPM() : DisableNewPM();
         break;
       case kGCOnly:
         (opt.Type() == kEnable) ? EnableGCOnly() : DisableGCOnly();

@@ -1002,18 +1002,6 @@ class CGOptions : public MapleDriverOptionBase {
     return genLongCalls;
   }
 
-  static void EnableNewPM() {
-    useNewPM = true;
-  }
-
-  static void DisableNewPM() {
-    useNewPM = false;
-  }
-
-  static bool UseNewPM() {
-    return useNewPM;
-  }
-
   static void EnableGCOnly() {
     gcOnly = true;
   }
@@ -1099,7 +1087,6 @@ class CGOptions : public MapleDriverOptionBase {
   static EmitFileType emitFileType;
   /* if true generate adrp/ldr/blr */
   static bool genLongCalls;
-  static bool useNewPM;
   static bool gcOnly;
   static bool doPreSchedule;
   static bool emitBlockMarker;
@@ -1128,17 +1115,9 @@ class CGOptions : public MapleDriverOptionBase {
 #define SET_END(SET) ((SET).end())
 #define IS_STR_IN_SET(SET, NAME) (SET_FIND(SET, NAME) != SET_END(SET))
 
-#define CG_DEBUG_FUNC(f)                                                                                      \
-    ((maplebe::CGOptions::GetDumpPhases().find(PhaseName()) != maplebe::CGOptions::GetDumpPhases().end()) &&  \
-     maplebe::CGOptions::IsDumpFunc((f)->GetName()))
-
-#define CG_DEBUG_FUNC_(f)                                                 \
-    ((maplebe::CGOptions::GetDumpPhases().find(PhaseName()) != maplebe::CGOptions::GetDumpPhases().end()) && \
-     maplebe::CGOptions::IsDumpFunc((f).GetName()))
-
-#define CG_DEBUG_FUNC_NEWPM(f, phaseName)                                                               \
+#define CG_DEBUG_FUNC(f)                                                               \
     (!maplebe::CGOptions::GetDumpPhases().empty() && maplebe::CGOptions::IsDumpFunc((f).GetName()) &&   \
-     maplebe::CGOptions::GetDumpPhases().find(#phaseName) != maplebe::CGOptions::GetDumpPhases().end())
+     maplebe::CGOptions::GetDumpPhases().find(PhaseName()) != maplebe::CGOptions::GetDumpPhases().end())
 #ifndef TRACE_PHASE
 #define TRACE_PHASE (IS_STR_IN_SET(maplebe::CGOptions::GetDumpPhases(), PhaseName()))
 #endif
