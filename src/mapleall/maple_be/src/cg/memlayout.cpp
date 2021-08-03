@@ -73,18 +73,6 @@ uint32 MemLayout::FindLargestActualArea(int32 &aggCopySize) {
   return maxActualSize;
 }
 
-AnalysisResult *CgDoLayoutSF::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
-  (void)cgFuncResultMgr;
-  ASSERT(cgFunc != nullptr, "expect a cgfunc in CgDoLayoutSF");
-  if (CGOptions::IsPrintFunction()) {
-    LogInfo::MapleLogger() << cgFunc->GetName() << "\n";
-  }
-
-  cgFunc->LayoutStackFrame();
-
-  return nullptr;
-}
-
 bool CgLayoutFrame::PhaseRun(maplebe::CGFunc &f) {
   if (CGOptions::IsPrintFunction()) {
     LogInfo::MapleLogger() << f.GetName() << "\n";

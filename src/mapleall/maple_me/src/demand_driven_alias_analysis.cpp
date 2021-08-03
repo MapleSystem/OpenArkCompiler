@@ -165,17 +165,17 @@ PEGBuilder::PtrValueRecorder PEGBuilder::BuildPEGNodeOfIread(const IreadSSANode 
     return PtrValueRecorder(nullptr, 0, OffsetType(0));
   }
 
-  auto *ostOfBase = ptrNode.pegNode->ost;
-  FieldID fieldId = iread->GetFieldID() + ptrNode.fieldId;
-
   MIRType *mirType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(iread->GetTyIdx());
   CHECK_FATAL(mirType->GetKind() == kTypePointer, "CreateAliasElemsExpr: ptr type expected in iread");
-  bool typeHasBeenCasted =
-      static_cast<MIRPtrType*>(mirType)->GetPointedType()->GetSize() != GetPrimTypeSize(iread->GetPrimType());
+  auto *pointedType = static_cast<MIRPtrType*>(mirType)->GetPointedType();
+  if (iread->GetFieldID() > 0) {
+    pointedType = static_cast<MIRStructType *>(pointedType)->GetFieldType(iread->GetFieldID());
+  }
+  bool typeHasBeenCasted = pointedType->GetSize() != GetPrimTypeSize(iread->GetPrimType());
   OffsetType offset = typeHasBeenCasted ? OffsetType::InvalidOffset() : ptrNode.offset;
-
+  auto *ostOfBase = ptrNode.pegNode->ost;
   auto *mayUsedOst =
-      AliasClass::FindOrCreateExtraLevOst(ssaTab, ostOfBase, iread->GetTyIdx(), fieldId, offset);
+      AliasClass::FindOrCreateExtraLevOst(ssaTab, ostOfBase, iread->GetTyIdx(), iread->GetFieldID(), offset);
   // build prevLev-nextLev relationship
   auto *pegNodeOfMayUsedOSt = peg->GetOrCreateNodeOf(mayUsedOst);
 
@@ -234,15 +234,20 @@ PEGBuilder::PtrValueRecorder PEGBuilder::BuildPEGNodeOfAdd(const BinaryNode *bin
       return PtrValueRecorder(ptrNode.pegNode, 0, OffsetType::InvalidOffset());
     }
 
-    OffsetType offset(kOffsetUnknown);
     auto *constVal = static_cast<ConstvalNode *>(binaryNode->Opnd(1))->GetConstVal();
     ASSERT(constVal->GetKind() == kConstInt, "pointer cannot add/sub a non-integer value");
-    constexpr int kBitNumInOneByte = 8;
-    int64 offsetValue = static_cast<MIRIntConst *>(constVal)->GetValue() * kBitNumInOneByte;
+    int64 offsetInByte = static_cast<MIRIntConst *>(constVal)->GetValue();
+    int64 offsetInBit = kOffsetUnknown;
+    if (offsetInByte < kOffsetMax && offsetInByte > kOffsetMin) {
+      constexpr int kBitNumInOneByte = 8;
+      offsetInBit = offsetInByte * kBitNumInOneByte;
+    }
+
+    OffsetType offset(kOffsetUnknown);
     if (binaryNode->GetOpCode() == OP_sub) {
-      offset = ptrNode.offset + (-offsetValue);
+      offset = ptrNode.offset + (-offsetInBit);
     } else if (binaryNode->GetOpCode() == OP_add) {
-      offset = ptrNode.offset + offsetValue;
+      offset = ptrNode.offset + offsetInBit;
     } else {
       CHECK_FATAL(false, "unsupported pointer arithmetic");
     }
@@ -419,12 +424,14 @@ void PEGBuilder::AddAssignEdge(const StmtNode *stmt, PEGNode *lhsNode, PEGNode *
         // the OriginalSt of at least one side has appearance in code
         if (fieldOstLHS == nullptr) {
           auto *ptrType = GlobalTables::GetTypeTable().GetOrCreatePointerType(lhsOst->GetTyIdx());
-          fieldOstLHS = ssaTab->FindOrCreateExtraLevOriginalSt(preLevOfLHSOst, ptrType->GetTypeIndex(), fieldId);
+          fieldOstLHS = ssaTab->GetOriginalStTable().FindOrCreateExtraLevOriginalSt(
+              preLevOfLHSOst, ptrType->GetTypeIndex(), fieldId, offset);
         }
 
         if (fieldOstRHS == nullptr) {
           auto *ptrType = GlobalTables::GetTypeTable().GetOrCreatePointerType(rhsOst->GetTyIdx());
-          fieldOstRHS = ssaTab->FindOrCreateExtraLevOriginalSt(preLevOfRHSOst, ptrType->GetTypeIndex(), fieldId);
+          fieldOstRHS = ssaTab->GetOriginalStTable().FindOrCreateExtraLevOriginalSt(
+              preLevOfRHSOst, ptrType->GetTypeIndex(), fieldId, offset);
         }
 
         auto pegNodeOfLhsField = peg->GetOrCreateNodeOf(fieldOstLHS);
@@ -493,10 +500,8 @@ void PEGBuilder::BuildPEGNodeInIassign(const IassignNode *iassign) {
   }
 
   auto *ostOfBase = baseAddrValNode.pegNode->ost;
-  FieldID fieldId = iassign->GetFieldID() + baseAddrValNode.fieldId;
-
   OriginalSt *defedOst = AliasClass::FindOrCreateExtraLevOst(
-      ssaTab, ostOfBase, iassign->GetTyIdx(), fieldId, baseAddrValNode.offset);
+      ssaTab, ostOfBase, iassign->GetTyIdx(), iassign->GetFieldID(), baseAddrValNode.offset);
   PEGNode *lhsNode = peg->GetOrCreateNodeOf(defedOst);
 
   // build prevLev-nextLev relation

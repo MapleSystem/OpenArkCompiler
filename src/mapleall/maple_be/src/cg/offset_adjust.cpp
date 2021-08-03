@@ -26,21 +26,6 @@
 
 namespace maplebe {
 using namespace maple;
-AnalysisResult *CgDoFPLROffsetAdjustment::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
-  (void)cgFuncResultMgr;
-  MemPool *memPool = NewMemPool();
-  FPLROffsetAdjustment *offsetAdjustment = nullptr;
-  ASSERT(cgFunc != nullptr, "expect a cgfun in CgDoFPLROffsetAdjustment");
-#if TARGAARCH64 || TARGRISCV64
-  offsetAdjustment = memPool->New<AArch64FPLROffsetAdjustment>(*cgFunc);
-#endif
-#if TARGARM32
-  offsetAdjustment = memPool->New<Arm32FPLROffsetAdjustment>(*cgFunc);
-#endif
-  offsetAdjustment->Run();
-  return nullptr;
-}
-
 bool CgFPLROffsetAdjustment::PhaseRun(maplebe::CGFunc &f) {
   FPLROffsetAdjustment *offsetAdjustment = nullptr;
 #if TARGAARCH64 || TARGRISCV64

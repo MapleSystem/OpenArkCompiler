@@ -211,6 +211,7 @@ class Ebo {
   virtual bool IsAdd(const Insn &insn) const = 0;
   virtual bool IsClinitCheck(const Insn &insn) const = 0;
   virtual bool IsLastAndBranch(BB &bb, Insn &insn) const = 0;
+  virtual bool IsSameRedefine(BB &bb, Insn &insn, OpndInfo &opndInfo) const = 0;
   virtual bool ResIsNotDefAndUse(Insn &insn) const = 0;
   virtual bool LiveOutOfBB(const Operand &opnd, const BB &bb) const = 0;
   OpndInfo *BuildMemOpndInfo(BB &bb, Insn &insn, Operand &opnd, int32 opndIndex);
@@ -238,10 +239,6 @@ class Ebo {
   MapleVector<OpndInfo*> exprInfoTable;
   MapleVector<InsnInfo*> insnInfoTable;
 };
-
-CGFUNCPHASE_CANSKIP(CgDoEbo, "ebo")
-CGFUNCPHASE_CANSKIP(CgDoEbo1, "ebo1")
-CGFUNCPHASE_CANSKIP(CgDoPostEbo, "postebo")
 
 MAPLE_FUNC_PHASE_DECLARE(CgEbo0, maplebe::CGFunc)
 MAPLE_FUNC_PHASE_DECLARE(CgEbo1, maplebe::CGFunc)

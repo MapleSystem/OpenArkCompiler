@@ -357,6 +357,11 @@ void MIRSymbol::Dump(bool isLocal, int32 indent, bool suppressInit, const MIRSym
     PrintString(GlobalTables::GetUStrTable().GetStringFromStrIdx(sectionAttr));
     LogInfo::MapleLogger() << " )";
   }
+  if (asmAttr != UStrIdx(0)) {
+    LogInfo::MapleLogger() << " asm (";
+    PrintString(GlobalTables::GetUStrTable().GetStringFromStrIdx(asmAttr));
+    LogInfo::MapleLogger() << " )";
+  }
   typeAttrs.DumpAttributes();
   if (sKind == kStJavaClass || sKind == kStJavaInterface || GetStorageClass() == kScTypeInfoName ||
       GetStorageClass() == kScTypeInfo || GetStorageClass() == kScTypeCxxAbi) {

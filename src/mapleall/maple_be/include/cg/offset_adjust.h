@@ -35,7 +35,6 @@ class FPLROffsetAdjustment {
   CGFunc *cgFunc;
 };
 
-CGFUNCPHASE(CgDoFPLROffsetAdjustment, "offsetadjustforfplr")
 MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgFPLROffsetAdjustment, maplebe::CGFunc)
 MAPLE_FUNC_PHASE_DECLARE_END
 }  /* namespace maplebe */

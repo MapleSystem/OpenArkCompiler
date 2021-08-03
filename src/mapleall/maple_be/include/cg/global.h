@@ -35,7 +35,6 @@ class GlobalOpt {
   CGFunc &cgFunc;
 };
 
-CGFUNCPHASE_CANSKIP(CgDoGlobalOpt, "globalopt")
 MAPLE_FUNC_PHASE_DECLARE(CgGlobalOpt, maplebe::CGFunc)
 }  /* namespace maplebe */
 

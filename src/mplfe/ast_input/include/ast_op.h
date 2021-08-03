@@ -156,6 +156,7 @@ enum ASTStmtOp {
   kASTStmtImplicitCastExpr,
   kASTStmtParenExpr,
   kASTStmtIntegerLiteral,
+  kASTStmtFloatingLiteral,
   kASTStmtVAArgExpr,
   kASTStmtConditionalOperator,
   kASTStmtCharacterLiteral,

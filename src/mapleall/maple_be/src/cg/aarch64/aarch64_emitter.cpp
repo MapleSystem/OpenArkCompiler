@@ -542,16 +542,6 @@ void AArch64AsmEmitter::Run(FuncEmitInfo &funcEmitInfo) {
 #endif /* ~EMIT_INSN_COUNT */
 }
 
-AnalysisResult *CgDoEmission::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
-  (void)cgFuncResultMgr;
-  ASSERT(cgFunc != nullptr, "null ptr check");
-  Emitter *emitter = cgFunc->GetCG()->GetEmitter();
-  CHECK_NULL_FATAL(emitter);
-  AsmFuncEmitInfo funcEmitInfo(*cgFunc);
-  static_cast<AArch64AsmEmitter*>(emitter)->Run(funcEmitInfo);
-  return nullptr;
-}
-
 /* new phase manager */
 bool CgEmission::PhaseRun(maplebe::CGFunc &f) {
   Emitter *emitter = f.GetCG()->GetEmitter();

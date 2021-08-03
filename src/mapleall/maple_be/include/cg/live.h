@@ -70,8 +70,6 @@ class LiveAnalysis : public AnalysisResult {
   StackMemPool &stackMp;
 };
 
-CGFUNCPHASE(CgDoLiveAnalysis, "liveanalysis")
-
 MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgLiveAnalysis, maplebe::CGFunc)
   LiveAnalysis *GetResult() {
     return live;

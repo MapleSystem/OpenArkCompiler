@@ -51,15 +51,6 @@ void LabelCreation::CreateStartEndLabel() {
   }
 }
 
-AnalysisResult *CgDoCreateLabel::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResultMgr) {
-  (void)cgFuncResultMgr;
-  MemPool *memPool = NewMemPool();
-  ASSERT(cgFunc != nullptr, "expect a cgfunc in CgDoCreateLabel");
-  LabelCreation *labelCreate = memPool->New<LabelCreation>(*cgFunc);
-  labelCreate->Run();
-  return nullptr;
-}
-
 bool CgCreateLabel::PhaseRun(maplebe::CGFunc &f) {
   MemPool *memPool = GetPhaseMemPool();
   LabelCreation *labelCreate = memPool->New<LabelCreation>(f);

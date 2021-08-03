@@ -508,68 +508,6 @@ void Schedule::InitIDAndLoc() {
   }
 }
 
-AnalysisResult* CgDoPreScheduling::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResMgr) {
-  ASSERT(cgFunc != nullptr, "expect a cgfunc in CgDoPreScheduling");
-  if (cgFunc->HasAsm()) {
-    return nullptr;
-  }
-  CHECK_NULL_FATAL(cgFuncResMgr);
-  if (LIST_SCHED_DUMP) {
-    LogInfo::MapleLogger() << "Before CgDoPreScheduling : " << cgFunc->GetName() << "\n";
-    DotGenerator::GenerateDot("preschedule", *cgFunc, cgFunc->GetMirModule(), true);
-  }
-
-  auto *live = static_cast<LiveAnalysis*>(cgFuncResMgr->GetAnalysisResult(kCGFuncPhaseLIVE, cgFunc));
-  /* revert liveanalysis result container. */
-  ASSERT(live != nullptr, "nullptr check");
-  live->ResetLiveSet();
-
-  MemPool *scheduleMp = NewMemPool();
-  Schedule *schedule = nullptr;
-#if TARGAARCH64 || TARGRISCV64
-  schedule = scheduleMp->New<AArch64Schedule>(*cgFunc, *scheduleMp, *live, PhaseName());
-#endif
-#if TARGARM32
-  schedule = scheduleMp->New<Arm32Schedule>(*cgFunc, *scheduleMp, *live, PhaseName());
-#endif
-  schedule->ListScheduling(true);
-  live->ClearInOutDataInfo();
-  cgFuncResMgr->InvalidAnalysisResult(kCGFuncPhaseLIVE, cgFunc);
-
-  return nullptr;
-}
-
-AnalysisResult* CgDoScheduling::Run(CGFunc *cgFunc, CgFuncResultMgr *cgFuncResMgr) {
-  ASSERT(cgFunc != nullptr, "expect a cgfunc in CgDoScheduling");
-  if (cgFunc->HasAsm()) {
-    return nullptr;
-  }
-  CHECK_NULL_FATAL(cgFuncResMgr);
-  if (LIST_SCHED_DUMP) {
-    LogInfo::MapleLogger() << "Before CgDoScheduling : " << cgFunc->GetName() << "\n";
-    DotGenerator::GenerateDot("scheduling", *cgFunc, cgFunc->GetMirModule(), true);
-  }
-
-  auto *live = static_cast<LiveAnalysis*>(cgFuncResMgr->GetAnalysisResult(kCGFuncPhaseLIVE, cgFunc));
-  /* revert liveanalysis result container. */
-  ASSERT(live != nullptr, "nullptr check");
-  live->ResetLiveSet();
-
-  MemPool *scheduleMp = NewMemPool();
-  Schedule *schedule = nullptr;
-#if TARGAARCH64 || TARGRISCV64
-  schedule = scheduleMp->New<AArch64Schedule>(*cgFunc, *scheduleMp, *live, PhaseName());
-#endif
-#if TARGARM32
-  schedule = scheduleMp->New<Arm32Schedule>(*cgFunc, *scheduleMp, *live, PhaseName());
-#endif
-  schedule->ListScheduling(false);
-  live->ClearInOutDataInfo();
-  cgFuncResMgr->InvalidAnalysisResult(kCGFuncPhaseLIVE, cgFunc);
-
-  return nullptr;
-}
-
 /* === new pm === */
 bool CgPreScheduling::PhaseRun(maplebe::CGFunc &f) {
   if (LIST_SCHED_DUMP_NEWPM) {
@@ -582,7 +520,7 @@ bool CgPreScheduling::PhaseRun(maplebe::CGFunc &f) {
   live->ResetLiveSet();
 
   Schedule *schedule = nullptr;
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
   schedule = GetPhaseAllocator()->New<AArch64Schedule>(f, *GetPhaseMemPool(), *live, PhaseName());
 #endif
 #if TARGARM32
@@ -593,9 +531,12 @@ bool CgPreScheduling::PhaseRun(maplebe::CGFunc &f) {
 
   return true;
 }
+
 void CgPreScheduling::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
   aDep.AddRequired<CgLiveAnalysis>();
+  aDep.PreservedAllExcept<CgLiveAnalysis>();
 }
+
 MAPLE_TRANSFORM_PHASE_REGISTER(CgPreScheduling, prescheduling)
 
 bool CgScheduling::PhaseRun(maplebe::CGFunc &f) {
@@ -609,7 +550,7 @@ bool CgScheduling::PhaseRun(maplebe::CGFunc &f) {
   live->ResetLiveSet();
 
   Schedule *schedule = nullptr;
-#if TARGAARCH64
+#if TARGAARCH64 || TARGRISCV64
   schedule = GetPhaseAllocator()->New<AArch64Schedule>(f, *GetPhaseMemPool(), *live, PhaseName());
 #endif
 #if TARGARM32
@@ -620,8 +561,11 @@ bool CgScheduling::PhaseRun(maplebe::CGFunc &f) {
 
   return true;
 }
+
 void CgScheduling::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
   aDep.AddRequired<CgLiveAnalysis>();
+  aDep.PreservedAllExcept<CgLiveAnalysis>();
 }
+
 MAPLE_TRANSFORM_PHASE_REGISTER(CgScheduling, scheduling)
 }  /* namespace maplebe */
