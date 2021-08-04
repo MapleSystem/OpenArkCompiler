@@ -1272,12 +1272,12 @@ void ValueRangePropagation::DealWithCondGoto(BB &bb, MeStmt &stmt) {
 
 AnalysisResult *MeDoValueRangePropagation::Run(MeFunction *func, MeFuncResultMgr *frm, ModuleResultMgr*) {
   CHECK_FATAL(frm != nullptr, "frm is nullptr");
-  auto *dom = static_cast<Dominance*>(frm->GetAnalysisResult(MeFuncPhase_DOMINANCE, func));
+  auto *dom = static_cast<Dominance*>(frm->GetAnalysisResult(MeFuncPhase_DOMINANCE, func, !MeOption::quiet));
   CHECK_FATAL(dom != nullptr, "dominance phase has problem");
-  auto *irMap = static_cast<MeIRMap*>(frm->GetAnalysisResult(MeFuncPhase_IRMAPBUILD, func));
+  auto *irMap = static_cast<MeIRMap*>(frm->GetAnalysisResult(MeFuncPhase_IRMAPBUILD, func, !MeOption::quiet));
   CHECK_FATAL(irMap != nullptr, "irMap phase has problem");
   frm->InvalidAnalysisResult(MeFuncPhase_MELOOP, func);
-  IdentifyLoops *meLoop = static_cast<IdentifyLoops*>(frm->GetAnalysisResult(MeFuncPhase_MELOOP, func));
+  IdentifyLoops *meLoop = static_cast<IdentifyLoops*>(frm->GetAnalysisResult(MeFuncPhase_MELOOP, func, !MeOption::quiet));
   if (ValueRangePropagation::isDebug) {
     LogInfo::MapleLogger() << func->GetName() << "\n";
     func->Dump(false);
