@@ -267,13 +267,15 @@ void Emitter::EmitFileInfo(const std::string &fileName) {
 
 void Emitter::EmitInlineAsmSection() {
   MapleVector<MapleString> &asmSections = cg->GetMIRModule()->GetAsmDecls();
-  Emit("#APP\n");
-  for (auto &singleSection : asmSections) {
-    Emit("\t");
-    Emit(singleSection);
-    Emit("\n");
+  if (!asmSections.empty()) {
+    Emit("#APP\n");
+    for (auto &singleSection : asmSections) {
+      Emit("\t");
+      Emit(singleSection);
+      Emit("\n");
+    }
+    Emit("#NO_APP\n");
   }
-  Emit("#NO_APP\n");
 }
 void Emitter::EmitAsmLabel(AsmLabel label) {
   switch (label) {
@@ -692,6 +694,11 @@ void Emitter::EmitScalarConstant(MIRConst &mirConst, bool newLine, bool flag32, 
       }
       if (symAddr.GetOffset() != 0) {
         Emit(" + ").Emit(symAddr.GetOffset());
+      }
+      if (symAddr.GetFieldID() > 1) {
+        MIRStructType *structType = static_cast<MIRStructType*>(symAddrSym->GetType());
+        ASSERT(structType != nullptr, "EmitScalarConstant: non-zero fieldID for non-structure");
+        Emit(" + ").Emit(Globals::GetInstance()->GetBECommon()->GetFieldOffset(*structType, symAddr.GetFieldID()).first);
       }
       break;
     }

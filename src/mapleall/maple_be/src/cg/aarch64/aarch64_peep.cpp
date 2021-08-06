@@ -411,8 +411,8 @@ void RemoveMovingtoSameRegAArch64::Run(BB &bb, Insn &insn) {
   ASSERT(insn.GetOperand(kInsnSecondOpnd).IsRegister(), "expects registers");
   auto &reg1 = static_cast<AArch64RegOperand&>(insn.GetOperand(kInsnFirstOpnd));
   auto &reg2 = static_cast<AArch64RegOperand&>(insn.GetOperand(kInsnSecondOpnd));
-
-  if ((reg1.GetRegisterNumber() == reg2.GetRegisterNumber()) && (reg1.GetSize() == reg2.GetSize())) {
+  /* remove mov x0,x0 when it cast i32 to i64 */
+  if ((reg1.GetRegisterNumber() == reg2.GetRegisterNumber()) && (reg1.GetSize() >= reg2.GetSize())) {
     bb.RemoveInsn(insn);
   }
 }

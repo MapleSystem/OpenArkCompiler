@@ -104,6 +104,9 @@ bool MeOption::srForAdd = false;
 bool MeOption::doLFTR = true;
 std::string MeOption::inlineFuncList = "";
 bool MeOption::meVerify = false;
+uint32 MeOption::dseRunsLimit = 2;    // dse phase run at most 2 times each PU
+uint32 MeOption::hdseRunsLimit = 3;   // hdse phase run at most 3 times each PU
+uint32 MeOption::hpropRunsLimit = 2;  // hprop phase run at most 2 times each PU
 #if MIR_JAVA
 std::string MeOption::acquireFuncName = "Landroid/location/LocationManager;|requestLocationUpdates|";
 std::string MeOption::releaseFuncName = "Landroid/location/LocationManager;|removeUpdates|";
@@ -217,6 +220,9 @@ enum OptionIndex {
   kMeThreads,
   kMeIgnoreInferredRetType,
   kMeVerify,
+  kDseRunsLimit,
+  kHdseRunsLimit,
+  kHpropRunsLimit,
 };
 
 const Descriptor kUsage[] = {
@@ -586,7 +592,7 @@ const Descriptor kUsage[] = {
     "copyproplimit",
     kBuildTypeExperimental,
     kArgCheckPolicyRequired,
-    "  --copyproplimit          \tApply Rename-to-Preg optimization only up to NUM times\n"
+    "  --copyproplimit             \tApply copy propagation only up to NUM times\n"
     "                              \t--copyproplimit=NUM\n",
     "me",
     {} },
@@ -1042,6 +1048,36 @@ const Descriptor kUsage[] = {
     "  --meverify                       \tenable meverify features\n",
     "me",
     {}},
+  { kDseRunsLimit,
+    0,
+    "",
+    "dserunslimit",
+    kBuildTypeExperimental,
+    kArgCheckPolicyNumeric,
+    "  --dserunslimit=n            \tControl number of times dse phase can be run\n"
+    "                              \t--dserunslimit=NUM\n",
+    "me",
+    {} },
+  { kHdseRunsLimit,
+    0,
+    "",
+    "hdserunslimit",
+    kBuildTypeExperimental,
+    kArgCheckPolicyNumeric,
+    "  --hdserunslimit=n           \tControl number of times hdse phase can be run\n"
+    "                              \t--hdserunslimit=NUM\n",
+    "me",
+    {} },
+  { kHpropRunsLimit,
+    0,
+    "",
+    "hproprunslimit",
+    kBuildTypeExperimental,
+    kArgCheckPolicyNumeric,
+    "  --hproprunslimit=n          \tControl number of times hprop phase can be run\n"
+    "                              \t--hproprunslimit=NUM\n",
+    "me",
+    {} },
 #if MIR_JAVA
   { kMeAcquireFunc,
     0,
@@ -1468,6 +1504,15 @@ bool MeOption::SolveOptions(const std::vector<mapleOption::Option> &opts, bool i
         break;
       case kMeVerify:
         meVerify = (opt.Type() == kEnable);
+        break;
+      case kDseRunsLimit:
+        dseRunsLimit = std::stoul(opt.Args(), nullptr);
+        break;
+      case kHdseRunsLimit:
+        hdseRunsLimit = std::stoul(opt.Args(), nullptr);
+        break;
+      case kHpropRunsLimit:
+        hpropRunsLimit = std::stoul(opt.Args(), nullptr);
         break;
 #if MIR_JAVA
       case kMeAcquireFunc:

@@ -488,6 +488,8 @@ class SSANode : public BaseNode {
     return *(GetSSAVar()->GetOst()->GetMIRSymbol());
   }
 
+  virtual BaseNode *GetNoSSANode()= 0;
+
  protected:
   VersionSt *ssaVar = nullptr;
 };
@@ -514,6 +516,11 @@ class AddrofSSANode : public SSANode {
   FieldID GetFieldID() const {
     return addrofNode->GetFieldID();
   }
+
+  BaseNode *GetNoSSANode() override {
+    return addrofNode;
+  }
+
  private:
   AddrofNode *addrofNode;
 };
@@ -547,6 +554,11 @@ class IreadSSANode : public SSANode {
   void SetOpnd(BaseNode *node, size_t i = 0) override {
     ireadNode->SetOpnd(node, i);
   }
+
+  BaseNode *GetNoSSANode() override {
+    return ireadNode;
+  }
+
  private:
   IreadNode *ireadNode;
 };
@@ -568,6 +580,11 @@ class RegreadSSANode : public SSANode {
   PregIdx GetRegIdx() const {
     return regreadNode->GetRegIdx();
   }
+
+  BaseNode *GetNoSSANode() override {
+    return regreadNode;
+  }
+
  private:
   RegreadNode *regreadNode;
 };
