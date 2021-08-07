@@ -32,6 +32,7 @@
 #endif
 #include "securec.h"
 #include "string_utils.h"
+#include "ssa_mir_nodes.h"
 
 namespace maplebe {
 namespace arrayNameForLower {
