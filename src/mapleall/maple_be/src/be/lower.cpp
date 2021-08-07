@@ -32,6 +32,7 @@
 #endif
 #include "securec.h"
 #include "string_utils.h"
+#include "ssa_mir_nodes.h"
 
 namespace maplebe {
 namespace arrayNameForLower {
@@ -2211,6 +2212,9 @@ void CGLowerer::ProcessArrayExpr(BaseNode &expr, BlockNode &blkNode) {
 }
 
 BaseNode *CGLowerer::LowerExpr(BaseNode &parent, BaseNode &expr, BlockNode &blkNode) {
+  if (expr.IsSSANode()) {
+    return LowerExpr(parent, *static_cast<SSANode &>(expr).GetNoSSANode(), blkNode);
+  }
   bool isCvtU1Expr = (expr.GetOpCode() == OP_cvt && expr.GetPrimType() == PTY_u1 &&
       static_cast<TypeCvtNode&>(expr).FromType() != PTY_u1);
   if (expr.GetPrimType() == PTY_u1) {

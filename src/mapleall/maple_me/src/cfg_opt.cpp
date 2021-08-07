@@ -88,6 +88,7 @@ void CfgOpt::PropagateBB(BB &bb, BB *trueBranchBB, BB *falseBranchBB) {
         }
         break;
       }
+      case kBBGoto:
       case kBBFallthru: {
         if (!IsShortCircuitBB(predBB->GetBBLabel())) {
           continue;

@@ -32,6 +32,9 @@ bool IVCanon::ResolveExprValue(MeExpr *x, ScalarMeExpr *phiLHS) {
   case kMeOpConst: return IsPrimitiveInteger(x->GetPrimType());
   case kMeOpVar:
   case kMeOpReg:{
+    if (x->IsVolatile()) {
+      return false;
+    }
     if (x == phiLHS) {
       return true;
     }
