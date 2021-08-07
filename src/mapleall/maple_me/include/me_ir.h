@@ -2337,6 +2337,40 @@ class IntrinsiccallMeStmt : public NaryMeStmt, public MuChiMePart, public Assign
   PrimType retPType = kPtyInvalid;
 };
 
+class AsmMeStmt : public NaryMeStmt, public MuChiMePart, public AssignedPart {
+ public:
+  AsmMeStmt(MapleAllocator *alloc, const StmtNode *stt)
+      : NaryMeStmt(alloc, stt),
+        MuChiMePart(alloc),
+        AssignedPart(alloc),
+        asmString(static_cast<const AsmNode*>(stt)->asmString),
+        inputConstraints(alloc->Adapter()),
+        outputConstraints(alloc->Adapter()),
+        clobberList(alloc->Adapter()),
+        gotoLabels(alloc->Adapter()),
+        qualifiers(static_cast<const AsmNode*>(stt)->qualifiers) {
+          inputConstraints = static_cast<const AsmNode*>(stt)->inputConstraints;
+          outputConstraints = static_cast<const AsmNode*>(stt)->outputConstraints;
+          clobberList = static_cast<const AsmNode*>(stt)->clobberList;
+          gotoLabels = static_cast<const AsmNode*>(stt)->gotoLabels;
+        }
+  virtual ~AsmMeStmt() = default;
+  MapleMap<OStIdx, ChiMeNode*> *GetChiList() {
+    return &chiList;
+  }
+  MapleVector<MustDefMeNode> *GetMustDefList() {
+    return &mustDefList;
+  }
+  StmtNode &EmitStmt(SSATab &ssaTab);
+ public:
+  MapleString asmString;
+  MapleVector<UStrIdx> inputConstraints;  // length is numOpnds
+  MapleVector<UStrIdx> outputConstraints; // length is returnValues.size()
+  MapleVector<UStrIdx> clobberList;
+  MapleVector<LabelIdx> gotoLabels;
+  uint32 qualifiers;
+};
+
 class RetMeStmt : public NaryMeStmt {
  public:
   RetMeStmt(MapleAllocator *alloc, const StmtNode *stt)

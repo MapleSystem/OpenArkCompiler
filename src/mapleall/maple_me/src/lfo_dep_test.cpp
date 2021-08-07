@@ -68,6 +68,7 @@ void LfoDepInfo::CreateDoloopInfo(BlockNode *block, DoloopInfo *parent) {
       case OP_icallassigned:
       case OP_return:
       case OP_throw:
+      case OP_asm:
         if (parent) {
           parent->hasOtherCtrlFlow = true;
         }

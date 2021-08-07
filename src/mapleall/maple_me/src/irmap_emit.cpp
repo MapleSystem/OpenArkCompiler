@@ -491,6 +491,34 @@ StmtNode &IntrinsiccallMeStmt::EmitStmt(SSATab &ssaTab) {
   return *callNode;
 }
 
+StmtNode &AsmMeStmt::EmitStmt(SSATab &ssaTab) {
+  AsmNode *asmNode = ssaTab.GetModule().CurFunction()->GetCodeMempool()->New<AsmNode>(&ssaTab.GetModule().GetCurFuncCodeMPAllocator());
+  asmNode->GetNopnd().resize(NumMeStmtOpnds());
+  for (size_t i = 0; i < NumMeStmtOpnds(); ++i) {
+    asmNode->SetOpnd(&GetOpnd(i)->EmitExpr(ssaTab), i);
+  }
+  asmNode->SetNumOpnds(asmNode->GetNopndSize());
+  asmNode->SetSrcPos(GetSrcPosition());
+  EmitCallReturnVector(*asmNode->GetCallReturnVector());
+  for (size_t j = 0; j < asmNode->GetCallReturnVector()->size(); ++j) {
+    CallReturnPair retPair = (*asmNode->GetCallReturnVector())[j];
+    if (!retPair.second.IsReg()) {
+      StIdx stIdx = retPair.first;
+      if (stIdx.Islocal()) {
+        MIRSymbolTable *symbolTab = ssaTab.GetModule().CurFunction()->GetSymTab();
+        MIRSymbol *symbol = symbolTab->GetSymbolFromStIdx(stIdx.Idx());
+        symbol->ResetIsDeleted();
+      }
+    }
+  }
+  asmNode->asmString = asmString;
+  asmNode->inputConstraints = inputConstraints;
+  asmNode->outputConstraints = outputConstraints;
+  asmNode->clobberList = clobberList;
+  asmNode->gotoLabels = gotoLabels;
+  return *asmNode;
+}
+
 StmtNode &NaryMeStmt::EmitStmt(SSATab &ssaTab) {
   auto *naryStmt =
       ssaTab.GetModule().CurFunction()->GetCodeMempool()->New<NaryStmtNode>(ssaTab.GetModule(), Opcode(GetOp()));
