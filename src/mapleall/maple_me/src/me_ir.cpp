@@ -1302,6 +1302,7 @@ void NaryMeStmt::Dump(const IRMap *irMap) const {
 void AssignedPart::DumpAssignedPart(const IRMap *irMap) const {
   LogInfo::MapleLogger() << "    assignedpart: {";
   for (auto it = mustDefList.begin(); it != mustDefList.end(); ++it) {
+    LogInfo::MapleLogger() << " ";
     const MeExpr *lhsVar = (*it).GetLHS();
     lhsVar->Dump(irMap);
   }
@@ -1351,6 +1352,14 @@ void IntrinsiccallMeStmt::Dump(const IRMap *irMap) const {
     mirType->Dump(0);
   }
   LogInfo::MapleLogger() << GetIntrinsicName(intrinsic) << '\n';
+  DumpOpnds(irMap);
+  DumpMuList(irMap, muList);
+  DumpChiList(irMap, chiList);
+  DumpAssignedPart(irMap);
+}
+
+void AsmMeStmt::Dump(const IRMap *irMap) const {
+  LogInfo::MapleLogger() << "||MEIR|| " << kOpcodeInfo.GetTableItemAt(GetOp()).name << " " << '\"' << asmString << '\"' << std::endl;
   DumpOpnds(irMap);
   DumpMuList(irMap, muList);
   DumpChiList(irMap, chiList);
