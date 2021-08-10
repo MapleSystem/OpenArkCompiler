@@ -21,6 +21,7 @@
 #include "inline.h"
 #include "me_phase_manager.h"
 #include "constantfold.h"
+#include "lfo_loop_vec.h"
 
 namespace maple {
 using namespace mapleOption;
@@ -199,7 +200,10 @@ ErrorCode MapleCombCompiler::Compile(MplOptions &options, std::unique_ptr<MIRMod
     PrintCommand(options);
   }
   ErrorCode nErr = runner.Run();
-
+  // dump vectorized loop counter here
+  if (LoopVectorization::vectorizedLoop > 0) {
+    LogInfo::MapleLogger() << "\n " << LoopVectorization::vectorizedLoop << " loop vectorized\n";
+  }
   delete optMp;
   return nErr;
 }
