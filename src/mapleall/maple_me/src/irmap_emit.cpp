@@ -328,16 +328,16 @@ StmtNode &MaydassignMeStmt::EmitStmt(SSATab &ssaTab) {
 
 void MeStmt::EmitCallReturnVector(CallReturnVector &nRets) {
   MapleVector<MustDefMeNode> *mustDefs = GetMustDefList();
-  if (mustDefs == nullptr || mustDefs->empty()) {
-    return;
-  }
-  MeExpr *meExpr = mustDefs->front().GetLHS();
-  if (meExpr->GetMeOp() == kMeOpVar) {
-    OriginalSt *ost = static_cast<VarMeExpr*>(meExpr)->GetOst();
-    MIRSymbol *symbol = ost->GetMIRSymbol();
-    nRets.push_back(CallReturnPair(symbol->GetStIdx(), RegFieldPair(0, 0)));
-  } else if (meExpr->GetMeOp() == kMeOpReg) {
-    nRets.push_back(CallReturnPair(StIdx(), RegFieldPair(0, static_cast<RegMeExpr*>(meExpr)->GetRegIdx())));
+  CHECK_FATAL(mustDefs != nullptr, "EmitCallReturnVector: mustDefList cannot be null");
+  for (MustDefMeNode mustdef : *mustDefs) {
+    MeExpr *meExpr = mustdef.GetLHS();
+    if (meExpr->GetMeOp() == kMeOpVar) {
+      OriginalSt *ost = static_cast<VarMeExpr*>(meExpr)->GetOst();
+      MIRSymbol *symbol = ost->GetMIRSymbol();
+      nRets.push_back(CallReturnPair(symbol->GetStIdx(), RegFieldPair(0, 0)));
+    } else if (meExpr->GetMeOp() == kMeOpReg) {
+      nRets.push_back(CallReturnPair(StIdx(), RegFieldPair(0, static_cast<RegMeExpr*>(meExpr)->GetRegIdx())));
+    }
   }
 }
 
@@ -489,6 +489,35 @@ StmtNode &IntrinsiccallMeStmt::EmitStmt(SSATab &ssaTab) {
     }
   }
   return *callNode;
+}
+
+StmtNode &AsmMeStmt::EmitStmt(SSATab &ssaTab) {
+  AsmNode *asmNode = ssaTab.GetModule().CurFunction()->GetCodeMempool()->New<AsmNode>(&ssaTab.GetModule().GetCurFuncCodeMPAllocator());
+  asmNode->GetNopnd().resize(NumMeStmtOpnds());
+  for (size_t i = 0; i < NumMeStmtOpnds(); ++i) {
+    asmNode->SetOpnd(&GetOpnd(i)->EmitExpr(ssaTab), i);
+  }
+  asmNode->SetNumOpnds(asmNode->GetNopndSize());
+  asmNode->SetSrcPos(GetSrcPosition());
+  EmitCallReturnVector(*asmNode->GetCallReturnVector());
+  for (size_t j = 0; j < asmNode->GetCallReturnVector()->size(); ++j) {
+    CallReturnPair retPair = (*asmNode->GetCallReturnVector())[j];
+    if (!retPair.second.IsReg()) {
+      StIdx stIdx = retPair.first;
+      if (stIdx.Islocal()) {
+        MIRSymbolTable *symbolTab = ssaTab.GetModule().CurFunction()->GetSymTab();
+        MIRSymbol *symbol = symbolTab->GetSymbolFromStIdx(stIdx.Idx());
+        symbol->ResetIsDeleted();
+      }
+    }
+  }
+  asmNode->asmString = asmString;
+  asmNode->inputConstraints = inputConstraints;
+  asmNode->outputConstraints = outputConstraints;
+  asmNode->clobberList = clobberList;
+  asmNode->gotoLabels = gotoLabels;
+  asmNode->qualifiers = qualifiers;
+  return *asmNode;
 }
 
 StmtNode &NaryMeStmt::EmitStmt(SSATab &ssaTab) {

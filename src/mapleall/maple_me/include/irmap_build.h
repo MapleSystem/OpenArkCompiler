@@ -89,6 +89,7 @@ class IRMapBuild {
   MeStmt *BuildGosubMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart);
   MeStmt *BuildThrowMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart);
   MeStmt *BuildSyncMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart);
+  MeStmt *BuildAsmMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart);
   MeStmt *BuildMeStmt(StmtNode&);
   static void InitMeStmtFactory();
 
