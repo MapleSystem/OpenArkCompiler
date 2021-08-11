@@ -99,6 +99,7 @@ constexpr bool IsStmtMustRequire(Opcode opcode) {
     case OP_xintrinsiccallassigned:
     case OP_intrinsiccallwithtype:
     case OP_intrinsiccallwithtypeassigned:
+    case OP_asm:
     case OP_syncenter:
     case OP_syncexit:
     case OP_membaracquire:
