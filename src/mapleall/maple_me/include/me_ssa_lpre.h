@@ -57,14 +57,18 @@ class MeSSALPre : public SSAPre {
   }
 
   void CollectVarForMeExpr(MeExpr &meExpr, std::vector<MeExpr*> &varVec) const override {
-    if (meExpr.GetMeOp() == kMeOpAddrof || meExpr.GetMeOp() == kMeOpAddroffunc) {
+    if (meExpr.GetMeOp() == kMeOpAddrof || 
+        meExpr.GetMeOp() == kMeOpAddroffunc ||
+        meExpr.GetMeOp() == kMeOpConst) {
       return;
     }
     varVec.push_back(&meExpr);
   }
 
   void CollectVarForCand(MeRealOcc &realOcc, std::vector<MeExpr*> &varVec) const override {
-    if (realOcc.GetMeExpr()->GetMeOp() == kMeOpAddrof || realOcc.GetMeExpr()->GetMeOp() == kMeOpAddroffunc) {
+    if (realOcc.GetMeExpr()->GetMeOp() == kMeOpAddrof || 
+        realOcc.GetMeExpr()->GetMeOp() == kMeOpAddroffunc ||
+        realOcc.GetMeExpr()->GetMeOp() == kMeOpConst) {
       return;
     }
     varVec.push_back(realOcc.GetMeExpr());
