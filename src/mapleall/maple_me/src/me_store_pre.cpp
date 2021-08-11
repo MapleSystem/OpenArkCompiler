@@ -74,8 +74,9 @@ RegMeExpr *MeStorePre::EnsureRHSInCurTemp(BB &bb) {
     } else if (kOpcodeInfo.IsCallAssigned(itStmt->GetOp())) {
       MapleVector<MustDefMeNode> *mustDefList = itStmt->GetMustDefList();
       CHECK_NULL_FATAL(mustDefList);
-      if (!mustDefList->empty()) {
-        MeExpr *mdLHS = mustDefList->front().GetLHS();
+      MapleVector<MustDefMeNode>::iterator it = mustDefList->begin();
+      for (; it != mustDefList->end(); it++) {
+        MeExpr *mdLHS = (*it).GetLHS();
         if (mdLHS->GetMeOp() != kMeOpVar) {
           continue;
         }
@@ -88,7 +89,7 @@ RegMeExpr *MeStorePre::EnsureRHSInCurTemp(BB &bb) {
         }
         // change mustDefList
         RegMeExpr *lhsReg = irMap->CreateRegMeExprVersion(*curTemp);
-        mustDefList->front().UpdateLHS(*lhsReg);
+        (*it).UpdateLHS(*lhsReg);
         // create dassign
         AssignMeStmt *dass = irMap->CreateAssignMeStmt(*lhsVar, *lhsReg, bb);
         dass->SetSrcPos(itStmt->GetSrcPosition());
@@ -184,7 +185,7 @@ void MeStorePre::CodeMotion() {
         }
         realOcc->GetBB().RemoveMeStmt(dass);
       } else {
-        CHECK_FATAL(kOpcodeInfo.IsCallAssigned(realOcc->GetStmt()->GetOp()), "CodeMotion: callassign expected");
+        CHECK_FATAL(kOpcodeInfo.IsCallAssigned(realOcc->GetStmt()->GetOp()) && realOcc->GetStmt()->GetOp() != OP_asm, "CodeMotion: callassign expected");
         MapleVector<MustDefMeNode> *mustDefList = realOcc->GetStmt()->GetMustDefList();
         CHECK_NULL_FATAL(mustDefList);
         mustDefList->clear();
@@ -223,7 +224,7 @@ void MeStorePre::CreateRealOcc(const OStIdx &ostIdx, MeStmt &meStmt) {
     if (meStmt.GetOp() == OP_dassign) {
       wkCand->SetTheVar(*static_cast<VarMeExpr*>(static_cast<DassignMeStmt*>(&meStmt)->GetVarLHS()));
     } else {
-      ASSERT(kOpcodeInfo.IsCallAssigned(meStmt.GetOp()), "CreateRealOcc: callassign expected");
+      ASSERT(kOpcodeInfo.IsCallAssigned(meStmt.GetOp()) && meStmt.GetOp() != OP_asm, "CreateRealOcc: callassign expected");
       MapleVector<MustDefMeNode> *mustDefList = meStmt.GetMustDefList();
       CHECK_FATAL(mustDefList != nullptr, "CreateRealOcc: mustDefList cannot be empty");
       CHECK_FATAL(!mustDefList->empty(), "CreateRealOcc: mustDefList cannot be empty");
@@ -323,7 +324,7 @@ void MeStorePre::BuildWorkListBB(BB *bb) {
       if (dass->GetLHS()->GetPrimType() != PTY_ref && dass->GetLHS()->GetPrimType() != PTY_agg) {
         lhsOstIdx = dass->GetVarLHS()->GetOstIdx();
       }
-    } else if (kOpcodeInfo.IsCallAssigned(stmt->GetOp())) {
+    } else if (kOpcodeInfo.IsCallAssigned(stmt->GetOp()) && stmt->GetOp() != OP_asm) {
       MapleVector<MustDefMeNode> *mustDefList = stmt->GetMustDefList();
       CHECK_NULL_FATAL(mustDefList);
       if (!mustDefList->empty()) {

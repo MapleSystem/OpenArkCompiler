@@ -130,6 +130,9 @@ class MeOption : public MapleDriverOptionBase {
   static bool doLFTR;
   static std::string inlineFuncList;
   static bool meVerify;
+  static uint32 dseRunsLimit;
+  static uint32 hdseRunsLimit;
+  static uint32 hpropRunsLimit;
 #if MIR_JAVA
   static std::string acquireFuncName;
   static std::string releaseFuncName;
