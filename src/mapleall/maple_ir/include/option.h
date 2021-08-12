@@ -55,6 +55,21 @@ class Options : public MapleDriverOptionBase {
     kAggressiveDecouple = 2,
     kDecoupleAndLazy = 3
   };
+
+  static bool DumpPhase(const std::string &phase) {
+    if (phase == "") {
+      return false;
+    }
+    return dumpPhase == "*" || dumpPhase == phase;
+  }
+
+  static bool IsSkipPhase(const std::string &phaseName) {
+    return skipPhase == phaseName;
+  }
+
+  static bool DumpFunc() {
+    return dumpFunc != "*" && dumpFunc != "";
+  }
   static bool dumpBefore;
   static bool dumpAfter;
   static std::string dumpPhase;

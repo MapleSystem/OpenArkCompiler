@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -14,11 +14,11 @@
  */
 #ifndef MAPLEALL_VERIFY_MARK_H
 #define MAPLEALL_VERIFY_MARK_H
-#include "module_phase.h"
 #include "class_hierarchy.h"
 #include "verify_pragma_info.h"
 
 namespace maple {
+#ifdef NOT_USED
 class DoVerifyMark : public ModulePhase {
  public:
   explicit DoVerifyMark(ModulePhaseID id) : ModulePhase(id) {}
@@ -34,5 +34,6 @@ class DoVerifyMark : public ModulePhase {
  private:
   void AddAnnotations(MIRModule &module, const Klass &klass, const std::vector<const VerifyPragmaInfo*> &pragmaInfoVec);
 };
+#endif
 } // namespace maple
 #endif // MAPLEALL_VERIFY_MARK_H

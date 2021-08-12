@@ -57,5 +57,4 @@ bool CgCreateLabel::PhaseRun(maplebe::CGFunc &f) {
   labelCreate->Run();
   return false;
 }
-MAPLE_TRANSFORM_PHASE_REGISTER(CgCreateLabel, createstartendlabel)
 } /* namespace maplebe */

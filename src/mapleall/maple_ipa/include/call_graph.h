@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -14,9 +14,8 @@
  */
 #ifndef MAPLE_IPA_INCLUDE_CALL_GRAPH_H
 #define MAPLE_IPA_INCLUDE_CALL_GRAPH_H
-#include "module_phase.h"
 #include "mir_nodes.h"
-#include "class_hierarchy.h"
+#include "class_hierarchy_phase.h"
 #include "mir_builder.h"
 namespace maple {
 class SCCNode;
@@ -495,18 +494,6 @@ class CallGraph : public AnalysisResult {
   MapleVector<uint32> visitStack;
 };
 
-class DoCallGraph : public ModulePhase {
- public:
-  explicit DoCallGraph(ModulePhaseID id) : ModulePhase(id) {}
-
-  AnalysisResult *Run(MIRModule *module, ModuleResultMgr *mgr) override;
-  std::string PhaseName() const override {
-    return "callgraph";
-  }
-
-  ~DoCallGraph() = default;
-};
-
 class IPODevirtulize {
  public:
   IPODevirtulize(MIRModule *m, MemPool *memPool, KlassHierarchy *kh)
@@ -527,16 +514,13 @@ class IPODevirtulize {
   bool debugFlag;
 };
 
-class DoIPODevirtulize : public ModulePhase {
- public:
-  explicit DoIPODevirtulize(ModulePhaseID id) : ModulePhase(id) {}
-
-  AnalysisResult *Run(MIRModule *module, ModuleResultMgr *mgr) override;
-  std::string PhaseName() const override {
-    return "ipodevirtulize";
+MAPLE_MODULE_PHASE_DECLARE_BEGIN(M2MCallGraph)
+  CallGraph *GetResult() {
+    return cg;
   }
-
-  ~DoIPODevirtulize() = default;
-};
+  CallGraph *cg = nullptr;
+OVERRIDE_DEPENDENCE
+MAPLE_MODULE_PHASE_DECLARE_END
+MAPLE_MODULE_PHASE_DECLARE(M2MIPODevirtualize)
 }  // namespace maple
 #endif  // MAPLE_IPA_INCLUDE_CALLGRAPH_H

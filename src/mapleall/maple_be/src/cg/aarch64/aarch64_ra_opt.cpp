@@ -110,7 +110,7 @@ bool RaX0Opt::PropagateX0Optimize(const BB *bb, const Insn *insn, X0OptInfo &opt
     }
 
     /* BB definition differences among C and other modules */
-    if (!cgFunc->GetMirModule().IsCModule() && ninsn->IsCall()) {
+    if (ninsn->IsCall()) {
       break;
     }
 

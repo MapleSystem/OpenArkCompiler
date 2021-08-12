@@ -16,7 +16,6 @@
 #define MAPLE_ME_INCLUDE_LOOP_VEC_H
 #include "me_function.h"
 #include "me_irmap.h"
-#include "me_phase.h"
 #include "me_ir.h"
 #include "lfo_pre_emit.h"
 #include "lfo_dep_test.h"
@@ -111,17 +110,6 @@ class LoopVectorization {
   bool enableDebug;
 };
 
-class DoLfoLoopVectorization: public MeFuncPhase {
- public:
-  explicit DoLfoLoopVectorization(MePhaseID id) : MeFuncPhase(id) {}
-  ~DoLfoLoopVectorization() = default;
-
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) override;
-  std::string PhaseName() const override {
-    return "lfoloopvec";
-  }
-
- private:
-};
+MAPLE_FUNC_PHASE_DECLARE(MELfoLoopVectorization, MeFunction)
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_LOOP_VEC_H

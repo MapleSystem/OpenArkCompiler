@@ -358,7 +358,7 @@ void MIRSymbol::Dump(bool isLocal, int32 indent, bool suppressInit, const MIRSym
     LogInfo::MapleLogger() << " )";
   }
   if (asmAttr != UStrIdx(0)) {
-    LogInfo::MapleLogger() << " asm (";
+    LogInfo::MapleLogger() << " asmattr (";
     PrintString(GlobalTables::GetUStrTable().GetStringFromStrIdx(asmAttr));
     LogInfo::MapleLogger() << " )";
   }

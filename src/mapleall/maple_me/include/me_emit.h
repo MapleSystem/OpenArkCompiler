@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -15,19 +15,10 @@
 #ifndef MAPLE_ME_INCLUDE_ME_EMIT_H
 #define MAPLE_ME_INCLUDE_ME_EMIT_H
 #include "me_function.h"
-#include "me_phase.h"
+#include "maple_phase.h"
 
 // emit ir to specified file
 namespace maple {
-class MeDoEmit : public MeFuncPhase {
- public:
-  explicit MeDoEmit(MePhaseID id) : MeFuncPhase(id) {}
-
-  virtual ~MeDoEmit() = default;
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *funcResMgr, ModuleResultMgr *moduleResMgr) override;
-  std::string PhaseName() const override {
-    return "emit";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE(MEEmit, MeFunction)
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_ME_EMIT_H

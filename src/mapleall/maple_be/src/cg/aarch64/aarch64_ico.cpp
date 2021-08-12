@@ -100,16 +100,18 @@ Insn *AArch64ICOPattern::BuildCondSet(const Insn &branch, RegOperand &reg, bool 
   ASSERT(ccCode != kCcLast, "unknown cond, ccCode can't be kCcLast");
   AArch64CGFunc *func = static_cast<AArch64CGFunc*>(cgFunc);
   CondOperand &cond = func->GetCondOperand(ccCode);
+  Operand &rflag = func->GetOrCreateRflag();
   MOperator mopCode = (reg.GetSize() == k64BitSize) ? MOP_xcsetrc : MOP_wcsetrc;
-  return &func->GetCG()->BuildInstruction<AArch64Insn>(mopCode, reg, cond);
+  return &func->GetCG()->BuildInstruction<AArch64Insn>(mopCode, reg, cond, rflag);
 }
 
 Insn *AArch64ICOPattern::BuildCondSel(const Insn &branch, MOperator mOp, RegOperand &dst, RegOperand &src1,
                                       RegOperand &src2) {
   AArch64CC_t ccCode = Encode(branch.GetMachineOpcode(), false);
   ASSERT(ccCode != kCcLast, "unknown cond, ccCode can't be kCcLast");
-  CondOperand &cond = static_cast<AArch64CGFunc*>(cgFunc)->GetCondOperand(ccCode);
-  return &cgFunc->GetCG()->BuildInstruction<AArch64Insn>(mOp, dst, src1, src2, cond);
+  CondOperand &cond = static_cast<AArch64CGFunc *>(cgFunc)->GetCondOperand(ccCode);
+  Operand &rflag = static_cast<AArch64CGFunc *>(cgFunc)->GetOrCreateRflag();
+  return &cgFunc->GetCG()->BuildInstruction<AArch64Insn>(mOp, dst, src1, src2, cond, rflag);
 }
 
 void AArch64ICOPattern::GenerateInsnForImm(const Insn &branchInsn, Operand &ifDest, Operand &elseDest,

@@ -17,6 +17,7 @@
 #include "aarch64_color_ra.h"
 #include "aarch64_cg.h"
 #include "aarch64_live.h"
+#include "cg_dominance.h"
 #include "mir_lower.h"
 #include "securec.h"
 
@@ -730,6 +731,15 @@ bool DefaultO0RegAllocator::AllocateRegisters() {
 
 bool CgRegAlloc::PhaseRun(maplebe::CGFunc &f) {
   bool success = false;
+  (void)GetAnalysisInfoHook()->ForceRunAnalysisPhase<MapleFunctionPhase<CGFunc>, CGFunc>(&CgLoopAnalysis::id, f);
+  DomAnalysis *dom = nullptr;
+  if (Globals::GetInstance()->GetOptimLevel() >= 1 &&
+      f.GetCG()->GetCGOptions().DoColoringBasedRegisterAllocation()) {
+    MaplePhase *it = GetAnalysisInfoHook()->ForceRunAnalysisPhase<MapleFunctionPhase<CGFunc>, CGFunc>(
+        &CgDomAnalysis::id, f);
+    dom = static_cast<CgDomAnalysis*>(it)->GetResult();
+    CHECK_FATAL(dom != nullptr, "null ptr check");
+  }
   while (success == false) {
     MemPool *phaseMp = GetPhaseMemPool();
     LiveAnalysis *live = nullptr;
@@ -750,7 +760,7 @@ bool CgRegAlloc::PhaseRun(maplebe::CGFunc &f) {
       if (f.GetCG()->GetCGOptions().DoLinearScanRegisterAllocation()) {
         regAllocator = phaseMp->New<LSRALinearScanRegAllocator>(f, *phaseMp);
       } else if (f.GetCG()->GetCGOptions().DoColoringBasedRegisterAllocation()) {
-        regAllocator = phaseMp->New<GraphColorRegAllocator>(f, *phaseMp);
+        regAllocator = phaseMp->New<GraphColorRegAllocator>(f, *phaseMp, *dom);
       } else {
         maple::LogInfo::MapleLogger(kLlErr) <<
             "Warning: We only support Linear Scan and GraphColor register allocation\n";
@@ -758,7 +768,6 @@ bool CgRegAlloc::PhaseRun(maplebe::CGFunc &f) {
     }
 
     CHECK_FATAL(regAllocator != nullptr, "regAllocator is null in CgDoRegAlloc::Run");
-    (void)GetAnalysisInfoHook()->ForceRunAnalysisPhase<MapleFunctionPhase<CGFunc>, CGFunc>(&CgLoopAnalysis::id, f);
     f.SetIsAfterRegAlloc();
     success = regAllocator->AllocateRegisters();
     /* the live range info may changed, so invalid the info. */
@@ -766,10 +775,8 @@ bool CgRegAlloc::PhaseRun(maplebe::CGFunc &f) {
       live->ClearInOutDataInfo();
     }
     GetAnalysisInfoHook()->ForceEraseAnalysisPhase(&CgLiveAnalysis::id);
-    GetAnalysisInfoHook()->ForceEraseAnalysisPhase(&CgLoopAnalysis::id);
   }
+  GetAnalysisInfoHook()->ForceEraseAnalysisPhase(&CgLoopAnalysis::id);
   return false;
 }
-
-MAPLE_TRANSFORM_PHASE_REGISTER(CgRegAlloc, regalloc)
 }  /* namespace maplebe */

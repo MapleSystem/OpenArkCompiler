@@ -16,18 +16,9 @@
 #define MAPLE_ME_INCLUDE_SYNCSELECT_H
 #include "me_function.h"
 #include "mir_module.h"
-#include "me_phase.h"
+#include "maple_phase.h"
 
 namespace maple {
-class MeDoSyncSelect : public MeFuncPhase {
- public:
-  explicit MeDoSyncSelect(MePhaseID id) : MeFuncPhase(id) {}
-
-  virtual ~MeDoSyncSelect() = default;
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *frm, ModuleResultMgr *mrm) override;
-  std::string PhaseName() const override {
-    return "syncselect";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE(MESyncSelect, MeFunction)
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_SYNCSELECT_H

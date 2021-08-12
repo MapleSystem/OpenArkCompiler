@@ -45,8 +45,39 @@ class MeOption : public MapleDriverOptionBase {
     return skipPhases;
   }
 
+  static bool IsSkipFromPhase(const std::string &phaseName) {
+    return skipFrom.compare(phaseName) == 0;
+  }
+
+  static const std::string GetSkipFromPhase() {
+    return skipFrom;
+  }
+
+  static void SetSkipFrom(const std::string &phaseName) {
+    skipFrom = phaseName;
+  }
+
+  static bool IsSkipAfterPhase(const std::string &phaseName) {
+    return skipAfter.compare(phaseName) == 0;
+  }
+
+  static const std::string GetSkipAfterPhase() {
+    return skipAfter;
+  }
+
+  static void SetSkipAfter(const std::string &phaseName) {
+    skipAfter = phaseName;
+  }
+
+  static bool IsSkipPhase(const std::string &phaseName) {
+    return !(skipPhases.find(phaseName) == skipPhases.end());
+  }
+
   static bool DumpPhase(const std::string &phase);
+  static bool DumpFunc(const std::string &func);
   static std::unordered_set<std::string> dumpPhases;
+  static std::unordered_set<std::string> skipPhases;
+
   static bool dumpBefore;
   static bool dumpAfter;
   static constexpr int kRangeArrayLen = 2;
@@ -143,13 +174,18 @@ class MeOption : public MapleDriverOptionBase {
 #endif
  private:
   void DecideMeRealLevel(const std::vector<mapleOption::Option> &inputOptions) const;
-  std::unordered_set<std::string> skipPhases;
 };
 
 #ifndef DEBUGFUNC
 #define DEBUGFUNC(f)                                                       \
   (MeOption::dumpPhases.find(PhaseName()) != MeOption::dumpPhases.end() && \
-   (MeOption::dumpFunc.compare("*") == 0 || (f)->GetName().find(MeOption::dumpFunc) != std::string::npos))
+   (MeOption::dumpFunc.compare("*") == 0 || (f)->GetName() == MeOption::dumpFunc))
+#endif
+
+#ifndef DEBUGFUNC_NEWPM
+#define DEBUGFUNC_NEWPM(f)                                                                                  \
+  (!MeOption::dumpPhases.empty() && MeOption::dumpPhases.find(PhaseName()) != MeOption::dumpPhases.end() && \
+   (MeOption::dumpFunc.compare("*") == 0 || (f).GetName() == MeOption::dumpFunc))
 #endif
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_ME_OPTION_H

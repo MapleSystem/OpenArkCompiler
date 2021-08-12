@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -14,7 +14,6 @@
  */
 #ifndef MAPLEIR_VERIFICATION_PHASE_H
 #define MAPLEIR_VERIFICATION_PHASE_H
-#include "module_phase.h"
 #include "class_hierarchy.h"
 #include "verify_pragma_info.h"
 
@@ -110,6 +109,7 @@ class VerificationPhaseResult : public AnalysisResult {
   const VerifyResult &verifyResult;
 };
 
+#ifdef NOT_USED
 class DoVerification : public ModulePhase {
  public:
   explicit DoVerification(ModulePhaseID id) : ModulePhase(id) {}
@@ -128,5 +128,6 @@ class DoVerification : public ModulePhase {
   bool NeedRuntimeFinalCheck(const KlassHierarchy &klassHierarchy, const std::string &className) const;
   void CheckExtendFinalClass(VerifyResult &result) const;
 };
+#endif
 }  // namespace maple
 #endif  // MAPLEIR_VERIFICATION_PHASE_H

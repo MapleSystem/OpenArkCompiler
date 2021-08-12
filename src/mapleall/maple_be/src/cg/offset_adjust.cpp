@@ -37,5 +37,4 @@ bool CgFPLROffsetAdjustment::PhaseRun(maplebe::CGFunc &f) {
   offsetAdjustment->Run();
   return false;
 }
-MAPLE_TRANSFORM_PHASE_REGISTER(CgFPLROffsetAdjustment, offsetadjustforfplr)
 }  /* namespace maplebe */

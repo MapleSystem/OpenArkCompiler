@@ -15,12 +15,12 @@
 #ifndef MPL2MPL_INCLUDE_BARRIERINSERTION_H
 #define MPL2MPL_INCLUDE_BARRIERINSERTION_H
 #include <set>
-#include "module_phase.h"
 #include "mir_nodes.h"
 #include "mir_module.h"
 #include "mir_builder.h"
 
 namespace maple {
+#ifdef NOT_USED
 class BarrierInsertion : public ModulePhase {
  public:
   explicit BarrierInsertion(ModulePhaseID id) : ModulePhase(id) {}
@@ -72,5 +72,6 @@ class BarrierInsertion : public ModulePhase {
   void EnsureLibraryFunction(MIRModule &module, const char &name, const MIRType &retType, const ArgVector &args);
   void EnsureLibraryFunctions(MIRModule &module);
 };
+#endif
 }  // namespace maple
 #endif  // MPL2MPL_INCLUDE_BARRIERINSERTION_H

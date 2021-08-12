@@ -85,6 +85,7 @@ class ASTParser {
   ASTStmt *PROCESS_STMT(AtomicExpr);
   ASTStmt *PROCESS_STMT(GCCAsmStmt);
   ASTStmt *PROCESS_STMT(OffsetOfExpr);
+  ASTStmt *PROCESS_STMT(GenericSelectionExpr);
   bool HasDefault(const clang::Stmt &stmt);
 
   // ProcessExpr
@@ -141,6 +142,7 @@ class ASTParser {
   ASTExpr *PROCESS_EXPR(DependentScopeDeclRefExpr);
   ASTExpr *PROCESS_EXPR(AtomicExpr);
   ASTExpr *PROCESS_EXPR(ChooseExpr);
+  ASTExpr *PROCESS_EXPR(GenericSelectionExpr);
 
   ASTDecl *ProcessDecl(MapleAllocator &allocator, const clang::Decl &decl);
 #define PROCESS_DECL(CLASS) ProcessDecl##CLASS##Decl(MapleAllocator &allocator, const clang::CLASS##Decl&)

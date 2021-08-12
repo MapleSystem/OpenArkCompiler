@@ -277,6 +277,25 @@ class AndCbzBranchesToTstAArch64 : public PeepPattern {
  *  cset w0, NE
  *  conditions:
  *  imm is pos power of 2
+ *
+ *  ---------------------------------------------------
+ *  and  w0, w0, #1  ====> and  wn, w0, #1
+ *  cmp  w0, #1
+ *  cset wn, EQ        # wn != w0 && w0 is not live after cset
+ *
+ *  and  w0, w0, #1  ====> and  wn, w0, #1
+ *  cmp  w0, #0
+ *  cset wn, NE        # wn != w0 && w0 is not live after cset
+ *  ---------------------------------------------------
+ *  and  w0, w0, #imm  ====> ubfx  wn, w0, pos, size
+ *  cmp  w0, #imm
+ *  cset wn, EQ        # wn != w0 && w0 is not live after cset
+ *
+ *  and  w0, w0, #imm  ====> ubfx  wn, w0, pos, size
+ *  cmp  w0, #0
+ *  cset wn, NE        # wn != w0 && w0 is not live after cset
+ *  conditions:
+ *  imm is pos power of 2 and w0 is not live after cset
  */
 class AndCmpBranchesToCsetAArch64 : public PeepPattern {
  public:

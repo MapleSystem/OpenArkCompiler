@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -19,9 +19,9 @@
 #include "mir_builder.h"
 #include "mempool.h"
 #include "mempool_allocator.h"
-#include "class_hierarchy.h"
+#include "class_hierarchy_phase.h"
 #include "me_ir.h"
-#include "module_phase.h"
+#include "maple_phase_manager.h"
 
 static constexpr char kFullNameStr[] = "INFO_fullname";
 static constexpr char kClassNameStr[] = "INFO_classname";
@@ -87,16 +87,12 @@ class Clone : public AnalysisResult {
   ReplaceRetIgnored *replaceRetIgnored;
 };
 
-class DoClone : public ModulePhase {
- public:
-  explicit DoClone(ModulePhaseID id) : ModulePhase(id) {}
-
-  ~DoClone() = default;
-
-  AnalysisResult *Run(MIRModule *module, ModuleResultMgr *mgr) override;
-  std::string PhaseName() const override {
-    return "clone";
+MAPLE_MODULE_PHASE_DECLARE_BEGIN(M2MClone)
+  Clone *GetResult() {
+    return cl;
   }
-};
+  Clone *cl = nullptr;
+OVERRIDE_DEPENDENCE
+MAPLE_MODULE_PHASE_DECLARE_END
 }  // namespace maple
 #endif  // MAPLE_IPA_INCLUDE_CLONE_H

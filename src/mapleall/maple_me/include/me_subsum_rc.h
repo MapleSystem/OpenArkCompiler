@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -15,6 +15,7 @@
 #ifndef MAPLE_ME_INCLUDE_ME_SUBSUM_RC_H
 #define MAPLE_ME_INCLUDE_ME_SUBSUM_RC_H
 #include "me_ssu_pre.h"
+#include "me_phase_manager.h"
 
 namespace maple {
 class DassignStmtPtrComparator {
@@ -59,14 +60,6 @@ class SubsumRC : public MeSSUPre {
   bool IsRhsPostDominateLhs(const SOcc &rhsOcc, const VarMeExpr &lhs) const;
 };
 
-class MeDoSubsumRC : public MeFuncPhase {
- public:
-  explicit MeDoSubsumRC(MePhaseID id) : MeFuncPhase(id) {}
-  virtual ~MeDoSubsumRC() = default;
-  AnalysisResult *Run(MeFunction*, MeFuncResultMgr*, ModuleResultMgr*) override;
-  std::string PhaseName() const override {
-    return "subsumrc";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE(MESubsumRC, MeFunction)
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_ME_SUBSUM_RC_H

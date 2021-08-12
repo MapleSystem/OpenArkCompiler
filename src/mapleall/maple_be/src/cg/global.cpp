@@ -92,5 +92,4 @@ void CgGlobalOpt::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
   aDep.AddRequired<CgLiveAnalysis>();
   aDep.PreservedAllExcept<CgLiveAnalysis>();
 }
-MAPLE_TRANSFORM_PHASE_REGISTER(CgGlobalOpt, globalopt)
 }  /* namespace maplebe */

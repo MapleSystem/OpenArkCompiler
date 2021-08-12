@@ -236,6 +236,13 @@ void DSE::RemoveNotRequiredStmtsInBB(BB &bb) {
 // Only make sure throw NPE in same BB
 // If must make sure throw at first stmt, much more not null stmt will be inserted
 bool DSE::NeedNotNullCheck(BaseNode &node, const BB &bb) {
+  if (node.GetOpCode() == OP_addrof) {
+    return false;
+  }
+  if (node.GetOpCode() == OP_iaddrof && static_cast<IreadNode &>(node).GetFieldID() > 0) {
+    return false;
+  }
+
   for (auto item : notNullExpr2Stmt[&node]) {
     if (!IsStmtRequired(*(item.first))) {
       continue;

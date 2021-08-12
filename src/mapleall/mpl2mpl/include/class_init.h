@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -15,8 +15,8 @@
 #ifndef MPL2MPL_INCLUDE_CLASS_INIT_H
 #define MPL2MPL_INCLUDE_CLASS_INIT_H
 #include "phase_impl.h"
-#include "module_phase.h"
-#include "class_hierarchy.h"
+#include "class_hierarchy_phase.h"
+#include "maple_phase_manager.h"
 
 namespace maple {
 class ClassInit : public FuncOptimizeImpl {
@@ -38,20 +38,6 @@ class ClassInit : public FuncOptimizeImpl {
   bool CanRemoveClinitCheck(const std::string &clinitClassname) const;
 };
 
-class DoClassInit : public ModulePhase {
- public:
-  explicit DoClassInit(ModulePhaseID id) : ModulePhase(id) {}
-
-  ~DoClassInit() = default;
-
-  std::string PhaseName() const override {
-    return "clinit";
-  }
-
-  AnalysisResult *Run(MIRModule *mod, ModuleResultMgr *mrm) override {
-    OPT_TEMPLATE(ClassInit);
-    return nullptr;
-  }
-};
+MAPLE_MODULE_PHASE_DECLARE(M2MClassInit)
 }  // namespace maple
 #endif  // MPL2MPL_INCLUDE_CLASS_INIT_H

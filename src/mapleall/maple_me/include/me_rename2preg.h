@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -14,8 +14,8 @@
  */
 #ifndef MAPLE_ME_INCLUDE_MERENAME2PREG_H
 #define MAPLE_ME_INCLUDE_MERENAME2PREG_H
-#include "me_phase.h"
 #include "me_function.h"
+#include "maple_phase.h"
 
 namespace maple {
 class SSARename2Preg {
@@ -81,15 +81,6 @@ class SSARename2Preg {
   uint32 rename2pregCount = 0;
 };
 
-class MeDoSSARename2Preg : public MeFuncPhase {
- public:
-  explicit MeDoSSARename2Preg(MePhaseID id) : MeFuncPhase(id) {}
-
-  virtual ~MeDoSSARename2Preg() = default;
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *funcRst, ModuleResultMgr*) override;
-  std::string PhaseName() const override {
-    return "rename2preg";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE(MESSARename2Preg, MeFunction)
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_MERENAME2PREG_H

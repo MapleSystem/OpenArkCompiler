@@ -91,16 +91,7 @@ class FEIRBuilder {
   static UniqueFEIRExpr CreateExprJavaNewArray(UniqueFEIRType type, UniqueFEIRExpr exprSize, uint32 typeID,
                                                bool isRcPermanent);
   static UniqueFEIRExpr CreateExprJavaArrayLength(UniqueFEIRExpr exprArray);
-  static UniqueFEIRExpr CreateExprArrayStoreForC(UniqueFEIRExpr argExprArray, UniqueFEIRExpr argExprIndex,
-                                                 UniqueFEIRType argTypeNative);
-  static UniqueFEIRExpr CreateExprArrayStoreForC(UniqueFEIRExpr argExprArray, std::list<UniqueFEIRExpr> &argExprIndexs,
-                                                 UniqueFEIRType argTypeNative,
-                                                 std::string argArrayName);
-  static UniqueFEIRExpr CreateExprArrayStoreForC(UniqueFEIRExpr argExprArray, std::list<UniqueFEIRExpr> &argExprIndexs,
-                                                 UniqueFEIRType argArrayTypeNative,
-                                                 UniqueFEIRExpr argExprStruct,
-                                                 UniqueFEIRType argStructTypeNative,
-                                                 std::string argArrayName);
+
   // Stmt
   static UniqueFEIRStmt CreateStmtDAssign(UniqueFEIRVar dstVar, UniqueFEIRExpr srcExpr, bool hasException = false);
   static UniqueFEIRStmt CreateStmtDAssignAggField(UniqueFEIRVar dstVar, UniqueFEIRExpr srcExpr, FieldID fieldID);
@@ -141,12 +132,7 @@ class FEIRBuilder {
                                                         UniqueFEIRType elemType, std::string argArrayName);
   static std::list<UniqueFEIRStmt> CreateStmtArrayLoad(UniqueFEIRVar varElem, UniqueFEIRVar varArray,
                                                        UniqueFEIRVar varIndex);
-  static UniqueFEIRExpr CreateExprFieldLoadForC(UniqueFEIRVar argVarObj, UniqueFEIRVar argVarField,
-                                                MIRStructType *argStructType,
-                                                FieldID argFieldID);
   static UniqueFEIRStmt CreateStmtArrayLength(UniqueFEIRVar varLength, UniqueFEIRVar varArray);
-  static UniqueFEIRStmt CreateStmtFieldStoreForC(UniqueFEIRVar varObj, UniqueFEIRExpr exprField,
-                                                 MIRStructType *structType, FieldID fieldID);
   static UniqueFEIRStmt CreateStmtRetype(UniqueFEIRVar varDst, const UniqueFEIRVar &varSrc);
   static UniqueFEIRStmt CreateStmtComment(const std::string &comment);
   static UniqueFEIRExpr ReadExprField(UniqueFEIRExpr expr, FieldID fieldID, UniqueFEIRType fieldType);

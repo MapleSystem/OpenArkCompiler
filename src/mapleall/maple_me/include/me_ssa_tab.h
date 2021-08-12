@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -15,20 +15,15 @@
 #ifndef MAPLE_ME_INCLUDE_ME_SSA_TAB_H
 #define MAPLE_ME_INCLUDE_ME_SSA_TAB_H
 #include "me_function.h"
-#include "me_phase.h"
+#include "maple_phase_manager.h"
 
 namespace maple {
-class MeDoSSATab : public MeFuncPhase {
- public:
-  explicit MeDoSSATab(MePhaseID id) : MeFuncPhase(id) {}
-
-  virtual ~MeDoSSATab() = default;
-
- private:
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *funcResMgr, ModuleResultMgr *moduleResMgr) override;
-  std::string PhaseName() const override {
-    return "ssatab";
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(MESSATab, MeFunction)
+  SSATab *GetResult() {
+    return ssaTab;
   }
-};
+  SSATab *ssaTab = nullptr;
+OVERRIDE_DEPENDENCE
+MAPLE_MODULE_PHASE_DECLARE_END
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_ME_SSA_TAB_H

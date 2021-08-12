@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -19,13 +19,11 @@
 #include <algorithm>
 #include "mir_parser.h"
 #include "opcode_info.h"
-#include "me_cfg.h"
-#include "module_phase_manager.h"
 #include "option_parser.h"
-#include "interleaved_manager.h"
 #include "option.h"
 #include "inline.h"
-#include "call_graph.h"
+#include "bin_mpl_export.h"
+#include "me_phase_manager.h"
 
 namespace maple {
 class IpaOption : public maple::MapleDriverOptionBase {
@@ -40,6 +38,34 @@ class IpaOption : public maple::MapleDriverOptionBase {
 
  private:
   IpaOption();
+};
+
+class MeFuncPM1 : public MeFuncPM {
+ public:
+  explicit MeFuncPM1(MemPool *memPool) : MeFuncPM(memPool) {
+    SetPhaseID(&MeFuncPM1::id);
+  }
+  PHASECONSTRUCTOR(MeFuncPM1);
+  std::string PhaseName() const override;
+  ~MeFuncPM1() override {}
+
+ private:
+  void GetAnalysisDependence(AnalysisDep &aDep) const override;
+  void DoPhasesPopulate(const MIRModule &m) override;
+};
+
+class MeFuncPM2 : public MeFuncPM {
+ public:
+  explicit MeFuncPM2(MemPool *memPool) : MeFuncPM(memPool) {
+    SetPhaseID(&MeFuncPM2::id);
+  }
+  PHASECONSTRUCTOR(MeFuncPM2);
+  std::string PhaseName() const override;
+  ~MeFuncPM2() override {}
+
+ private:
+  void GetAnalysisDependence(AnalysisDep &aDep) const override;
+  void DoPhasesPopulate(const MIRModule &m) override;
 };
 }  // namespace maple
 #endif // MAPLE_IPA_OPTION_H

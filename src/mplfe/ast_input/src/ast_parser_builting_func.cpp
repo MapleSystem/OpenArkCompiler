@@ -53,13 +53,22 @@ UniqueFEIRExpr ASTCallExpr::CreateIntrinsicopForC(std::list<UniqueFEIRStmt> &stm
     argOpnds.push_back(arg->Emit2FEExpr(stmts));
   }
   auto feExpr = std::make_unique<FEIRExprIntrinsicopForC>(std::move(feTy), argIntrinsicID, argOpnds);
-  std::string tmpName = FEUtils::GetSequentialName("intrinsicop_var_");
-  UniqueFEIRVar tmpVar = FEIRBuilder::CreateVarNameForC(tmpName, *mirType);
-  UniqueFEIRStmt dAssign = std::make_unique<FEIRStmtDAssign>(tmpVar->Clone(), std::move(feExpr), 0);
-  dAssign->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
-  stmts.emplace_back(std::move(dAssign));
-  auto dread = FEIRBuilder::CreateExprDRead(tmpVar->Clone());
-  return dread;
+  if (mirType->GetPrimType() == PTY_void) {
+    std::list<UniqueFEIRExpr> feExprs;
+    feExprs.emplace_back(std::move(feExpr));
+    UniqueFEIRStmt evalStmt = std::make_unique<FEIRStmtNary>(OP_eval, std::move(feExprs));
+    evalStmt->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
+    stmts.emplace_back(std::move(evalStmt));
+    return nullptr;
+  } else {
+    std::string tmpName = FEUtils::GetSequentialName("intrinsicop_var_");
+    UniqueFEIRVar tmpVar = FEIRBuilder::CreateVarNameForC(tmpName, *mirType);
+    UniqueFEIRStmt dAssign = std::make_unique<FEIRStmtDAssign>(tmpVar->Clone(), std::move(feExpr), 0);
+    dAssign->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
+    stmts.emplace_back(std::move(dAssign));
+    auto dread = FEIRBuilder::CreateExprDRead(tmpVar->Clone());
+    return dread;
+  }
 }
 
 UniqueFEIRExpr ASTCallExpr::CreateBinaryExpr(std::list<UniqueFEIRStmt> &stmts, Opcode op) const {
@@ -94,6 +103,22 @@ UniqueFEIRExpr ASTCallExpr::ProcessBuiltinFunc(std::list<UniqueFEIRStmt> &stmts,
   prefix = "__builtin_mpl_vector_zip";
   if (funcName.compare(0, prefix.size(), prefix) == 0) {
     return EmitBuiltinVectorZip(stmts, isFinish);
+  }
+  prefix = "__builtin_mpl_vector_shli";
+  if (funcName.compare(0, prefix.size(), prefix) == 0) {
+    isFinish = true;
+    UniqueFEIRType type = FEIRTypeHelper::CreateTypeNative(*args[0]->GetType());
+    auto arg1Expr = args[0]->Emit2FEExpr(stmts);
+    auto arg2Expr = args[1]->Emit2FEExpr(stmts);
+    return FEIRBuilder::CreateExprBinary(std::move(type), OP_shl, std::move(arg1Expr), std::move(arg2Expr));
+  }
+  prefix = "__builtin_mpl_vector_shri";
+  if (funcName.compare(0, prefix.size(), prefix) == 0) {
+    isFinish = true;
+    UniqueFEIRType type = FEIRTypeHelper::CreateTypeNative(*args[0]->GetType());
+    auto arg1Expr = args[0]->Emit2FEExpr(stmts);
+    auto arg2Expr = args[1]->Emit2FEExpr(stmts);
+    return FEIRBuilder::CreateExprBinary(std::move(type), OP_lshr, std::move(arg1Expr), std::move(arg2Expr));
   }
   // process a single builtinFunc
   auto ptrFunc = builtingFuncPtrMap.find(funcName);
@@ -292,6 +317,86 @@ UniqueFEIRExpr ASTCallExpr::EmitBuiltinAlignUp(std::list<UniqueFEIRStmt> &stmts)
 
 UniqueFEIRExpr ASTCallExpr::EmitBuiltinAlignDown(std::list<UniqueFEIRStmt> &stmts) const {
   return CreateIntrinsicopForC(stmts, INTRN_C_aligndown);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinSyncAddAndFetch8(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C___sync_add_and_fetch_8);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinSyncAddAndFetch4(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C___sync_add_and_fetch_4);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinSyncAddAndFetch2(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C___sync_add_and_fetch_2);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinSyncSubAndFetch8(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C___sync_sub_and_fetch_8);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinSyncSubAndFetch4(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C___sync_sub_and_fetch_4);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinSyncSubAndFetch2(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C___sync_sub_and_fetch_2);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinSyncFetchAndSub8(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C___sync_fetch_and_sub_8);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinSyncFetchAndSub4(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C___sync_fetch_and_sub_4);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinSyncFetchAndSub2(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C___sync_fetch_and_sub_2);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinSyncFetchAndAdd8(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C___sync_fetch_and_add_8);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinSyncFetchAndAdd4(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C___sync_fetch_and_add_4);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinSyncFetchAndAdd2(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C___sync_fetch_and_add_2);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinSyncValCompareAndSwap8(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C___sync_val_compare_and_swap_8);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinSyncValCompareAndSwap4(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C___sync_val_compare_and_swap_4);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinSyncLockRelease8(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C___sync_lock_release_8);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinSyncLockRelease4(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C___sync_lock_release_4);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinSyncBoolCompareAndSwap8(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C___sync_bool_compare_and_swap_8);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinSyncBoolCompareAndSwap4(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C___sync_bool_compare_and_swap_4);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinSyncLockTestAndSet8(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C___sync_lock_test_and_set_8);
+}
+
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinSyncLockTestAndSet4(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C___sync_lock_test_and_set_4);
 }
 
 UniqueFEIRExpr ASTCallExpr::EmitBuiltinAlloca(std::list<UniqueFEIRStmt> &stmts) const {

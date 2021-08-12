@@ -520,9 +520,9 @@ void MeVerify::VerifySwitchBB(const BB &bb) const {
   VerifyPredBBOfSuccBB(bb, bb.GetSucc());
 }
 
-AnalysisResult *MeDoVerify::Run(MeFunction *func, MeFuncResultMgr*, ModuleResultMgr*) {
-  MeVerify meVerify(*func);
+bool MEVerify::PhaseRun(maple::MeFunction &f) {
+  MeVerify meVerify(f);
   meVerify.VerifyFunction();
-  return nullptr;
+  return false;
 }
 } // namespace maple

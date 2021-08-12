@@ -16,10 +16,8 @@
 #define MAPLE_ME_INCLUDE_ALIAS_CLASS_H
 #include "mempool.h"
 #include "mempool_allocator.h"
-#include "phase.h"
 #include "ssa_tab.h"
 #include "union_find.h"
-#include "class_hierarchy.h"
 
 namespace maple {
 class AliasElem {

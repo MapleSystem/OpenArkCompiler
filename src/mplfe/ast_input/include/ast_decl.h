@@ -142,8 +142,8 @@ class ASTField : public ASTDecl {
 class ASTFunc : public ASTDecl {
  public:
   ASTFunc(const std::string &srcFile, const std::string &nameIn, const std::vector<MIRType*> &typeDescIn,
-          const GenericAttrs &genAttrsIn, const std::vector<std::string> &parmNamesIn)
-      : ASTDecl(srcFile, nameIn, typeDescIn), compound(nullptr), parmNames(parmNamesIn) {
+          const GenericAttrs &genAttrsIn, const std::vector<ASTDecl*> &paramDeclsIn)
+      : ASTDecl(srcFile, nameIn, typeDescIn), compound(nullptr), paramDecls(paramDeclsIn) {
     genAttrs = genAttrsIn;
     declKind = kASTFunc;
   }
@@ -153,8 +153,8 @@ class ASTFunc : public ASTDecl {
   void SetCompoundStmt(ASTStmt*);
   void InsertStmtsIntoCompoundStmtAtFront(const std::list<ASTStmt*> &stmts);
   const ASTStmt *GetCompoundStmt() const;
-  const std::vector<std::string> &GetParmNames() const {
-    return parmNames;
+  const std::vector<ASTDecl*> &GetParamDecls() const {
+    return paramDecls;
   }
   std::vector<std::unique_ptr<FEIRVar>> GenArgVarList() const;
   std::list<UniqueFEIRStmt> EmitASTStmtToFEIR() const;
@@ -162,7 +162,7 @@ class ASTFunc : public ASTDecl {
  private:
   // typeDesc format: [funcType, retType, arg0, arg1 ... argN]
   ASTStmt *compound;  // func body
-  std::vector<std::string> parmNames;
+  std::vector<ASTDecl*> paramDecls;
 };
 
 class ASTStruct : public ASTDecl {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -17,7 +17,7 @@
 #include <map>
 #include <unordered_set>
 #include "phase_impl.h"
-#include "module_phase.h"
+#include "maple_phase_manager.h"
 
 namespace maple {
 class JavaIntrnLowering : public FuncOptimizeImpl {
@@ -50,20 +50,6 @@ class JavaIntrnLowering : public FuncOptimizeImpl {
   MIRType *classLoaderPointerToType = nullptr;
 };
 
-class DoJavaIntrnLowering : public ModulePhase {
- public:
-  explicit DoJavaIntrnLowering(ModulePhaseID id) : ModulePhase(id) {}
-
-  ~DoJavaIntrnLowering() = default;
-
-  std::string PhaseName() const override {
-    return "javaintrnlowering";
-  }
-
-  AnalysisResult *Run(MIRModule *mod, ModuleResultMgr *mrm) override {
-    OPT_TEMPLATE(JavaIntrnLowering);
-    return nullptr;
-  }
-};
+MAPLE_MODULE_PHASE_DECLARE(M2MJavaIntrnLowering)
 }  // namespace maple
 #endif  // MPL2MPL_INCLUDE_JAVA_INTRN_LOWERING_H

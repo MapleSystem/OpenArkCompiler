@@ -284,10 +284,8 @@ BlockNode *SwitchLowerer::BuildCodeForSwitchItems(int32 start, int32 end, bool l
   ASSERT(mid >= start, "switch lowering logic mid should greater than or equal start");
   ASSERT(mid <= end, "switch lowering logic mid should less than or equal end");
   /* generate test for binary search */
-  cmpNode = BuildCmpNode(OP_ge, switchItems[mid].first);
-  BaseNode *expNode = static_cast<BaseNode*>(
-      mirModule.GetMIRBuilder()->CreateExprUnary(OP_lnot, *GlobalTables::GetTypeTable().GetUInt1(), cmpNode));
-  ifStmt = static_cast<IfStmtNode*>(mirModule.GetMIRBuilder()->CreateStmtIf(expNode));
+  cmpNode = BuildCmpNode(OP_lt, switchItems[mid].first);
+  ifStmt = static_cast<IfStmtNode*>(mirModule.GetMIRBuilder()->CreateStmtIf(cmpNode));
   bool leftHighBNdChecked = (stmt->GetCasePair(switchItems.at(mid - 1).first).first + 1 ==
                              stmt->GetCasePair(switchItems.at(mid).first).first) ||
                             (stmt->GetCasePair(switchItems.at(mid - 1).second).first + 1 ==

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -79,14 +79,16 @@ void MethodReplace::DoMethodReplace() {
   }
 }
 
-AnalysisResult *DoMethodReplace::Run(MIRModule *module, ModuleResultMgr*) {
-  MemPool *mp = memPoolCtrler.NewMemPool(PhaseName(), false /* isLocalPool */);
-  maple::MIRBuilder builder(module);
-  MethodReplace methodReplace(module, mp, builder);
+bool M2MMethodReplace::PhaseRun(maple::MIRModule &m) {
+  maple::MIRBuilder builder(&m);
+  MethodReplace methodReplace(&m, GetPhaseMemPool(), builder);
   methodReplace.Init();
   methodReplace.DoMethodReplace();
-  delete mp;
-  return nullptr;
+  return true;
+}
+
+void M2MMethodReplace::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.SetPreservedAll();
 }
 }  // namespace maple
 

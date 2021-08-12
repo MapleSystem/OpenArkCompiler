@@ -152,7 +152,7 @@ TEST_F(AstExprTest, ASTUnaryOperatorExpr_1) {
   feExpr = astUOLNotExpr->Emit2FEExpr(stmts);
   exprConst = feExpr->GenMIRNode(mirBuilder);
   exprConst->Dump();
-  EXPECT_EQ(GetBufferString(), "eq i32 i32 (dread i32 %aVar_0_0, constval i32 0)\n");
+  EXPECT_EQ(GetBufferString(), "eq u1 i32 (dread i32 %aVar_0_0, constval i32 0)\n");
   RestoreCout();
 }
 
@@ -480,7 +480,7 @@ TEST_F(AstExprTest, ConditionalOperator_Noncomparative) {
   EXPECT_EQ(mirStmts.front()->GetOpCode(), OP_if);
   mirStmts.front()->Dump();
   std::string pattern =
-      std::string("if \\(ne i32 f64 \\(dread f64 %aVar_0_0, constval f64 0\\)\\)") + MPLFEUTRegx::Any();
+      std::string("if \\(ne u1 f64 \\(dread f64 %aVar_0_0, constval f64 0\\)\\)") + MPLFEUTRegx::Any();
   EXPECT_EQ(MPLFEUTRegx::Match(GetBufferString(), pattern), true);
   ClearBufferString();
   feExpr->GenMIRNode(mirBuilder)->Dump();
@@ -522,7 +522,7 @@ TEST_F(AstExprTest, BinaryConditionalOperator) {
   mirStmts.front()->Dump();
   // save conditional var for true expr
   std::string pattern =
-      "dassign %condVal_[0-9][0-9] 0 \\(lt i32 i32 \\(dread i32 %aVar_0_0, dread i32 %bVar_0_0\\)\\)\n\n";
+      "dassign %condVal_[0-9][0-9] 0 \\(lt u1 i32 \\(dread i32 %aVar_0_0, dread i32 %bVar_0_0\\)\\)\n\n";
   EXPECT_EQ(MPLFEUTRegx::Match(GetBufferString(), pattern), true);
   ClearBufferString();
   feExpr->GenMIRNode(mirBuilder)->Dump();
@@ -553,7 +553,7 @@ TEST_F(AstExprTest, BinaryConditionalOperator_Noncomparative) {
   RedirectCout();
   feExpr->GenMIRNode(mirBuilder)->Dump();
   std::string pattern = "select i32 (\n"\
-                        "  ne i32 i32 (dread i32 %aVar_0_0, constval i32 0),\n"\
+                        "  ne u1 i32 (dread i32 %aVar_0_0, constval i32 0),\n"\
                         "  dread i32 %aVar_0_0,\n"\
                         "  constval i32 1)\n";
   EXPECT_EQ(GetBufferString(), pattern);

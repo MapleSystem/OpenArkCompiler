@@ -1734,7 +1734,8 @@ bool MIRParser::ParseDeclareVar(MIRSymbol &symbol) {
     return false;
   }
   symbol.SetTyIdx(tyIdx);
-  if (lexer.GetTokenKind() == TK_section) {  // parse section attribute
+  /* parse section/register attribute from inline assembly */
+  if (lexer.GetTokenKind() == TK_section) {
     lexer.NextToken();
     if (lexer.GetTokenKind() != TK_lparen) {
       Error("expect ( for section attribute but get ");
@@ -1747,6 +1748,26 @@ bool MIRParser::ParseDeclareVar(MIRSymbol &symbol) {
     }
     UStrIdx literalStrIdx = GlobalTables::GetUStrTable().GetOrCreateStrIdxFromName(lexer.GetName());
     symbol.sectionAttr = literalStrIdx;
+    lexer.NextToken();
+    if (lexer.GetTokenKind() != TK_rparen) {
+      Error("expect ) for section attribute but get ");
+      return false;
+    }
+    lexer.NextToken();
+  } else if (lexer.GetTokenKind() == TK_asmattr) { /* Specifying Registers for Local Variables */
+    lexer.NextToken();
+    if (lexer.GetTokenKind() != TK_lparen) {
+      Error("expect ( for register inline-asm attribute but get ");
+      return false;
+    }
+    lexer.NextToken();
+    if (lexer.GetTokenKind() != TK_string) {
+      Error("expect string literal for section attribute but get ");
+      return false;
+    }
+    UStrIdx literalStrIdx = GlobalTables::GetUStrTable().GetOrCreateStrIdxFromName(lexer.GetName());
+    symbol.asmAttr = literalStrIdx;
+
     lexer.NextToken();
     if (lexer.GetTokenKind() != TK_rparen) {
       Error("expect ) for section attribute but get ");

@@ -430,4 +430,16 @@ void PostDomAnalysis::Compute() {
   (void)ComputePdtPreorder(GetCommonExitBB(), num);
   ResizePdtPreOrder(num);
 }
+
+bool CgDomAnalysis::PhaseRun(maplebe::CGFunc &f) {
+  MemPool *domMemPool = GetPhaseMemPool();
+  domAnalysis = domMemPool->New<DomAnalysis>(f, *domMemPool, *domMemPool, f.GetAllBBs(),
+                                             *f.GetFirstBB(), *f.GetLastBB());
+  domAnalysis->Compute();
+  if (CG_DEBUG_FUNC(f)) {
+    domAnalysis->Dump();
+  }
+  return false;
+}
+MAPLE_ANALYSIS_PHASE_REGISTER(CgDomAnalysis, domanalysis)
 }  /* namespace maplebe */

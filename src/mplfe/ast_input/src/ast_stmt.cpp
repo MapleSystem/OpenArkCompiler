@@ -557,4 +557,17 @@ std::list<UniqueFEIRStmt> ASTOffsetOfStmt::Emit2FEStmtImpl() const {
   }
   return stmts;
 }
+
+std::list<UniqueFEIRStmt> ASTGenericSelectionExprStmt::Emit2FEStmtImpl() const {
+  CHECK_FATAL(exprs.front() != nullptr, "child expr must not be nullptr!");
+  std::list<UniqueFEIRStmt> stmts;
+  std::list<UniqueFEIRExpr> feExprs;
+  auto feExpr = exprs.front()->Emit2FEExpr(stmts);
+  if (feExpr != nullptr) {
+    feExprs.emplace_back(std::move(feExpr));
+    auto stmt = std::make_unique<FEIRStmtNary>(OP_eval, std::move(feExprs));
+    stmts.emplace_back(std::move(stmt));
+  }
+  return stmts;
+}
 } // namespace maple

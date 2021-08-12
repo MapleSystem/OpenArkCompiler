@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -24,15 +24,6 @@ class CondBasedRC : public MeCondBased {
   virtual ~CondBasedRC() = default;
 };
 
-class MeDoCondBasedRC : public MeFuncPhase {
- public:
-  explicit MeDoCondBasedRC(MePhaseID id) : MeFuncPhase(id) {}
-
-  virtual ~MeDoCondBasedRC() = default;
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr *mrm) override;
-  std::string PhaseName() const override {
-    return "condbasedrc";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE(MECondBasedRC, MeFunction)
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_MECONDBASEDRC_H

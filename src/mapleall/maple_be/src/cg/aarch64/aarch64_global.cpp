@@ -680,9 +680,9 @@ void CselPattern::Optimize(Insn &insn) {
   Operand &opnd0 = insn.GetOperand(kInsnFirstOpnd);
   Operand &cond = insn.GetOperand(kInsnFourthOpnd);
   MOperator newMop = ((opnd0.GetSize()) == k64BitSize ? MOP_xcsetrc : MOP_wcsetrc);
-
+  Operand &rflag = cgFunc.GetOrCreateRflag();
   if (OpndDefByOne(insn, kInsnSecondOpnd) && OpndDefByZero(insn, kInsnThirdOpnd)) {
-    Insn &newInsn = cgFunc.GetCG()->BuildInstruction<AArch64Insn>(newMop, opnd0, cond);
+    Insn &newInsn = cgFunc.GetCG()->BuildInstruction<AArch64Insn>(newMop, opnd0, cond, rflag);
     newInsn.SetId(insn.GetId());
     bb.ReplaceInsn(insn, newInsn);
     cgFunc.GetRD()->InitGenUse(bb, false);
@@ -694,7 +694,7 @@ void CselPattern::Optimize(Insn &insn) {
     }
     auto &aarchCGFunc = static_cast<AArch64CGFunc&>(cgFunc);
     CondOperand &inverseCond = aarchCGFunc.GetCondOperand(inverseCondCode);
-    Insn &newInsn = cgFunc.GetCG()->BuildInstruction<AArch64Insn>(newMop, opnd0, inverseCond);
+    Insn &newInsn = cgFunc.GetCG()->BuildInstruction<AArch64Insn>(newMop, opnd0, inverseCond, rflag);
     newInsn.SetId(insn.GetId());
     bb.ReplaceInsn(insn, newInsn);
     cgFunc.GetRD()->InitGenUse(bb, false);

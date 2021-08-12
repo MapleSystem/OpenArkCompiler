@@ -184,6 +184,14 @@ class CGFunc {
   virtual Operand *SelectCisaligned(IntrinsicopNode &intrinopNode) = 0;
   virtual Operand *SelectCalignup(IntrinsicopNode &intrinopNode) = 0;
   virtual Operand *SelectCaligndown(IntrinsicopNode &intrinopNode) = 0;
+  virtual Operand *SelectCSyncAddFetch(IntrinsicopNode &intrinopNode, PrimType pty) = 0;
+  virtual Operand *SelectCSyncFetchAdd(IntrinsicopNode &intrinopNode, PrimType pty) = 0;
+  virtual Operand *SelectCSyncSubFetch(IntrinsicopNode &intrinopNode, PrimType pty) = 0;
+  virtual Operand *SelectCSyncFetchSub(IntrinsicopNode &intrinopNode, PrimType pty) = 0;
+  virtual Operand *SelectCSyncBoolCmpSwap(IntrinsicopNode &intrinopNode, PrimType pty) = 0;
+  virtual Operand *SelectCSyncValCmpSwap(IntrinsicopNode &intrinopNode, PrimType pty) = 0;
+  virtual Operand *SelectCSyncLockTestSet(IntrinsicopNode &intrinopNode, PrimType pty) = 0;
+  virtual Operand *SelectCSyncLockRelease(IntrinsicopNode &intrinopNode, PrimType pty) = 0;
   virtual void SelectMembar(StmtNode &membar) = 0;
   virtual void SelectComment(CommentNode &comment) = 0;
   virtual void HandleCatch() = 0;
@@ -687,6 +695,8 @@ class CGFunc {
   BB *GetBBFromLab2BBMap(int32 index) {
     return lab2BBMap[index];
   }
+
+  void DumpCFGToDot(const std::string &fileNamePrefix);
 
   BECommon &GetBecommon() {
     return beCommon;

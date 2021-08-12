@@ -3411,6 +3411,26 @@ bool CGLowerer::IsIntrinsicOpHandledAtLowerLevel(MIRIntrinsicID intrinsic) {
   case INTRN_C_isaligned:
   case INTRN_C_alignup:
   case INTRN_C_aligndown:
+  case INTRN_C___sync_add_and_fetch_2:
+  case INTRN_C___sync_add_and_fetch_4:
+  case INTRN_C___sync_add_and_fetch_8:
+  case INTRN_C___sync_sub_and_fetch_2:
+  case INTRN_C___sync_sub_and_fetch_4:
+  case INTRN_C___sync_sub_and_fetch_8:
+  case INTRN_C___sync_fetch_and_add_2:
+  case INTRN_C___sync_fetch_and_add_4:
+  case INTRN_C___sync_fetch_and_add_8:
+  case INTRN_C___sync_fetch_and_sub_2:
+  case INTRN_C___sync_fetch_and_sub_4:
+  case INTRN_C___sync_fetch_and_sub_8:
+  case INTRN_C___sync_bool_compare_and_swap_4:
+  case INTRN_C___sync_bool_compare_and_swap_8:
+  case INTRN_C___sync_val_compare_and_swap_4:
+  case INTRN_C___sync_val_compare_and_swap_8:
+  case INTRN_C___sync_lock_test_and_set_4:
+  case INTRN_C___sync_lock_test_and_set_8:
+  case INTRN_C___sync_lock_release_8:
+  case INTRN_C___sync_lock_release_4:
     return true;
 #endif
   default:

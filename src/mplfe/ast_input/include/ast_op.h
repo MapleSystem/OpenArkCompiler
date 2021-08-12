@@ -114,6 +114,7 @@ enum ASTOp {
   kASTOpNoInitExpr,
   kASTOpCompoundLiteralExp,
   kASTOpOffsetOfExpr,
+  kASTOpGenericSelectionExpr,
   kASTOpInitListExpr,
   kASTOpArrayInitLoop,
   kASTOpArrayInitIndex,
@@ -166,6 +167,7 @@ enum ASTStmtOp {
   kASTStmtAtomicExpr,
   kASTStmtGCCAsmStmt,
   kASTOffsetOfStmt,
+  kASTGenericSelectionExprStmt,
 };
 }  // namespace maple
 #endif  // MPLFE_AST_INPUT_INCLUDE_AST_OP_H

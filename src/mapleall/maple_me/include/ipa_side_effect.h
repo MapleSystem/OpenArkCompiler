@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -14,12 +14,11 @@
  */
 #ifndef MAPLE_ME_INCLUDE_IPASIDEEFFECT_H
 #define MAPLE_ME_INCLUDE_IPASIDEEFFECT_H
-#include "me_phase.h"
 #include "call_graph.h"
 #include "mir_nodes.h"
 #include "mir_builder.h"
 #include "me_ir.h"
-#include "dominance.h"
+#include "me_dominance.h"
 #include "me_function.h"
 
 namespace maple {
@@ -139,16 +138,6 @@ class IpaSideEffect {
   Dominance &dominance;
 };
 
-class DoIpaSideEffect : public MeFuncPhase {
- public:
-  explicit DoIpaSideEffect(MePhaseID id) : MeFuncPhase(id) {}
-
-  virtual ~DoIpaSideEffect() = default;
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *mfrm, ModuleResultMgr *mrm) override;
-
-  std::string PhaseName() const override {
-    return "sideeffect";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE(MESideEffect, MeFunction)
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_IPASIDEEFFECT_H

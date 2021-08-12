@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -280,5 +280,15 @@ void CodeReLayout::GenLayoutSym() {
   MIRSymbol *funcLayoutSym = builder->CreateGlobalDecl(funcLayoutSymName, arrayType);
   funcLayoutSym->SetKonst(funcLayoutConst);
   funcLayoutSym->SetStorageClass(kScFstatic);
+}
+
+void M2MCodeReLayout::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<M2MKlassHierarchy>();
+  aDep.SetPreservedAll();
+}
+
+bool M2MCodeReLayout::PhaseRun(maple::MIRModule &m) {
+  OPT_TEMPLATE_NEWPM(CodeReLayout);
+  return true;
 }
 }  // namespace maple

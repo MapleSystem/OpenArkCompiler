@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -14,7 +14,7 @@
  */
 #ifndef MPL2MPL_INCLUDE_REFLECTION_ANALYSIS_H
 #define MPL2MPL_INCLUDE_REFLECTION_ANALYSIS_H
-#include "class_hierarchy.h"
+#include "class_hierarchy_phase.h"
 
 namespace maple {
 // maple field index definition
@@ -303,16 +303,6 @@ class ReflectionAnalysis : public AnalysisResult {
   static std::map<std::list<Klass*>, std::string> superClasesIdxMap;
 };
 
-class DoReflectionAnalysis : public ModulePhase {
- public:
-  explicit DoReflectionAnalysis(ModulePhaseID id) : ModulePhase(id) {}
-
-  ~DoReflectionAnalysis() = default;
-
-  AnalysisResult *Run(MIRModule *module, ModuleResultMgr *moduleResultMgr) override;
-  std::string PhaseName() const override {
-    return "reflectionanalysis";
-  }
-};
+MAPLE_MODULE_PHASE_DECLARE(M2MReflectionAnalysis)
 }  // namespace maple
 #endif  // MPL2MPL_INCLUDE_REFLECTION_ANALYSIS_H

@@ -15,10 +15,9 @@
 #ifndef MAPLE_ME_VERIFY_H
 #define MAPLE_ME_VERIFY_H
 #include "me_ir.h"
-#include "me_phase.h"
 #include "me_function.h"
 #include "me_irmap.h"
-#include "class_hierarchy.h"
+#include "class_hierarchy_phase.h"
 
 namespace maple {
 void VerifyGlobalTypeTable();
@@ -50,15 +49,7 @@ class MeVerify {
   MeFunction &meFunc;
 };
 
-class MeDoVerify : public MeFuncPhase {
- public:
-  explicit MeDoVerify(MePhaseID id) : MeFuncPhase(id) {}
-  ~MeDoVerify() = default;
-
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*mrm) override;
-  std::string PhaseName() const override {
-    return "meverify";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(MEVerify, MeFunction)
+MAPLE_FUNC_PHASE_DECLARE_END
 } // namespace maple
 #endif  // MAPLE_ME_VERIFY_H

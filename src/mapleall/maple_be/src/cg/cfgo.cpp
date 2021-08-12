@@ -827,7 +827,6 @@ bool CgCfgo::PhaseRun(maplebe::CGFunc &f) {
   }
   return false;
 }
-MAPLE_TRANSFORM_PHASE_REGISTER(CgCfgo, cfgo)
 
 bool CgPostCfgo::PhaseRun(maplebe::CGFunc &f) {
   CFGOptimizer *cfgOptimizer = GetPhaseAllocator()->New<CFGOptimizer>(f, *GetPhaseMemPool());
@@ -843,5 +842,4 @@ bool CgPostCfgo::PhaseRun(maplebe::CGFunc &f) {
   }
   return false;
 }
-MAPLE_TRANSFORM_PHASE_REGISTER(CgPostCfgo, postcfgo)
 }  /* namespace maplebe */

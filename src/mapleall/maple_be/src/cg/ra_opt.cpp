@@ -36,5 +36,4 @@ bool CgRaOpt::PhaseRun(maplebe::CGFunc &f) {
   }
   return false;
 }
-MAPLE_TRANSFORM_PHASE_REGISTER(CgRaOpt, raopt)
 }  /* namespace maplebe */

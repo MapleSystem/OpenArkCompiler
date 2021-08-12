@@ -73,6 +73,9 @@ class AArch64Ebo : public Ebo {
   bool IsSameRedefine(BB &bb, Insn &insn, OpndInfo &opndInfo) const override;
   bool ResIsNotDefAndUse(Insn &insn) const override;
   bool LiveOutOfBB(const Operand &opnd, const BB &bb) const override;
+  bool OperandLiveAfterInsn(const RegOperand &regOpnd, Insn &insn);
+  bool ValidPatternForCombineExtAndLoad(OpndInfo *prevOpndInfo, Insn *insn, MOperator newMop, MOperator oldMop,
+                                        RegOperand& opnd);
 
  private:
   /* The number of elements in callerSaveRegTable must less then 45. */

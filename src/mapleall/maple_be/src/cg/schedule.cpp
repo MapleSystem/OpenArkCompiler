@@ -537,8 +537,6 @@ void CgPreScheduling::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
   aDep.PreservedAllExcept<CgLiveAnalysis>();
 }
 
-MAPLE_TRANSFORM_PHASE_REGISTER(CgPreScheduling, prescheduling)
-
 bool CgScheduling::PhaseRun(maplebe::CGFunc &f) {
   if (f.HasAsm()) {
     return true;
@@ -569,6 +567,4 @@ void CgScheduling::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
   aDep.AddRequired<CgLiveAnalysis>();
   aDep.PreservedAllExcept<CgLiveAnalysis>();
 }
-
-MAPLE_TRANSFORM_PHASE_REGISTER(CgScheduling, scheduling)
 }  /* namespace maplebe */

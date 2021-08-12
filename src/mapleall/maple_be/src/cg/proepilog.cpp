@@ -52,5 +52,4 @@ bool CgGenProEpiLog::PhaseRun(maplebe::CGFunc &f) {
   genPE->Run();
   return false;
 }
-MAPLE_TRANSFORM_PHASE_REGISTER(CgGenProEpiLog, generateproepilog)
 }  /* namespace maplebe */

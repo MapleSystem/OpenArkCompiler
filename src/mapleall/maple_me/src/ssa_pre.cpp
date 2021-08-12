@@ -1647,7 +1647,7 @@ void SSAPre::BuildWorkListStmt(MeStmt &stmt, uint32 seqStmt, bool isRebuilt, MeE
     case OP_customcallassigned:
     case OP_polymorphiccallassigned:
     case OP_icallassigned:
-    case OP_asm:{
+    case OP_asm: {
       auto *naryMeStmt = static_cast<NaryMeStmt*>(meStmt);
       const MapleVector<MeExpr*> &opnds = naryMeStmt->GetOpnds();
       for (auto it = opnds.begin(); it != opnds.end(); ++it) {

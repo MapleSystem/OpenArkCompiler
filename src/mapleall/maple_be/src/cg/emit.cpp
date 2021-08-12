@@ -696,9 +696,10 @@ void Emitter::EmitScalarConstant(MIRConst &mirConst, bool newLine, bool flag32, 
         Emit(" + ").Emit(symAddr.GetOffset());
       }
       if (symAddr.GetFieldID() > 1) {
-        MIRStructType *structType = static_cast<MIRStructType*>(symAddrSym->GetType());
+        MIRStructType *structType = static_cast<MIRStructType *>(symAddrSym->GetType());
         ASSERT(structType != nullptr, "EmitScalarConstant: non-zero fieldID for non-structure");
-        Emit(" + ").Emit(Globals::GetInstance()->GetBECommon()->GetFieldOffset(*structType, symAddr.GetFieldID()).first);
+        Emit(" + ").Emit(Globals::GetInstance()->GetBECommon()->GetFieldOffset(
+            *structType, symAddr.GetFieldID()).first);
       }
       break;
     }

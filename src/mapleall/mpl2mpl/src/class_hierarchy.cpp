@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -869,25 +869,6 @@ KlassHierarchy::KlassHierarchy(MIRModule *mirmodule, MemPool *memPool)
       strIdx2KlassMap(std::less<GStrIdx>(), alloc.Adapter()),
       vfunc2RfuncMap(std::less<GStrIdx>(), alloc.Adapter()),
       topoWorkList(alloc.Adapter()) {}
-
-AnalysisResult *DoKlassHierarchy::Run(MIRModule *module, ModuleResultMgr *m) {
-  MemPool *memPool = NewMemPool();
-  KlassHierarchy *kh = memPool->New<KlassHierarchy>(module, memPool);
-  KlassHierarchy::traceFlag = TRACE_PHASE;
-  kh->BuildHierarchy();
-#if MIR_JAVA
-  if (!Options::skipVirtualMethod) {
-    kh->CountVirtualMethods();
-  }
-#else
-  kh->CountVirtualMethods();
-#endif
-  if (KlassHierarchy::traceFlag) {
-    kh->Dump();
-  }
-  m->AddResult(GetPhaseID(), *module, *kh);
-  return kh;
-}
 
 MIRType *WKTypes::javaLangObject;
 MIRType *WKTypes::javaLangString;

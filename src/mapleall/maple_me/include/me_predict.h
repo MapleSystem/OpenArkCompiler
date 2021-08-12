@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -16,7 +16,6 @@
 #define MAPLE_ME_INCLUDE_MEPREDICT_H
 #include "me_function.h"
 #include "bb.h"
-#include "me_phase.h"
 #include "dominance.h"
 #include "me_loop_analysis.h"
 
@@ -112,6 +111,7 @@ class MePrediction : public AnalysisResult {
   bool predictDebug;
 };
 
+#ifdef NOT_USED
 class MeDoPredict : public MeFuncPhase {
  public:
   explicit MeDoPredict(MePhaseID id) : MeFuncPhase(id) {}
@@ -122,5 +122,6 @@ class MeDoPredict : public MeFuncPhase {
     return "mepredict";
   }
 };
+#endif
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_MEPREDICT_H

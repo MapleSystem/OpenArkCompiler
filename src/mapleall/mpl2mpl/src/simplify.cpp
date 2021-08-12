@@ -269,4 +269,14 @@ void Simplify::ProcessFuncStmt(MIRFunction &func, StmtNode *stmt, BlockNode *blo
 
 void Simplify::Finish() {
 }
+
+void M2MSimplify::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<M2MKlassHierarchy>();
+  aDep.SetPreservedAll();
+}
+
+bool M2MSimplify::PhaseRun(maple::MIRModule &m) {
+  OPT_TEMPLATE_NEWPM(Simplify)
+  return true;
+}
 }  // namespace maple

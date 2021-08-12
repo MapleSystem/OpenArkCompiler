@@ -21,6 +21,8 @@
 #include "mir_function.h"
 #include "mir_builder.h"
 #include "global_tables.h"
+#include "me_option.h"
+#include "maple_phase_manager.h"
 
 namespace {
 constexpr maple::uint64 kJsTypeNumber = 4;
@@ -1130,7 +1132,14 @@ std::pair<BaseNode*, int64> ConstantFold::FoldUnary(UnaryNode *node) {
     sum = 0;
   } else {
     bool isInt = IsPrimitiveInteger(node->GetPrimType());
-    if (isInt && node->GetOpCode() == OP_neg) {
+    // The neg node will be recreated regardless of whether the folding is successful or not. And the neg node's
+    // primType will be set to opnd type. There will be problems in some cases. For example:
+    // before cf:
+    //   neg i32 (eq u1 f32 (dread f32 %f_4_2, constval f32 0f))
+    // after cf:
+    //   neg u1 (eq u1 f32 (dread f32 %f_4_2, constval f32 0f))  # wrong!
+    // As a workaround, we exclude u1 opnd type
+    if (isInt && node->GetOpCode() == OP_neg && p.first->GetPrimType() != PTY_u1) {
       result = NegateTree(p.first);
       if (result->GetOpCode() == OP_neg && result->GetPrimType() == node->GetPrimType() &&
           static_cast<UnaryNode*>(result)->Opnd(0) == node->Opnd(0)) {
@@ -2398,5 +2407,18 @@ void ConstantFold::ProcessFunc(MIRFunction *func) {
   }
   mirModule->SetCurFunction(func);
   (void)Simplify(func->GetBody());
+}
+
+void M2MConstantFold::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<M2MKlassHierarchy>();
+  aDep.SetPreservedAll();
+}
+
+bool M2MConstantFold::PhaseRun(maple::MIRModule &m) {
+  OPT_TEMPLATE_NEWPM(ConstantFold);
+  if (MeOption::meVerify) {
+    VerifyGlobalTypeTable();
+  }
+  return true;
 }
 }  // namespace maple

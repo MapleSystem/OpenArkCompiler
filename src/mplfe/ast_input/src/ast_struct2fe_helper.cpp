@@ -16,6 +16,7 @@
 #include "fe_manager.h"
 #include "fe_utils_ast.h"
 #include "ast_util.h"
+#include "ast_decl_builder.h"
 
 namespace maple {
 // ---------- ASTStruct2FEHelper ----------
@@ -216,14 +217,19 @@ bool ASTFunc2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
                                                        argsTypeIdx, isVarg, isStatic);
   mirFunc->GetSrcPosition().SetFileNum(func.GetSrcFileIdx());
   mirFunc->GetSrcPosition().SetLineNum(func.GetSrcFileLineNum());
-  std::vector<std::string> parmNames = func.GetParmNames();
+  std::vector<ASTDecl*> paramDecls = func.GetParamDecls();
   if (firstArgRet) {
-    parmNames.insert(parmNames.begin(), "first_arg_return");
+    ASTDecl *returnParamVar = ASTDeclsBuilder::ASTVarBuilder(
+        allocator, "", "first_arg_return", std::vector<MIRType*>{}, GenericAttrs());
+    returnParamVar->SetIsParam(true);
+    paramDecls.insert(paramDecls.begin(), returnParamVar);
   }
-  for (uint32 i = 0; i < parmNames.size(); ++i) {
-    MIRSymbol *sym = FEManager::GetMIRBuilder().GetOrCreateDeclInFunc(parmNames[i], *argMIRTypes[i], *mirFunc);
+  for (uint32 i = 0; i < paramDecls.size(); ++i) {
+    MIRSymbol *sym = FEManager::GetMIRBuilder().GetOrCreateDeclInFunc(
+        paramDecls[i]->GetName(), *argMIRTypes[i], *mirFunc);
     sym->SetStorageClass(kScFormal);
     sym->SetSKind(kStVar);
+    sym->AddAttrs(paramDecls[i]->GetGenericAttrs().ConvertToTypeAttrs());
     mirFunc->AddArgument(sym);
   }
   mirMethodPair.first = mirFunc->GetStIdx();

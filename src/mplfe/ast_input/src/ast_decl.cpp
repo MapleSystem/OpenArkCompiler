@@ -107,7 +107,7 @@ void ASTVar::GenerateInitStmtImpl(std::list<UniqueFEIRStmt> &stmts) {
   if (initExpr == nullptr) {
     return;
   }
-  if (initExpr->IsConstantFolded() && genAttrs.GetAttr(GENATTR_static)) {
+  if (genAttrs.GetAttr(GENATTR_static)) {
     return;
   }
   UniqueFEIRExpr initFeirExpr = initExpr->Emit2FEExpr(stmts);
@@ -134,7 +134,7 @@ void ASTVar::GenerateInitStmtImpl(std::list<UniqueFEIRStmt> &stmts) {
 MIRSymbol *ASTVar::Translate2MIRSymbol() const {
   UniqueFEIRVar feirVar = Translate2FEIRVar();
   MIRSymbol *mirSymbol = feirVar->GenerateMIRSymbol(FEManager::GetMIRBuilder());
-  if (initExpr != nullptr && initExpr->IsConstantFolded() && genAttrs.GetAttr(GENATTR_static)) {
+  if (initExpr != nullptr && genAttrs.GetAttr(GENATTR_static)) {
     MIRConst *cst = initExpr->GenerateMIRConst();
     mirSymbol->SetKonst(cst);
   }

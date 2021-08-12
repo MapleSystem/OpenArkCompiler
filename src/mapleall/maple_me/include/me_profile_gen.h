@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -15,10 +15,10 @@
 #ifndef MAPLE_ME_INCLUDE_PROFILEGEN_H
 #define MAPLE_ME_INCLUDE_PROFILEGEN_H
 
-#include "me_phase.h"
 #include "me_pgo_instrument.h"
 #include "bb.h"
 #include "me_irmap.h"
+#include "maple_phase_manager.h"
 
 namespace maple {
 class BBEdge;
@@ -47,16 +47,6 @@ class MeProfGen : public PGOInstrument<BBEdge> {
   static bool firstRun;
 };
 
-class MeDoProfGen : public MeFuncPhase {
- public:
-  explicit MeDoProfGen(MePhaseID id) : MeFuncPhase(id) {}
-
-  ~MeDoProfGen() = default;
-
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr *mrm) override;
-  std::string PhaseName() const override {
-    return "profileGen";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE(MEProfGen, MeFunction)
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_PROFILEGEN_H
