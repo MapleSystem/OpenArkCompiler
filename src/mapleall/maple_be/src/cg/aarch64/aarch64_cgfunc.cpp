@@ -4527,12 +4527,14 @@ void AArch64CGFunc::SelectCvtFloat2Int(Operand &resOpnd, Operand &srcOpnd, PrimT
       mOp = !is64BitsFloat ? MOP_vcvtrf : MOP_vcvtrd;
       break;
     case PTY_u32:
+    case PTY_a32:
       mOp = !is64BitsFloat ? MOP_vcvturf : MOP_vcvturd;
       break;
     case PTY_i64:
       mOp = !is64BitsFloat ? MOP_xvcvtrf : MOP_xvcvtrd;
       break;
     case PTY_u64:
+    case PTY_a64:
       mOp = !is64BitsFloat ? MOP_xvcvturf : MOP_xvcvturd;
       break;
     default:
