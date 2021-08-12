@@ -14,21 +14,52 @@
  */
 #ifndef MAPLE_PHASE_INCLUDE_MAPLE_PHASE_SUPPORT_H
 #define MAPLE_PHASE_INCLUDE_MAPLE_PHASE_SUPPORT_H
-#include "phase.h"
+#include <map>
+#include <string>
+#include <iostream>
+#include "mempool.h"
+#include "maple_string.h"
+#include "mpl_timer.h"
+#include "mempool_allocator.h"
+#include "option.h"
 
 namespace maple {
 using MaplePhaseID = const void *;
 class MaplePhase;
 typedef MaplePhase* (*MaplePhase_t)(MemPool*);
 
+// base class of analysisPhase's result
+class AnalysisResult {
+ public:
+  explicit AnalysisResult(MemPool *memPoolParam) {
+    ASSERT(memPoolParam != nullptr, "memPoolParam is null in AnalysisResult::AnalysisResult");
+    memPool = memPoolParam;
+  }
+
+  virtual ~AnalysisResult() = default;
+
+  MemPool *GetMempool() const {
+    return memPool;
+  }
+
+  void EraseMemPool() {
+    delete memPool;
+    memPool = nullptr;
+  }
+
+ protected:
+  MemPool *memPool;
+};
+
 /* record every phase known by the system */
 class MaplePhaseInfo {
  public:
-  MaplePhaseInfo(const std::string &pName, MaplePhaseID pID, bool isAS, bool isCFGonly)
+  MaplePhaseInfo(const std::string &pName, MaplePhaseID pID, bool isAS, bool isCFGonly, bool canSkip)
       : phaseName(pName),
         phaseID(pID),
         isAnalysis(isAS),
-        isCFGOnlyPass(isCFGonly) {}
+        isCFGOnlyPass(isCFGonly),
+        canSkip(canSkip) {}
 
   ~MaplePhaseInfo() {
     constructor = nullptr;
@@ -52,12 +83,41 @@ class MaplePhaseInfo {
   std::string PhaseName() const {
     return phaseName;
   }
+  bool CanSkip() const {
+    return canSkip;
+  }
   MaplePhase_t constructor = nullptr;
  private:
   std::string phaseName;
   MaplePhaseID phaseID;
   const bool isAnalysis ;
   const bool isCFGOnlyPass;
+  const bool canSkip;
+};
+
+class PhaseTimeHandler {
+ public:
+  PhaseTimeHandler(MemPool &memPool, uint32 threadNum = 1)
+      : allocator(&memPool),
+        phaseTimeRecord(allocator.Adapter()),
+        originOrder(allocator.Adapter()),
+        multiTimers(allocator.Adapter()){
+    if (threadNum > 1) {
+      isMultithread = true;
+    }
+  }
+
+  void RunBeforePhase(const MaplePhaseInfo &pi);
+  void RunAfterPhase(const MaplePhaseInfo &pi);
+  void DumpPhasesTime();
+ private:
+  MapleAllocator allocator;
+  MapleMap<std::string, long> phaseTimeRecord;
+  MapleVector<MapleMap<std::string, long>::iterator> originOrder;
+  long phaseTotalTime = 0;
+  MPLTimer timer;
+  bool isMultithread = false;
+  MapleMap<std::thread::id, MPLTimer*> multiTimers;
 };
 
 // usasge :: analysis dependency

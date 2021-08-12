@@ -492,7 +492,8 @@ StmtNode &IntrinsiccallMeStmt::EmitStmt(SSATab &ssaTab) {
 }
 
 StmtNode &AsmMeStmt::EmitStmt(SSATab &ssaTab) {
-  AsmNode *asmNode = ssaTab.GetModule().CurFunction()->GetCodeMempool()->New<AsmNode>(&ssaTab.GetModule().GetCurFuncCodeMPAllocator());
+  AsmNode *asmNode = ssaTab.GetModule().CurFunction()->GetCodeMempool()->New<AsmNode>(
+      &ssaTab.GetModule().GetCurFuncCodeMPAllocator());
   asmNode->GetNopnd().resize(NumMeStmtOpnds());
   for (size_t i = 0; i < NumMeStmtOpnds(); ++i) {
     asmNode->SetOpnd(&GetOpnd(i)->EmitExpr(ssaTab), i);

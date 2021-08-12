@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -14,8 +14,8 @@
  */
 #ifndef MAPLE_ME_INCLUDE_ME_SSA_LPRE_H
 #define MAPLE_ME_INCLUDE_ME_SSA_LPRE_H
-#include "me_irmap.h"
 #include "ssa_pre.h"
+#include "me_irmap.h"
 #include "me_loop_analysis.h"
 
 namespace maple {
@@ -95,14 +95,6 @@ class MeSSALPre : public SSAPre {
   MapleMap<OStIdx, MapleSet<BBId>*> candsForSSAUpdate;
 };
 
-class MeDoSSALPre : public MeFuncPhase {
- public:
-  explicit MeDoSSALPre(MePhaseID id) : MeFuncPhase(id) {}
-  virtual ~MeDoSSALPre() = default;
-  AnalysisResult *Run(MeFunction *irFunc, MeFuncResultMgr *funcMgr, ModuleResultMgr *moduleMgr) override;
-  std::string PhaseName() const override {
-    return "lpre";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE(MESSALPre, MeFunction)
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_ME_SSA_LPRE_H

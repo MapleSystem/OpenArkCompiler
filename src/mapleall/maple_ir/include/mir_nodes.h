@@ -3216,6 +3216,7 @@ class AsmNode : public NaryStmtNode {
 };
 
 void DumpCallReturns(const MIRModule &mod, CallReturnVector nrets, int32 indent);
+bool HasIreadExpr(const BaseNode *expr);
 }  // namespace maple
 
 #define LOAD_SAFE_CAST_FOR_MIR_NODE

@@ -53,9 +53,6 @@ static BaseNode *ConvertSSANode(BaseNode *node) {
   if (node->IsSSANode()) {
     node = static_cast<SSANode *>(node)->GetNoSSANode();
   }
-  if (node->IsLeaf()) {
-    return node;
-  }
   for (uint32 opndId = 0; opndId < node->GetNumOpnds(); ++opndId) {
     node->SetOpnd(ConvertSSANode(node->Opnd(opndId)), opndId);
   }
@@ -88,8 +85,9 @@ void FuncEmit::EmitBeforeHSSA(MIRFunction &func, const MapleVector<BB*> &bbList)
       if (func.GetBody()->GetFirst() == nullptr) {
         func.GetBody()->SetFirst(bb->GetStmtNodes().begin().d());
       }
-      if (lastStmt != nullptr) {
-        bb->GetStmtNodes().push_front(lastStmt);
+      if (lastStmt != nullptr) { // link basic blocks
+        bb->GetFirst().SetPrev(lastStmt);
+        lastStmt->SetNext(&bb->GetFirst());
       }
       lastStmt = bb->GetStmtNodes().rbegin().base().d();
     }

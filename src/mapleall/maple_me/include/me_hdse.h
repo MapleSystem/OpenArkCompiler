@@ -17,9 +17,10 @@
 #include <iostream>
 #include "bb.h"
 #include "me_cfg.h"
-#include "me_phase.h"
 #include "me_option.h"
 #include "me_dominance.h"
+#include "me_alias_class.h"
+#include "me_irmap_build.h"
 #include "hdse.h"
 
 namespace maple {
@@ -42,15 +43,6 @@ class MeHDSE : public HDSE {
   MeFunction &func;
 };
 
-class MeDoHDSE : public MeFuncPhase {
- public:
-  explicit MeDoHDSE(MePhaseID id) : MeFuncPhase(id) {}
-
-  virtual ~MeDoHDSE() = default;
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr *mrm) override;
-  std::string PhaseName() const override {
-    return "hdse";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE(MEHdse, MeFunction)
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_MEHDSE_H

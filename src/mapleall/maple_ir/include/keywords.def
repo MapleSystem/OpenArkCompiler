@@ -103,3 +103,5 @@
   KEYWORD(asmdecl)
   // section attribute
   KEYWORD(section)
+  // attrbuite for asm var
+  KEYWORD(asmattr)

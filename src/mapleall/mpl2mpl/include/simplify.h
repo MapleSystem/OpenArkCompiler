@@ -14,9 +14,9 @@
  */
 #ifndef MPL2MPL_INCLUDE_SIMPLIFY_H
 #define MPL2MPL_INCLUDE_SIMPLIFY_H
-#include "module_phase.h"
 #include "phase_impl.h"
 #include "factory.h"
+#include "maple_phase_manager.h"
 namespace maple {
 class Simplify : public FuncOptimizeImpl {
  public:
@@ -43,20 +43,7 @@ class Simplify : public FuncOptimizeImpl {
   void SimplifyCallAssigned(const StmtNode &stmt, BlockNode &block);
   StmtNode *SplitAggCopy(StmtNode *stmt, BlockNode *block, MIRFunction *func);
 };
-class DoSimplify : public ModulePhase {
- public:
-  explicit DoSimplify(ModulePhaseID id) : ModulePhase(id) {}
 
-  std::string PhaseName() const override {
-    return "simplify";
-  }
-
-  AnalysisResult *Run(MIRModule *mod, ModuleResultMgr *mrm) override {
-    OPT_TEMPLATE(Simplify);
-    return nullptr;
-  }
-
-  ~DoSimplify() = default;
-};
+MAPLE_MODULE_PHASE_DECLARE(M2MSimplify)
 }  // namespace maple
 #endif  // MPL2MPL_INCLUDE_SIMPLIFY_H

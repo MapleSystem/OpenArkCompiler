@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -294,16 +294,19 @@ bool MeProfUse::Run() {
   return true;
 }
 
-AnalysisResult *MeDoProfUse::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) {
-  (void)(m->GetAnalysisResult(MeFuncPhase_MECFG, func));
-  MemPool *tempMp = NewMemPool();
-  MeProfUse profUse(*func, *tempMp, DEBUGFUNC(func));
+void MEProfUse::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<MEMeCfg>();
+  aDep.SetPreservedAll();
+}
+
+bool MEProfUse::PhaseRun(maple::MeFunction &f) {
+  MeProfUse profUse(f, *GetPhaseMemPool(), DEBUGFUNC_NEWPM(f));
   profUse.Run();
-  if (DEBUGFUNC(func) && profUse.IsSuccUseProf()) {
+  if (DEBUGFUNC_NEWPM(f) && profUse.IsSuccUseProf()) {
     LogInfo::MapleLogger() << "******************after profile use  dump function******************\n";
     profUse.DumpFuncCFGEdgeFreq();
-    func->GetCfg()->DumpToFile("afterProfileUse", false, true);
+    f.GetCfg()->DumpToFile("afterProfileUse", false, true);
   }
-  return nullptr;
+  return true;
 }
 }  // namespace maple

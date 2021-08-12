@@ -14,7 +14,6 @@
  */
 #ifndef MAPLEME_INCLUDE_ME_PREGRENAMER_H
 #define MAPLEME_INCLUDE_ME_PREGRENAMER_H
-#include "me_irmap.h"
 #include "ssa_pre.h"
 
 namespace maple {
@@ -34,15 +33,6 @@ class PregRenamer {
   MeIRMap *meirmap;
 };
 
-class MeDoPregRename : public MeFuncPhase {
- public:
-  explicit MeDoPregRename(MePhaseID id) : MeFuncPhase(id) {}
-
-  virtual ~MeDoPregRename() = default;
-  AnalysisResult *Run(MeFunction *ir, MeFuncResultMgr *m, ModuleResultMgr *mrm) override;
-  std::string PhaseName() const override {
-    return "pregrename";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE(MEPregRename, MeFunction)
 }  // namespace maple
 #endif  // MAPLEME_INCLUDE_ME_PREGRENAMER_H

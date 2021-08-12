@@ -37,5 +37,4 @@ bool CgMoveRegArgs::PhaseRun(maplebe::CGFunc &f) {
   movRegArgs->Run();
   return true;
 }
-MAPLE_TRANSFORM_PHASE_REGISTER(CgMoveRegArgs, moveargs)
 }  /* namespace maplebe */

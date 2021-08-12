@@ -672,6 +672,7 @@ void MePrediction::SetPredictDebug(bool val) {
   predictDebug = val;
 }
 
+#ifdef NOT_USED
 // Estimate the execution frequecy for all bbs.
 AnalysisResult *MeDoPredict::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) {
   auto *hMap = static_cast<MeIRMap*>(m->GetAnalysisResult(MeFuncPhase_IRMAPBUILD, func));
@@ -693,4 +694,5 @@ AnalysisResult *MeDoPredict::Run(MeFunction *func, MeFuncResultMgr *m, ModuleRes
   }
   return mePredict;
 }
+#endif
 }  // namespace maple

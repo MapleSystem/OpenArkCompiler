@@ -14,7 +14,6 @@
  */
 #ifndef MPL2MPL_INCLUDE_PREME_H
 #define MPL2MPL_INCLUDE_PREME_H
-#include "module_phase.h"
 #include "phase_impl.h"
 #include "me_option.h"
 
@@ -28,22 +27,12 @@ class Preme : public FuncOptimizeImpl {
   FuncOptimizeImpl *Clone() override {
     return new Preme(*this);
   }
+  static void CreateMIRTypeForLowerGlobalDreads();
 
  private:
   void CreateMIRTypeForAddrof(const MIRFunction &func, const BaseNode *baseNode) const;
 };
 
-class DoPreme : public ModulePhase {
- public:
-  explicit DoPreme(ModulePhaseID id) : ModulePhase(id) {}
-  ~DoPreme() = default;
-  AnalysisResult *Run(MIRModule *mod, ModuleResultMgr *mrm) override;
-  std::string PhaseName() const override {
-    return "preme";
-  }
-
- private:
-  void CreateMIRTypeForLowerGlobalDreads() const;
-};
+MAPLE_MODULE_PHASE_DECLARE(M2MPreme)
 }  // namespace maple
 #endif  // MPL2MPL_INCLUDE_PREME_H

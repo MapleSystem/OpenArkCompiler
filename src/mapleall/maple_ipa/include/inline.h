@@ -21,9 +21,9 @@
 #include "mempool.h"
 #include "mempool_allocator.h"
 #include "call_graph.h"
-#include "module_phase.h"
 #include "string_utils.h"
 #include "me_option.h"
+#include "maple_phase_manager.h"
 
 namespace maple {
 constexpr char kSpaceTabStr[] = " \t";
@@ -158,16 +158,6 @@ class MInline {
   uint32 maxInlineLevel = 4; //for recursive function, allow inline 4 levels at most.
 };
 
-class DoInline : public ModulePhase {
- public:
-  explicit DoInline(ModulePhaseID id) : ModulePhase(id) {}
-
-  AnalysisResult *Run(MIRModule *module, ModuleResultMgr *mgr) override;
-  std::string PhaseName() const override {
-    return "inline";
-  }
-
-  ~DoInline() = default;
-};
+MAPLE_MODULE_PHASE_DECLARE(M2MInline)
 }  // namespace maple
 #endif  // MAPLE_IPA_INCLUDE_INLINE_H

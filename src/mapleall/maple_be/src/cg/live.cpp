@@ -317,5 +317,4 @@ bool CgLiveAnalysis::PhaseRun(maplebe::CGFunc &f) {
   }
   return false;
 }
-MAPLE_ANALYSIS_PHASE_REGISTER(CgLiveAnalysis, liveanalysis)
 }  /* namespace maplebe */

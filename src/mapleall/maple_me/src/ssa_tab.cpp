@@ -138,8 +138,7 @@ void SSATab::CreateSSAStmt(StmtNode &stmt, const BB *curbb) {
           OriginalSt *ost = nullptr;
           if (!retPair.second.IsReg()) {
             StIdx stidx = retPair.first;
-            MIRSymbolTable *symTab = mirModule.CurFunction()->GetSymTab();
-            MIRSymbol *st = symTab->GetSymbolFromStIdx(stidx.Idx());
+            MIRSymbol *st = mirModule.CurFunction()->GetLocalOrGlobalSymbol(stidx);
             ost = FindOrCreateSymbolOriginalSt(*st, mirModule.CurFunction()->GetPuidx(), retPair.second.GetFieldID());
           } else {
             ost = originalStTable.FindOrCreatePregOriginalSt(retPair.second.GetPregIdx(),

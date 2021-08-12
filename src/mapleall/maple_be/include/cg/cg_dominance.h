@@ -19,6 +19,7 @@
 #include "insn.h"
 #include "cgbb.h"
 #include "datainfo.h"
+#include "maple_phase.h"
 
 namespace maplebe {
 class DominanceBase : public AnalysisResult {
@@ -250,6 +251,12 @@ private:
   MapleVector<uint32> pdtDfnOut;                 // max position of all nodes in the sub tree of each BB in pdt_preorder
 };
 
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgDomAnalysis, maplebe::CGFunc);
+   DomAnalysis *GetResult() {
+    return domAnalysis;
+  }
+  DomAnalysis *domAnalysis = nullptr;
+MAPLE_FUNC_PHASE_DECLARE_END
 }  /* namespace maplebe */
 
 #endif  /* MAPLEBE_INCLUDE_CG_DOM_H */

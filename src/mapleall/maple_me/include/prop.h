@@ -64,6 +64,8 @@ class Prop {
     curBB = bb;
   }
 
+  bool NoPropUnionAggField(const MeStmt *meStmt, const StmtNode *stmt /* for irmap */, const MeExpr *propedRHS) const;
+
  protected:
   virtual void UpdateCurFunction(BB&) const {
   }
@@ -74,6 +76,7 @@ class Prop {
 
   Dominance &dom;
 
+  virtual MeExpr &PropMeExpr(MeExpr &meExpr, bool &isproped, bool atParm);
 
   virtual BB *GetBB(BBId) {
     return nullptr;
@@ -91,7 +94,6 @@ class Prop {
                                ScalarMeExpr *propagatingScalar = nullptr);
   MeExpr *FormInverse(ScalarMeExpr *v, MeExpr *x, MeExpr *formingExp);
   MeExpr *RehashUsingInverse(MeExpr *x);
-  virtual MeExpr &PropMeExpr(MeExpr &meExpr, bool &isproped, bool atParm);
 
   IRMap &irMap;
   SSATab &ssaTab;

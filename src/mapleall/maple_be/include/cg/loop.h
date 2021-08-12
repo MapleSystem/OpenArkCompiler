@@ -114,7 +114,8 @@ class LoopFinder : public AnalysisResult {
         sortedBBs(loopMemPool.Adapter()),
         dfsBBs(loopMemPool.Adapter()),
         onPathBBs(loopMemPool.Adapter()),
-        recurseVisited(loopMemPool.Adapter())
+        recurseVisited(loopMemPool.Adapter()),
+        criticalEdges(loopMemPool.Adapter())
         {}
 
   ~LoopFinder() override = default;
@@ -131,6 +132,8 @@ class LoopFinder : public AnalysisResult {
   void DetectInnerLoop();
   void UpdateCGFunc();
   void FormLoopHierarchy();
+  void CollectCriticalEdges();
+  void SplitCriticalEdges();
 
  private:
   CGFunc *cgFunc;
@@ -141,6 +144,7 @@ class LoopFinder : public AnalysisResult {
   MapleStack<BB*> dfsBBs;
   MapleVector<bool> onPathBBs;
   MapleVector<bool> recurseVisited;
+  MapleVector<std::pair<BB*, BB*>> criticalEdges;
   LoopHierarchy *loops = nullptr;
 };
 

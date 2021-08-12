@@ -15,16 +15,10 @@
 
 #ifndef MAPLE_ME_INCLUDE_LFO_INJECT_IV_H
 #define MAPLE_ME_INCLUDE_LFO_INJECT_IV_H
-#include "me_phase.h"
+#include "me_phase_manager.h"
 
 namespace maple {
 /* emit ir to specified file */
-class DoLfoInjectIV : public MeFuncPhase {
- public:
-  DoLfoInjectIV(MePhaseID id) : MeFuncPhase(id) {}
-
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) override;
-  std::string PhaseName() const override { return "injectiv"; }
-};
+MAPLE_FUNC_PHASE_DECLARE(MELfoInjectIV, MeFunction)
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_LFO_INJECT_IV_H

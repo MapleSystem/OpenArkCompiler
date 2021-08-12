@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -15,7 +15,6 @@
 #ifndef MAPLE_ME_INCLUDE_MECONSTPROP_H
 #define MAPLE_ME_INCLUDE_MECONSTPROP_H
 #include "me_ir.h"
-#include "me_phase.h"
 
 namespace maple {
 class MeConstProp {
@@ -27,6 +26,7 @@ class MeConstProp {
   void InterConstProp() const;
 };
 
+#ifdef NOT_USED
 class MeDoIntraConstProp : public MeFuncPhase {
  public:
   explicit MeDoIntraConstProp(MePhaseID id) : MeFuncPhase(id) {}
@@ -48,5 +48,6 @@ class MeDoInterConstProp : public MeFuncPhase {
     return "interconstantpropagation";
   }
 };
+#endif
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_MECONSTPROP_H

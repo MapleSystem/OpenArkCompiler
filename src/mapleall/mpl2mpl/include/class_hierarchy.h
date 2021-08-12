@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -15,7 +15,7 @@
 #ifndef MPL2MPL_INCLUDE_CLASS_HIERARCHY_H
 #define MPL2MPL_INCLUDE_CLASS_HIERARCHY_H
 #include "mir_function.h"
-#include "module_phase.h"
+#include "maple_phase.h"
 
 namespace maple {
 class KlassHierarchy;  // circular dependency exists, no other choice
@@ -409,18 +409,6 @@ class KlassHierarchy : public AnalysisResult {
   // This is used for devirtualization and has to be built with a closed-world view
   MapleMap<GStrIdx, GStrIdx> vfunc2RfuncMap;
   MapleVector<Klass*> topoWorkList;
-};
-
-class DoKlassHierarchy : public ModulePhase {
- public:
-    explicit DoKlassHierarchy(ModulePhaseID id) : ModulePhase(id) {}
-
-    AnalysisResult *Run(MIRModule *module, ModuleResultMgr *m) override;
-    std::string PhaseName() const override {
-      return "classhierarchy";
-    }
-
-    virtual ~DoKlassHierarchy() = default;
 };
 }  // namespace maple
 #endif  // MPL2MPL_INCLUDE_CLASS_HIERARCHY_H

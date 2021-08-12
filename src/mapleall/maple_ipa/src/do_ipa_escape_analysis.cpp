@@ -16,6 +16,7 @@
 #include <iostream>
 
 namespace maple {
+#ifdef NOT_USED
 AnalysisResult *DoIpaEA::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr *mrm) {
   if (func == nullptr) {
     return nullptr;
@@ -102,4 +103,5 @@ AnalysisResult *DoIpaEAOpt::Run(MeFunction *func, MeFuncResultMgr *mgr, ModuleRe
   delete eaMemPool;
   return nullptr;
 }
+#endif
 }

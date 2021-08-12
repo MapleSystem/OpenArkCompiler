@@ -72,17 +72,6 @@ class PlacementRC : public MeSSUPre {
   MapleVector<bool> bbHasReal;
 };
 
-class MeDoPlacementRC : public MeFuncPhase {
- public:
-  explicit MeDoPlacementRC(MePhaseID id) : MeFuncPhase(id) {}
-
-  virtual ~MeDoPlacementRC() = default;
-
-  AnalysisResult *Run(MeFunction *ir, MeFuncResultMgr *m, ModuleResultMgr *mrm) override;
-
-  std::string PhaseName() const override {
-    return "placementrc";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE(MEPlacementRC, MeFunction)
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_MEPLACEMENTRC_H

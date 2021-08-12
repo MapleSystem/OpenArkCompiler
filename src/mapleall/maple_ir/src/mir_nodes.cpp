@@ -1003,6 +1003,19 @@ void DumpCallReturns(const MIRModule &mod, CallReturnVector nrets, int32 indent)
   LogInfo::MapleLogger() << "}\n";
 }
 
+// iread expr has sideeffect, may cause derefference error
+bool HasIreadExpr(const BaseNode *expr) {
+  if (expr->GetOpCode() == OP_iread) {
+    return true;
+  }
+  for (size_t i = 0; i < expr->GetNumOpnds(); ++i) {
+    if (HasIreadExpr(expr->Opnd(i))) {
+      return true;
+    }
+  }
+  return false;
+}
+
 MIRType *CallNode::GetCallReturnType() {
   if (!kOpcodeInfo.IsCallAssigned(GetOpCode())) {
     return nullptr;

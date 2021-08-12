@@ -15,8 +15,8 @@
 #ifndef MAPLE_ME_INCLUDE_MECRITICALEDGE_H
 #define MAPLE_ME_INCLUDE_MECRITICALEDGE_H
 
-#include "me_phase.h"
 #include "bb.h"
+#include "maple_phase_manager.h"
 
 namespace maple {
 // Split critical edge
@@ -33,16 +33,6 @@ class MeSplitCEdge {
   bool isDebugFunc = false;
 };
 
-class MeDoSplitCEdge : public MeFuncPhase {
- public:
-  explicit MeDoSplitCEdge(MePhaseID id) : MeFuncPhase(id) {}
-
-  ~MeDoSplitCEdge() = default;
-
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr *mrm) override;
-  std::string PhaseName() const override {
-    return "splitcriticaledge";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE(MESplitCEdge, MeFunction)
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_MECRITICALEDGE_H

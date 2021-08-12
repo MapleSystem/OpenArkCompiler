@@ -16,8 +16,7 @@
 #ifndef MAPLE_ME_INCLUDE_LFO_PRE_EMIT_H
 #define MAPLE_ME_INCLUDE_LFO_PRE_EMIT_H
 #include "mir_nodes.h"
-#include "me_irmap.h"
-#include "me_phase.h"
+#include "me_irmap_build.h"
 
 namespace maple {
 class LfoPreEmitter : public AnalysisResult {
@@ -102,12 +101,12 @@ class LfoPreEmitter : public AnalysisResult {
 };
 
 /* emit ir to specified file */
-class DoLfoPreEmission : public MeFuncPhase {
- public:
-  DoLfoPreEmission(MePhaseID id) : MeFuncPhase(id) {}
-
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr *mrm) override;
-  std::string PhaseName() const override { return "lfopreemit"; }
-};
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(MELfoPreEmission, MeFunction)
+  LfoPreEmitter *GetResult() {
+    return emitter;
+  }
+  LfoPreEmitter *emitter = nullptr;
+OVERRIDE_DEPENDENCE
+MAPLE_FUNC_PHASE_DECLARE_END
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_LFO_PRE_EMIT_H

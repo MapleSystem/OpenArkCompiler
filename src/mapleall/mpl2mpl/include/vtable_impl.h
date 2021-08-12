@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -14,7 +14,6 @@
  */
 #ifndef MPL2MPL_INCLUDE_VTABLE_IMPL_H
 #define MPL2MPL_INCLUDE_VTABLE_IMPL_H
-#include "module_phase.h"
 #include "phase_impl.h"
 
 namespace maple {
@@ -23,7 +22,6 @@ enum CallKind {
   kVirtualCall = 1,
   kSuperCall = 2
 };
-
 
 class VtableImpl : public FuncOptimizeImpl {
  public:
@@ -73,20 +71,6 @@ class VtableImpl : public FuncOptimizeImpl {
   MIRFunction *mccItabFunc;
 };
 
-class DoVtableImpl : public ModulePhase {
- public:
-  explicit DoVtableImpl(ModulePhaseID id) : ModulePhase(id) {}
-
-  std::string PhaseName() const override {
-    return "VtableImpl";
-  }
-
-  ~DoVtableImpl() = default;
-
-  AnalysisResult *Run(MIRModule *mod, ModuleResultMgr *mrm) override {
-    OPT_TEMPLATE(VtableImpl);
-    return nullptr;
-  }
-};
+MAPLE_MODULE_PHASE_DECLARE(M2MVtableImpl)
 }  // namespace maple
 #endif  // MPL2MPL_INCLUDE_VTABLE_IMPL_H

@@ -22,8 +22,6 @@
 #include "mempool.h"
 #include "mempool_allocator.h"
 #include "call_graph.h"
-#include "module_phase.h"
-#include "me_phase.h"
 #include "mir_nodes.h"
 #include "me_ir.h"
 #include "me_irmap.h"
@@ -31,6 +29,7 @@
 #include "me_loop_analysis.h"
 
 namespace maple {
+#ifdef NOT_USED
 class DoIpaEA : public MeFuncPhase {
  public:
   explicit DoIpaEA(MePhaseID id) : MeFuncPhase(id) {}
@@ -50,5 +49,6 @@ class DoIpaEAOpt : public MeFuncPhase {
     return "ipaeaopt";
   }
 };
+#endif
 }
 #endif  // INCLUDE_MAPLEIPA_INCLUDE_IPAESCAPEANALYSIS_H

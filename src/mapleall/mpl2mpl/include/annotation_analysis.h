@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -14,7 +14,7 @@
  */
 #ifndef MPL2MPL_INCLUDE_ANNOTATION_ANALYSIS_H
 #define MPL2MPL_INCLUDE_ANNOTATION_ANALYSIS_H
-#include "class_hierarchy.h"
+#include "class_hierarchy_phase.h"
 #include "namemangler.h"
 
 namespace maple {
@@ -281,16 +281,12 @@ class AnnotationAnalysis : public AnalysisResult {
   GenericType *dummyObj;
 };
 
-class DoAnnotationAnalysis : public ModulePhase {
- public:
-  explicit DoAnnotationAnalysis(ModulePhaseID id) : ModulePhase(id) {}
-
-  ~DoAnnotationAnalysis() = default;
-
-  AnalysisResult *Run(MIRModule *module, ModuleResultMgr *moduleResultMgr) override;
-  std::string PhaseName() const override {
-    return "annotationanalysis";
+MAPLE_MODULE_PHASE_DECLARE_BEGIN(M2MAnnotationAnalysis)
+  AnnotationAnalysis *GetResult() {
+    return aa;
   }
-};
+  AnnotationAnalysis *aa = nullptr;
+OVERRIDE_DEPENDENCE
+MAPLE_MODULE_PHASE_DECLARE_END
 }
 #endif

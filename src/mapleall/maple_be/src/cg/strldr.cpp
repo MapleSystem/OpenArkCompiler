@@ -57,5 +57,4 @@ void CgStoreLoadOpt::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
   aDep.AddRequired<CgReachingDefinition>();
   aDep.SetPreservedAll();
 }
-MAPLE_TRANSFORM_PHASE_REGISTER(CgStoreLoadOpt, storeloadopt)
 }  /* namespace maplebe */

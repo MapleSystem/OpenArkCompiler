@@ -1,4 +1,4 @@
-/*
+ /*
  * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
@@ -17,6 +17,7 @@
 
 #include "strldr.h"
 #include "aarch64_reaching.h"
+#include "aarch64_operand.h"
 
 namespace maplebe {
 using namespace maple;
@@ -31,17 +32,36 @@ class AArch64StoreLoadOpt : public StoreLoadOpt {
   void DoLoadZeroToMoveTransfer(const Insn&, short, const InsnSet&) const;
   void DoLoadToMoveTransfer(Insn&, short, short, const InsnSet&);
   bool CheckStoreOpCode(MOperator opCode) const;
+
+  enum MemPropMode : uint8 {
+    kUndef,
+    kPropBase,
+    kPropOffset,
+    kPropSignedExtend,
+    kPropUnsignedExtend,
+    kPropShift
+  };
  private:
+  bool CheckDefInsn(Insn &defInsn, Insn &currInsn);
+  AArch64MemOperand *SelectReplaceMem(Insn &defInsn, RegOperand &base, Operand *offset);
+  bool CanDoMemProp(Insn *insn);
+  void MemPropInit();
+  void SelectPropMode(AArch64MemOperand &currMemOpnd);
+  bool ReplaceMemOpnd(Insn &insn, regno_t regNo, RegOperand &base, Operand *offset);
+  void MemProp(Insn &insn);
   void ProcessStrPair(Insn &insn);
   void ProcessStr(Insn &insn);
   void GenerateMoveLiveInsn(RegOperand &resRegOpnd, RegOperand &srcRegOpnd,
                             Insn &ldrInsn, Insn &strInsn, short memSeq);
   void GenerateMoveDeadInsn(RegOperand &resRegOpnd, RegOperand &srcRegOpnd,
                             Insn &ldrInsn, Insn &strInsn, short memSeq);
+  bool HasMemBarrier(const Insn &ldrInsn, const Insn &strInsn) const;
   MapleAllocator localAlloc;
   /* the max number of mov insn to optimize. */
   static constexpr uint8 kMaxMovNum = 2;
   MapleMap<Insn*, Insn*[kMaxMovNum]> str2MovMap;
+  MemPropMode propMode = kUndef;
+  uint32 amount = 0;
 };
 }  /* namespace maplebe */
 

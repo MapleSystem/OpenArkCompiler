@@ -19,9 +19,9 @@
 #include "lfo_function.h"
 #include "lfo_pre_emit.h"
 #include "orig_symbol.h"
-#include "me_phase.h"
+#include "maple_phase.h"
 #include "me_ir.h"
-#include "dominance.h"
+#include "me_dominance.h"
 
 namespace maple {
 class LfoDepInfo;
@@ -121,14 +121,12 @@ class LfoDepInfo : public AnalysisResult {
   std::string PhaseName() const { return "deptest"; }
 };
 
-class DoLfoDepTest : public MeFuncPhase {
- public:
-  explicit DoLfoDepTest(MePhaseID id) : MeFuncPhase(id) {}
-  ~DoLfoDepTest() = default;
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr *moduleResMgr) override;
-  std::string PhaseName() const override {
-    return "deptest";
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(MELfoDepTest, MeFunction)
+  LfoDepInfo *GetResult() {
+    return depInfo;
   }
-};
+  LfoDepInfo *depInfo = nullptr;
+OVERRIDE_DEPENDENCE
+MAPLE_FUNC_PHASE_DECLARE_END
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_LFO_DEP_TEST_H

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -14,8 +14,8 @@
  */
 #ifndef MPL2MPL_INCLUDE_NATIVE_STUB_FUNC_H
 #define MPL2MPL_INCLUDE_NATIVE_STUB_FUNC_H
-#include "module_phase.h"
 #include "phase_impl.h"
+#include "maple_phase_manager.h"
 
 namespace maple {
 #ifdef USE_ARM32_MACRO
@@ -102,23 +102,6 @@ class NativeStubFuncGeneration : public FuncOptimizeImpl {
   static const std::string callSlowNativeFuncs[kSlownativeFuncnum];
 };
 
-class DoGenerateNativeStubFunc : public ModulePhase {
- public:
-  explicit DoGenerateNativeStubFunc(ModulePhaseID id) : ModulePhase(id) {}
-
-  ~DoGenerateNativeStubFunc() = default;
-
-  std::string PhaseName() const override {
-    return "GenNativeStubFunc";
-  }
-
-  AnalysisResult *Run(MIRModule *mod, ModuleResultMgr *mrm) override {
-    bool origUsePreg = Options::usePreg;
-    Options::usePreg = false;  // As a pre mpl2mpl phase, NativeStubFunc always use symbols
-    OPT_TEMPLATE(NativeStubFuncGeneration);
-    Options::usePreg = origUsePreg;
-    return nullptr;
-  }
-};
+MAPLE_MODULE_PHASE_DECLARE(M2MGenerateNativeStubFunc)
 }  // namespace maple
 #endif  // MPL2MPL_INCLUDE_NATIVE_STUB_FUNC_H

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -18,87 +18,96 @@
 #include <string>
 #include "mempool.h"
 #include "mempool_allocator.h"
-#include "phase_manager.h"
 #include "mir_module.h"
-#include "me_phase.h"
 #include "mir_function.h"
+#include "maple_phase_manager.h"
+#include "me_dominance.h"
+#include "me_cfg.h"
+#include "me_alias_class.h"
+#include "me_bypath_eh.h"
+#include "me_critical_edge.h"
+#include "me_profile_gen.h"
+#include "me_profile_use.h"
+#include "me_loop_canon.h"
+#include "me_analyzector.h"
+#include "me_value_range_prop.h"
+#include "me_abco.h"
+#include "me_dse.h"
+#include "me_hdse.h"
+#include "me_prop.h"
+#include "copy_prop.h"
+#include "me_rename2preg.h"
+#include "me_loop_unrolling.h"
+#include "me_cfg_opt.h"
+#include "meconstprop.h"
+#include "me_bb_analyze.h"
+#include "me_ssa_lpre.h"
+#include "me_ssa_epre.h"
+#include "me_stmt_pre.h"
+#include "me_store_pre.h"
+#include "me_cond_based_rc.h"
+#include "me_cond_based_npc.h"
+#include "me_check_cast.h"
+#include "me_placement_rc.h"
+#include "me_subsum_rc.h"
+#include "me_predict.h"
+#include "ipa_side_effect.h"
+#include "do_ipa_escape_analysis.h"
+#include "me_gc_lowering.h"
+#include "me_gc_write_barrier_opt.h"
+#include "preg_renamer.h"
+#include "me_ssa_devirtual.h"
+#include "me_delegate_rc.h"
+#include "me_analyze_rc.h"
+#include "me_may2dassign.h"
+#include "me_loop_analysis.h"
+#include "me_ssa.h"
+#include "me_irmap_build.h"
+#include "me_bb_layout.h"
+#include "me_emit.h"
+#include "me_rc_lowering.h"
+#include "gen_check_cast.h"
+#include "me_fsaa.h"
+#if MIR_JAVA
+#include "sync_select.h"
+#endif  // MIR_JAVA
+#include "me_ssa_tab.h"
+#include "mpl_timer.h"
+#include "constantfold.h"
+#include "me_verify.h"
+#include "lfo_inject_iv.h"
+#include "lfo_pre_emit.h"
+#include "lfo_iv_canon.h"
+#include "cfg_opt.h"
+#include "lfo_dep_test.h"
+#include "lfo_loop_vec.h"
 
 namespace maple {
-enum MePhaseType {
-  kMePhaseInvalid,
-  kMePhaseMainopt,
-  kMePhaseLno
-};
+using meFuncOptTy = MapleFunctionPhase<MeFunction>;
 
-// driver of Me
-class MeFuncPhaseManager : public PhaseManager {
+/* ==== new phase manager ==== */
+class MeFuncPM : public FunctionPM {
  public:
-  MeFuncPhaseManager(MemPool *memPool, MIRModule &mod, ModuleResultMgr *mrm = nullptr)
-      : PhaseManager(*memPool, "mephase"),
-        mirModule(mod),
-        modResMgr(mrm) {}
+  explicit MeFuncPM(MemPool *memPool) : FunctionPM(memPool, &id) {}
+  PHASECONSTRUCTOR(MeFuncPM);
+  std::string PhaseName() const override;
+  ~MeFuncPM() override {}
+  static bool genMeMpl;
+  static bool timePhases;
 
-  ~MeFuncPhaseManager() {
-    arFuncManager.InvalidAllResults();
+  void SetMeInput(const std::string &str) {
+    meInput = str;
   }
 
-  void RunFuncPhase(MeFunction *func, MeFuncPhase *phase);
-  void RegisterFuncPhases();
-  void AddPhases(const std::unordered_set<std::string> &skipPhases);
-  void AddPhasesNoDefault(const std::vector<std::string> &phases);
-  void SetMePhase(MePhaseType mephase) {
-    mePhaseType = mephase;
-  }
-
-  void SetModResMgr(ModuleResultMgr *mrm) {
-    modResMgr = mrm;
-  }
-
-  void Run(MIRFunction *mirFunc, uint64 rangeNum, const std::string &meInput,
-           MemPoolCtrler &localMpCtrler = memPoolCtrler);
-  void Run() override {}
-
-  MeFuncPhaseManager &Clone(MemPool &mp, MemPoolCtrler &ctrler) const;
-
-  MeFuncResultMgr *GetAnalysisResultManager() {
-    return &arFuncManager;
-  }
-
-  ModuleResultMgr *GetModResultMgr() override {
-    return modResMgr;
-  }
-
-  bool FuncFilter(const std::string &filter, const std::string &name);
-
-  bool GetGenMeMpl() {
-    return genMeMpl;
-  }
-
-  void SetGenMeMpl(bool pl) {
-    genMeMpl = pl;
-  }
-
-  void SetTimePhases(bool phs) {
-    timePhases = phs;
-  }
-
-  bool IsIPA() const {
-    return ipa;
-  }
-
-  void SetIPA(bool ipaVal) {
-    ipa = ipaVal;
-  }
-
+  bool PhaseRun(MIRModule &m) override;
  private:
-  // analysis phase result manager
-  MeFuncResultMgr arFuncManager{ GetMemAllocator() };
-  MIRModule &mirModule;
-  ModuleResultMgr *modResMgr;
-  MePhaseType mePhaseType = kMePhaseInvalid;
-  bool genMeMpl = false;
-  bool timePhases = false;
-  bool ipa = false;
+  bool SkipFuncForMe(MIRModule &m, const MIRFunction &func, uint64 range);
+  bool FuncLevelRun(MeFunction &f, AnalysisDataManager &serialADM);
+  void GetAnalysisDependence(AnalysisDep &aDep) const override;
+  void DumpMEIR(MeFunction &f, const std::string phaseName, bool isBefore);
+  virtual void DoPhasesPopulate(const MIRModule &m);
+
+  std::string meInput = "";
 };
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_ME_PHASE_MANAGER_H

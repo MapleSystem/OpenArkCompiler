@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -19,7 +19,7 @@
 #include "mir_builder.h"
 #include "mempool.h"
 #include "mempool_allocator.h"
-#include "module_phase.h"
+#include "maple_phase.h"
 
 namespace maple {
 using StrStrMap = std::unordered_map<std::string, std::string>;
@@ -45,17 +45,6 @@ class MethodReplace : public AnalysisResult {
   void FindCalleeAndReplace(MIRFunction &callerFunc, StrStrMap &calleeMap) const;
 };
 
-class DoMethodReplace : public ModulePhase {
- public:
-  explicit DoMethodReplace(ModulePhaseID id) : ModulePhase(id) {}
-
-  ~DoMethodReplace() = default;
-
-  AnalysisResult *Run(MIRModule *module, ModuleResultMgr *mgr) override;
-
-  std::string PhaseName() const override {
-    return "methodreplace";
-  }
-};
+MAPLE_MODULE_PHASE_DECLARE(M2MMethodReplace)
 }  // namespace maple
 #endif

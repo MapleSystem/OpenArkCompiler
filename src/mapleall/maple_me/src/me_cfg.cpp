@@ -1749,20 +1749,21 @@ void MeCFG::BuildSCC() {
   SCCTopologicalSort(sccNodes);
 }
 
-AnalysisResult *MeDoMeCfg::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) {
-  if (!func->IsLfo() && func->GetLfoFunc() != nullptr) {
-    m->InvalidAllResults();
-    func->SetMeSSATab(nullptr);
-    func->SetIRMap(nullptr);
+bool MEMeCfg::PhaseRun(MeFunction &f) {
+  if (!f.IsLfo() && f.GetLfoFunc() != nullptr) {
+    GetAnalysisInfoHook()->ForceEraseAllAnalysisPhase();
+    f.SetMeSSATab(nullptr);
+    f.SetIRMap(nullptr);
 
-    MIRLower mirlowerer(func->GetMIRModule(), func->GetMirFunc());
+    MIRLower mirlowerer(f.GetMIRModule(), f.GetMirFunc());
     mirlowerer.SetLowerME();
     mirlowerer.SetLowerExpandArray();
-    mirlowerer.LowerFunc(*func->GetMirFunc());
+    mirlowerer.LowerFunc(*f.GetMirFunc());
   }
-  MemPool *meCfgMp = NewMemPool();
-  MeCFG *theCFG = meCfgMp->New<MeCFG>(meCfgMp, *func);
-  func->SetTheCfg(theCFG);
+
+  MemPool *meCfgMp = GetPhaseMemPool();
+  theCFG = meCfgMp->New<MeCFG>(meCfgMp, f);
+  f.SetTheCfg(theCFG);
   theCFG->CreateBasicBlocks();
   if (theCFG->NumBBs() == 0) {
     /* there's no basicblock generated */
@@ -1777,6 +1778,6 @@ AnalysisResult *MeDoMeCfg::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResul
   theCFG->UnreachCodeAnalysis();
   theCFG->WontExitAnalysis();
   theCFG->Verify();
-  return theCFG;
+  return false;
 }
 }  // namespace maple

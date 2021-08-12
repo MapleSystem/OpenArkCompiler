@@ -18,10 +18,10 @@
 #include "mir_nodes.h"
 #include "me_function.h"
 #include "me_cfg.h"
-#include "me_phase.h"
 #include "ssa.h"
-#include "dominance.h"
+#include "me_dominance.h"
 #include "me_loop_analysis.h"
+#include "maple_phase_manager.h"
 
 namespace maple {
 class MeSSA : public SSA, public AnalysisResult {
@@ -43,17 +43,12 @@ class MeSSA : public SSA, public AnalysisResult {
   bool eDebug = false;
 };
 
-class MeDoSSA : public MeFuncPhase {
- public:
-  explicit MeDoSSA(MePhaseID id) : MeFuncPhase(id) {}
-
-  ~MeDoSSA() = default;
-
- private:
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *funcResMgr, ModuleResultMgr *moduleResMgr) override;
-  std::string PhaseName() const override {
-    return "ssa";
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(MESSA, MeFunction)
+  MeSSA *GetResult() {
+    return ssa;
   }
-};
+  MeSSA *ssa = nullptr;
+OVERRIDE_DEPENDENCE
+MAPLE_FUNC_PHASE_DECLARE_END
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_ME_SSA_H

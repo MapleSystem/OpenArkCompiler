@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -234,5 +234,15 @@ void JavaEHLowerer::ProcessFunc(MIRFunction *func) {
   divSTIndex = 0;  // Init it to 0.
   BlockNode *newBody = DoLowerBlock(*(func->GetBody()));
   func->SetBody(newBody);
+}
+
+bool M2MJavaEHLowerer::PhaseRun(maple::MIRModule &m) {
+  OPT_TEMPLATE_NEWPM(JavaEHLowerer);
+  return true;
+}
+
+void M2MJavaEHLowerer::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<M2MKlassHierarchy>();
+  aDep.SetPreservedAll();
 }
 }  // namespace maple

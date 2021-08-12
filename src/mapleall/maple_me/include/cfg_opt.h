@@ -16,9 +16,9 @@
 #define MAPLE_ME_INCLUDE_CFG_OPT_H
 #include "bb.h"
 #include "me_cfg.h"
-#include "me_phase.h"
 #include "me_option.h"
 #include "dominance.h"
+#include "maple_phase_manager.h"
 
 namespace maple {
 class CfgOpt {
@@ -45,14 +45,6 @@ class CfgOpt {
   bool cfgChanged = false;
 };
 
-class DoCfgOpt : public MeFuncPhase {
- public:
-  explicit DoCfgOpt(MePhaseID id) : MeFuncPhase(id) {}
-  virtual ~DoCfgOpt() = default;
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr*, ModuleResultMgr*) override;
-  std::string PhaseName() const override {
-    return "cfgOpt";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE(MECFGOPT, MeFunction)
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_CFG_OPT_H

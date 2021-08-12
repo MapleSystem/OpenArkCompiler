@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -18,6 +18,7 @@
 #include "utils.h"
 
 namespace maple {
+#ifdef NOT_USED
 AnalysisResult *DoVerification::Run(MIRModule *module, ModuleResultMgr *mgr) {
   LogInfo::MapleLogger() << "========== Starting Verify Module =====================" << '\n';
   CHECK_FATAL(module != nullptr, "Module should be not null");
@@ -146,6 +147,7 @@ void DoVerification::VerifyModule(MIRModule &module, VerifyResult &result) const
     }
   }
 }
+#endif
 
 bool VerifyResult::HasVerifyError(const std::vector<const VerifyPragmaInfo*> &pragmaInfoPtrVec) const {
   if (pragmaInfoPtrVec.empty()) {

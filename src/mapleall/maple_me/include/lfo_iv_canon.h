@@ -18,8 +18,8 @@
 
 #include "lfo_function.h"
 #include "me_loop_analysis.h"
-#include "me_irmap.h"
-#include "me_phase.h"
+#include "me_irmap_build.h"
+#include "maple_phase.h"
 
 namespace maple {
 // describe characteristics of one IV
@@ -69,18 +69,6 @@ class IVCanon {
   std::string PhaseName() const { return "ivcanon"; }
 };
 
-class DoLfoIVCanon : public MeFuncPhase {
- public:
-  explicit DoLfoIVCanon(MePhaseID id) : MeFuncPhase(id) {}
-
-  ~DoLfoIVCanon() {}
-
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr *moduleResMgr) override;
-
-  std::string PhaseName() const override { return "ivcanon"; }
-
- private:
-  void IVCanonLoop(LoopDesc *aloop, LfoWhileInfo *whileInfo);
-};
+MAPLE_FUNC_PHASE_DECLARE(MELfoIVCanon, MeFunction)
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_LFO_IV_CANON_H

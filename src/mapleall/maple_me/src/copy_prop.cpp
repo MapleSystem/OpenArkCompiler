@@ -144,6 +144,11 @@ MeExpr &CopyProp::PropMeExpr(MeExpr &meExpr, bool &isproped, bool atParm) {
       newMeExpr.SetBase(propedExpr);
       newMeExpr.SetDefStmt(nullptr);
       ivarMeExpr = static_cast<IvarMeExpr*>(irMap.HashMeExpr(newMeExpr));
+
+      auto &propedIvar = PropIvar(*ivarMeExpr);
+      if (PropagatableByCopyProp(&propedIvar)) {
+        return propedIvar;
+      }
       return *ivarMeExpr;
     }
     case kMeOpOp: {
@@ -284,22 +289,25 @@ void CopyProp::TraversalMeStmt(MeStmt &meStmt) {
   }
 }
 
-AnalysisResult *MeDoCopyProp::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) {
-  CHECK_NULL_FATAL(func);
-  auto *dom = static_cast<Dominance*>(m->GetAnalysisResult(MeFuncPhase_DOMINANCE, func));
-  CHECK_NULL_FATAL(dom);
-  auto *hMap = static_cast<MeIRMap*>(m->GetAnalysisResult(MeFuncPhase_IRMAPBUILD, func));
-  CHECK_NULL_FATAL(hMap);
+void MECopyProp::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<MEDominance>();
+  aDep.AddRequired<MEIRMapBuild>();
+  aDep.SetPreservedAll();
+}
 
-  CopyProp copyProp(func, *hMap, *dom, *NewMemPool(), func->GetCfg()->NumBBs(),
+bool MECopyProp::PhaseRun(maple::MeFunction &f) {
+  auto *dom = GET_ANALYSIS(MEDominance);
+  auto *hMap = GET_ANALYSIS(MEIRMapBuild);
+
+  CopyProp copyProp(&f, *hMap, *dom, *GetPhaseMemPool(), f.GetCfg()->NumBBs(),
       Prop::PropConfig { MeOption::propBase, true, MeOption::propGlobalRef, MeOption::propFinaliLoadRef,
-       MeOption::propIloadRefNonParm, MeOption::propAtPhi, MeOption::propWithInverse || func->IsLfo() });
-  copyProp.TraversalBB(*func->GetCfg()->GetCommonEntryBB());
-  if (DEBUGFUNC(func)) {
+      MeOption::propIloadRefNonParm, MeOption::propAtPhi, MeOption::propWithInverse || f.IsLfo() });
+  copyProp.TraversalBB(*f.GetCfg()->GetCommonEntryBB());
+  if (DEBUGFUNC_NEWPM(f)) {
     LogInfo::MapleLogger() << "\n============== After Copy Propagation  =============" << '\n';
-    func->Dump(false);
-    func->GetCfg()->DumpToFile("afterCopyProp-");
+    f.Dump(false);
+    f.GetCfg()->DumpToFile("afterCopyProp-");
   }
-  return nullptr;
+  return false;
 }
 } // namespace maple

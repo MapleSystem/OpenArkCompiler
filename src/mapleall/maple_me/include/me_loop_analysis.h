@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -14,12 +14,12 @@
  */
 #ifndef MAPLE_ME_INCLUDE_MEIDENTLOOPS_H
 #define MAPLE_ME_INCLUDE_MEIDENTLOOPS_H
+#include <algorithm>
 #include "me_function.h"
 #include "bb.h"
-#include "me_phase.h"
 #include "dominance.h"
-#include <algorithm>
 #include "me_cfg.h"
+#include "maple_phase_manager.h"
 
 namespace maple {
 class IdentifyLoops;
@@ -129,6 +129,9 @@ class IdentifyLoops : public AnalysisResult {
   }
 
   LoopDesc *GetBBLoopParent(BBId bbID) const {
+    if (bbID >= bbLoopParent.size()) {
+      return nullptr;
+    }
     return bbLoopParent.at(bbID);
   }
 
@@ -153,14 +156,12 @@ class IdentifyLoops : public AnalysisResult {
   MapleVector<LoopDesc*> bbLoopParent;  // gives closest nesting loop for each bb
 };
 
-class MeDoMeLoop : public MeFuncPhase {
- public:
-  explicit MeDoMeLoop(MePhaseID id) : MeFuncPhase(id) {}
-  virtual ~MeDoMeLoop() = default;
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) override;
-  std::string PhaseName() const override {
-    return "identloops";
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(MELoopAnalysis, MeFunction)
+  IdentifyLoops *GetResult() {
+    return identLoops;
   }
-};
+  IdentifyLoops *identLoops = nullptr;
+OVERRIDE_DEPENDENCE
+MAPLE_MODULE_PHASE_DECLARE_END
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_MEIDENTLOOPS_H

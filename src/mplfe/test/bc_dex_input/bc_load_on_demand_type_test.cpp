@@ -24,7 +24,7 @@
 namespace maple {
 TEST(BCLoadOnDemandType, Test) {
   std::string str(getenv("MAPLE_ROOT"));
-  std::string path = str + "/android/emui-10.0/java-corelib-dex/libcore-all.dex";
+  std::string path = str + "/output/aarch64-clang-release/libjava-core/host-x86_64-O2/libcore-all.dex";
   FEOptions::GetInstance().SetXBootClassPath(path);
   bc::BCCompilerComponent<bc::DexReader> bcCompiler(MPLFEUTEnvironment::GetMIRModule());
   std::unordered_set<std::string> allDepSet;
