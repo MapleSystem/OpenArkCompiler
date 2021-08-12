@@ -282,6 +282,44 @@ uint8x8_t __builtin_mpl_vector_reverse_v8u8(uint8x8_t);
 float64x1_t __builtin_mpl_vector_reverse_v1f64(float64x1_t);
 float32x2_t __builtin_mpl_vector_reverse_v2f32(float32x2_t);
 
+// vecTy vector_shli(vecTy src, const int n)
+//     Shift each element in the vector left by n.
+int64x2_t __builtin_mpl_vector_shli_v2i64(int64x2_t, const int);
+int32x4_t __builtin_mpl_vector_shli_v4i32(int32x4_t, const int);
+int16x8_t __builtin_mpl_vector_shli_v8i16(int16x8_t, const int);
+int8x16_t __builtin_mpl_vector_shli_v16i8(int8x16_t, const int);
+uint64x2_t __builtin_mpl_vector_shli_v2u64(uint64x2_t, const int);
+uint32x4_t __builtin_mpl_vector_shli_v4u32(uint32x4_t, const int);
+uint16x8_t __builtin_mpl_vector_shli_v8u16(uint16x8_t, const int);
+uint8x16_t __builtin_mpl_vector_shli_v16u8(uint8x16_t, const int);
+int64x1_t __builtin_mpl_vector_shli_v1i64(int64x1_t, const int);
+int32x2_t __builtin_mpl_vector_shli_v2i32(int32x2_t, const int);
+int16x4_t __builtin_mpl_vector_shli_v4i16(int16x4_t, const int);
+int8x8_t __builtin_mpl_vector_shli_v8i8(int8x8_t, const int);
+uint64x1_t __builtin_mpl_vector_shli_v1u64(uint64x1_t, const int);
+uint32x2_t __builtin_mpl_vector_shli_v2u32(uint32x2_t, const int);
+uint16x4_t __builtin_mpl_vector_shli_v4u16(uint16x4_t, const int);
+uint8x8_t __builtin_mpl_vector_shli_v8u8(uint8x8_t, const int);
+
+// vecTy vector_shri(vecTy src, const int n)
+//     Shift each element in the vector right by n.
+int64x2_t __builtin_mpl_vector_shri_v2i64(int64x2_t, const int);
+int32x4_t __builtin_mpl_vector_shri_v4i32(int32x4_t, const int);
+int16x8_t __builtin_mpl_vector_shri_v8i16(int16x8_t, const int);
+int8x16_t __builtin_mpl_vector_shri_v16i8(int8x16_t, const int);
+uint64x2_t __builtin_mpl_vector_shri_v2u64(uint64x2_t, const int);
+uint32x4_t __builtin_mpl_vector_shri_v4u32(uint32x4_t, const int);
+uint16x8_t __builtin_mpl_vector_shri_v8u16(uint16x8_t, const int);
+uint8x16_t __builtin_mpl_vector_shri_v16u8(uint8x16_t, const int);
+int64x1_t __builtin_mpl_vector_shri_v1i64(int64x1_t, const int);
+int32x2_t __builtin_mpl_vector_shri_v2i32(int32x2_t, const int);
+int16x4_t __builtin_mpl_vector_shri_v4i16(int16x4_t, const int);
+int8x8_t __builtin_mpl_vector_shri_v8i8(int8x8_t, const int);
+uint64x1_t __builtin_mpl_vector_shri_v1u64(uint64x1_t, const int);
+uint32x2_t __builtin_mpl_vector_shri_v2u32(uint32x2_t, const int);
+uint16x4_t __builtin_mpl_vector_shri_v4u16(uint16x4_t, const int);
+uint8x8_t __builtin_mpl_vector_shri_v8u8(uint8x8_t, const int);
+
 // vecTy2 vector_shift_narrow_low(vecTy1 src, const int n)
 //     Shift each element in the vector right by n, narrow each element to half
 //     of the original width (truncating), then write the result to the lower
@@ -937,22 +975,22 @@ void __builtin_mpl_vector_store_v2f32(float32_t *, float32x2_t);
 #define vshlq_u64(a, b) (a << b)
 
 // vshl_n
-#define vshl_n_s8(a, n) (a << n)
-#define vshl_n_s16(a, n) (a << n)
-#define vshl_n_s32(a, n) (a << n)
-#define vshl_n_s64(a, n) (a << n)
-#define vshl_n_u8(a, n) (a << n)
-#define vshl_n_u16(a, n) (a << n)
-#define vshl_n_u32(a, n) (a << n)
-#define vshl_n_u64(a, n) (a << n)
-#define vshlq_n_s8(a, n) (a << n)
-#define vshlq_n_s16(a, n) (a << n)
-#define vshlq_n_s32(a, n) (a << n)
-#define vshlq_n_s64(a, n) (a << n)
-#define vshlq_n_u8(a, n) (a << n)
-#define vshlq_n_u16(a, n) (a << n)
-#define vshlq_n_u32(a, n) (a << n)
-#define vshlq_n_u64(a, n) (a << n)
+#define vshlq_n_s64(a, n) __builtin_mpl_vector_shli_v2i64(a, n);
+#define vshlq_n_s32(a, n) __builtin_mpl_vector_shli_v4i32(a, n);
+#define vshlq_n_s16(a, n) __builtin_mpl_vector_shli_v8i16(a, n);
+#define vshlq_n_s8(a, n) __builtin_mpl_vector_shli_v16i8(a, n);
+#define vshlq_n_u64(a, n) __builtin_mpl_vector_shli_v2u64(a, n);
+#define vshlq_n_u32(a, n) __builtin_mpl_vector_shli_v4u32(a, n);
+#define vshlq_n_u16(a, n) __builtin_mpl_vector_shli_v8u16(a, n);
+#define vshlq_n_u8(a, n) __builtin_mpl_vector_shli_v16u8(a, n);
+#define vshl_n_s64(a, n) __builtin_mpl_vector_shli_v1i64(a, n);
+#define vshl_n_s32(a, n) __builtin_mpl_vector_shli_v2i32(a, n);
+#define vshl_n_s16(a, n) __builtin_mpl_vector_shli_v4i16(a, n);
+#define vshl_n_s8(a, n) __builtin_mpl_vector_shli_v8i8(a, n);
+#define vshl_n_u64(a, n) __builtin_mpl_vector_shli_v1u64(a, n);
+#define vshl_n_u32(a, n) __builtin_mpl_vector_shli_v2u32(a, n);
+#define vshl_n_u16(a, n) __builtin_mpl_vector_shli_v4u16(a, n);
+#define vshl_n_u8(a, n) __builtin_mpl_vector_shli_v8u8(a, n);
 
 // vshr
 #define vshr_s8(a, b) (a >> b)
@@ -973,22 +1011,22 @@ void __builtin_mpl_vector_store_v2f32(float32_t *, float32x2_t);
 #define vshrq_u64(a, b) (a >> b)
 
 // vshr_n
-#define vshr_n_s8(a, n) (a >> n)
-#define vshr_n_s16(a, n) (a >> n)
-#define vshr_n_s32(a, n) (a >> n)
-#define vshr_n_s64(a, n) (a >> n)
-#define vshr_n_u8(a, n) (a >> n)
-#define vshr_n_u16(a, n) (a >> n)
-#define vshr_n_u32(a, n) (a >> n)
-#define vshr_n_u64(a, n) (a >> n)
-#define vshrq_n_s8(a, n) (a >> n)
-#define vshrq_n_s16(a, n) (a >> n)
-#define vshrq_n_s32(a, n) (a >> n)
-#define vshrq_n_s64(a, n) (a >> n)
-#define vshrq_n_u8(a, n) (a >> n)
-#define vshrq_n_u16(a, n) (a >> n)
-#define vshrq_n_u32(a, n) (a >> n)
-#define vshrq_n_u64(a, n) (a >> n)
+#define vshrq_n_s64(a, n) __builtin_mpl_vector_shri_v2i64(a, n);
+#define vshrq_n_s32(a, n) __builtin_mpl_vector_shri_v4i32(a, n);
+#define vshrq_n_s16(a, n) __builtin_mpl_vector_shri_v8i16(a, n);
+#define vshrq_n_s8(a, n) __builtin_mpl_vector_shri_v16i8(a, n);
+#define vshrq_n_u64(a, n) __builtin_mpl_vector_shri_v2u64(a, n);
+#define vshrq_n_u32(a, n) __builtin_mpl_vector_shri_v4u32(a, n);
+#define vshrq_n_u16(a, n) __builtin_mpl_vector_shri_v8u16(a, n);
+#define vshrq_n_u8(a, n) __builtin_mpl_vector_shri_v16u8(a, n);
+#define vshr_n_s64(a, n) __builtin_mpl_vector_shri_v1i64(a, n);
+#define vshr_n_s32(a, n) __builtin_mpl_vector_shri_v2i32(a, n);
+#define vshr_n_s16(a, n) __builtin_mpl_vector_shri_v4i16(a, n);
+#define vshr_n_s8(a, n) __builtin_mpl_vector_shri_v8i8(a, n);
+#define vshr_n_u64(a, n) __builtin_mpl_vector_shri_v1u64(a, n);
+#define vshr_n_u32(a, n) __builtin_mpl_vector_shri_v2u32(a, n);
+#define vshr_n_u16(a, n) __builtin_mpl_vector_shri_v4u16(a, n);
+#define vshr_n_u8(a, n) __builtin_mpl_vector_shri_v8u8(a, n);
 
 // vshrn_n
 #define vshrn_n_s16(a, n) __builtin_mpl_vector_shr_narrow_low_v8i16(a, n)

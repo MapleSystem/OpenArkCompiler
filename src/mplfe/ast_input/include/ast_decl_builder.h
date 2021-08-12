@@ -70,11 +70,11 @@ class ASTDeclsBuilder {
 
   static ASTFunc *ASTFuncBuilder(MapleAllocator &allocator, const std::string &srcFile, const std::string &nameIn,
                                  const std::vector<MIRType*> &typeDescIn, const GenericAttrs &genAttrsIn,
-                                 const std::vector<std::string> &parmNamesIn, int64 id = INT64_MAX) {
+                                 const std::vector<ASTDecl*> &paramDeclsIn, int64 id = INT64_MAX) {
     if (id == INT64_MAX) {
-      allocator.GetMemPool()->New<ASTFunc>(srcFile, nameIn, typeDescIn, genAttrsIn, parmNamesIn);
+      allocator.GetMemPool()->New<ASTFunc>(srcFile, nameIn, typeDescIn, genAttrsIn, paramDeclsIn);
     } else if (declesTable[id] == nullptr) {
-      declesTable[id] = allocator.GetMemPool()->New<ASTFunc>(srcFile, nameIn, typeDescIn, genAttrsIn, parmNamesIn);
+      declesTable[id] = allocator.GetMemPool()->New<ASTFunc>(srcFile, nameIn, typeDescIn, genAttrsIn, paramDeclsIn);
     }
     return static_cast<ASTFunc*>(declesTable[id]);
   }

@@ -1287,34 +1287,43 @@ uint8 AArch64Insn::GetLoadStoreSize() const {
   /* These are the loads and stores possible from PickLdStInsn() */
   switch (mOp) {
   case MOP_wldarb:
+  case MOP_wldaxrb:
   case MOP_wldrb:
   case MOP_wldrsb:
   case MOP_xldrsb:
   case MOP_wstrb:
   case MOP_wstlrb:
+  case MOP_wstlxrb:
     return k1ByteSize;
   case MOP_wldrh:
   case MOP_wldarh:
+  case MOP_wldaxrh:
   case MOP_wldrsh:
   case MOP_xldrsh:
   case MOP_wstrh:
   case MOP_wstlrh:
+  case MOP_wstlxrh:
     return k2ByteSize;
   case MOP_sldr:
   case MOP_wldr:
   case MOP_wldar:
+  case MOP_wldaxr:
   case MOP_sstr:
   case MOP_wstr:
   case MOP_wstlr:
+  case MOP_wstlxr:
+  case MOP_xldrsw:
     return k4ByteSize;
   case MOP_dstr:
   case MOP_xstr:
   case MOP_xstlr:
+  case MOP_xstlxr:
   case MOP_wstp:
   case MOP_sstp:
   case MOP_dldr:
   case MOP_xldr:
   case MOP_xldar:
+  case MOP_xldaxr:
   case MOP_wldp:
   case MOP_sldp:
     return k8ByteSize;
@@ -1328,6 +1337,7 @@ uint8 AArch64Insn::GetLoadStoreSize() const {
     return k16ByteSize;
 
   default:
+    this->Dump();
     CHECK_FATAL(false, "Unsupported load/store op");
   }
 }

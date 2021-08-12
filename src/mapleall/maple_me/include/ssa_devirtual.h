@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -15,7 +15,6 @@
 #ifndef MAPLE_ME_INCLUDE_SSADEVIRTUAL_H
 #define MAPLE_ME_INCLUDE_SSADEVIRTUAL_H
 #include "me_ir.h"
-#include "me_phase.h"
 #include "me_irmap.h"
 #include "dominance.h"
 #include "class_hierarchy.h"

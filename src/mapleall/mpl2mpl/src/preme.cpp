@@ -17,6 +17,7 @@
 #include "me_function.h"
 #include "me_verify.h"
 #include "mir_symbol_builder.h"
+#include "maple_phase_manager.h"
 
 namespace maple {
 void Preme::CreateMIRTypeForAddrof(const MIRFunction &func, const BaseNode *baseNode) const {
@@ -55,7 +56,7 @@ void Preme::ProcessFunc(MIRFunction *func) {
   }
 }
 
-void DoPreme::CreateMIRTypeForLowerGlobalDreads() const {
+void Preme::CreateMIRTypeForLowerGlobalDreads() {
   for (uint32 i = 0; i < MIRSymbolBuilder::Instance().GetSymbolTableSize(); ++i) {
     auto *symbol = MIRSymbolBuilder::Instance().GetSymbolFromStIdx(i);
     if (symbol == nullptr) {
@@ -74,11 +75,16 @@ void DoPreme::CreateMIRTypeForLowerGlobalDreads() const {
   }
 }
 
-AnalysisResult *DoPreme::Run(MIRModule *mod, ModuleResultMgr *mrm) {
-  OPT_TEMPLATE(Preme);
+bool M2MPreme::PhaseRun(maple::MIRModule &m) {
+  OPT_TEMPLATE_NEWPM(Preme);
   if (MeOption::optLevel == 2) {
-    CreateMIRTypeForLowerGlobalDreads();
+    Preme::CreateMIRTypeForLowerGlobalDreads();
   }
-  return nullptr;
+  return true;
+}
+
+void M2MPreme::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<M2MKlassHierarchy>();
+  aDep.SetPreservedAll();
 }
 }  // namespace maple

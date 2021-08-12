@@ -170,8 +170,14 @@ MIRConst *ASTDeclRefExpr::GenerateMIRConstImpl() const {
     return FEManager::GetModule().GetMemPool()->New<MIRAddroffuncConst>(mirFunc->GetPuidx(), *mirType);
   } else if (!isConstantFolded) {
     ASTDecl *var = refedDecl;
-    MIRSymbol *mirSymbol = FEManager::GetMIRBuilder().GetOrCreateGlobalDecl(
-        var->GenerateUniqueVarName(), *(var->GetTypeDesc().front()));
+    MIRSymbol *mirSymbol;
+    if (var->IsGlobal()) {
+      mirSymbol = FEManager::GetMIRBuilder().GetOrCreateGlobalDecl(
+          var->GenerateUniqueVarName(), *(var->GetTypeDesc().front()));
+    } else {
+      mirSymbol = FEManager::GetMIRBuilder().GetOrCreateLocalDecl(
+          var->GenerateUniqueVarName(), *(var->GetTypeDesc().front()));
+    }
     return FEManager::GetModule().GetMemPool()->New<MIRAddrofConst>(
         mirSymbol->GetStIdx(), 0, *(var->GetTypeDesc().front()));
   } else {
@@ -917,6 +923,10 @@ UniqueFEIRExpr ASTCompoundLiteralExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt>
     feirExpr = child->Emit2FEExpr(stmts);
   }
   return feirExpr;
+}
+
+MIRConst *ASTCompoundLiteralExpr::GenerateMIRConstImpl() const {
+  return child->GenerateMIRConst();
 }
 
 void ASTCompoundLiteralExpr::SetCompoundLiteralType(MIRType *clType) {
@@ -1720,7 +1730,7 @@ UniqueFEIRExpr ASTBinaryOperatorExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> 
       leftExpr->SetShortCircuitParent();
       rightExpr->SetShortCircuitParent();
       Opcode op = opcode == OP_lior ? OP_brtrue : OP_brfalse;
-      MIRType *tempVarType = GlobalTables::GetTypeTable().GetInt32();
+      MIRType *tempVarType = GlobalTables::GetTypeTable().GetUInt1();
       UniqueFEIRType tempFeirType = std::make_unique<FEIRTypeNative>(*tempVarType);
       UniqueFEIRVar shortCircuit = FEIRBuilder::CreateVarNameForC(varName, *tempVarType);
       std::string labelName = FEUtils::GetSequentialName("shortCircuit_label_");
@@ -1925,8 +1935,7 @@ UniqueFEIRExpr ASTConditionalOperator::Emit2FEExprImpl(std::list<UniqueFEIRStmt>
 
 // ---------- ASTConstantExpr ----------
 UniqueFEIRExpr ASTConstantExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
-  CHECK_FATAL(false, "NIY");
-  return nullptr;
+  return child->Emit2FEExpr(stmts);
 }
 
 MIRConst *ASTConstantExpr::GenerateMIRConstImpl() const {

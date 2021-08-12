@@ -130,6 +130,5 @@ bool CgFixShortBranch::PhaseRun(maplebe::CGFunc &f) {
   fixShortBranch->FixShortBranches();
   return false;
 }
-MAPLE_TRANSFORM_PHASE_REGISTER(CgFixShortBranch, fixshortbranch)
 }  /* namespace maplebe */
 

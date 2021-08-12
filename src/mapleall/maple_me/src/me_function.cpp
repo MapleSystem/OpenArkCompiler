@@ -21,7 +21,6 @@
 #include "mir_builder.h"
 #include "constantfold.h"
 #include "me_irmap.h"
-#include "me_phase.h"
 #include "lfo_mir_lower.h"
 
 namespace maple {

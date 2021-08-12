@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -13,6 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "scalarreplacement.h"
+#include "maple_phase_manager.h"
 // ScalarReplacement works together with EscapeAnalysis. If EA has decided
 // to allocate a certain object on the stack, ScalarReplacement will further
 // break down that object into several fields if possible, thus the object
@@ -333,5 +334,15 @@ void ScalarReplacement::ProcessFunc(MIRFunction *func) {
     DumpCandidates();
   }
   ReplaceLocalVars();
+}
+
+void M2MScalarReplacement::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<M2MKlassHierarchy>();
+  aDep.SetPreservedAll();
+}
+
+bool M2MScalarReplacement::PhaseRun(maple::MIRModule &m) {
+  OPT_TEMPLATE_NEWPM(ScalarReplacement);
+  return true;
 }
 }  // namespace maple

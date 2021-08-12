@@ -1143,7 +1143,6 @@ bool CgReachingDefinition::PhaseRun(maplebe::CGFunc &f) {
   reachingDef->AnalysisStart();
   return false;
 }
-MAPLE_ANALYSIS_PHASE_REGISTER(CgReachingDefinition, reachingdefinition)
 
 bool CgClearRDInfo::PhaseRun(maplebe::CGFunc &f) {
   if (f.GetRDStatus()) {
@@ -1151,5 +1150,4 @@ bool CgClearRDInfo::PhaseRun(maplebe::CGFunc &f) {
   }
   return false;
 }
-MAPLE_TRANSFORM_PHASE_REGISTER(CgClearRDInfo, clearrdinfo)
 }  /* namespace maplebe */

@@ -1324,7 +1324,6 @@ void CgEbo0::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
   aDep.AddRequired<CgLiveAnalysis>();
   aDep.AddPreserved<CgLoopAnalysis>();
 }
-MAPLE_TRANSFORM_PHASE_REGISTER(CgEbo0, ebo);
 
 bool CgEbo1::PhaseRun(maplebe::CGFunc &f) {
   if (EBO_DUMP_NEWPM) {
@@ -1351,7 +1350,6 @@ void CgEbo1::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
   aDep.AddRequired<CgLiveAnalysis>();
   aDep.AddPreserved<CgLoopAnalysis>();
 }
-MAPLE_TRANSFORM_PHASE_REGISTER(CgEbo1, ebo1)
 
 bool CgPostEbo::PhaseRun(maplebe::CGFunc &f) {
   if (EBO_DUMP_NEWPM) {
@@ -1378,5 +1376,4 @@ void CgPostEbo::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
   aDep.AddRequired<CgLiveAnalysis>();
   aDep.AddPreserved<CgLoopAnalysis>();
 }
-MAPLE_TRANSFORM_PHASE_REGISTER(CgPostEbo, postebo)
 }  /* namespace maplebe */

@@ -15,11 +15,11 @@
 #ifndef MAPLEME_INCLUDE_ME_ABCOPT
 #define MAPLEME_INCLUDE_ME_ABCOPT
 #include "me_function.h"
-#include "me_irmap.h"
+#include "me_irmap_build.h"
 #include "me_ir.h"
 #include "me_inequality_graph.h"
 #include "me_cfg.h"
-#include "dominance.h"
+#include "me_dominance.h"
 #include "mir_module.h"
 #include "mir_builder.h"
 #include "me_ssi.h"
@@ -164,15 +164,6 @@ class MeABC {
   std::map<std::pair<MeExpr*, MeExpr*>, MeExpr*> unresolveEdge;
 };
 
-class MeDoABCOpt : public MeFuncPhase {
- public:
-  explicit MeDoABCOpt(MePhaseID id) : MeFuncPhase(id) {}
-  ~MeDoABCOpt() = default;
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *frm, ModuleResultMgr *mrm) override;
-
-  std::string PhaseName() const override {
-    return "abcopt";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE(MEABCOpt, MeFunction)
 }
 #endif

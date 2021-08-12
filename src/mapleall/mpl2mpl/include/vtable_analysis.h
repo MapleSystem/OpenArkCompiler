@@ -14,7 +14,6 @@
  */
 #ifndef MPL2MPL_INCLUDE_VTABLE_ANALYSIS_H
 #define MPL2MPL_INCLUDE_VTABLE_ANALYSIS_H
-#include "module_phase.h"
 #include "phase_impl.h"
 
 namespace maple {
@@ -61,20 +60,6 @@ class VtableAnalysis : public FuncOptimizeImpl {
   MIRIntConst *oneConst;
 };
 
-class DoVtableAnalysis : public ModulePhase {
- public:
-  explicit DoVtableAnalysis(ModulePhaseID id) : ModulePhase(id) {}
-
-  ~DoVtableAnalysis() = default;
-
-  std::string PhaseName() const override {
-    return "vtableanalysis";
-  }
-
-  AnalysisResult *Run(MIRModule *mod, ModuleResultMgr *mrm) override {
-    OPT_TEMPLATE(VtableAnalysis);
-    return nullptr;
-  }
-};
+MAPLE_MODULE_PHASE_DECLARE(M2MVtableAnalysis)
 }  // namespace maple
 #endif  // MPL2MPL_INCLUDE_VTABLE_ANALYSIS_H

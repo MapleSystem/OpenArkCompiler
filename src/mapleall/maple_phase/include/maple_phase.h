@@ -24,7 +24,9 @@ enum MaplePhaseKind : uint8 {
     kModulePM,
     kModulePhase,
     kFunctionPM,
-    kFunctionPhase
+    kFunctionPhase,
+    kSccPhasePM,
+    kSccPhase
 };
 
 class MaplePhase {
@@ -42,6 +44,9 @@ class MaplePhase {
   void Dump() const;
   MaplePhaseID GetPhaseID() const {
     return phaseID;
+  }
+  void SetPhaseID(MaplePhaseID id) {
+    phaseID = id;
   }
   virtual std::string PhaseName() const = 0;
   void SetAnalysisInfoHook(AnalysisInfoHook *hook);
@@ -83,6 +88,14 @@ class MapleFunctionPhase : public MaplePhase {
   virtual bool PhaseRun(funcT &f) = 0;
 };
 
+template <class SccT>
+class MapleSccPhase : public MaplePhase {
+ public:
+  MapleSccPhase(MaplePhaseID id, MemPool *mp) : MaplePhase(kSccPhase, id, *mp){}
+  ~MapleSccPhase() override = default;
+  virtual bool PhaseRun(SccT &f) = 0;
+};
+
 class MaplePhaseRegister {
  public:
   MaplePhaseRegister() = default;
@@ -91,6 +104,9 @@ class MaplePhaseRegister {
   static MaplePhaseRegister *GetMaplePhaseRegister();
   void RegisterPhase(const MaplePhaseInfo &PI);
   const MaplePhaseInfo *GetPhaseByID(MaplePhaseID id);
+  const auto &GetAllPassInfo() {
+    return passInfoMap;
+  }
  private:
   std::map<MaplePhaseID, const MaplePhaseInfo*> passInfoMap;
 };
@@ -98,8 +114,8 @@ class MaplePhaseRegister {
 template<typename phaseNameT>
 class RegisterPhase : public MaplePhaseInfo {
  public:
-  RegisterPhase(const std::string name, bool isAnalysis = false, bool CFGOnly = false)
-      : MaplePhaseInfo(name, &phaseNameT::id, isAnalysis, CFGOnly) {
+  RegisterPhase(const std::string name, bool isAnalysis = false, bool CFGOnly = false, bool canSkip = false)
+      : MaplePhaseInfo(name, &phaseNameT::id, isAnalysis, CFGOnly, canSkip) {
     SetConstructor(phaseNameT::CreatePhase);
     auto globalRegistry = maple::MaplePhaseRegister::GetMaplePhaseRegister();
     globalRegistry->RegisterPhase(*this);
@@ -130,6 +146,21 @@ class PHASENAME : public MapleFunctionPhase<IRTYPE> {                      \
   bool PhaseRun(IRTYPE &f) override;
 
 #define MAPLE_FUNC_PHASE_DECLARE_END \
+};
+
+#define MAPLE_SCC_PHASE_DECLARE_BEGIN(PHASENAME, IRTYPE)                   \
+class PHASENAME : public MapleSccPhase<IRTYPE> {                           \
+ public:                                                                   \
+  explicit PHASENAME(MemPool *mp) : MapleSccPhase<IRTYPE>(&id, mp) {}      \
+  ~PHASENAME() override = default;                                         \
+  std::string PhaseName() const override;                                  \
+  static unsigned int id;                                                  \
+  static MaplePhase *CreatePhase(MemPool *createMP) {                      \
+    return createMP->New<PHASENAME>(createMP);                             \
+  }                                                                        \
+  bool PhaseRun(IRTYPE &f) override;
+
+#define MAPLE_SCC_PHASE_DECLARE_END \
 };
 
 #define MAPLE_FUNC_PHASE_DECLARE(PHASENAME, IRTYPE)                \
@@ -166,6 +197,16 @@ static RegisterPhase<CLASSNAME> MAPLEPHASE_##PHASENAME(#PHASENAME, true);
 unsigned int CLASSNAME::id = 0;                                           \
 std::string CLASSNAME::PhaseName() const { return #PHASENAME; }           \
 static RegisterPhase<CLASSNAME> MAPLEPHASE_##PHASENAME(#PHASENAME, false);
+
+#define MAPLE_ANALYSIS_PHASE_REGISTER_CANSKIP(CLASSNAME, PHASENAME)                    \
+unsigned int CLASSNAME::id = 0;                                                        \
+std::string CLASSNAME::PhaseName() const { return #PHASENAME; }                        \
+static RegisterPhase<CLASSNAME> MAPLEPHASE_##PHASENAME(#PHASENAME, true, false, true);
+
+#define MAPLE_TRANSFORM_PHASE_REGISTER_CANSKIP(CLASSNAME, PHASENAME)                    \
+unsigned int CLASSNAME::id = 0;                                                         \
+std::string CLASSNAME::PhaseName() const { return #PHASENAME; }                         \
+static RegisterPhase<CLASSNAME> MAPLEPHASE_##PHASENAME(#PHASENAME, false, false, true);
 
 #define GET_ANALYSIS(PHASENAME) \
 static_cast<PHASENAME*>(GetAnalysisInfoHook()->FindAnalysisData(this, &PHASENAME::id))->GetResult()

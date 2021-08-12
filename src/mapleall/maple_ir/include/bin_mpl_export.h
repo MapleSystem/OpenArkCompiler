@@ -19,9 +19,7 @@
 #include "mir_function.h"
 #include "mir_preg.h"
 #include "parser_opt.h"
-#include "module_phase.h"
 #include "ea_connection_graph.h"
-#include "call_graph.h"
 
 namespace maple {
 enum : uint8 {
@@ -192,7 +190,7 @@ class BinaryMplExport {
   std::unordered_map<UStrIdx, int64, UStrIdxHash> uStrMark;
   std::unordered_map<const MIRSymbol*, int64> symMark;
   std::unordered_map<MIRType*, int64> typMark;
-  friend class DoUpdateMplt;
+  friend class UpdateMplt;
   std::unordered_map<uint32, int64> callInfoMark;
   std::map<GStrIdx, uint8> *func2SEMap = nullptr;
   std::unordered_map<EACGBaseNode*, int64> eaNodeMark;
@@ -200,8 +198,10 @@ class BinaryMplExport {
   static int typeMarkOffset;  // offset of mark (tag in binmplimport) resulting from duplicated function
 };
 
-class DoUpdateMplt : public ModulePhase {
+class UpdateMplt  {
  public:
+  UpdateMplt() = default;
+  ~UpdateMplt() = default;
   class ManualSideEffect {
    public:
     ManualSideEffect(std::string name, bool p, bool u, bool d, bool o, bool e)
@@ -250,16 +250,7 @@ class DoUpdateMplt : public ModulePhase {
     bool privateUse = false;
     bool privateDef = false;
   };
-
-  explicit DoUpdateMplt(ModulePhaseID id) : ModulePhase(id) {}
-
-  ~DoUpdateMplt() = default;
-
   void UpdateCgField(BinaryMplt &binMplt, const CallGraph &cg);
-  AnalysisResult *Run(MIRModule *module, ModuleResultMgr *moduleResultMgr) override;
-  std::string PhaseName() const override {
-    return "updatemplt";
-  }
 };
 }  // namespace maple
 #endif  // MAPLE_IR_INCLUDE_BIN_MPL_EXPORT_H

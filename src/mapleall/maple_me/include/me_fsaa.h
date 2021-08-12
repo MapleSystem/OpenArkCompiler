@@ -14,11 +14,11 @@
  */
 #ifndef MAPLE_ME_INCLUDE_ME_FSAA_H
 #define MAPLE_ME_INCLUDE_ME_FSAA_H
-#include "me_phase.h"
 #include "me_option.h"
 #include "me_function.h"
-#include "dominance.h"
-#include "ssa_tab.h"
+#include "me_dominance.h"
+#include "me_ssa_tab.h"
+#include "maple_phase.h"
 
 namespace maple {
 class FSAA {
@@ -42,16 +42,6 @@ class FSAA {
   }
 };
 
-class MeDoFSAA : public MeFuncPhase {
- public:
-  MeDoFSAA(MePhaseID id) : MeFuncPhase(id) {}
-
-  ~MeDoFSAA() {}
-
-  AnalysisResult *Run(MeFunction *ir, MeFuncResultMgr *m, ModuleResultMgr*) override;
-  std::string PhaseName() const override {
-    return "fsaa";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE(MEFSAA, MeFunction)
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_ME_FSAA_H

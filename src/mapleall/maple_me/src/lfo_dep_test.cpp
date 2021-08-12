@@ -521,23 +521,28 @@ void LfoDepInfo::PerformDepTest() {
   }
 }
 
-AnalysisResult *DoLfoDepTest::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) {
-  Dominance *dom = static_cast<Dominance *>(m->GetAnalysisResult(MeFuncPhase_DOMINANCE, func));
+bool MELfoDepTest::PhaseRun(MeFunction &f) {
+  Dominance *dom = GET_ANALYSIS(MEDominance);
   ASSERT(dom != nullptr, "dominance phase has problem");
-  LfoPreEmitter *preEmit = static_cast<LfoPreEmitter *>(m->GetAnalysisResult(MeFuncPhase_LFOPREEMIT, func));
+  LfoPreEmitter *preEmit = GET_ANALYSIS(MELfoPreEmission);
   ASSERT(preEmit != nullptr, "lfo preemit phase has problem");
-  LfoFunction *lfoFunc = func->GetLfoFunc();
-  MemPool *depTestMp = NewMemPool();
-  LfoDepInfo *depInfo = depTestMp->New<LfoDepInfo>(depTestMp, lfoFunc, dom, preEmit);
-  if (DEBUGFUNC(func)) {
+  LfoFunction *lfoFunc = f.GetLfoFunc();
+  MemPool *depTestMp = GetPhaseMemPool();
+  depInfo = depTestMp->New<LfoDepInfo>(depTestMp, lfoFunc, dom, preEmit);
+  if (DEBUGFUNC_NEWPM(f)) {
     LogInfo::MapleLogger() << "\n============== LFO_DEP_TEST =============" << '\n';
   }
-  depInfo->CreateDoloopInfo(func->GetMirFunc()->GetBody(), nullptr);
+  depInfo->CreateDoloopInfo(f.GetMirFunc()->GetBody(), nullptr);
   depInfo->PerformDepTest();
-  if (DEBUGFUNC(func)) {
+  if (DEBUGFUNC_NEWPM(f)) {
     LogInfo::MapleLogger() << "________________" << std::endl;
     lfoFunc->meFunc->GetMirFunc()->Dump();
   }
   return depInfo;
+}
+
+void MELfoDepTest::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<MEDominance>();
+  aDep.AddRequired<MELfoPreEmission>();
 }
 }  // namespace maple

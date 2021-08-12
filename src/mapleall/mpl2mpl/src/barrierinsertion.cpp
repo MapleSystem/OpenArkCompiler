@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -28,6 +28,7 @@
 #define MEMVERIFY
 
 namespace maple {
+#ifdef NOT_USED
 CallNode *BarrierInsertion::RunFunction::CreateWriteRefVarCall(BaseNode &var, BaseNode &value) const {
   MIRFunction *callee = builder->GetOrCreateFunction("MCC_WriteRefVar", static_cast<TyIdx>(PTY_void));
   MapleVector<BaseNode*> args(builder->GetCurrentFuncCodeMpAllocator()->Adapter());
@@ -437,4 +438,5 @@ AnalysisResult *BarrierInsertion::Run(MIRModule *module, ModuleResultMgr*) {
   }
   return nullptr;
 }
+#endif
 }  // namespace maple

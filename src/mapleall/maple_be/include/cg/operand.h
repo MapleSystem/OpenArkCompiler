@@ -126,8 +126,16 @@ class Operand {
     return opndKind == kOpdCond;
   }
 
+  bool IsOpdShift() const {
+    return opndKind == kOpdShift;
+  }
+
   bool IsRegShift() const {
     return opndKind == kOpdRegShift;
+  }
+
+  bool IsOpdExtend() const {
+    return opndKind == kOpdExtend;
   }
 
   virtual bool IsLabelOpnd() const {
@@ -682,6 +690,10 @@ class ListOperand : public Operand {
 
   void PopOpnd() {
     opndList.pop_back();
+  }
+
+  void PopFrontOpnd() {
+    opndList.pop_front();
   }
 
   void PushOpnd(RegOperand &opnd) {

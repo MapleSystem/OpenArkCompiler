@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -16,7 +16,7 @@
 #define MAPLE_ME_INCLUDE_MESTMTPRE_H
 
 #include "me_function.h"
-#include "me_irmap.h"
+#include "me_irmap_build.h"
 #include "ssa_epre.h"
 
 namespace maple {
@@ -83,15 +83,6 @@ class MeStmtPre : public SSAEPre {
   }
 };
 
-class MeDoStmtPre : public MeFuncPhase {
- public:
-  explicit MeDoStmtPre(MePhaseID id) : MeFuncPhase(id) {}
-
-  virtual ~MeDoStmtPre() = default;
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr *mrm) override;
-  std::string PhaseName() const override {
-    return "stmtpre";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE(MEStmtPre, MeFunction)
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_MESTMTPRE_H

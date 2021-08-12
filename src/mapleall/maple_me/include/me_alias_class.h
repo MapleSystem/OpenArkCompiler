@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -15,9 +15,9 @@
 #ifndef MAPLE_ME_INCLUDE_ME_ALIAS_CLASS_H
 #define MAPLE_ME_INCLUDE_ME_ALIAS_CLASS_H
 #include "alias_class.h"
-#include "me_phase.h"
 #include "me_function.h"
 #include "me_cfg.h"
+#include "maple_phase.h"
 
 namespace maple {
 class MeAliasClass : public AliasClass {
@@ -52,18 +52,12 @@ class MeAliasClass : public AliasClass {
   bool enabledDebug;
 };
 
-class MeDoAliasClass : public MeFuncPhase {
-  ModuleResultMgr *moduleResultMgr; // keep the moduleResultmgr for later use
- public:
-  explicit MeDoAliasClass(MePhaseID id) : MeFuncPhase(id) {}
-
-  virtual ~MeDoAliasClass() = default;
-
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *funcResMgr, ModuleResultMgr *mrm) override;
-
-  std::string PhaseName() const override {
-    return "aliasclass";
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(MEAliasClass, MeFunction)
+  MeAliasClass *GetResult() {
+    return aliasClass;
   }
-};
+  MeAliasClass *aliasClass = nullptr;
+OVERRIDE_DEPENDENCE
+MAPLE_FUNC_PHASE_DECLARE_END
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_ME_ALIAS_CLASS_H

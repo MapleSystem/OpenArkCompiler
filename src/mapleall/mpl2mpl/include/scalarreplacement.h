@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -15,7 +15,6 @@
 #ifndef MPL2MPL_INCLUDE_SCALARREPLACEMENT_H
 #define MPL2MPL_INCLUDE_SCALARREPLACEMENT_H
 #include "phase_impl.h"
-#include "module_phase.h"
 namespace maple {
 using StmtVec = std::vector<StmtNode*>;
 using FldRefMap = std::unordered_map<FieldID, StmtVec>;
@@ -54,20 +53,7 @@ class ScalarReplacement : public FuncOptimizeImpl {
   void FixRCCalls(const StmtVec *refs);
   void ReplaceLocalVars();
 };
-class DoScalarReplacement : public ModulePhase {
- public:
-  DoScalarReplacement(ModulePhaseID id) : ModulePhase(id) {}
 
-  ~DoScalarReplacement() {}
-
-  std::string PhaseName() const override {
-    return "ScalarReplacement";
-  }
-
-  AnalysisResult *Run(MIRModule *mod, ModuleResultMgr *mrm) override {
-    OPT_TEMPLATE(ScalarReplacement);
-    return nullptr;
-  }
-};
+MAPLE_MODULE_PHASE_DECLARE(M2MScalarReplacement)
 }  // namespace maple
 #endif  // MPL2MPL_INCLUDE_SCALARREPLACEMENT_H

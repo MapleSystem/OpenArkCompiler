@@ -16,6 +16,7 @@
 #define MAPLEBE_INCLUDE_CG_AARCH64_AARCH64_REACHING_H
 
 #include "reaching.h"
+#include "aarch64_operand.h"
 
 namespace maplebe {
 class AArch64ReachingDefinition : public ReachingDefinition {

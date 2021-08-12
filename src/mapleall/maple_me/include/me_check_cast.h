@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -15,8 +15,8 @@
 #ifndef MAPLEME_INCLUDE_MECHECKCAST_H
 #define MAPLEME_INCLUDE_MECHECKCAST_H
 #include "me_function.h"
-#include "me_phase.h"
-#include "me_irmap.h"
+#include "me_irmap_build.h"
+#include "me_dominance.h"
 #include "me_ssi.h"
 #include "annotation_analysis.h"
 
@@ -84,17 +84,6 @@ class CheckCast {
   std::vector<MeStmt*> redundantChecks;
 };
 
-class MeDoCheckCastOpt : public MeFuncPhase {
- public:
-  explicit MeDoCheckCastOpt(MePhaseID id) : MeFuncPhase(id) {}
-
-  virtual ~MeDoCheckCastOpt() = default;
-
-  AnalysisResult *Run(MeFunction*, MeFuncResultMgr*, ModuleResultMgr*) override;
-
-  std::string PhaseName() const override {
-    return "checkcastopt";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE(MECheckCastOpt, MeFunction)
 }  // namespace maple
 #endif  // MAPLEME_INCLUDE_MECONDBASEDNPC_H

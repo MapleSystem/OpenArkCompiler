@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -16,11 +16,7 @@
 #define MAPLE_ME_INCLUDE_MEDSE_H
 #include <iostream>
 #include "bb.h"
-#include "me_phase.h"
-#include "me_option.h"
-#include "dominance.h"
-#include "me_function.h"
-#include "me_cfg.h"
+#include "me_phase_manager.h"
 #include "dse.h"
 
 namespace maple {
@@ -42,15 +38,6 @@ class MeDSE : public DSE {
   void VerifyPhi() const;
 };
 
-class MeDoDSE : public MeFuncPhase {
- public:
-  explicit MeDoDSE(MePhaseID id) : MeFuncPhase(id) {}
-
-  virtual ~MeDoDSE() = default;
-  AnalysisResult *Run(MeFunction *ir, MeFuncResultMgr *m, ModuleResultMgr *mrm) override;
-  std::string PhaseName() const override {
-    return "dse";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE(MEDse, MeFunction)
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_MEDSE_H

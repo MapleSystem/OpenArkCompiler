@@ -614,9 +614,6 @@ class AArch64MemOperand : public MemOperand {
         idxOpt(kIntact),
         noExtend(false),
         isStackMem(false) {
-    if (shift != 0 && dSize != (k8BitSize << shift)) {
-      ASSERT(false, "incompatible data size and shift amount");
-    }
     if (baseOpnd.GetRegisterNumber() == RSP || baseOpnd.GetRegisterNumber() == RFP) {
       isStackMem = true;
     }
@@ -801,7 +798,6 @@ class AArch64MemOperand : public MemOperand {
 
   int32 ShiftAmount() const {
     int32 scale = extend & 0xF;
-    ASSERT(IsExtendedRegisterMode(), "Just checking");
     /* 8 is 1 << 3, 4 is 1 << 2, 2 is 1 << 1, 1 is 1 << 0; */
     return (scale == 8) ? 3 : ((scale == 4) ? 2 : ((scale == 2) ? 1 : 0));
   }
@@ -1059,7 +1055,10 @@ class CommentOperand : public Operand {
   }
 
   void Dump() const override {
-    LogInfo::MapleLogger() << "# " << comment << std::endl;
+    LogInfo::MapleLogger() << "# ";
+    if (!comment.empty()) {
+      LogInfo::MapleLogger() << comment;
+    }
   }
 
  private:

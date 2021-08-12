@@ -15,7 +15,7 @@
 #ifndef MAPLEME_INCLUDE_ME_CFGOPT
 #define MAPLEME_INCLUDE_ME_CFGOPT
 #include "me_function.h"
-#include "me_phase.h"
+#include "maple_phase_manager.h"
 
 namespace maple {
 class MeCfgOpt {
@@ -54,18 +54,6 @@ class MeCfgOpt {
   MeIRMap *meIrMap;
 };
 
-class MeDoCfgOpt : public MeFuncPhase {
- public:
-  explicit MeDoCfgOpt(MePhaseID id) : MeFuncPhase(id) {}
-
-  virtual ~MeDoCfgOpt() = default;
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr *mrm) override;
-  std::string PhaseName() const override {
-    return "cfgopt";
-  }
-
-  bool FindLocalRefVarUses(const MeIRMap &irMap, const MeExpr &expr, const MeStmt &meStmt, const VarMeExpr &var) const;
-  void EmitMapleIr(MeFunction &func, MeFuncResultMgr &m);
-};
+MAPLE_FUNC_PHASE_DECLARE(MECfgOpt, MeFunction)
 }  // namespace maple
 #endif  // MAPLEME_INCLUDE_ME_CFGOPT

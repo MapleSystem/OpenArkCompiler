@@ -916,6 +916,17 @@ void PreCheckCast::ProcessFunc(MIRFunction *func) {
   }
 }
 
+bool M2MPreCheckCast::PhaseRun(maple::MIRModule &m) {
+  OPT_TEMPLATE_NEWPM(PreCheckCast);
+  return true;
+}
+
+void M2MPreCheckCast::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<M2MKlassHierarchy>();
+  aDep.SetPreservedAll();
+}
+
+
 void CheckCastGenerator::ProcessFunc(MIRFunction *func) {
   if (func->IsEmpty()) {
     return;
@@ -939,5 +950,15 @@ void CheckCastGenerator::ProcessFunc(MIRFunction *func) {
   }
   MIRLower mirlowerer(GetMIRModule(), func);
   mirlowerer.LowerFunc(*func);
+}
+
+bool M2MCheckCastGeneration::PhaseRun(maple::MIRModule &m) {
+  OPT_TEMPLATE_NEWPM(CheckCastGenerator);
+  return true;
+}
+
+void M2MCheckCastGeneration::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<M2MKlassHierarchy>();
+  aDep.SetPreservedAll();
 }
 }  // namespace maple

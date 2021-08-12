@@ -14,7 +14,6 @@
  */
 #ifndef MAPLE_ME_INCLUDE_DOMINANCE_H
 #define MAPLE_ME_INCLUDE_DOMINANCE_H
-#include "phase.h"
 #include "bb.h"
 
 namespace maple {

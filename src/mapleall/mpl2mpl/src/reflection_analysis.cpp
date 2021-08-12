@@ -28,6 +28,7 @@
 #include "itab_util.h"
 #include "string_utils.h"
 #include "metadata_layout.h"
+#include "maple_phase_manager.h"
 
 namespace {
 using namespace maple;
@@ -2246,19 +2247,21 @@ void ReflectionAnalysis::Run() {
   GenClassHashMetaData();
 }
 
-AnalysisResult *DoReflectionAnalysis::Run(MIRModule *module, ModuleResultMgr *moduleResultMgr) {
-  auto memPool = std::make_unique<ThreadShareMemPool>(memPoolCtrler, "ReflectionAnalysis mempool");
-  auto *kh = static_cast<KlassHierarchy*>(moduleResultMgr->GetAnalysisResult(MoPhase_CHA, module));
+bool M2MReflectionAnalysis::PhaseRun(maple::MIRModule &m) {
+  auto *memPool = GetPhaseMemPool();
+  auto *kh = GET_ANALYSIS(M2MKlassHierarchy);
   ASSERT_NOT_NULL(kh);
-  maple::MIRBuilder mirBuilder(module);
-  ReflectionAnalysis *rv = memPool->New<ReflectionAnalysis>(module, memPool.get(), kh, mirBuilder);
-  if (rv == nullptr) {
-    CHECK_FATAL(false, "failed to allocate memory");
-  }
+  maple::MIRBuilder mirBuilder(&m);
+  ReflectionAnalysis *rv = memPool->New<ReflectionAnalysis>(&m, memPool, kh, mirBuilder);
   rv->Run();
   if (Options::genPGOReport) {
     rv->DumpPGOSummary();
   }
-  return nullptr;
+  return true;
+}
+
+void M2MReflectionAnalysis::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<M2MKlassHierarchy>();
+  aDep.SetPreservedAll();
 }
 }  // namespace maple

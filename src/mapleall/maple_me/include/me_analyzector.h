@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -16,9 +16,10 @@
 #define MAPLEME_INCLUDE_ANALYZECTOR_H
 
 #include "me_function.h"
-#include "me_phase.h"
-#include "me_irmap.h"
-#include "annotation_analysis.h"
+#include "class_hierarchy_phase.h"
+#include "me_dominance.h"
+#include "me_irmap_build.h"
+#include "me_phase_manager.h"
 
 namespace maple {
 #pragma clang diagnostic push
@@ -42,17 +43,6 @@ class AnalyzeCtor {
 };
 #pragma clang diagnostic pop
 
-class MeDoAnalyzeCtor : public MeFuncPhase {
- public:
-  explicit MeDoAnalyzeCtor(MePhaseID id) : MeFuncPhase(id) {}
-
-  virtual ~MeDoAnalyzeCtor() = default;
-
-  AnalysisResult *Run(MeFunction*, MeFuncResultMgr*, ModuleResultMgr*) override;
-
-  std::string PhaseName() const override {
-    return "analyzector";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE(MEAnalyzeCtor, MeFunction)
 }  // namespace maple
 #endif  // MAPLEME_INCLUDE_ANALYZECTOR_H

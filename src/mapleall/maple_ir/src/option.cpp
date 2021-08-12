@@ -24,7 +24,7 @@ using namespace mapleOption;
 
 bool Options::dumpBefore = false;
 bool Options::dumpAfter = false;
-std::string Options::dumpPhase = "*";
+std::string Options::dumpPhase = "";
 std::string Options::dumpFunc = "*";
 std::string Options::skipPhase;
 std::string Options::skipFrom;

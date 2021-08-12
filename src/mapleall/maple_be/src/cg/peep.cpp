@@ -366,7 +366,6 @@ bool CgPrePeepHole0::PhaseRun(maplebe::CGFunc &f) {
   peep->PrePeepholeOpt();
   return false;
 }
-MAPLE_TRANSFORM_PHASE_REGISTER(CgPrePeepHole0, prepeephole)
 
 bool CgPrePeepHole1::PhaseRun(maplebe::CGFunc &f) {
   auto *peep = GetPhaseMemPool()->New<PeepHoleOptimizer>(&f);
@@ -374,7 +373,6 @@ bool CgPrePeepHole1::PhaseRun(maplebe::CGFunc &f) {
   peep->PrePeepholeOpt1();
   return false;
 }
-MAPLE_TRANSFORM_PHASE_REGISTER(CgPrePeepHole1, prepeephole1)
 
 bool CgPeepHole0::PhaseRun(maplebe::CGFunc &f) {
   auto *peep = GetPhaseMemPool()->New<PeepHoleOptimizer>(&f);
@@ -382,7 +380,6 @@ bool CgPeepHole0::PhaseRun(maplebe::CGFunc &f) {
   peep->Peephole0();
   return false;
 }
-MAPLE_TRANSFORM_PHASE_REGISTER(CgPeepHole0, peephole0)
 
 bool CgPeepHole1::PhaseRun(maplebe::CGFunc &f) {
   auto *peep = GetPhaseMemPool()->New<PeepHoleOptimizer>(&f);
@@ -390,5 +387,4 @@ bool CgPeepHole1::PhaseRun(maplebe::CGFunc &f) {
   peep->PeepholeOpt();
   return false;
 }
-MAPLE_TRANSFORM_PHASE_REGISTER(CgPeepHole1, peephole)
 }  /* namespace maplebe */

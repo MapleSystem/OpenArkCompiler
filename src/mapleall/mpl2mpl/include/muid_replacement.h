@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -14,10 +14,10 @@
  */
 #ifndef MPL2MPL_INCLUDE_MUID_REPLACEMENT_H
 #define MPL2MPL_INCLUDE_MUID_REPLACEMENT_H
-#include "module_phase.h"
 #include "phase_impl.h"
 #include "muid.h"
 #include "version.h"
+#include "maple_phase_manager.h"
 
 namespace maple {
 // For func def table.
@@ -214,20 +214,6 @@ class MUIDReplacement : public FuncOptimizeImpl {
   std::string mplMuidStr;
 };
 
-class DoMUIDReplacement : public ModulePhase {
- public:
-  explicit DoMUIDReplacement(ModulePhaseID id) : ModulePhase(id) {}
-
-  ~DoMUIDReplacement() = default;
-
-  std::string PhaseName() const override {
-    return "MUIDReplacement";
-  }
-
-  AnalysisResult *Run(MIRModule *mod, ModuleResultMgr *mrm) override {
-    OPT_TEMPLATE(MUIDReplacement);
-    return nullptr;
-  }
-};
+MAPLE_MODULE_PHASE_DECLARE(M2MMuidReplacement)
 }  // namespace maple
 #endif  // MPL2MPL_INCLUDE_MUID_REPLACEMENT_H

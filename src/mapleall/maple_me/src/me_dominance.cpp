@@ -22,14 +22,17 @@
 // the reverse CFG(The CFG with its edges reversed) is always useful,
 // so we also generates the above two structures on the reverse CFG.
 namespace maple {
-AnalysisResult *MeDoDominance::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) {
-  MeCFG *cfg = func->GetCfg();
-  if (!cfg) {
-    cfg = static_cast<MeCFG*>(m->GetAnalysisResult(MeFuncPhase_MECFG, func));
-  }
-  MemPool *memPool = NewMemPool();
-  auto *dom = memPool->New<Dominance>(*memPool, *NewMemPool(), cfg->GetAllBBs(),
-                                      *cfg->GetCommonEntryBB(), *cfg->GetCommonExitBB());
+void MEDominance::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<MEMeCfg>();
+  aDep.SetPreservedAll();
+}
+
+bool MEDominance::PhaseRun(maple::MeFunction &f) {
+  MeCFG *cfg = f.GetCfg();
+  ASSERT_NOT_NULL(cfg);
+  MemPool *memPool = GetPhaseMemPool();
+  dom = memPool->New<Dominance>(*memPool, *ApplyTempMemPool(), cfg->GetAllBBs(),
+                                *cfg->GetCommonEntryBB(), *cfg->GetCommonExitBB());
   dom->GenPostOrderID();
   dom->ComputeDominance();
   dom->ComputeDomFrontiers();
@@ -49,11 +52,11 @@ AnalysisResult *MeDoDominance::Run(MeFunction *func, MeFuncResultMgr *m, ModuleR
   dom->ComputePdtPreorder(*cfg->GetCommonExitBB(), num);
   dom->ResizePdtPreOrder(num);
   dom->ComputePdtDfn();
-  if (DEBUGFUNC(func)) {
+  if (DEBUGFUNC_NEWPM(f)) {
     LogInfo::MapleLogger() << "-----------------Dump dominance info and postdominance info---------\n";
     dom->DumpDoms();
     dom->DumpPdoms();
   }
-  return dom;
+  return false;
 }
 }  // namespace maple

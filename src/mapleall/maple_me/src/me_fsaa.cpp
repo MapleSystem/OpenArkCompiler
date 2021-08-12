@@ -135,18 +135,16 @@ void FSAA::ProcessBB(BB *bb) {
   }
 }
 
-AnalysisResult *MeDoFSAA::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) {
-  SSATab *ssaTab = static_cast<SSATab *>(m->GetAnalysisResult(MeFuncPhase_SSATAB, func));
-  ASSERT(ssaTab != nullptr, "ssaTab phase has problem");
+bool MEFSAA::PhaseRun(MeFunction &f) {
+  auto *ssaTab = GET_ANALYSIS(MESSATab);
+  CHECK_NULL_FATAL(ssaTab);
+  auto *ssa = GET_ANALYSIS(MESSA);
+  CHECK_NULL_FATAL(ssa);
+  auto *dom = GET_ANALYSIS(MEDominance);
+  CHECK_NULL_FATAL(dom);
 
-  MeSSA *ssa = static_cast<MeSSA *>(m->GetAnalysisResult(MeFuncPhase_SSA, func));
-  ASSERT(ssa != nullptr, "ssa phase has problem");
-
-  Dominance *dom = static_cast<Dominance *>(m->GetAnalysisResult(MeFuncPhase_DOMINANCE, func));
-  ASSERT(dom != nullptr, "dominance phase has problem");
-
-  FSAA fsaa(func, dom);
-  auto cfg = func->GetCfg();
+  FSAA fsaa(&f, dom);
+  auto cfg = f.GetCfg();
   for (BB *bb : cfg->GetAllBBs()) {
     if (bb != nullptr) {
       fsaa.ProcessBB(bb);
@@ -165,11 +163,17 @@ AnalysisResult *MeDoFSAA::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResult
 
     ssa->VerifySSA();
 
-    if (DEBUGFUNC(func)) {
-      func->DumpFunction();
+    if (DEBUGFUNC_NEWPM(f)) {
+      f.DumpFunction();
     }
   }
+  return false;
+}
 
-  return nullptr;
+void MEFSAA::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<MESSATab>();
+  aDep.AddRequired<MESSA>();
+  aDep.AddRequired<MEDominance>();
+  aDep.SetPreservedAll();
 }
 }  // namespace maple

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -14,41 +14,63 @@
  */
 #ifndef MAPLE_IPA_INCLUDE_MODULE_PHASE_MANAGER_H
 #define MAPLE_IPA_INCLUDE_MODULE_PHASE_MANAGER_H
-#include "me_phase_manager.h"
+#include "maple_phase_manager.h"
+#include "class_hierarchy_phase.h"
+#include "class_init.h"
+#include "bin_mpl_export.h"
+#include "mpl_timer.h"
+#include "clone.h"
+#include "call_graph.h"
+#include "verification.h"
+#include "verify_mark.h"
+#include "inline.h"
+#include "method_replace.h"
+#if MIR_JAVA
+#include "native_stub_func.h"
+#include "vtable_analysis.h"
+#include "reflection_analysis.h"
+#include "annotation_analysis.h"
+#include "vtable_impl.h"
+#include "java_intrn_lowering.h"
+#include "simplify.h"
+#include "java_eh_lower.h"
+#include "muid_replacement.h"
+#include "gen_check_cast.h"
+#include "coderelayout.h"
+#include "constantfold.h"
+#include "barrierinsertion.h"
+#include "preme.h"
+#include "scalarreplacement.h"
+#include "openProfile.h"
+#include "update_mplt.h"
+#endif  // ~MIR_JAVA
+#include "option.h"
+#include "me_option.h"
 
 namespace maple {
-class ModulePhaseManager : public PhaseManager {
+class MEBETopLevelManager : public ModulePM {
  public:
-  ModulePhaseManager(MemPool *memPool, MIRModule &mod, ModuleResultMgr *mrm = nullptr)
-      : PhaseManager(*memPool, "modulephase"), mirModule(mod) {
-    if (mrm != nullptr) {
-      arModuleMgr = mrm;
-    } else {
-      arModuleMgr = memPool->New<ModuleResultMgr>(GetMemAllocator());
-    }
+  explicit MEBETopLevelManager(MemPool *mp) : ModulePM(mp, &id) {}
+  ~MEBETopLevelManager() override {};
+  PHASECONSTRUCTOR(MEBETopLevelManager)
+  std::string PhaseName() const override;
+  void DoPhasesPopulate(const MIRModule &m);
+  void Run(MIRModule &mod);
+  bool IsRunMpl2Mpl() const {
+    return runMpl2mpl;
   }
-
-  ~ModulePhaseManager() = default;
-
-  // Register all module phases defined in module_phases.def
-  void RegisterModulePhases();
-  // Add module phases which are going to be run
-  void AddModulePhases(const std::vector<std::string> &phases);
-  ModuleResultMgr *GetModResultMgr() override {
-    return arModuleMgr;
+  void SetRunMpl2Mpl(bool value) {
+    runMpl2mpl = value;
   }
-
-  void SetTimePhases(bool val) {
-    timePhases = val;
+  bool IsRunMe() const {
+    return runMe;
   }
-
-  void Run() override;
-  void Emit(const std::string &passName);
-
+  void SetRunMe(bool value) {
+    runMe = value;
+  }
  private:
-  bool timePhases = false;
-  MIRModule &mirModule;
-  ModuleResultMgr *arModuleMgr; // module level analysis result
+  bool runMpl2mpl = false;
+  bool runMe = false;
 };
 }  // namespace maple
 #endif  // MAPLE_IPA_INCLUDE_MODULE_PHASE_MANAGER_H

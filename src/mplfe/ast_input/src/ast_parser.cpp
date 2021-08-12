@@ -125,6 +125,7 @@ ASTStmt *ASTParser::ProcessStmt(MapleAllocator &allocator, const clang::Stmt &st
     STMT_CASE(AtomicExpr);
     STMT_CASE(GCCAsmStmt);
     STMT_CASE(OffsetOfExpr);
+    STMT_CASE(GenericSelectionExpr);
     default: {
       CHECK_FATAL(false, "ASTStmt: %s NIY", stmt.getStmtClassName());
       return nullptr;
@@ -133,6 +134,18 @@ ASTStmt *ASTParser::ProcessStmt(MapleAllocator &allocator, const clang::Stmt &st
 }
 
 ASTStmt *ASTParser::ProcessStmtOffsetOfExpr(MapleAllocator &allocator, const clang::OffsetOfExpr &expr) {
+  auto *astStmt = ASTDeclsBuilder::ASTStmtBuilder<ASTOffsetOfStmt>(allocator);
+  CHECK_FATAL(astStmt != nullptr, "astStmt is nullptr");
+  ASTExpr *astExpr = ProcessExpr(allocator, &expr);
+  if (astExpr == nullptr) {
+    return nullptr;
+  }
+  astStmt->SetASTExpr(astExpr);
+  return astStmt;
+}
+
+ASTStmt *ASTParser::ProcessStmtGenericSelectionExpr(MapleAllocator &allocator,
+                                                    const clang::GenericSelectionExpr &expr) {
   auto *astStmt = ASTDeclsBuilder::ASTStmtBuilder<ASTOffsetOfStmt>(allocator);
   CHECK_FATAL(astStmt != nullptr, "astStmt is nullptr");
   ASTExpr *astExpr = ProcessExpr(allocator, &expr);
@@ -408,7 +421,9 @@ ASTStmt *ASTParser::ProcessStmtGCCAsmStmt(MapleAllocator &allocator, const clang
   astStmt->SetAsmStr(asmStmt.generateAsmString(*(astFile->GetAstContext())));
   // set output
   for (unsigned i = 0; i < asmStmt.getNumOutputs(); ++i) {
-    astStmt->InsertOutput(std::make_pair(asmStmt.getOutputName(i).str(), asmStmt.getOutputConstraint(i).str()));
+    bool isPlusConstraint = asmStmt.isOutputPlusConstraint(i);
+    astStmt->InsertOutput(std::make_tuple(asmStmt.getOutputName(i).str(),
+                                          asmStmt.getOutputConstraint(i).str(), isPlusConstraint));
     astStmt->SetASTExpr(ProcessExpr(allocator, asmStmt.getOutputExpr(i)));
   }
   // set input
@@ -721,9 +736,7 @@ ASTValue *ASTParser::TranslateLValue2ASTValue(
         const clang::StringLiteral &strExpr = llvm::cast<const clang::StringLiteral>(*lvExpr);
         std::string str = "";
         if (strExpr.isWide()) {
-          for (uint32 i = 0; i < strExpr.getLength(); ++i) {
-            str += std::to_string(strExpr.getCodeUnit(i));
-          }
+          str = strExpr.getBytes().str();
         } else {
           str = strExpr.getString().str();
         }
@@ -827,6 +840,7 @@ ASTExpr *ASTParser::ProcessExpr(MapleAllocator &allocator, const clang::Expr *ex
     EXPR_CASE(DependentScopeDeclRefExpr);
     EXPR_CASE(AtomicExpr);
     EXPR_CASE(ChooseExpr);
+    EXPR_CASE(GenericSelectionExpr);
     default:
       CHECK_FATAL(false, "ASTExpr %s NIY", expr->getStmtClassName());
       return nullptr;
@@ -2039,6 +2053,10 @@ ASTExpr *ASTParser::ProcessExprChooseExpr(MapleAllocator &allocator, const clang
   return ProcessExpr(allocator, chs.getChosenSubExpr());
 }
 
+ASTExpr *ASTParser::ProcessExprGenericSelectionExpr(MapleAllocator &allocator, const clang::GenericSelectionExpr &gse) {
+  return ProcessExpr(allocator, gse.getResultExpr());
+}
+
 bool ASTParser::PreProcessAST() {
   TraverseDecl(astUnitDecl, [&](clang::Decl *child) {
     switch (child->getKind()) {
@@ -2194,7 +2212,7 @@ ASTDecl *ASTParser::ProcessDeclFunctionDecl(MapleAllocator &allocator, const cla
   if (retType == nullptr) {
     return nullptr;
   }
-  std::vector<std::string> parmNamesIn;
+  std::vector<ASTDecl*> paramDecls;
   typeDescIn.push_back(retType);
   unsigned int numParam = funcDecl.getNumParams();
   std::list<ASTStmt*> implicitStmts;
@@ -2207,7 +2225,7 @@ ASTDecl *ASTParser::ProcessDeclFunctionDecl(MapleAllocator &allocator, const cla
       implicitStmts.emplace_back(stmt);
     }
     ASTDecl *parmVarDecl = ProcessDecl(allocator, *parmDecl);
-    parmNamesIn.emplace_back(parmVarDecl->GetName());
+    paramDecls.push_back(parmVarDecl);
     typeDescIn.push_back(parmVarDecl->GetTypeDesc().front());
   }
   GenericAttrs attrs;
@@ -2217,7 +2235,7 @@ ASTDecl *ASTParser::ProcessDeclFunctionDecl(MapleAllocator &allocator, const cla
     attrs.SetAttr(GENATTR_oneelem_simd);
   }
   astFunc = ASTDeclsBuilder::ASTFuncBuilder(
-      allocator, fileName, funcName, typeDescIn, attrs, parmNamesIn, funcDecl.getID());
+      allocator, fileName, funcName, typeDescIn, attrs, paramDecls, funcDecl.getID());
   CHECK_FATAL(astFunc != nullptr, "astFunc is nullptr");
   if (funcDecl.hasBody()) {
     ASTStmt *astCompoundStmt = ProcessStmt(allocator, *llvm::cast<clang::CompoundStmt>(funcDecl.getBody()));

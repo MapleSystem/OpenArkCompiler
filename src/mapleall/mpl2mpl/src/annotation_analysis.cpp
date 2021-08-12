@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -13,6 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "annotation_analysis.h"
+#include "maple_phase_manager.h"
 
 namespace maple {
 char AnnotationAnalysis::annoDeclare = ':';
@@ -547,13 +548,16 @@ void AnnotationAnalysis::Run() {
   AnalysisAnnotation();
 }
 
-AnalysisResult *DoAnnotationAnalysis::Run(MIRModule *module, ModuleResultMgr *moduleResultMgr) {
-  auto memPool = std::make_unique<ThreadShareMemPool>(memPoolCtrler, "AnnotationAnalysis mempool");
-  MemPool *pragmaMemPool = memPoolCtrler.NewMemPool("New Pragma mempool", false /* isLocalPool */);
-  auto *kh = static_cast<KlassHierarchy*>(moduleResultMgr->GetAnalysisResult(MoPhase_CHA, module));
+void M2MAnnotationAnalysis::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<M2MKlassHierarchy>();
+}
+
+bool M2MAnnotationAnalysis::PhaseRun(maple::MIRModule &m) {
+  auto *kh = GET_ANALYSIS(M2MKlassHierarchy);
   ASSERT_NOT_NULL(kh);
-  AnnotationAnalysis *aa = pragmaMemPool->New<AnnotationAnalysis>(module, memPool.get(), pragmaMemPool, kh);
+  MemPool *pragmaMemPool = GetPhaseMemPool();
+  aa = pragmaMemPool->New<AnnotationAnalysis>(&m, ApplyTempMemPool(), pragmaMemPool, kh);
   aa->Run();
-  return aa;
+  return false;
 }
 }

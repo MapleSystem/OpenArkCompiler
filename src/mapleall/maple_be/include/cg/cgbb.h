@@ -564,6 +564,12 @@ class BB {
   void SetInternalFlag3(long arg) {
     internalFlag3 = arg;
   }
+  bool IsAtomicBuiltInBB() const {
+    return isAtomicBuiltIn;
+  }
+  void SetAtomicBuiltIn() {
+    isAtomicBuiltIn = true;
+  }
   const MapleList<Insn*> &GetCallInsns() const {
     return callInsns;
   }
@@ -741,6 +747,9 @@ class BB {
   long internalFlag3 = 0;
   MapleList<Insn*> callInsns;
   MapleVector<LabelIdx> rangeGotoLabelVec;
+
+  /* includes Built-in functions for atomic memory access */
+  bool isAtomicBuiltIn = false;
 
   const Insn *firstLoc = nullptr;
   const Insn *lastLoc = nullptr;

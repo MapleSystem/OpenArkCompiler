@@ -73,11 +73,15 @@ class SyncSelect {
 }
 
 namespace maple {
-AnalysisResult *MeDoSyncSelect::Run(MeFunction *func, MeFuncResultMgr*, ModuleResultMgr*) {
-  SyncSelect(utils::ToRef(func)).SyncOptimization();
-  if (DEBUGFUNC(func)) {
-    func->Dump(true);
+bool MESyncSelect::PhaseRun(MeFunction &f) {
+  SyncSelect(f).SyncOptimization();
+  if (DEBUGFUNC_NEWPM(f)) {
+    f.Dump(true);
   }
-  return nullptr;
+  return true;
+}
+
+void MESyncSelect::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.SetPreservedAll();
 }
 }  // namespace maple

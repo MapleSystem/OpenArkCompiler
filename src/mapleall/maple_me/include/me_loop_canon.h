@@ -15,7 +15,6 @@
 #ifndef MAPLE_ME_INCLUDE_MELOOPCANON_H
 #define MAPLE_ME_INCLUDE_MELOOPCANON_H
 #include "me_function.h"
-#include "me_phase.h"
 #include "me_loop_analysis.h"
 
 namespace maple {
@@ -50,16 +49,6 @@ class MeLoopCanon {
   bool isCFGChange = false;
 };
 
-class MeDoLoopCanon : public MeFuncPhase {
- public:
-  explicit MeDoLoopCanon(MePhaseID id) : MeFuncPhase(id) {}
-
-  ~MeDoLoopCanon() = default;
-
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) override;
-  std::string PhaseName() const override {
-    return "loopcanon";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE(MELoopCanaon, MeFunction)
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_MELOOPCANON_H

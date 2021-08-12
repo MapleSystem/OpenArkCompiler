@@ -647,4 +647,100 @@ BB *CGCFG::FindLastRetBB() {
   }
   return nullptr;
 }
+
+void CGCFG::UpdatePredsSuccsAfterSplit(BB &pred, BB &succ, BB &newBB) {
+  /* connext newBB -> succ */
+  for (auto it = succ.GetPredsBegin(); it != succ.GetPredsEnd(); ++it) {
+    if (*it == &pred) {
+      auto origIt = it;
+      succ.ErasePreds(it);
+      if (origIt != succ.GetPredsBegin()) {
+        origIt--;
+        succ.InsertPred(origIt, newBB);
+      } else {
+        succ.PushFrontPreds(newBB);
+      }
+      break;
+    }
+  }
+  newBB.PushBackSuccs(succ);
+
+  /* connext pred -> newBB */
+  for (auto it = pred.GetSuccsBegin(); it != pred.GetSuccsEnd(); ++it) {
+    if (*it == &succ) {
+      auto origIt = it;
+      pred.EraseSuccs(it);
+      if (origIt != succ.GetSuccsBegin()) {
+        origIt--;
+        pred.InsertSucc(origIt, newBB);
+      } else {
+        pred.PushFrontSuccs(newBB);
+      }
+      break;
+    }
+  }
+  newBB.PushBackPreds(pred);
+}
+
+void CGCFG::BreakCriticalEdge(BB &pred, BB &succ) {
+  LabelIdx newLblIdx = cgFunc->CreateLabel();
+  BB *newBB = cgFunc->CreateNewBB(newLblIdx, false, BB::kBBGoto, pred.GetFrequency());
+  bool isFallThru = pred.GetNext() == &succ;
+  /* set prev, next */
+  if (isFallThru) {
+    BB *origNext = pred.GetNext();
+    origNext->SetPrev(newBB);
+    newBB->SetNext(origNext);
+    pred.SetNext(newBB);
+    newBB->SetPrev(&pred);
+    newBB->SetKind(BB::kBBFallthru);
+  } else {
+    BB *exitBB = cgFunc->GetExitBBsVec().size() == 0 ? nullptr : cgFunc->GetExitBB(0);
+    if (exitBB == nullptr) {
+      cgFunc->GetLastBB()->AppendBB(*newBB);
+      cgFunc->SetLastBB(*newBB);
+    } else {
+      exitBB->AppendBB(*newBB);
+    }
+    newBB->AppendInsn(cgFunc->GetCG()->BuildInstruction<AArch64Insn>(
+        MOP_xuncond, cgFunc->GetOrCreateLabelOperand(succ.GetLabIdx())));
+  }
+
+  /* update offset if succ is goto target */
+  if (pred.GetKind() == BB::kBBIf) {
+    Insn *brInsn = FindLastCondBrInsn(pred);
+    LabelOperand &brTarget = static_cast<LabelOperand&>(
+        brInsn->GetOperand(static_cast<int>(brInsn->GetJumpTargetIdx())));
+    if (brTarget.GetLabelIndex() == succ.GetLabIdx()) {
+      brInsn->SetOperand(brInsn->GetJumpTargetIdx(), cgFunc->GetOrCreateLabelOperand(newLblIdx));
+    }
+  } else if (pred.GetKind() == BB::kBBRangeGoto) {
+    const MapleVector<LabelIdx> &labelVec = pred.GetRangeGotoLabelVec();
+    uint32 index = 0;
+    for (auto label: labelVec) {
+      if (label == succ.GetLabIdx()) {
+        pred.SetRangeGotoLabel(index, newLblIdx);
+        break;
+      }
+      index++;
+    }
+    MIRSymbol *st = cgFunc->GetEmitSt(pred.GetId());
+    MIRAggConst *arrayConst = safe_cast<MIRAggConst>(st->GetKonst());
+    MIRType *etype = GlobalTables::GetTypeTable().GetTypeFromTyIdx((TyIdx)PTY_a64);
+    MIRConst *mirConst = cgFunc->GetMemoryPool()->New<MIRLblConst>(newLblIdx, cgFunc->GetFunction().GetPuidx(), *etype);
+    for (size_t i = 0; i < arrayConst->GetConstVec().size(); ++i) {
+      CHECK_FATAL(arrayConst->GetConstVecItem(i)->GetKind() == kConstLblConst, "not a kConstLblConst");
+      MIRLblConst *lblConst = safe_cast<MIRLblConst>(arrayConst->GetConstVecItem(i));
+      if (succ.GetLabIdx() == lblConst->GetValue()) {
+        arrayConst->SetConstVecItem(i, *mirConst);
+        break;
+      }
+    }
+  } else {
+    ASSERT(0, "unexpeced bb kind in BreakCriticalEdge");
+  }
+
+  /* update pred, succ */
+  UpdatePredsSuccsAfterSplit(pred, succ, *newBB);
+}
 }  /* namespace maplebe */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -15,9 +15,8 @@
 #ifndef MAPLEME_INCLUDE_MEBYPATHEH_H
 #define MAPLEME_INCLUDE_MEBYPATHEH_H
 
-#include "me_phase.h"
 #include "bb.h"
-#include "class_hierarchy.h"
+#include "class_hierarchy_phase.h"
 #include "mir_builder.h"
 
 namespace maple {
@@ -30,15 +29,6 @@ class MeBypathEH {
                          const KlassHierarchy &kh, MeFunction &func, const StmtNode *syncExitStmt) const;
 };
 
-class MeDoBypathEH : public MeFuncPhase {
- public:
-  explicit MeDoBypathEH(MePhaseID id) : MeFuncPhase(id) {}
-  ~MeDoBypathEH() = default;
-
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr *mrm) override;
-  std::string PhaseName() const override {
-    return "bypatheh";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE(MEBypathEH, MeFunction)
 }  // namespace maple
 #endif

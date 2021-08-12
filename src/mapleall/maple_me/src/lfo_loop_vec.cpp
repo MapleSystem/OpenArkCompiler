@@ -555,37 +555,39 @@ void LoopVectorization::Perform() {
   TransformLoop();
 }
 
-AnalysisResult *DoLfoLoopVectorization::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) {
+bool MELfoLoopVectorization::PhaseRun(MeFunction &f) {
   // generate lfo IR
-  LfoPreEmitter *lfoemit = static_cast<LfoPreEmitter *>(m->GetAnalysisResult(MeFuncPhase_LFOPREEMIT, func));
+  LfoPreEmitter *lfoemit = GET_ANALYSIS(MELfoPreEmission);
   CHECK_NULL_FATAL(lfoemit);
   // step 1: get dependence graph for each loop
-  auto *lfodepInfo = static_cast<LfoDepInfo *>(m->GetAnalysisResult(MeFuncPhase_LFODEPTEST, func));
+  auto *lfodepInfo = GET_ANALYSIS(MELfoDepTest);
   CHECK_NULL_FATAL(lfodepInfo);
 
-  if (DEBUGFUNC(func)) {
+  if (DEBUGFUNC_NEWPM(f)) {
     LogInfo::MapleLogger() << "\n**** Before loop vectorization phase ****\n";
-    func->GetMirFunc()->Dump(false);
+    f.GetMirFunc()->Dump(false);
   }
 
   // run loop vectorization
-  LoopVectorization loopVec(NewMemPool(), lfoemit, lfodepInfo, DEBUGFUNC(func));
+  LoopVectorization loopVec(GetPhaseMemPool(), lfoemit, lfodepInfo, DEBUGFUNC_NEWPM(f));
   loopVec.Perform();
 
-  // invalid analysis result
-  m->InvalidAllResults();
-
-  if (DEBUGFUNC(func)) {
+  if (DEBUGFUNC_NEWPM(f)) {
     LogInfo::MapleLogger() << "\n\n\n**** After loop vectorization phase ****\n";
-    func->GetMirFunc()->Dump(false);
+    f.GetMirFunc()->Dump(false);
   }
 
   // lower lfoIR for other mapleme phases
-  MIRLower mirlowerer(func->GetMIRModule(), func->GetMirFunc());
+  MIRLower mirlowerer(f.GetMIRModule(), f.GetMirFunc());
   mirlowerer.SetLowerME();
   mirlowerer.SetLowerExpandArray();
-  mirlowerer.LowerFunc(*(func->GetMirFunc()));
+  mirlowerer.LowerFunc(*(f.GetMirFunc()));
 
-  return nullptr;
+  return false;
+}
+
+void MELfoLoopVectorization::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<MELfoPreEmission>();
+  aDep.AddRequired<MELfoDepTest>();
 }
 }  // namespace maple

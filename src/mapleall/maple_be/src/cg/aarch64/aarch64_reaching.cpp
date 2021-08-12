@@ -14,7 +14,6 @@
  */
 #include "aarch64_reaching.h"
 #include "aarch64_cg.h"
-#include "aarch64_operand.h"
 namespace maplebe {
 /* MCC_ClearLocalStackRef clear 1 stack slot, and MCC_DecRefResetPair clear 2 stack slot,
  * the stack positins cleared are recorded in callInsn->clearStackOffset
@@ -200,7 +199,7 @@ void AArch64ReachingDefinition::GenAllCallerSavedRegs(BB &bb) {
   }
 }
 
-static bool SetDefInsnVecForAsm(Insn *insn, uint32 index, uint32 regNO, std::vector<Insn*> &defInsnVec) {
+static bool SetDefInsnVecForAsm(Insn *insn, uint32 index, uint32 regNO, std::vector<Insn *> &defInsnVec) {
   for (auto reg : static_cast<AArch64ListOperand&>(insn->GetOperand(index)).GetOperands()) {
     if (static_cast<RegOperand *>(reg)->GetRegisterNumber() == regNO) {
       defInsnVec.emplace_back(insn);
@@ -214,8 +213,8 @@ static bool SetDefInsnVecForAsm(Insn *insn, uint32 index, uint32 regNO, std::vec
  * find definition for register between startInsn and endInsn.
  * startInsn and endInsn must be in same BB and startInsn and endInsn are included
  */
-std::vector<Insn*> AArch64ReachingDefinition::FindRegDefBetweenInsn(uint32 regNO, Insn *startInsn,
-                                                                    Insn *endInsn) const {
+std::vector<Insn*> AArch64ReachingDefinition::FindRegDefBetweenInsn(
+    uint32 regNO, Insn *startInsn, Insn *endInsn) const {
   std::vector<Insn*> defInsnVec;
   if (startInsn == nullptr || endInsn == nullptr) {
     return defInsnVec;
@@ -354,8 +353,8 @@ bool AArch64ReachingDefinition::CallInsnClearDesignateStackRef(const Insn &callI
  *      add x0, x29, #24
  *      bl MCC_ClearLocalStackRef
  */
-std::vector<Insn*> AArch64ReachingDefinition::FindMemDefBetweenInsn(uint32 offset, const Insn *startInsn,
-                                                                    Insn *endInsn) const {
+std::vector<Insn*> AArch64ReachingDefinition::FindMemDefBetweenInsn(
+    uint32 offset, const Insn *startInsn, Insn *endInsn) const {
   std::vector<Insn*> defInsnVec;
   if (startInsn == nullptr || endInsn == nullptr) {
     return defInsnVec;

@@ -68,6 +68,10 @@ void AArch64StoreLoadOpt::DoLoadToMoveTransfer(Insn &strInsn, short strSrcIdx,
       continue;
     }
 
+    if (HasMemBarrier(*ldrInsn, strInsn)) {
+      continue;
+    }
+
     /* ldr x200, [mem], mem index is 1, x200 index is 0 */
     InsnSet memDefInsnSet = cgFunc.GetRD()->FindDefForMemOpnd(*ldrInsn, kInsnSecondOpnd);
     ASSERT(!memDefInsnSet.empty(), "load insn should have definitions.");
@@ -78,7 +82,9 @@ void AArch64StoreLoadOpt::DoLoadToMoveTransfer(Insn &strInsn, short strSrcIdx,
 
     Operand &resOpnd = ldrInsn->GetOperand(kInsnFirstOpnd);
     Operand &srcOpnd = strInsn.GetOperand(strSrcIdx);
-    ASSERT(resOpnd.GetSize() == srcOpnd.GetSize(), "For stack location, the size of src and dst should be same.");
+    if (resOpnd.GetSize() != srcOpnd.GetSize()) {
+      return;
+    }
 
     auto &resRegOpnd = static_cast<RegOperand&>(resOpnd);
     auto &srcRegOpnd = static_cast<RegOperand&>(srcOpnd);
@@ -117,6 +123,12 @@ void AArch64StoreLoadOpt::GenerateMoveLiveInsn(RegOperand &resRegOpnd, RegOperan
   }
   movInsn->SetId(ldrInsn.GetId());
   ldrInsn.GetBB()->ReplaceInsn(ldrInsn, *movInsn);
+  if (CG_DEBUG_FUNC(cgFunc)) {
+    LogInfo::MapleLogger() << "replace ldrInsn:\n";
+    ldrInsn.Dump();
+    LogInfo::MapleLogger() << "with movInsn:\n";
+    movInsn->Dump();
+  }
   /* Add comment. */
   MapleString newComment = ldrInsn.GetComment();
   if (strInsn.IsStorePair()) {
@@ -157,6 +169,12 @@ void AArch64StoreLoadOpt::GenerateMoveDeadInsn(RegOperand &resRegOpnd, RegOperan
   Insn &movInsn = cgFunc.GetCG()->BuildInstruction<AArch64Insn>(movMop, resRegOpnd, *vregOpnd);
   movInsn.SetId(ldrInsn.GetId());
   ldrInsn.GetBB()->ReplaceInsn(ldrInsn, movInsn);
+  if (CG_DEBUG_FUNC(cgFunc)) {
+    LogInfo::MapleLogger() << "replace ldrInsn:\n";
+    ldrInsn.Dump();
+    LogInfo::MapleLogger() << "with movInsn:\n";
+    movInsn.Dump();
+  }
 
   /* Add comment. */
   MapleString newComment = ldrInsn.GetComment();
@@ -167,6 +185,23 @@ void AArch64StoreLoadOpt::GenerateMoveDeadInsn(RegOperand &resRegOpnd, RegOperan
   }
   movInsn.SetComment(newComment);
   cgFunc.GetRD()->InitGenUse(*ldrInsn.GetBB(), false);
+}
+
+bool AArch64StoreLoadOpt::HasMemBarrier(const Insn &ldrInsn, const Insn &strInsn) const {
+  if (!cgFunc.GetMirModule().IsCModule()) {
+    return false;
+  }
+  const Insn *currInsn = strInsn.GetNext();
+  while (currInsn != &ldrInsn) {
+    if (currInsn == nullptr) {
+      return false;
+    }
+    if (currInsn->IsCall()) {
+      return true;
+    }
+    currInsn = currInsn->GetNext();
+  }
+  return false;
 }
 
 /*
@@ -192,6 +227,9 @@ void AArch64StoreLoadOpt::DoLoadZeroToMoveTransfer(const Insn &strInsn, short st
     if (!ldrInsn->IsLoad() || ldrInsn->GetResultNum() > 1) {
       continue;
     }
+    if (HasMemBarrier(*ldrInsn, strInsn)) {
+      continue;
+    }
     /* ldr reg, [mem], the index of [mem] is 1 */
     InsnSet defInsnForUseInsns = cgFunc.GetRD()->FindDefForMemOpnd(*ldrInsn, 1);
     /* If load has multiple definition, continue. */
@@ -202,7 +240,9 @@ void AArch64StoreLoadOpt::DoLoadZeroToMoveTransfer(const Insn &strInsn, short st
     auto &resOpnd = ldrInsn->GetOperand(0);
     auto &srcOpnd = strInsn.GetOperand(strSrcIdx);
 
-    ASSERT(resOpnd.GetSize() == srcOpnd.GetSize(), "For stack location, the size of src and dst should be same.");
+    if (resOpnd.GetSize() != srcOpnd.GetSize()) {
+      return;
+    }
     RegOperand &resRegOpnd = static_cast<RegOperand&>(resOpnd);
     MOperator movMop = SelectMovMop(resRegOpnd.IsOfFloatOrSIMDClass(), resRegOpnd.GetSize() == k64BitSize);
     Insn &movInsn = cgFunc.GetCG()->BuildInstruction<AArch64Insn>(movMop, resOpnd, srcOpnd);
@@ -234,6 +274,289 @@ bool AArch64StoreLoadOpt::CheckStoreOpCode(MOperator opCode) const {
   }
 }
 
+void AArch64StoreLoadOpt::MemPropInit() {
+  propMode = kUndef;
+  amount = 0;
+}
+
+bool AArch64StoreLoadOpt::CheckDefInsn(Insn &defInsn, Insn &currInsn) {
+  if (defInsn.GetOperandSize() < k2ByteSize) {
+    return false;
+  }
+  Operand &opnd0 = defInsn.GetOperand(kInsnFirstOpnd);
+  for (uint32 i = kInsnSecondOpnd; i < defInsn.GetOperandSize(); i++) {
+    Operand &opnd = defInsn.GetOperand(i);
+    if (opnd0.IsRegister() && opnd.IsRegister()) {
+      AArch64RegOperand &a64Opnd0 = static_cast<AArch64RegOperand&>(opnd0);
+      AArch64RegOperand &a64OpndTmp = static_cast<AArch64RegOperand&>(opnd);
+      if (a64Opnd0.IsPhysicalRegister() || a64OpndTmp.IsPhysicalRegister()) {
+        return false;
+      }
+    }
+    if (opnd.IsRegister()) {
+      AArch64RegOperand &a64OpndTmp = static_cast<AArch64RegOperand&>(opnd);
+      regno_t replaceRegNo = a64OpndTmp.GetRegisterNumber();
+      InsnSet newRegDefSet = cgFunc.GetRD()->FindDefForRegOpnd(currInsn, replaceRegNo, true);
+      /* check replace reg def between defInsn and currInsn */
+      if (newRegDefSet.size() != k1BitSize) {
+        return false;
+      }
+      Insn *newRegDefInsn = *newRegDefSet.begin();
+      if (newRegDefInsn->GetBB() != defInsn.GetBB()) {
+        return false;
+      } else if (newRegDefInsn->GetId() >= defInsn.GetId()) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+/*
+ * currAddrMode | defMop       | propMode | replaceAddrMode
+ * =============================================================================
+ * boi          | addrri       | base     | boi, update imm(offset)
+ *              | addrrr       | base     | imm(offset) == 0(nullptr) ? borx : NA
+ *              | adrpl12      | base     | imm(offset) == 0(nullptr) ? literal : NA
+ *              | movrr        | base     | boi
+ *              | movri        | base     | NA
+ *              | extend/lsl   | base     | NA
+ * =============================================================================
+ * borx         | addrri       | offset   | NA
+ * (noextend)   | addrrr       | offset   | NA
+ *              | adrpl12      | offset   | NA
+ *              | movrr        | offset   | borx
+ *              | movri        | offset   | bori
+ *              | extend/lsl   | offset   | borx(with extend)
+ * =============================================================================
+ * borx         | addrri       | extend   | NA
+ * (extend)     | addrrr       | extend   | NA
+ *              | adrpl12      | extend   | NA
+ *              | movrr        | extend   | borx
+ *              | movri        | extend   | NA
+ *              | extend/lsl   | extend   | borx(with extend)
+ * =============================================================================
+ */
+AArch64MemOperand *AArch64StoreLoadOpt::SelectReplaceMem(Insn &defInsn, RegOperand &base, Operand *offset) {
+  AArch64MemOperand *newMemOpnd = nullptr;
+  MOperator opCode = defInsn.GetMachineOpcode();
+  AArch64RegOperand *newBase = static_cast<AArch64RegOperand*>(&defInsn.GetOperand(kInsnSecondOpnd));
+  switch (opCode) {
+    case MOP_xaddrri24:
+    case MOP_xaddrri12:
+    case MOP_waddrri24:
+    case MOP_waddrri12: {
+      if (propMode == kPropBase) {
+        AArch64ImmOperand *imm = static_cast<AArch64ImmOperand*>(&defInsn.GetOperand(kInsnThirdOpnd));
+        int64 val = imm->GetValue();
+        AArch64OfstOperand *newOffset = nullptr;
+        if (offset == nullptr) {
+          newOffset = cgFunc.GetMemoryPool()->New<AArch64OfstOperand>(imm->GetValue(), k32BitSize);
+        } else {
+          AArch64OfstOperand *ofst = static_cast<AArch64OfstOperand*>(offset);
+          val += ofst->GetValue();
+          newOffset = cgFunc.GetMemoryPool()->New<AArch64OfstOperand>(val, k32BitSize);
+        }
+        CHECK_FATAL(newOffset != nullptr, "newOffset is null!");
+        newMemOpnd = cgFunc.GetMemoryPool()->New<AArch64MemOperand>(
+            AArch64MemOperand::kAddrModeBOi, k64BitSize, *newBase, nullptr, newOffset, nullptr);
+      }
+      break;
+    }
+    case MOP_xaddrrr:
+    case MOP_waddrrr:
+    case MOP_dadd:
+    case MOP_sadd: {
+      if (propMode == kPropBase) {
+        OfstOperand *ofstOpnd = static_cast<OfstOperand*>(offset);
+        if (!ofstOpnd->IsZero()) {
+          break;
+        }
+        AArch64RegOperand *newOffset = static_cast<AArch64RegOperand*>(&defInsn.GetOperand(kInsnThirdOpnd));
+        CHECK_FATAL(newOffset != nullptr, "newOffset is null!");
+        newMemOpnd = cgFunc.GetMemoryPool()->New<AArch64MemOperand>(
+            AArch64MemOperand::kAddrModeBOrX, k64BitSize, *newBase, newOffset, nullptr, nullptr);
+      }
+      break;
+    }
+    case MOP_xadrpl12: {
+      if (propMode == kPropBase) {
+        OfstOperand *ofstOpnd = static_cast<OfstOperand*>(offset);
+        CHECK_FATAL(ofstOpnd != nullptr, "oldOffset is null!");
+        int64 val = ofstOpnd->GetValue();
+        StImmOperand *offset1 = static_cast<StImmOperand*>(&defInsn.GetOperand(kInsnThirdOpnd));
+        CHECK_FATAL(offset1 != nullptr, "offset1 is null!");
+        val += offset1->GetOffset();
+        AArch64OfstOperand *newOfsetOpnd = cgFunc.GetMemoryPool()->New<AArch64OfstOperand>(val, k32BitSize);
+        CHECK_FATAL(newOfsetOpnd != nullptr, "newOfsetOpnd is null!");
+        const MIRSymbol *addr = offset1->GetSymbol();
+        newMemOpnd = cgFunc.GetMemoryPool()->New<AArch64MemOperand>(
+            AArch64MemOperand::kAddrModeLo12Li, k64BitSize, *newBase, nullptr, newOfsetOpnd, addr);
+      }
+      break;
+    }
+    case MOP_xmovrr:
+    case MOP_wmovrr: {
+      if (propMode == kPropBase) {
+        AArch64OfstOperand *offsetTmp = static_cast<AArch64OfstOperand*>(offset);
+        CHECK_FATAL(offsetTmp != nullptr, "newOffset is null!");
+        newMemOpnd = cgFunc.GetMemoryPool()->New<AArch64MemOperand>(
+            AArch64MemOperand::kAddrModeBOi, k64BitSize, *newBase, nullptr, offsetTmp, nullptr);
+      } else if (propMode == kPropOffset) {
+        newMemOpnd = cgFunc.GetMemoryPool()->New<AArch64MemOperand>(
+            AArch64MemOperand::kAddrModeBOrX, k64BitSize, base, newBase, nullptr, nullptr);
+      } else if (propMode == kPropSignedExtend) {
+        newMemOpnd = cgFunc.GetMemoryPool()->New<AArch64MemOperand>(
+            AArch64MemOperand::kAddrModeBOrX, k64BitSize, base, *newBase, amount, true);
+      } else {
+        newMemOpnd = cgFunc.GetMemoryPool()->New<AArch64MemOperand>(
+            AArch64MemOperand::kAddrModeBOrX, k64BitSize, base, *newBase, amount);
+      }
+      break;
+    }
+    case MOP_xmovri32:
+    case MOP_xmovri64: {
+      if (propMode == kPropOffset) {
+        AArch64ImmOperand *imm = static_cast<AArch64ImmOperand*>(&defInsn.GetOperand(kInsnSecondOpnd));
+        AArch64OfstOperand *newOffset = cgFunc.GetMemoryPool()->New<AArch64OfstOperand>(imm->GetValue(), k32BitSize);
+        CHECK_FATAL(newOffset != nullptr, "newOffset is null!");
+        newMemOpnd = cgFunc.GetMemoryPool()->New<AArch64MemOperand>(
+            AArch64MemOperand::kAddrModeBOi, k64BitSize, base, nullptr, newOffset, nullptr);
+      }
+      break;
+    }
+    case MOP_xlslrri6:
+    case MOP_wlslrri5: {
+      if (propMode == kPropOffset) {
+        AArch64ImmOperand *imm = static_cast<AArch64ImmOperand*>(&defInsn.GetOperand(kInsnThirdOpnd));
+        AArch64RegOperand *newOffset = static_cast<AArch64RegOperand*>(&defInsn.GetOperand(kInsnSecondOpnd));
+        CHECK_FATAL(newOffset != nullptr, "newOffset is null!");
+        int64 shift = imm->GetValue();
+        if ((shift <= k4ByteSize) && (shift >= 0)) {
+          newMemOpnd = cgFunc.GetMemoryPool()->New<AArch64MemOperand>(
+              AArch64MemOperand::kAddrModeBOrX, k64BitSize, base, *newOffset, shift);
+        }
+      }
+      break;
+    }
+    case MOP_xsxtb32:
+    case MOP_xsxtb64:
+    case MOP_xsxth32:
+    case MOP_xsxth64:
+    case MOP_xsxtw64: {
+      if (propMode == kPropOffset) {
+        AArch64RegOperand *newOffset = static_cast<AArch64RegOperand*>(&defInsn.GetOperand(kInsnSecondOpnd));
+        CHECK_FATAL(newOffset != nullptr, "newOffset is null!");
+        newMemOpnd = cgFunc.GetMemoryPool()->New<AArch64MemOperand>(
+            AArch64MemOperand::kAddrModeBOrX, k64BitSize, base, *newOffset, 0, true);
+      } else if (propMode == kPropShift) {
+        AArch64RegOperand *newOffset = static_cast<AArch64RegOperand*>(&defInsn.GetOperand(kInsnSecondOpnd));
+        CHECK_FATAL(newOffset != nullptr, "newOffset is null!");
+        newMemOpnd = cgFunc.GetMemoryPool()->New<AArch64MemOperand>(
+            AArch64MemOperand::kAddrModeBOrX, k64BitSize, base, *newOffset, amount, true);
+      }
+      break;
+    }
+    case MOP_xuxtb32:
+    case MOP_xuxth32:
+    case MOP_xuxtw64: {
+      if (propMode == kPropOffset) {
+        AArch64RegOperand *newOffset = static_cast<AArch64RegOperand*>(&defInsn.GetOperand(kInsnSecondOpnd));
+        CHECK_FATAL(newOffset != nullptr, "newOffset is null!");
+        newMemOpnd = cgFunc.GetMemoryPool()->New<AArch64MemOperand>(
+            AArch64MemOperand::kAddrModeBOrX, k64BitSize, base, *newOffset, 0);
+      } else if (propMode == kPropShift) {
+        AArch64RegOperand *newOffset = static_cast<AArch64RegOperand*>(&defInsn.GetOperand(kInsnSecondOpnd));
+        CHECK_FATAL(newOffset != nullptr, "newOffset is null!");
+        newMemOpnd = cgFunc.GetMemoryPool()->New<AArch64MemOperand>(
+            AArch64MemOperand::kAddrModeBOrX, k64BitSize, base, *newOffset, amount);
+      }
+      break;
+    }
+    default:
+      break;
+  }
+  return newMemOpnd;
+}
+
+bool AArch64StoreLoadOpt::ReplaceMemOpnd(Insn &insn, regno_t regNo, RegOperand &base, Operand *offset) {
+  AArch64ReachingDefinition *a64RD = static_cast<AArch64ReachingDefinition*>(cgFunc.GetRD());
+  CHECK_FATAL((a64RD != nullptr), "check a64RD!");
+  InsnSet regDefSet = a64RD->FindDefForRegOpnd(insn, regNo, true);
+  if (regDefSet.size() != k1BitSize) {
+    return false;
+  }
+  Insn *regDefInsn = *regDefSet.begin();
+  if (!CheckDefInsn(*regDefInsn, insn)) {
+    return false;
+  }
+  AArch64MemOperand *newMemOpnd = SelectReplaceMem(*regDefInsn, base, offset);
+  if (newMemOpnd == nullptr) {
+    return false;
+  }
+  uint32 opndIdx;
+  if (insn.IsLoadPair() || insn.IsStorePair()) {
+    if (newMemOpnd->GetOffsetImmediate() == nullptr) {
+      return false;
+    }
+    opndIdx = kInsnThirdOpnd;
+  } else {
+    opndIdx = kInsnSecondOpnd;
+  }
+  AArch64CGFunc &a64CgFunc = static_cast<AArch64CGFunc&>(cgFunc);
+  if ((newMemOpnd->GetOffsetImmediate() != nullptr) &&
+      !a64CgFunc.IsOperandImmValid(insn.GetMachineOpcode(), newMemOpnd, opndIdx)) {
+    return false;
+  }
+  if (CG_DEBUG_FUNC(cgFunc)) {
+    std::cout << "replace insn:" << std::endl;
+    insn.Dump();
+  }
+  insn.SetOperand(opndIdx, *newMemOpnd);
+  if (CG_DEBUG_FUNC(cgFunc)) {
+    std::cout << "new insn:" << std::endl;
+    insn.Dump();
+  }
+  return true;
+}
+
+bool AArch64StoreLoadOpt::CanDoMemProp(Insn *insn) {
+  if (!cgFunc.GetMirModule().IsCModule()) {
+    return false;
+  }
+  if (!insn->IsMachineInstruction()) {
+    return false;
+  }
+
+  if (insn->IsLoad() || insn->IsStore()) {
+    AArch64MemOperand *currMemOpnd = static_cast<AArch64MemOperand*>(insn->GetMemOpnd());
+    return currMemOpnd != nullptr;
+  }
+  return false;
+}
+
+void AArch64StoreLoadOpt::SelectPropMode(AArch64MemOperand &currMemOpnd) {
+  AArch64MemOperand::AArch64AddressingMode currAddrMode = currMemOpnd.GetAddrMode();
+  switch (currAddrMode) {
+    case AArch64MemOperand::kAddrModeBOi:
+      propMode = kPropBase;
+      break;
+    case AArch64MemOperand::kAddrModeBOrX:
+      propMode = kPropOffset;
+      if (currMemOpnd.ShouldEmitExtend() && (currMemOpnd.GetExtendAsString() == "LSL")) {
+        propMode = kPropShift;
+      } else if (currMemOpnd.SignedExtend()) {
+        propMode = kPropSignedExtend;
+      } else if (currMemOpnd.UnsignedExtend()) {
+        propMode = kPropUnsignedExtend;
+      }
+      amount = currMemOpnd.ShiftAmount();
+      break;
+    default:
+      propMode = kUndef;
+  }
+}
+
 /*
  * Optimize: store x100, [MEM]
  *           ... // May exist branches.
@@ -252,9 +575,18 @@ bool AArch64StoreLoadOpt::CheckStoreOpCode(MOperator opCode) const {
  *  Note: x100 may be wzr/xzr registers.
  */
 void AArch64StoreLoadOpt::DoStoreLoadOpt() {
-  FOR_ALL_BB(bb, &cgFunc) {
+  AArch64CGFunc &a64CgFunc = static_cast<AArch64CGFunc&>(cgFunc);
+  if (a64CgFunc.IsIntrnCallForC()) {
+    return;
+  }
+  FOR_ALL_BB(bb, &a64CgFunc) {
     FOR_BB_INSNS(insn, bb) {
-      if (!insn->IsMachineInstruction() || !insn->IsStore() || !CheckStoreOpCode(insn->GetMachineOpcode())) {
+      MOperator mOp = insn->GetMachineOpcode();
+      if (CanDoMemProp(insn)) {
+        MemProp(*insn);
+      }
+      if (!insn->IsMachineInstruction() || !insn->IsStore() || !CheckStoreOpCode(mOp) ||
+          a64CgFunc.GetMirModule().IsCModule()) {
         continue;
       }
       if (insn->IsStorePair()) {
@@ -263,6 +595,57 @@ void AArch64StoreLoadOpt::DoStoreLoadOpt() {
       }
       ProcessStr(*insn);
     }
+  }
+}
+
+/*
+ * PropBase:
+ *   add x1, x2, #immVal1
+ *   ...
+ *   ldr/str x0, [x1, #immVal2]
+ *   ======>
+ *   add x1, x2, #immVal1
+ *   ...
+ *   ldr/str x0, [x2, #(immVal1 + immVal2)]
+ *
+ * PropOffset:
+ *   sxtw x2, w2
+ *   lsl x1, x2, #1~3
+ *   ...
+ *   ldr/str x0, [x0, x1]
+ *   ======>
+ *   sxtw x2, w2
+ *   lsl x1, x2, #1~3
+ *   ...
+ *   ldr/str x0, [x0, w2, sxtw 1~3]
+ */
+void AArch64StoreLoadOpt::MemProp(Insn &insn) {
+  MemPropInit();
+  AArch64MemOperand *currMemOpnd = static_cast<AArch64MemOperand*>(insn.GetMemOpnd());
+  SelectPropMode(*currMemOpnd);
+  RegOperand *base = currMemOpnd->GetBaseRegister();
+  Operand *offset = currMemOpnd->GetOffset();
+  bool memReplaced = false;
+
+  if (propMode == kUndef) {
+    return;
+  } else if (propMode == kPropBase) {
+    OfstOperand *immOffset = static_cast<OfstOperand*>(offset);
+    CHECK_FATAL(immOffset != nullptr, "immOffset is nullptr!");
+    regno_t baseRegNo = base->GetRegisterNumber();
+    memReplaced = ReplaceMemOpnd(insn, baseRegNo, *base, immOffset);
+  } else {
+    AArch64RegOperand *regOffset = static_cast<AArch64RegOperand*>(offset);
+    if (regOffset == nullptr) {
+      return;
+    }
+    regno_t offsetRegNo = regOffset->GetRegisterNumber();
+    memReplaced = ReplaceMemOpnd(insn, offsetRegNo, *base, regOffset);
+  }
+
+  /* if prop success, find more prop chance */
+  if (memReplaced) {
+    MemProp(insn);
   }
 }
 

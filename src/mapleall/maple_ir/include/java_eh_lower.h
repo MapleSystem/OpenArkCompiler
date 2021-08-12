@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -15,8 +15,8 @@
 #ifndef MAPLE_IR_INCLUDE_JAVA_EH_LOWER_H
 #define MAPLE_IR_INCLUDE_JAVA_EH_LOWER_H
 #include "phase_impl.h"
-#include "module_phase.h"
 #include "class_hierarchy.h"
+#include "maple_phase_manager.h"
 
 namespace maple {
 class JavaEHLowerer : public FuncOptimizeImpl {
@@ -43,20 +43,6 @@ class JavaEHLowerer : public FuncOptimizeImpl {
   bool useRegTmp = Options::usePreg;     // Use register to save temp variable or not.
 };
 
-class JavaEHLowererPhase : public ModulePhase {
- public:
-  explicit JavaEHLowererPhase(ModulePhaseID id) : ModulePhase(id) {}
-
-  ~JavaEHLowererPhase() = default;
-
-  std::string PhaseName() const override {
-    return "javaehlower";
-  }
-
-  AnalysisResult *Run(MIRModule *mod, ModuleResultMgr *mrm) override {
-    OPT_TEMPLATE(JavaEHLowerer);
-    return nullptr;
-  }
-};
+MAPLE_MODULE_PHASE_DECLARE(M2MJavaEHLowerer)
 }  // namespace maple
 #endif  // MAPLE_IR_INCLUDE_JAVA_EH_LOWER_H

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2020-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -19,6 +19,7 @@
 #include "me_phase_manager.h"
 
 namespace maple {
+#ifdef NOT_USED
 class MeFuncOptTask : public MplTask {
  public:
   MeFuncOptTask(MIRModule &mod, MIRFunction &func, size_t rangeNum, const std::string &meInput)
@@ -68,5 +69,6 @@ class MeFuncOptScheduler : public MplScheduler {
   std::unique_ptr<MeFuncOptExecutor> funcOpt;
   std::vector<std::unique_ptr<MplTask>> tasksUniquePtr;
 };
+#endif
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_ME_FUNC_OPT_H

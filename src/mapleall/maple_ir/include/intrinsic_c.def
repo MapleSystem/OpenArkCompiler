@@ -105,3 +105,43 @@ DEF_MIR_INTRINSIC(C_alignup,\
                   "alignup"/*dummy*/, INTRNISPURE, kArgTyU1, kArgTyPtr, kArgTyU64)
 DEF_MIR_INTRINSIC(C_aligndown,\
                   "aligndown"/*dummy*/, INTRNISPURE, kArgTyU1, kArgTyPtr, kArgTyU64)
+DEF_MIR_INTRINSIC(C___sync_add_and_fetch_2,\
+                  "__sync_add_and_fetch_2"/*dummy*/, INTRNISPURE, kArgTyU16, kArgTyPtr, kArgTyU16)
+DEF_MIR_INTRINSIC(C___sync_add_and_fetch_4,\
+                  "__sync_add_and_fetch_4"/*dummy*/, INTRNISPURE, kArgTyU32, kArgTyPtr, kArgTyU32)
+DEF_MIR_INTRINSIC(C___sync_add_and_fetch_8,\
+                  "__sync_add_and_fetch_8"/*dummy*/, INTRNISPURE, kArgTyU64, kArgTyPtr, kArgTyU64)
+DEF_MIR_INTRINSIC(C___sync_sub_and_fetch_2,\
+                  "__sync_sub_and_fetch_2"/*dummy*/, INTRNISPURE, kArgTyU16, kArgTyPtr, kArgTyU16)
+DEF_MIR_INTRINSIC(C___sync_sub_and_fetch_4,\
+                  "__sync_sub_and_fetch_4"/*dummy*/, INTRNISPURE, kArgTyU32, kArgTyPtr, kArgTyU32)
+DEF_MIR_INTRINSIC(C___sync_sub_and_fetch_8,\
+                  "__sync_sub_and_fetch_8"/*dummy*/, INTRNISPURE, kArgTyU64, kArgTyPtr, kArgTyU64)
+DEF_MIR_INTRINSIC(C___sync_fetch_and_add_2,\
+                  "__sync_fetch_and_add_2"/*dummy*/, INTRNISPURE, kArgTyU16, kArgTyPtr, kArgTyU16)
+DEF_MIR_INTRINSIC(C___sync_fetch_and_add_4,\
+                  "__sync_fetch_and_add_4"/*dummy*/, INTRNISPURE, kArgTyU32, kArgTyPtr, kArgTyU32)
+DEF_MIR_INTRINSIC(C___sync_fetch_and_add_8,\
+                  "__sync_fetch_and_add_8"/*dummy*/, INTRNISPURE, kArgTyU64, kArgTyPtr, kArgTyU64)
+DEF_MIR_INTRINSIC(C___sync_fetch_and_sub_2,\
+                  "__sync_fetch_and_sub_2"/*dummy*/, INTRNISPURE, kArgTyU16, kArgTyPtr, kArgTyU16)
+DEF_MIR_INTRINSIC(C___sync_fetch_and_sub_4,\
+                  "__sync_fetch_and_sub_4"/*dummy*/, INTRNISPURE, kArgTyU32, kArgTyPtr, kArgTyU32)
+DEF_MIR_INTRINSIC(C___sync_fetch_and_sub_8,\
+                  "__sync_fetch_and_sub_8"/*dummy*/, INTRNISPURE, kArgTyU64, kArgTyPtr, kArgTyU64)
+DEF_MIR_INTRINSIC(C___sync_bool_compare_and_swap_4,\
+                  "__sync_bool_compare_and_swap_4"/*dummy*/, INTRNISPURE, kArgTyU1, kArgTyPtr, kArgTyU32, kArgTyU32)
+DEF_MIR_INTRINSIC(C___sync_bool_compare_and_swap_8,\
+                  "__sync_bool_compare_and_swap_8"/*dummy*/, INTRNISPURE, kArgTyU1, kArgTyPtr, kArgTyU64, kArgTyU64)
+DEF_MIR_INTRINSIC(C___sync_val_compare_and_swap_4,\
+                  "__sync_val_compare_and_swap_4"/*dummy*/, INTRNISPURE, kArgTyU32, kArgTyPtr, kArgTyU32, kArgTyU32)
+DEF_MIR_INTRINSIC(C___sync_val_compare_and_swap_8,\
+                  "__sync_val_compare_and_swap_8"/*dummy*/, INTRNISPURE, kArgTyU64, kArgTyPtr, kArgTyU64, kArgTyU64)
+DEF_MIR_INTRINSIC(C___sync_lock_test_and_set_4,\
+                  "__sync_lock_test_and_set_4"/*dummy*/, INTRNISPURE, kArgTyU1, kArgTyPtr, kArgTyU32)
+DEF_MIR_INTRINSIC(C___sync_lock_test_and_set_8,\
+                  "__sync_lock_test_and_set_8"/*dummy*/, INTRNISPURE, kArgTyU1, kArgTyPtr, kArgTyU64)
+DEF_MIR_INTRINSIC(C___sync_lock_release_8,\
+                  "__sync_lock_release_8"/*dummy*/, INTRNISPURE, kArgTyVoid, kArgTyPtr)
+DEF_MIR_INTRINSIC(C___sync_lock_release_4,\
+                  "__sync_lock_release_4"/*dummy*/, INTRNISPURE, kArgTyVoid, kArgTyPtr)

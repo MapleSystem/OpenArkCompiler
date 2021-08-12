@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -16,19 +16,15 @@
 #define MAPLE_ME_INCLUDE_ME_DOMINANCE_H
 #include "dominance.h"
 #include "me_function.h"
-#include "me_phase.h"
+#include "maple_phase.h"
 
 namespace maple {
-class MeDoDominance : public MeFuncPhase {
- public:
-  explicit MeDoDominance(MePhaseID id) : MeFuncPhase(id) {}
-
-  ~MeDoDominance() override = default;
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *funcResMgr, ModuleResultMgr *moduleResMgr) override;
-
-  std::string PhaseName() const override {
-    return "dominance";
+MAPLE_FUNC_PHASE_DECLARE_BEGIN(MEDominance, MeFunction)
+  Dominance *GetResult() {
+    return dom;
   }
-};
+  Dominance *dom = nullptr;
+OVERRIDE_DEPENDENCE
+MAPLE_MODULE_PHASE_DECLARE_END
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_ME_DOMINANCE_H

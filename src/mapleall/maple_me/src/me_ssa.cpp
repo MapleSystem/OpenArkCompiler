@@ -21,6 +21,8 @@
 #include "dominance.h"
 #include "me_function.h"
 #include "mir_builder.h"
+#include "me_ssa_tab.h"
+#include "me_phase_manager.h"
 
 // This phase builds the SSA form of a function. Before this we have got the dominator tree
 // and each bb's dominance frontiers. Then the algorithm follows this outline:
@@ -183,39 +185,39 @@ void MeSSA::InsertIdentifyAssignments(IdentifyLoops *identloops) {
   }
 }
 
-AnalysisResult *MeDoSSA::Run(MeFunction *func, MeFuncResultMgr *funcResMgr, ModuleResultMgr*) {
-  auto *dom = static_cast<Dominance*>(funcResMgr->GetAnalysisResult(MeFuncPhase_DOMINANCE, func));
-  CHECK_FATAL(dom != nullptr, "dominance phase has problem");
-  auto *ssaTab = static_cast<SSATab*>(funcResMgr->GetAnalysisResult(MeFuncPhase_SSATAB, func));
-  CHECK_FATAL(ssaTab != nullptr, "ssaTab phase has problem");
-  MemPool *ssaMp = NewMemPool();
-  auto *ssa = ssaMp->New<MeSSA>(*func, func->GetMeSSATab(), *dom, *ssaMp, DEBUGFUNC(func));
-  auto cfg = func->GetCfg();
-  ssa->InsertPhiNode();
+void MESSA::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<MEDominance>();
+  aDep.AddRequired<MESSATab>();
+  aDep.SetPreservedAll();
+}
 
-  if (func->IsLfo()) {
-    IdentifyLoops *identloops = static_cast<IdentifyLoops *>(funcResMgr->GetAnalysisResult(MeFuncPhase_MELOOP, func));
+bool MESSA::PhaseRun(maple::MeFunction &f) {
+  auto *dom = GET_ANALYSIS(MEDominance);
+  CHECK_FATAL(dom != nullptr, "dominance phase has problem");
+  auto *ssaTab = GET_ANALYSIS(MESSATab);
+  CHECK_FATAL(ssaTab != nullptr, "ssaTab phase has problem");
+  ssa = GetPhaseAllocator()->New<MeSSA>(f, ssaTab, *dom, *GetPhaseMemPool(), DEBUGFUNC_NEWPM(f));
+  auto cfg = f.GetCfg();
+  ssa->InsertPhiNode();
+  if (f.IsLfo()) {
+    IdentifyLoops *identloops = FORCE_GET(MELoopAnalysis);
     CHECK_FATAL(identloops != nullptr, "identloops has problem");
     ssa->InsertIdentifyAssignments(identloops);
   }
 
-  ssa->InitRenameStack(func->GetMeSSATab()->GetOriginalStTable(), cfg->GetAllBBs().size(),
-                       func->GetMeSSATab()->GetVersionStTable());
-
+  ssa->InitRenameStack(ssaTab->GetOriginalStTable(), cfg->GetAllBBs().size(),
+                       ssaTab->GetVersionStTable());
   // recurse down dominator tree in pre-order traversal
   MapleSet<BBId> *children = &dom->domChildren[cfg->GetCommonEntryBB()->GetBBId()];
   for (BBId child : *children) {
     ssa->RenameBB(*cfg->GetBBFromID(child));
   }
-
   ssa->VerifySSA();
-
-  if (DEBUGFUNC(func)) {
+  if (DEBUGFUNC_NEWPM(f)) {
     ssaTab->GetVersionStTable().Dump(&ssaTab->GetModule());
   }
-  if (DEBUGFUNC(func)) {
-    func->DumpFunction();
-  }
-  return ssa;
+  if (DEBUGFUNC_NEWPM(f)) {
+    f.DumpFunction();
+  }  return true;
 }
 }  // namespace maple

@@ -23,6 +23,7 @@ namespace maple {
 using namespace mapleOption;
 
 std::unordered_set<std::string> MeOption::dumpPhases = {};
+std::unordered_set<std::string> MeOption::skipPhases = {};
 bool MeOption::dumpAfter = false;
 std::string MeOption::dumpFunc = "*";
 unsigned long MeOption::range[kRangeArrayLen] = { 0, 0 };
@@ -1604,5 +1605,12 @@ bool MeOption::DumpPhase(const std::string &phase) {
     return false;
   }
   return ((dumpPhases.find(phase) != dumpPhases.end()) || (dumpPhases.find("*") != dumpPhases.end()));
+}
+
+bool MeOption::DumpFunc(const std::string &func) {
+  if (func == "") {
+    return false;
+  }
+  return dumpFunc == "*" || dumpFunc == func;
 }
 } // namespace maple

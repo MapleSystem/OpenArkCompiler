@@ -15,8 +15,9 @@
 #ifndef MAPLE_ME_INCLUDE_ME_BB_LAYOUT_H
 #define MAPLE_ME_INCLUDE_ME_BB_LAYOUT_H
 #include "me_function.h"
-#include "me_phase.h"
 #include "me_pgo_instrument.h"
+#include "maple_phase_manager.h"
+#include "me_dominance.h"
 
 namespace maple {
 class BBLayout{
@@ -127,15 +128,6 @@ class BBLayout{
   MeCFG *cfg;
 };
 
-class MeDoBBLayout : public MeFuncPhase {
- public:
-  explicit MeDoBBLayout(MePhaseID id) : MeFuncPhase(id) {}
-
-  virtual ~MeDoBBLayout() = default;
-  AnalysisResult *Run(MeFunction *func, MeFuncResultMgr *funcResMgr, ModuleResultMgr *moduleResMgr) override;
-  std::string PhaseName() const override {
-    return "bblayout";
-  }
-};
+MAPLE_FUNC_PHASE_DECLARE(MEBBLayout, MeFunction)
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_ME_BB_LAYOUT_H

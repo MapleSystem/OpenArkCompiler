@@ -374,31 +374,6 @@ UniqueFEIRExpr FEIRBuilder::CreateExprJavaArrayLength(UniqueFEIRExpr exprArray) 
   return expr;
 }
 
-UniqueFEIRExpr FEIRBuilder::CreateExprArrayStoreForC(UniqueFEIRExpr argExprArray,
-                                                     std::list<UniqueFEIRExpr> &argExprIndexs,
-                                                     UniqueFEIRType argTypeNative,
-                                                     std::string argArrayName) {
-  UniqueFEIRExpr expr = std::make_unique<FEIRExprArrayStoreForC>(std::move(argExprArray), argExprIndexs,
-                                                                 std::move(argTypeNative), argArrayName);
-  CHECK_NULL_FATAL(expr);
-  return expr;
-}
-
-UniqueFEIRExpr FEIRBuilder::CreateExprArrayStoreForC(UniqueFEIRExpr argExprArray,
-                                                     std::list<UniqueFEIRExpr> &argExprIndexs,
-                                                     UniqueFEIRType argArrayTypeNative,
-                                                     UniqueFEIRExpr argExprStruct,
-                                                     UniqueFEIRType argStructTypeNative,
-                                                     std::string argArrayName) {
-  UniqueFEIRExpr expr = std::make_unique<FEIRExprArrayStoreForC>(std::move(argExprArray), argExprIndexs,
-                                                                 std::move(argArrayTypeNative),
-                                                                 std::move(argExprStruct),
-                                                                 std::move(argStructTypeNative),
-                                                                 argArrayName);
-  CHECK_NULL_FATAL(expr);
-  return expr;
-}
-
 UniqueFEIRStmt FEIRBuilder::CreateStmtDAssign(UniqueFEIRVar dstVar, UniqueFEIRExpr srcExpr, bool hasException) {
   std::unique_ptr<FEIRStmtDAssign> stmt = std::make_unique<FEIRStmtDAssign>(std::move(dstVar), std::move(srcExpr));
   stmt->SetHasException(hasException);
@@ -570,18 +545,6 @@ UniqueFEIRStmt FEIRBuilder::CreateStmtArrayStoreOneStmtForC(UniqueFEIRExpr exprE
                                                              std::move(exprIndex), std::move(arrayType),
                                                              std::move(elemType), argArrayName);
   return stmt;
-}
-
-UniqueFEIRExpr FEIRBuilder::CreateExprFieldLoadForC(UniqueFEIRVar argVarObj, UniqueFEIRVar argVarField,
-                                                    MIRStructType *argStructType,
-                                                    FieldID argFieldID) {
-  return std::make_unique<FEIRExprFieldLoadForC>(std::move(argVarObj), std::move(argVarField), argStructType,
-                                                 argFieldID);
-}
-
-UniqueFEIRStmt FEIRBuilder::CreateStmtFieldStoreForC(UniqueFEIRVar varObj, UniqueFEIRExpr exprField,
-                                                     MIRStructType *structType, FieldID fieldID) {
-  return std::make_unique<FEIRStmtFieldStoreForC>(std::move(varObj), std::move(exprField), structType, fieldID);
 }
 
 std::list<UniqueFEIRStmt> FEIRBuilder::CreateStmtArrayLoad(UniqueFEIRVar varElem, UniqueFEIRVar varArray,

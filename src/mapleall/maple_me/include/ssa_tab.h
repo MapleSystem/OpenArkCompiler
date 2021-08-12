@@ -16,7 +16,6 @@
 #define MAPLE_ME_INCLUDE_SSA_TAB_H
 #include "mempool.h"
 #include "mempool_allocator.h"
-#include "phase.h"
 #include "ver_symbol.h"
 #include "ssa_mir_nodes.h"
 

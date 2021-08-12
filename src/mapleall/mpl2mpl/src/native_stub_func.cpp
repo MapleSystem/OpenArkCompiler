@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -703,4 +703,17 @@ const std::string NativeStubFuncGeneration::callSlowNativeFuncs[kSlownativeFuncn
     "MCC_CallSlowNative5", "MCC_CallSlowNative6", "MCC_CallSlowNative7", "MCC_CallSlowNative8"
 };
 #endif
+
+bool M2MGenerateNativeStubFunc::PhaseRun(maple::MIRModule &m) {
+  bool origUsePreg = Options::usePreg;
+  Options::usePreg = false;  // As a pre mpl2mpl phase, NativeStubFunc always use symbols
+  OPT_TEMPLATE_NEWPM(NativeStubFuncGeneration);
+  Options::usePreg = origUsePreg;
+  return true;
+}
+
+void M2MGenerateNativeStubFunc::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<M2MKlassHierarchy>();
+  aDep.SetPreservedAll();
+}
 }  // namespace maple

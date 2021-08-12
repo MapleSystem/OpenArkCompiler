@@ -157,6 +157,13 @@ void HDSE::RemoveNotRequiredStmtsInBB(BB &bb) {
 // Only make sure throw NPE in same BB
 // If must make sure throw at first stmt, much more not null stmt will be inserted
 bool HDSE::NeedNotNullCheck(MeExpr &meExpr, const BB &bb) {
+  if (meExpr.GetOp() == OP_addrof) {
+    return false;
+  }
+  if (meExpr.GetOp() == OP_iaddrof && static_cast<OpMeExpr &>(meExpr).GetFieldID() > 0) {
+    return false;
+  }
+
   for (MeStmt *stmt : notNullExpr2Stmt[&meExpr]) {
     if (!stmt->GetIsLive()) {
       continue;

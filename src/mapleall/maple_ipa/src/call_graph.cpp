@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -21,6 +21,7 @@
 #include "option.h"
 #include "retype.h"
 #include "string_utils.h"
+#include "maple_phase_manager.h"
 
 //                   Call Graph Analysis
 // This phase is a foundation phase of compilation. This phase build
@@ -633,6 +634,15 @@ void CallGraph::AddCallGraphNode(MIRFunction &func) {
   if (func.GetName() == mirModule->GetEntryFuncName()) {
     mirModule->SetEntryFunction(&func);
     entryNode = node;
+  }
+  // collect addroffunc from local symbol
+  size_t symTabSize = func.GetSymbolTabSize();
+  for (size_t i = 0; i < symTabSize; ++i) {
+    MIRSymbol *sym = func.GetSymbolTabItem(i);
+    if (sym != nullptr && sym->IsConst()) {
+      MIRConst *mirConst = sym->GetKonst();
+      CollectAddroffuncFromConst(mirConst);
+    }
   }
 }
 
@@ -1810,32 +1820,38 @@ MIRFunction *CGNode::HasOneCandidate() const {
   return (count == 1) ? cand : nullptr;
 }
 
-AnalysisResult *DoCallGraph::Run(MIRModule *module, ModuleResultMgr *mgr) {
-  MemPool *memPool = NewMemPool();
-  KlassHierarchy *klassh = static_cast<KlassHierarchy*>(mgr->GetAnalysisResult(MoPhase_CHA, module));
-  CHECK_FATAL(klassh != nullptr, "CHA can't be null");
-  CallGraph *cg = memPool->New<CallGraph>(*module, *memPool, *klassh, module->GetFileName());
+bool M2MCallGraph::PhaseRun(maple::MIRModule &m) {
+  KlassHierarchy *klassh = GET_ANALYSIS(M2MKlassHierarchy);
+  CHECK_NULL_FATAL(klassh);
+  cg = GetPhaseAllocator()->New<CallGraph>(m, *GetPhaseMemPool(), *klassh, m.GetFileName());
   cg->InitCallExternal();
-  cg->SetDebugFlag(TRACE_PHASE);
+  cg->SetDebugFlag(TRACE_MAPLE_PHASE);
   cg->BuildCallGraph();
-  mgr->AddResult(GetPhaseID(), *module, *cg);
-  if (!module->IsInIPA() && module->firstInline) {
+  if (!m.IsInIPA() && m.firstInline) {
     // do retype
-    MemPool *localMp = NewMemPool();
-    maple::MIRBuilder dexMirbuilder(module);
-    Retype retype(module, localMp);
+    maple::MIRBuilder dexMirbuilder(&m);
+    Retype retype(&m, ApplyTempMemPool());
     retype.DoRetype();
   }
-  return cg;
+  return true;
 }
 
-AnalysisResult *DoIPODevirtulize::Run(MIRModule *module, ModuleResultMgr *mgr) {
-  MemPool *memPool = NewMemPool();
-  KlassHierarchy *klassh = static_cast<KlassHierarchy*>(mgr->GetAnalysisResult(MoPhase_CHA, module));
+void M2MCallGraph::GetAnalysisDependence(AnalysisDep &aDep) const {
+  aDep.AddRequired<M2MKlassHierarchy>();
+  aDep.SetPreservedAll();
+}
+
+bool M2MIPODevirtualize::PhaseRun(maple::MIRModule &m) {
+  KlassHierarchy *klassh = GET_ANALYSIS(M2MKlassHierarchy);
   CHECK_NULL_FATAL(klassh);
-  IPODevirtulize *dev = memPool->New<IPODevirtulize>(module, memPool, klassh);
+  IPODevirtulize *dev = GetPhaseAllocator()->New<IPODevirtulize>(&m, GetPhaseMemPool(), klassh);
   // Devirtualize vcall of final variable
   dev->DevirtualFinal();
-  return nullptr;
+  return true;
+}
+
+void M2MIPODevirtualize::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<M2MKlassHierarchy>();
+  aDep.SetPreservedAll();
 }
 }  // namespace maple

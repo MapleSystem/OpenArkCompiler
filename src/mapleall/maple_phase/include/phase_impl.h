@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -14,7 +14,7 @@
  */
 #ifndef MAPLE_PHASE_INCLUDE_PHASE_IMPL_H
 #define MAPLE_PHASE_INCLUDE_PHASE_IMPL_H
-#include "class_hierarchy.h"
+#include "class_hierarchy_phase.h"
 #include "mir_builder.h"
 #include "mpl_scheduler.h"
 #include "utils.h"

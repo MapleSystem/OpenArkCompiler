@@ -37,5 +37,4 @@ bool CgYieldPointInsertion::PhaseRun(maplebe::CGFunc &f) {
   yieldPoint->Run();
   return false;
 }
-MAPLE_TRANSFORM_PHASE_REGISTER(CgYieldPointInsertion, yieldpoint)
 }  /* namespace maplebe */

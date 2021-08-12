@@ -42,10 +42,14 @@ void May2Dassign::DoIt() {
   }
 }
 
-AnalysisResult *MeDoMay2Dassign::Run(MeFunction *func, MeFuncResultMgr *m, ModuleResultMgr*) {
-  (void)(m->GetAnalysisResult(MeFuncPhase_IRMAPBUILD, func));
-  May2Dassign may2Dassign(*func);
+void MEMay2Dassign::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
+  aDep.AddRequired<MEIRMapBuild>();
+  aDep.SetPreservedAll();
+}
+
+bool MEMay2Dassign::PhaseRun(maple::MeFunction &f) {
+  May2Dassign may2Dassign(f);
   may2Dassign.DoIt();
-  return nullptr;
+  return true;
 }
 }  // namespace maple
