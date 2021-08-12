@@ -902,7 +902,7 @@ void IRMapBuild::BuildBB(BB &bb, std::vector<bool> &bbIRMapProcessed) {
     BuildBB(*irMap->GetBB(childBBId), bbIRMapProcessed);
   }
   if (propagater) {
-    for (uint32 i = 1; i < propagater->GetVstLiveStackVecSize(); i++) {
+    for (uint32 i = 1; i < curStackSizeVec.size(); i++) {
       MapleStack<MeExpr *> *liveStack = propagater->GetVstLiveStackVec(i);
       uint32 curSize = curStackSizeVec[i];
       while (liveStack->size() > curSize) {
