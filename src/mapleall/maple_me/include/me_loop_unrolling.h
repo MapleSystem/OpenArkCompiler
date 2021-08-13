@@ -67,6 +67,8 @@ class LoopUnrolling {
                             MapleMap<OStIdx, MapleSet<BBId>*> &cands, MeStmt &stmt, BB &bb);
   static void CopyCallStmt(MeIRMap &irMap, MemPool &memPool, MapleAllocator &mpAllocator,
                            MapleMap<OStIdx, MapleSet<BBId>*> &cands, MeStmt &stmt, BB &bb);
+  static void CopyAsmStmt(MeIRMap &irMap, MemPool &memPool, MapleAllocator &mpAllocator,
+                          MapleMap<OStIdx, MapleSet<BBId>*> &cands, MeStmt &stmt, BB &bb);
   static void InsertCandsForSSAUpdate(MemPool &memPool, MapleAllocator &mpAllocator,
                                       MapleMap<OStIdx, MapleSet<BBId>*> &cands, OStIdx ostIdx, const BB &bb);
 

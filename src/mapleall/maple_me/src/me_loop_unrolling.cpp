@@ -165,6 +165,24 @@ void LoopUnrolling::CopyCallStmt(MeIRMap &irMap, MemPool &memPool, MapleAllocato
   bb.AddMeStmtLast(newCallStmt);
 }
 
+void LoopUnrolling::CopyAsmStmt(MeIRMap &irMap, MemPool &memPool, MapleAllocator &mpAllocator,
+                                MapleMap<OStIdx, MapleSet<BBId>*> &cands, MeStmt &stmt, BB &bb) {
+  auto *asmStmt = static_cast<AsmMeStmt*>(&stmt);
+  if (asmStmt->GetAssignedLHS() != nullptr) {
+    CHECK_FATAL(asmStmt->GetAssignedLHS()->GetMeOp() == kMeOpVar, "should be var");
+  }
+  AsmMeStmt *newCallStmt = irMap.NewInPool<AsmMeStmt>(asmStmt);
+  for (auto &mu : *asmStmt->GetMuList()) {
+    CHECK_FATAL(newCallStmt->GetMuList()->find(mu.first) == newCallStmt->GetMuList()->end(), "must not exit");
+    newCallStmt->GetMuList()->insert(std::make_pair(mu.first, mu.second));
+  }
+  BuildChiList(irMap, memPool, mpAllocator, cands, bb, *newCallStmt,
+               *asmStmt->GetChiList(), *newCallStmt->GetChiList());
+  BuildMustDefList(irMap, memPool, mpAllocator, cands, bb, *newCallStmt,
+                   *asmStmt->GetMustDefList(), *newCallStmt->GetMustDefList());
+  bb.AddMeStmtLast(newCallStmt);
+}
+
 void LoopUnrolling::CopyAndInsertStmt(MeIRMap &irMap, MemPool &memPool, MapleAllocator &mpAllocator,
     MapleMap<OStIdx, MapleSet<BBId>*> &cands, BB &bb, BB &oldBB, bool copyWithoutLastMe) {
   for (auto &stmt : oldBB.GetMeStmts()) {
@@ -214,6 +232,10 @@ void LoopUnrolling::CopyAndInsertStmt(MeIRMap &irMap, MemPool &memPool, MapleAll
       case OP_icall:
       case OP_icallassigned: {
         CopyIcallStmt(irMap, memPool, mpAllocator, cands, stmt, bb);
+        break;
+      }
+      case OP_asm:{
+        CopyAsmStmt(irMap, memPool, mpAllocator, cands, stmt, bb);
         break;
       }
       case OP_call:
