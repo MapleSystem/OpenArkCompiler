@@ -1240,6 +1240,30 @@ void EmitStr(const MapleString &mplStr) {
   LogInfo::MapleLogger() << "\"\n";
 }
 
+AsmNode *AsmNode::CloneTree(MapleAllocator &allocator) const {
+  auto *node = allocator.GetMemPool()->New<AsmNode>(allocator, *this);
+  for (size_t i = 0; i < GetNopndSize(); ++i) {
+    node->GetNopnd().push_back(GetNopndAt(i)->CloneTree(allocator));
+  }
+  for (size_t i = 0; i < inputConstraints.size(); ++i) {
+    node->inputConstraints.push_back(inputConstraints[i]);
+  }
+  for (size_t i = 0; i < asmOutputs.size(); ++i) {
+    node->asmOutputs.push_back(asmOutputs[i]);
+  }
+  for (size_t i = 0; i < outputConstraints.size(); ++i) {
+    node->outputConstraints.push_back(outputConstraints[i]);
+  }
+  for (size_t i = 0; i < clobberList.size(); ++i) {
+    node->clobberList.push_back(clobberList[i]);
+  }
+  for (size_t i = 0; i < gotoLabels.size(); ++i) {
+    node->gotoLabels.push_back(gotoLabels[i]);
+  }
+  node->SetNumOpnds(GetNopndSize());
+  return node;
+}
+
 void AsmNode::DumpOutputs(int32 indent, std::string &uStr) const {
   PrintIndentation(indent + 1);
   LogInfo::MapleLogger() << " :";

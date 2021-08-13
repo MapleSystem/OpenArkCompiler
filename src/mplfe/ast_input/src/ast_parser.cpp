@@ -707,7 +707,7 @@ ASTValue *ASTParser::TranslateConstantValue2ASTValue(MapleAllocator &allocator, 
     } else if (result.Val.isVector()) {
       // vector type var must be init by initListExpr
       return nullptr;
-    } else if (result.Val.isMemberPointer() || result.Val.isAddrLabelDiff()) {
+    } else if (result.Val.isMemberPointer()) {
       CHECK_FATAL(false, "NIY");
     }
     // Others: Agg const processed in `InitListExpr`

@@ -3186,9 +3186,14 @@ class AsmNode : public NaryStmtNode {
         asmOutputs(alloc->Adapter()), outputConstraints(alloc->Adapter()),
         clobberList(alloc->Adapter()), gotoLabels(alloc->Adapter()), qualifiers(0) {}
 
-  AsmNode(const AsmNode &node) = delete;
-  AsmNode &operator=(const AsmNode &node) = delete;
+  AsmNode(MapleAllocator &allocator, const AsmNode &node)
+      : NaryStmtNode(allocator, OP_asm), asmString(node.asmString), inputConstraints(allocator.Adapter()),
+        asmOutputs(allocator.Adapter()), outputConstraints(allocator.Adapter()),
+        clobberList(allocator.Adapter()), gotoLabels(allocator.Adapter()), qualifiers(node.qualifiers) {}
+
   virtual ~AsmNode() = default;
+
+  AsmNode *CloneTree(MapleAllocator &allocator) const override;
 
   void SetQualifier(AsmQualifierKind x) {
     qualifiers |= (1U << static_cast<uint32>(x));
