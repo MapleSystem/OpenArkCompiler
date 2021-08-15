@@ -160,11 +160,13 @@ class CGFunc {
   virtual void HandleRetCleanup(NaryStmtNode &retNode) = 0;
   /* select stmt */
   virtual void SelectDassign(DassignNode &stmt, Operand &opnd0) = 0;
+  virtual void SelectDassignoff(DassignoffNode &stmt, Operand &opnd0) = 0;
   virtual void SelectRegassign(RegassignNode &stmt, Operand &opnd0) = 0;
   virtual void SelectAssertNull(UnaryStmtNode &stmt) = 0;
   virtual void SelectAsm(AsmNode &node) = 0;
   virtual void SelectAggDassign(DassignNode &stmt) = 0;
   virtual void SelectIassign(IassignNode &stmt) = 0;
+  virtual void SelectIassignoff(IassignoffNode &stmt) = 0;
   virtual void SelectAggIassign(IassignNode &stmt, Operand &lhsAddrOpnd) = 0;
   virtual void SelectReturn(Operand *opnd) = 0;
   virtual void SelectIgoto(Operand *opnd0) = 0;
