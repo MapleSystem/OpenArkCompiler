@@ -328,17 +328,6 @@ void DebugInfo::BuildDebugInfo() {
     }
   }
 
-  for (size_t i = 0; i < GlobalTables::GetGsymTable().GetSymbolTableSize(); ++i) {
-    MIRSymbol *mirSymbol = GlobalTables::GetGsymTable().GetSymbolFromStidx(i);
-    if (mirSymbol == nullptr || mirSymbol->IsDeleted() || mirSymbol->GetStorageClass() == kScUnused) {
-      continue;
-    }
-    if (module->IsCModule() && mirSymbol->IsGlobal() && mirSymbol->IsVar()) {
-      DBGDie *vdie = CreateVarDie(mirSymbol);
-      compUnit->AddSubVec(vdie);
-    }
-  }
-
   // setup debug info for functions
   for (auto func : GlobalTables::GetFunctionTable().GetFuncTable()) {
     // the first one in funcTable is nullptr

@@ -932,6 +932,7 @@ void Prop::TraversalMeStmt(MeStmt &meStmt) {
               }
               lhsVar->SetDefBy(kDefByStmt);
               lhsVar->SetDefByStmt(*newDassign);
+              PropUpdateDef(*lhsVar);
             } else if (simplifiedIvar->GetMeOp() == kMeOpIvar) {
               ivarStmt.SetLHSVal(static_cast<IvarMeExpr *>(simplifiedIvar));
             }

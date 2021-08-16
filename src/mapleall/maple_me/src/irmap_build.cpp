@@ -652,6 +652,7 @@ MeStmt *IRMapBuild::BuildIassignMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart) 
         lhs->SetDefByStmt(*meStmt);
         lhs->SetDefBy(kDefByStmt);
         if (propagater) {
+          propagater->PropUpdateDef(*meStmt->GetLHS());
           propagater->PropUpdateChiListDef(*meStmt->GetChiList());
         }
         return meStmt;

@@ -228,10 +228,10 @@ BaseNode *BinaryMplImport::ImportExpression(MIRFunction *func) {
       return sot;
     }
     case OP_addrof:
-    case OP_addrofoff:
-    case OP_dread:
-    case OP_dreadoff: {
-      int32 num = ReadNum();
+    case OP_dread: {
+      AddrofNode *drNode = mod.CurFuncCodeMemPool()->New<AddrofNode>(op);
+      drNode->SetPrimType(typ);
+      drNode->SetFieldID(ReadNum());
       StIdx stIdx;
       stIdx.SetScope(ReadNum());
       if (stIdx.Islocal()) {
@@ -246,19 +246,8 @@ BaseNode *BinaryMplImport::ImportExpression(MIRFunction *func) {
         }
         stIdx.SetIdx(sym->GetStIdx().Idx());
       }
-      if (op == OP_addrof || op == OP_dread) {
-        AddrofNode *drNode = mod.CurFuncCodeMemPool()->New<AddrofNode>(op);
-        drNode->SetPrimType(typ);
-        drNode->SetStIdx(stIdx);
-        drNode->SetFieldID(num);
-        return drNode;
-      } else {
-        DreadoffNode *dreadoff = mod.CurFuncCodeMemPool()->New<DreadoffNode>(op);
-        dreadoff->SetPrimType(typ);
-        dreadoff->stIdx = stIdx;
-        dreadoff->offset = num;
-        return dreadoff;
-      }
+      drNode->SetStIdx(stIdx);
+      return drNode;
     }
     case OP_regread: {
       RegreadNode *regreadNode = mod.CurFuncCodeMemPool()->New<RegreadNode>();
@@ -475,9 +464,9 @@ BlockNode *BinaryMplImport::ImportBlockNode(MIRFunction *func) {
     op = (Opcode)ReadNum();
     StmtNode *stmt = nullptr;
     switch (op) {
-      case OP_dassign:
-      case OP_dassignoff: {
-        int32 num = ReadNum();
+      case OP_dassign: {
+        DassignNode *s = func->GetCodeMemPool()->New<DassignNode>();
+        s->SetFieldID(ReadNum());
         StIdx stIdx;
         stIdx.SetScope(ReadNum());
         if (stIdx.Islocal()) {
@@ -490,19 +479,9 @@ BlockNode *BinaryMplImport::ImportBlockNode(MIRFunction *func) {
           sym->SetHasPotentialAssignment();
           stIdx.SetIdx(sym->GetStIdx().Idx());
         }
-        if (op == OP_dassign) {
-          DassignNode *s = func->GetCodeMemPool()->New<DassignNode>();
-          s->SetStIdx(stIdx);
-          s->SetFieldID(num);
-          s->SetOpnd(ImportExpression(func), 0);
-          stmt = s;
-        } else {
-          DassignoffNode *s = func->GetCodeMemPool()->New<DassignoffNode>();
-          s->stIdx = stIdx;
-          s->offset = num;
-          s->SetOpnd(ImportExpression(func), 0);
-          stmt = s;
-        }
+        s->SetStIdx(stIdx);
+        s->SetOpnd(ImportExpression(func), 0);
+        stmt = s;
         break;
       }
       case OP_regassign: {

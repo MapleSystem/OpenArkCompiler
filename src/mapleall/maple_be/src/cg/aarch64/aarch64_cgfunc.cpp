@@ -6658,10 +6658,10 @@ void AArch64CGFunc::SelectParmList(StmtNode &naryNode, AArch64ListOperand &srcOp
     ASSERT(primType != PTY_void, "primType should not be void");
     switch (argExpr->op) {
       case OP_dread: {
-        DreadNode *dNode = static_cast<DreadNode*>(argExpr);
+        DreadNode *dNode = static_cast<DreadNode *>(argExpr);
         MIRSymbol *symbol = GetFunction().GetLocalOrGlobalSymbol(dNode->GetStIdx());
         if (dNode->GetFieldID() != 0) {
-          MIRStructType *structType = static_cast<MIRStructType*>(symbol->GetType());
+          MIRStructType *structType = static_cast<MIRStructType *>(symbol->GetType());
           ASSERT(structType != nullptr, "SelectParmList: non-zero fieldID for non-structure");
           FieldAttrs fa = structType->GetFieldAttrs(dNode->GetFieldID());
           is64x1vec = fa.GetAttr(FLDATTR_oneelem_simd) ? true : false;
@@ -6671,17 +6671,17 @@ void AArch64CGFunc::SelectParmList(StmtNode &naryNode, AArch64ListOperand &srcOp
         break;
       }
       case OP_iread: {
-        IreadNode *iNode = static_cast<IreadNode*>(argExpr);
+        IreadNode *iNode = static_cast<IreadNode *>(argExpr);
         MIRType *type = GlobalTables::GetTypeTable().GetTypeFromTyIdx(iNode->GetTyIdx());
-        MIRPtrType *ptrTyp = static_cast<MIRPtrType*>(type);
+        MIRPtrType *ptrTyp = static_cast<MIRPtrType *>(type);
         ASSERT(ptrTyp != nullptr, "expect a pointer type at iread node");
         MIRType *pointedTy = GlobalTables::GetTypeTable().GetTypeFromTyIdx(ptrTyp->GetPointedTyIdx());
         if (iNode->GetFieldID() != 0) {
-          MIRStructType *structType = static_cast<MIRStructType*>(pointedTy);
+          MIRStructType *structType = static_cast<MIRStructType *>(pointedTy);
           FieldAttrs fa = structType->GetFieldAttrs(iNode->GetFieldID());
           is64x1vec = fa.GetAttr(FLDATTR_oneelem_simd) ? true : false;
         } else {
-          TypeAttrs ta = static_cast<MIRPtrType*>(ptrTyp)->GetTypeAttrs();
+          TypeAttrs ta = static_cast<MIRPtrType *>(ptrTyp)->GetTypeAttrs();
           is64x1vec = ta.GetAttr(ATTR_oneelem_simd) ? true : false;
         }
         break;
@@ -6697,7 +6697,7 @@ void AArch64CGFunc::SelectParmList(StmtNode &naryNode, AArch64ListOperand &srcOp
     ty = GlobalTables::GetTypeTable().GetTypeTable()[static_cast<uint32>(primType)];
     RegOperand *expRegOpnd = nullptr;
     Operand *opnd = HandleExpr(naryNode, *argExpr);
-    if (opnd->GetKind() == Operand::kOpdRegister && static_cast<AArch64RegOperand*>(opnd)->GetIF64Vec()) {
+    if (opnd->GetKind() == Operand::kOpdRegister && static_cast<AArch64RegOperand *>(opnd)->GetIF64Vec()) {
       is64x1vec = true;
     }
     if (!opnd->IsRegister()) {
@@ -6714,7 +6714,7 @@ void AArch64CGFunc::SelectParmList(StmtNode &naryNode, AArch64ListOperand &srcOp
     /* is64x1vec should be an int64 value in an FP/simd reg for ABI compliance,
        convert R-reg to equivalent V-reg */
     if (is64x1vec && ploc.reg0 != kRinvalid && ploc.reg0 < R7) {
-      ploc.reg0 = AArch64Abi::floatParmRegs[(int)ploc.reg0 - 1];
+      ploc.reg0 = AArch64Abi::floatParmRegs[static_cast<int>(ploc.reg0) - 1];
       primType = PTY_f64;
     }
     if (ploc.reg0 != kRinvalid) {  /* load to the register. */
@@ -9093,8 +9093,8 @@ RegOperand *AArch64CGFunc::SelectVectorFromScalar(PrimType rType, Operand *src, 
     RegOperand *res = &CreateRegisterOperandOfType(PTY_f64);
     Insn *insn = &GetCG()->BuildInstruction<AArch64Insn>(MOP_xvmovdr, *res, *src);
     GetCurBB()->AppendInsn(*insn);                                       /* move xreg to dreg */
-    static_cast<AArch64RegOperand*>(res)->SetIF64Vec();
-    return static_cast<RegOperand*>(res);
+    static_cast<AArch64RegOperand *>(res)->SetIF64Vec();
+    return static_cast<RegOperand *>(res);
   }
   RegOperand *res = &CreateRegisterOperandOfType(rType);                 /* result operand */
   VectorRegSpec *vecSpec = GetMemoryPool()->New<VectorRegSpec>();
@@ -9153,7 +9153,7 @@ RegOperand *AArch64CGFunc::SelectVectorGetHigh(PrimType rType, Operand *src) {
   GetCurBB()->AppendInsn(*insn);
   if (oType != rType) {
     res = AdjustOneElementVectorOperand(oType, res);
-    static_cast<AArch64RegOperand*>(res)->SetIF64Vec();
+    static_cast<AArch64RegOperand *>(res)->SetIF64Vec();
   }
   return res;
 }
@@ -9171,7 +9171,7 @@ RegOperand *AArch64CGFunc::SelectVectorGetLow(PrimType rType, Operand *src) {
   GetCurBB()->AppendInsn(*insn);
   if (oType != rType) {
     res = AdjustOneElementVectorOperand(oType, res);
-    static_cast<AArch64RegOperand*>(res)->SetIF64Vec();
+    static_cast<AArch64RegOperand *>(res)->SetIF64Vec();
   }
   return res;
 }
@@ -9221,8 +9221,8 @@ RegOperand *AArch64CGFunc::SelectVectorSetElement(Operand *eOpnd, PrimType eType
     RegOperand *res = &CreateRegisterOperandOfType(PTY_f64);
     Insn *insn = &GetCG()->BuildInstruction<AArch64Insn>(MOP_xvmovdr, *res, *eOpnd);
     GetCurBB()->AppendInsn(*insn);                                         /* move xreg to dreg */
-    static_cast<AArch64RegOperand*>(res)->SetIF64Vec();
-    return static_cast<RegOperand*>(res);
+    static_cast<AArch64RegOperand *>(res)->SetIF64Vec();
+    return static_cast<RegOperand *>(res);
   }
   RegOperand *reg = &CreateRegisterOperandOfType(eType);                   /* vector element type */
   SelectCopy(*reg, eType, *eOpnd, eType);
@@ -9245,8 +9245,8 @@ RegOperand *AArch64CGFunc::SelectVectorSetElement(Operand *eOpnd, PrimType eType
 
 RegOperand *AArch64CGFunc::SelectVectorMerge(PrimType rTyp, Operand *o1, Operand *o2, int32 index) {
   if (!IsPrimitiveVector(rTyp)) {
-    static_cast<AArch64RegOperand*>(o1)->SetIF64Vec();
-    return static_cast<RegOperand*>(o1);                                   /* 64x1_t, index==0 */
+    static_cast<AArch64RegOperand *>(o1)->SetIF64Vec();
+    return static_cast<RegOperand *>(o1);                                   /* 64x1_t, index equals 0 */
   }
   RegOperand *res = &CreateRegisterOperandOfType(rTyp);
   int32 size = GetPrimTypeSize(rTyp);                                      /* 8b or 16b */
@@ -9353,7 +9353,7 @@ void AArch64CGFunc::SelectVectorCvt(Operand *res, PrimType rType, Operand *o1, P
     insn = &GetCG()->BuildInstruction<AArch64VectorInsn>(mOp, *res, *o1, *imm);
   } else if (GetPrimTypeSize(rType) < GetPrimTypeSize(oType)) {
     /* extract, similar to vqmovn_XX() intrinsics */
-    mOp = IsUnsignedInteger(rType) ? MOP_vuqxtnvv: MOP_vsqxtnvv;
+    mOp = (IsUnsignedInteger(rType)) ? MOP_vuqxtnvv : MOP_vsqxtnvv;
     insn = &GetCG()->BuildInstruction<AArch64VectorInsn>(mOp, *res, *o1);
   } else {
     CHECK_FATAL(0, "Invalid cvt between 2 operands of the same size");
