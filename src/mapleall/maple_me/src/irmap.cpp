@@ -198,7 +198,7 @@ static void ComputeCastInfoForExpr(const MeExpr &expr, CastInfo &castInfo) {
       break;
     }
     case OP_retype: {
-      srcType = expr.GetPrimType();
+      srcType = static_cast<const OpMeExpr&>(expr).GetOpndType();
       castKind = CAST_retype;
       break;
     }
@@ -774,7 +774,7 @@ IvarMeExpr *IRMap::BuildLHSIvar(MeExpr &baseAddr, PrimType primType, const TyIdx
 }
 
 MeExpr* IRMap::SimplifyIvarWithConstOffset(IvarMeExpr *ivar) {
-  auto *base = ivar;
+  auto *base = ivar->GetBase();
   if (base->GetOp() == OP_add || base->GetOp() == OP_sub) {
     auto offsetNode = base->GetOpnd(1);
     if (offsetNode->GetOp() == OP_constval) {
@@ -792,6 +792,7 @@ MeExpr* IRMap::SimplifyIvarWithConstOffset(IvarMeExpr *ivar) {
       IvarMeExpr newIvar(kInvalidExprID, ivar->GetPrimType(), ivar->GetTyIdx(), ivar->GetFieldID(), op);
       newIvar.SetBase(base->GetOpnd(0));
       newIvar.SetOffset(offset.val);
+      newIvar.SetMuVal(ivar->GetMu());
       return HashMeExpr(newIvar);
     }
   }

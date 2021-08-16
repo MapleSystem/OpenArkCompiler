@@ -1198,17 +1198,15 @@ void ExtendShiftOptPattern::ReplaceUseInsn(Insn &use, Insn &def, uint32 amount) 
 void ExtendShiftOptPattern::Optimize(Insn &insn) {
   if (shiftOp == BitShiftOperand::kLSL) {
     InsnSet preDef = cgFunc.GetRD()->FindDefForRegOpnd(*defInsn, kInsnSecondOpnd, false);
-    if (preDef.size() == 1) {
-      Insn *preDefInsn = *preDef.begin();
-      CHECK_FATAL((preDefInsn != nullptr), "defInsn is null!");
-      SelectExtenOp(*preDefInsn);
-      /* preDefInsn must be uxt/sxt */
-      if (extendOp != ExtendShiftOperand::kUndef) {
-        AArch64ImmOperand &immOpnd = static_cast<AArch64ImmOperand &>(defInsn->GetOperand(kInsnThirdOpnd));
-        /* do pattern2 */
-        ReplaceUseInsn(insn, *preDefInsn, immOpnd.GetValue());
-        return;
-      }
+    Insn *preDefInsn = *preDef.begin();
+    CHECK_FATAL((preDefInsn != nullptr), "defInsn is null!");
+    SelectExtenOp(*preDefInsn);
+    /* preDefInsn must be uxt/sxt */
+    if (extendOp != ExtendShiftOperand::kUndef) {
+      AArch64ImmOperand &immOpnd = static_cast<AArch64ImmOperand&>(defInsn->GetOperand(kInsnThirdOpnd));
+      /* do pattern2 */
+      ReplaceUseInsn(insn, *preDefInsn, immOpnd.GetValue());
+      return;
     }
   }
   /* reset shiftOp and extendOp */
@@ -1218,7 +1216,7 @@ void ExtendShiftOptPattern::Optimize(Insn &insn) {
     /* do pattern1 */
     ReplaceUseInsn(insn, *defInsn, 0);
   } else if (shiftOp != BitShiftOperand::kUndef) {
-    /* do pattern3 */
+    /* do pattern2 */
     AArch64ImmOperand &immOpnd = static_cast<AArch64ImmOperand&>(defInsn->GetOperand(kInsnThirdOpnd));
     ReplaceUseInsn(insn, *defInsn, immOpnd.GetValue());
   } else {
