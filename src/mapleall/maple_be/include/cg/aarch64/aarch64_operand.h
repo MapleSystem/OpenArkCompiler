@@ -89,6 +89,14 @@ class AArch64RegOperand : public RegOperand {
     return memPool.Clone<AArch64RegOperand>(*this);
   }
 
+  void SetIF64Vec() {
+    if64Vec = true;
+  }
+
+  bool GetIF64Vec() {
+    return if64Vec;
+  }
+
   void SetVecLanePosition(int32 pos) {
     vecLane = pos;
   }
@@ -131,6 +139,7 @@ class AArch64RegOperand : public RegOperand {
   uint32 flag;
   int16 vecLane = -1;     /* -1 for whole reg, 0 to 15 to specify each lane one at a time */
   uint16 vecLaneSize = 0; /* Number of lanes */
+  bool if64Vec = false;   /* operand returning 64x1's int value in FP/Simd register */
 };
 
 /*
