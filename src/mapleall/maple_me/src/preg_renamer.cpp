@@ -102,6 +102,14 @@ void PregRenamer::RunSelf() {
     OriginalSt *newost =
         func->GetMeSSATab()->GetOriginalStTable().CreatePregOriginalSt(newpregidx, func->GetMirFunc()->GetPuidx());
     renameCount++;
+    MIRPreg *oldpreg = func->GetMirFunc()->GetPregTab()->PregFromPregIdx(regMeexpr->GetRegIdx());
+    if (oldpreg->GetOp() != OP_undef) {
+      // carry over fields in MIRPreg to support rematerialization
+      MIRPreg *newpreg = func->GetMirFunc()->GetPregTab()->PregFromPregIdx(newpregidx);
+      newpreg->SetOp(oldpreg->GetOp());
+      newpreg->rematInfo = oldpreg->rematInfo;
+      newpreg->fieldID = oldpreg->fieldID;
+    }
     if (DEBUGFUNC(func)) {
       LogInfo::MapleLogger() << "%" << pregtab->PregFromPregIdx(regMeexpr->GetRegIdx())->GetPregNo();
       LogInfo::MapleLogger() << " renamed to %" << pregtab->PregFromPregIdx(newpregidx)->GetPregNo() << std::endl;
