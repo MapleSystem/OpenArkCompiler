@@ -147,6 +147,12 @@ bool AddrofNode::IsVolatile(const MIRModule &mod) const {
   return symbol->IsVolatile();
 }
 
+bool DreadoffNode::IsVolatile(const MIRModule &mod) const {
+  auto *symbol = mod.CurFunction()->GetLocalOrGlobalSymbol(stIdx);
+  ASSERT(symbol != nullptr, "null ptr check on symbol");
+  return symbol->IsVolatile();
+}
+
 bool DassignNode::AssigningVolatile(const MIRModule &mod) const {
   auto *symbol = mod.CurFunction()->GetLocalOrGlobalSymbol(stIdx);
   ASSERT(symbol != nullptr, "null ptr check on symbol");
@@ -555,6 +561,14 @@ void AddrofNode::Dump(int32) const {
   }
 }
 
+void DreadoffNode::Dump(int32) const {
+  LogInfo::MapleLogger() << kOpcodeInfo.GetTableItemAt(GetOpCode()).name << " " << GetPrimTypeName(GetPrimType());
+  const MIRSymbol *st = theMIRModule->CurFunction()->GetLocalOrGlobalSymbol(stIdx);
+  LogInfo::MapleLogger() << (stIdx.Islocal() ? " %" : " $");
+  LogInfo::MapleLogger() << st->GetName();
+  LogInfo::MapleLogger() << " " << offset;
+}
+
 void RegreadNode::Dump(int32) const {
   LogInfo::MapleLogger() << kOpcodeInfo.GetTableItemAt(GetOpCode()).name << " " << GetPrimTypeName(GetPrimType());
   if (regIdx >= 0) {
@@ -653,6 +667,21 @@ void DassignNode::Dump(int32 indent) const {
   const MIRSymbol *st = theMIRModule->CurFunction()->GetLocalOrGlobalSymbol(stIdx);
   LogInfo::MapleLogger() << (st->IsLocal() ? " %" : " $");
   LogInfo::MapleLogger() << st->GetName() << " " << fieldID;
+  LogInfo::MapleLogger() << " (";
+  if (GetRHS() != nullptr) {
+    GetRHS()->Dump(indent + 1);
+  } else {
+    LogInfo::MapleLogger() << "/*empty-rhs*/";
+  }
+  LogInfo::MapleLogger() << ")\n";
+}
+
+void DassignoffNode::Dump(int32 indent) const {
+  StmtNode::DumpBase(indent);
+  LogInfo::MapleLogger() << " " << GetPrimTypeName(GetPrimType());
+  const MIRSymbol *st = theMIRModule->CurFunction()->GetLocalOrGlobalSymbol(stIdx);
+  LogInfo::MapleLogger() << (st->IsLocal() ? " %" : " $");
+  LogInfo::MapleLogger() << st->GetName() << " " << offset;
   LogInfo::MapleLogger() << " (";
   if (GetRHS() != nullptr) {
     GetRHS()->Dump(indent + 1);

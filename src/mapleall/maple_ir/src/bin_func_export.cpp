@@ -199,14 +199,24 @@ void BinaryMplExport::OutputExpression(BaseNode *e) {
       return;
     }
     case OP_addrof:
-    case OP_dread: {
-      AddrofNode *drNode = static_cast<AddrofNode *>(e);
-      WriteNum(drNode->GetFieldID());
-      WriteNum(drNode->GetStIdx().Scope());
-      if (drNode->GetStIdx().Islocal()) {
-        WriteNum(drNode->GetStIdx().Idx());  // preserve original st index
+    case OP_addrofoff:
+    case OP_dread:
+    case OP_dreadoff: {
+      StIdx stIdx;
+      if (e->GetOpCode() == OP_addrof || e->GetOpCode() == OP_dread) {
+        AddrofNode *drNode = static_cast<AddrofNode *>(e);
+        WriteNum(drNode->GetFieldID());
+        stIdx = drNode->GetStIdx();
       } else {
-        MIRSymbol *sym = GlobalTables::GetGsymTable().GetSymbolFromStidx(drNode->GetStIdx().Idx());
+        DreadoffNode *droff = static_cast<DreadoffNode *>(e);
+        WriteNum(droff->offset);
+        stIdx = droff->stIdx;
+      }
+      WriteNum(stIdx.Scope());
+      if (stIdx.Islocal()) {
+        WriteNum(stIdx.Idx());  // preserve original st index
+      } else {
+        MIRSymbol *sym = GlobalTables::GetGsymTable().GetSymbolFromStidx(stIdx.Idx());
         WriteNum(kBinKindSymViaSymname);
         OutputStr(sym->GetNameStrIdx());
       }
@@ -370,14 +380,24 @@ void BinaryMplExport::OutputBlockNode(BlockNode *block) {
     OutputSrcPos(s->GetSrcPos());
     WriteNum(s->GetOpCode());
     switch (s->GetOpCode()) {
-      case OP_dassign: {
-        DassignNode *dass = static_cast<DassignNode *>(s);
-        WriteNum(dass->GetFieldID());
-        WriteNum(dass->GetStIdx().Scope());
-        if (dass->GetStIdx().Islocal()) {
-          WriteNum(dass->GetStIdx().Idx());  // preserve original st index
+      case OP_dassign:
+      case OP_dassignoff: {
+        StIdx stIdx;
+        if (s->GetOpCode() == OP_dassign) {
+          DassignNode *dass = static_cast<DassignNode *>(s);
+          WriteNum(dass->GetFieldID());
+          stIdx = dass->GetStIdx();
         } else {
-          MIRSymbol *sym = GlobalTables::GetGsymTable().GetSymbolFromStidx(dass->GetStIdx().Idx());
+          DassignoffNode *dassoff = static_cast<DassignoffNode *>(s);
+          WriteNum(dassoff->GetPrimType());
+          WriteNum(dassoff->offset);
+          stIdx = dassoff->stIdx;
+        }
+        WriteNum(stIdx.Scope());
+        if (stIdx.Islocal()) {
+          WriteNum(stIdx.Idx());  // preserve original st index
+        } else {
+          MIRSymbol *sym = GlobalTables::GetGsymTable().GetSymbolFromStidx(stIdx.Idx());
           WriteNum(kBinKindSymViaSymname);
           OutputStr(sym->GetNameStrIdx());
         }
@@ -393,6 +413,12 @@ void BinaryMplExport::OutputBlockNode(BlockNode *block) {
         IassignNode *iass = static_cast<IassignNode *>(s);
         OutputTypeViaTypeName(iass->GetTyIdx());
         WriteNum(iass->GetFieldID());
+        break;
+      }
+      case OP_iassignoff: {
+        IassignoffNode *iassoff = static_cast<IassignoffNode *>(s);
+        WriteNum(iassoff->GetPrimType());
+        WriteNum(iassoff->GetOffset());
         break;
       }
       case OP_call:
