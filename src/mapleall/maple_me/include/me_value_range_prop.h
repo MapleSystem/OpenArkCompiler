@@ -23,6 +23,7 @@
 namespace maple {
 int64 GetMinNumber(PrimType primType);
 int64 GetMaxNumber(PrimType primType);
+bool IsNeededPrimType(PrimType prim);
 
 class Bound {
  public:
@@ -50,6 +51,10 @@ class Bound {
 
   void SetPrimType(PrimType type) {
     primType = type;
+  }
+
+  bool IsEqual(Bound bound) {
+    return var == bound.GetVar() && constant == bound.GetConstant() && primType && bound.GetPrimType();
   }
 
  private:
@@ -211,9 +216,12 @@ class ValueRange {
   static Bound MinBound(PrimType pType) {
     return Bound(nullptr, GetMinNumber(pType), pType);
   }
+
   static Bound MaxBound(PrimType pType) {
     return Bound(nullptr, GetMaxNumber(pType), pType);
   }
+
+  bool IsEqual(ValueRange *valueRangeRight);
 
  private:
   union {
@@ -312,7 +320,7 @@ class ValueRangePropagation {
   void DealWithPhi(BB &bb, MePhiNode &mePhiNode);
   void DealWithCondGoto(BB &bb, MeStmt &stmt);
   bool OverflowOrUnderflow(PrimType primType, int64 lhs, int64 rhs);
-  void DealWithAssign(const BB &bb, const MeStmt &stmt);
+  void DealWithAssign(const BB &bb, MeStmt &stmt);
   bool IsConstant(const BB &bb, MeExpr &expr, int64 &constant, bool canNotBeNotEqual = true);
   std::unique_ptr<ValueRange> CreateValueRangeForPhi(
       LoopDesc &loop, BB &bb, ScalarMeExpr &init, ScalarMeExpr &backedge, ScalarMeExpr &lhsOfPhi);
@@ -348,7 +356,8 @@ class ValueRangePropagation {
   void AnalysisUnreachableBBOrEdge(BB &bb, BB &unreachableBB, BB &succBB);
   void DealWithOPNeOrEq(Opcode op, BB &bb, ValueRange *leftRange, ValueRange &rightRange,
                         const CondGotoMeStmt &brMeStmt);
-  void CreateValueRangeForNeOrEq(MeExpr &opnd, ValueRange &rightRange, BB &trueBranch, BB &falseBranch);
+  void CreateValueRangeForNeOrEq(
+      MeExpr &opnd, ValueRange *leftRange, ValueRange &rightRange, BB &trueBranch, BB &falseBranch);
   void DeleteUnreachableBBs();
   bool BrStmtInRange(BB &bb, ValueRange &leftRange, ValueRange &rightRange, Opcode op) const;
   void ChangeLoop2WontExit(LoopDesc &loop, BB &bb, BB &succBB, BB &unreachableBB);
@@ -377,13 +386,20 @@ class ValueRangePropagation {
   bool RemoveTheEdgeOfPredBB(BB &pred, BB &bb, BB &trueBranch);
   void DealWithCondGotoWhenRightRangeIsNotExist(BB &bb, MeExpr &opnd0, MeExpr &opnd1, Opcode op);
   MeExpr *GetDefOfBase(const IvarMeExpr &ivar) const;
-  void DealWithMeOp(const BB &bb, MeExpr &lhs, MeExpr &rhs);
+  void DealWithMeOp(const BB &bb, MeStmt &stmt);
   bool AnalysisValueRangeInPredsOfCondGotoBB(BB &bb, MeExpr &opnd0, ValueRange &rightRange, BB &falseBranch,
                                              BB &trueBranch, PrimType opndType);
   void CreateLabelForTargetBB(BB &pred, BB &newBB);
   size_t FindBBInSuccs(const BB &bb, const BB &succBB) const;
   bool IsEqual(Bound boundLeft, Bound boundRight);
-  bool IsEqual(ValueRange *valueRangeLeft, ValueRange *valueRangeRight);
+  void DealWithOperand(const BB &bb, MeStmt &stmt, MeExpr &meExpr);
+  bool OnlyHaveOneCondGotoPredBB(const BB &bb, const BB &condGotoBB) const;
+  void GetValueRangeForUnsignedInt(BB &bb, OpMeExpr &opMeExpr, MeExpr &opnd, ValueRange *&valueRange,
+                                   std::unique_ptr<ValueRange> &rightRangePtr);
+  void DealWithAssertNonnull(const BB &bb, MeStmt &meStmt);
+  void DealWithCVT(const BB &bb, MeStmt &stmt, MeExpr *operand, size_t i, bool dealWithStmt = false);
+  std::unique_ptr<ValueRange> ZeroIsInRange(ValueRange &valueRange);
+  bool IfTheLowerOrUpperOfLeftRangeEqualToTheRightRange(ValueRange &leftRange, ValueRange &rightRange, bool isLower);
 
   MeFunction &func;
   MeIRMap &irMap;
