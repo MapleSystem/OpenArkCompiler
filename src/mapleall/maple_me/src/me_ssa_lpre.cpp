@@ -364,6 +364,9 @@ void MeSSALPre::BuildWorkListExpr(MeStmt &meStmt, int32 seqStmt, MeExpr &meExpr,
       break;
     }
     case kMeOpConst: {
+      if (preKind != kAddrPre) {
+        break;
+      }
       if (!MeOption::lpre4LargeInt) {
         break;
       }
