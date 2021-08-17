@@ -529,6 +529,9 @@ bool AArch64StoreLoadOpt::CanDoMemProp(Insn *insn) {
   }
 
   if (insn->IsLoad() || insn->IsStore()) {
+    if (insn->IsAtomic()) {
+      return false;
+    }
     AArch64MemOperand *currMemOpnd = static_cast<AArch64MemOperand*>(insn->GetMemOpnd());
     return currMemOpnd != nullptr;
   }

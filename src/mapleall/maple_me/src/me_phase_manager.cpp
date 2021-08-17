@@ -95,7 +95,10 @@ bool MeFuncPM::PhaseRun(maple::MIRModule &m) {
     globalMIRModule = &m;
     globalFunc = &meFunc;
 #endif
-    meFunc.Prepare(i);
+    if (!IsQuiet()) {
+      LogInfo::MapleLogger() << "---Preparing Function  < " << func->GetName() << " > [" << i << "] ---\n";
+    }
+    meFunc.Prepare();
     FuncLevelRun(meFunc, *serialADM);
     serialADM->EraseAllAnalysisPhase();
   }
@@ -114,7 +117,8 @@ bool MeFuncPM::FuncLevelRun(MeFunction &meFunc, AnalysisDataManager &serialADM) 
     SolveSkipFrom(MeOption::GetSkipFromPhase(), i);
     const MaplePhaseInfo *curPhase = MaplePhaseRegister::GetMaplePhaseRegister()->GetPhaseByID(phasesSequence[i]);
     if (!IsQuiet()) {
-      LogInfo::MapleLogger() << "---Run Phase [ " << curPhase->PhaseName() << " ]---\n";
+      LogInfo::MapleLogger() << "---Run " << (curPhase->IsAnalysis() ? "analysis" : "transform")
+                             << " Phase [ " << curPhase->PhaseName() << " ]---\n";
     }
     DumpMEIR(meFunc, curPhase->PhaseName(), true);
     if (curPhase->IsAnalysis()) {

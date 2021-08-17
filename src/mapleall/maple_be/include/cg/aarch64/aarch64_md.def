@@ -561,6 +561,8 @@ DEFINE_MOP(MOP_bvs, {mopdRegCCS,mopdLabel},ISCONDBRANCH,kLtBranch,"bvs","1",1)
 
 /* MOP_xret		AARCH64 Specific */
 DEFINE_MOP(MOP_xret, {},CANTHROW,kLtBranch,"ret","",1)
+/* MOP_clrex    AARCH64 Specific */
+DEFINE_MOP(MOP_clrex, {},CANTHROW,kLtBranch,"clrex","",1)
 
 /* AARCH64 Floating-Point COMPARES signaling versions */
 /* MOP_hcmperi -- AArch64 cmp has no dest operand */

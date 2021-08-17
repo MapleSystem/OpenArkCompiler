@@ -168,7 +168,11 @@ void AArch64MemLayout::LayoutVarargParams() {
       }
     }
     SetSizeOfGRSaveArea((k8BitSize - nIntRegs) * kSizeOfPtr);
-    SetSizeOfVRSaveArea((k8BitSize - nFpRegs) * kSizeOfPtr * k2ByteSize);
+    if (CGOptions::UseGeneralRegOnly()) {
+      SetSizeOfVRSaveArea(0);
+    } else {
+      SetSizeOfVRSaveArea((k8BitSize - nFpRegs) * kSizeOfPtr * k2ByteSize);
+    }
   }
 }
 

@@ -1269,17 +1269,19 @@ void AArch64GenProEpilog::GeneratePushUnnamedVarargRegs() {
       cgFunc.GetCurBB()->AppendInsn(inst);
       offset += kSizeOfPtr;
     }
-    offset = memlayout->GetVRSaveAreaBaseLoc();
-    start_regno = k8BitSize - (memlayout->GetSizeOfVRSaveArea() / (kSizeOfPtr * k2BitSize));
-    ASSERT(start_regno <= k8BitSize, "Incorrect starting GR regno for VR Save Area");
-    for (uint32 i = start_regno + static_cast<uint32>(V0); i < static_cast<uint32>(V8); i++) {
-      Operand &stackloc = aarchCGFunc.CreateStkTopOpnd(offset, dataSizeBits);
-      RegOperand &reg =
-          aarchCGFunc.GetOrCreatePhysicalRegisterOperand(static_cast<AArch64reg>(i), k64BitSize, kRegTyInt);
-      Insn &inst =
-          currCG->BuildInstruction<AArch64Insn>(aarchCGFunc.PickStInsn(dataSizeBits, PTY_i64), reg, stackloc);
-      cgFunc.GetCurBB()->AppendInsn(inst);
-      offset += (kSizeOfPtr * k2BitSize);
+    if (!CGOptions::UseGeneralRegOnly()) {
+      offset = memlayout->GetVRSaveAreaBaseLoc();
+      start_regno = k8BitSize - (memlayout->GetSizeOfVRSaveArea() / (kSizeOfPtr * k2BitSize));
+      ASSERT(start_regno <= k8BitSize, "Incorrect starting GR regno for VR Save Area");
+      for (uint32 i = start_regno + static_cast<uint32>(V0); i < static_cast<uint32>(V8); i++) {
+        Operand &stackloc = aarchCGFunc.CreateStkTopOpnd(offset, dataSizeBits);
+        RegOperand &reg =
+            aarchCGFunc.GetOrCreatePhysicalRegisterOperand(static_cast<AArch64reg>(i), k64BitSize, kRegTyInt);
+        Insn &inst =
+            currCG->BuildInstruction<AArch64Insn>(aarchCGFunc.PickStInsn(dataSizeBits, PTY_i64), reg, stackloc);
+        cgFunc.GetCurBB()->AppendInsn(inst);
+        offset += (kSizeOfPtr * k2BitSize);
+      }
     }
   }
 }

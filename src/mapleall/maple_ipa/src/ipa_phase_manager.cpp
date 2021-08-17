@@ -30,25 +30,53 @@ bool IpaSccPM::PhaseRun(MIRModule &m) {
   auto *serialADM = GetManagerMemPool()->New<AnalysisDataManager>(*(admMempool.get()));
   CallGraph *cg = GET_ANALYSIS(M2MCallGraph);
   // Need reverse sccV
-  MapleVector<SCCNode*> topVec = cg->GetSCCTopVec();
+  const MapleVector<SCCNode*> &topVec = cg->GetSCCTopVec();
   for (MapleVector<SCCNode*>::const_reverse_iterator it = topVec.rbegin(); it != topVec.rend(); ++it) {
+    auto meFuncMP = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, "maple_ipa per-scc mempool");
+    auto meFuncStackMP = std::make_unique<StackMemPool>(memPoolCtrler, "");
+    for (auto *cgNode : (*it)->GetCGNodes()) {
+      MIRFunction *func = cgNode->GetMIRFunction();
+      if (func->IsEmpty()) {
+        continue;
+      }
+      m.SetCurFunction(func);
+      MemPool *versMP = new ThreadLocalMemPool(memPoolCtrler, "first verst mempool");
+      MeFunction &meFunc = *(meFuncMP->New<MeFunction>(&m, func, meFuncMP.get(), *meFuncStackMP, versMP, "unknown"));
+      func->SetMeFunc(&meFunc);
+      meFunc.PartialInit();
+      meFunc.Prepare();
+      MaplePhaseID ids[] = {&MEMeCfg::id, &MECFGOPT::id, &MESSATab::id, &MEAliasClass::id, &MESSA::id, &MEDse::id,
+          &MEMeProp::id};
+      for (MaplePhaseID id : ids) {
+        const MaplePhaseInfo *phase = MaplePhaseRegister::GetMaplePhaseRegister()->GetPhaseByID(id);
+        if (!IsQuiet()) {
+          LogInfo::MapleLogger() << "---Run " << (phase->IsAnalysis() ? "analysis" : "transform")
+                                 << " Phase [ " << phase->PhaseName() << " ]---\n";
+        }
+        if (phase->IsAnalysis()) {
+          RunAnalysisPhase<meFuncOptTy, MeFunction>(*phase, *serialADM, meFunc, 1);
+        } else {
+          RunTransformPhase<meFuncOptTy, MeFunction>(*phase, *serialADM, meFunc, 1);
+        }
+      }
+    }
     for (size_t i = 0; i < phasesSequence.size(); ++i) {
       const MaplePhaseInfo *curPhase = MaplePhaseRegister::GetMaplePhaseRegister()->GetPhaseByID(phasesSequence[i]);
       changed |= RunTransformPhase<MapleSccPhase<SCCNode>, SCCNode>(*curPhase, *serialADM, **it);
     }
+    serialADM->EraseAllAnalysisPhase();
   }
   return changed;
 }
 
 void IpaSccPM::DoPhasesPopulate(const MIRModule &mirModule) {
-  // AddPhase("propReturnNull", true);
   (void)mirModule;
 }
 
-void IpaSccPM::GetAnalysisDependence(AnalysisDep &aDep) const{
-  aDep.AddRequired<M2MClone>();
+void IpaSccPM::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
   aDep.AddRequired<M2MCallGraph>();
   aDep.AddRequired<M2MKlassHierarchy>();
+  aDep.AddPreserved<M2MCallGraph>();
   aDep.AddPreserved<M2MKlassHierarchy>();
 }
 }  // namespace maple

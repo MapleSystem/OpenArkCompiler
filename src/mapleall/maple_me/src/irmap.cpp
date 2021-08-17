@@ -250,7 +250,7 @@ static const uint8 castMatrix[kNumCastKinds][kNumCastKinds] = {
     {  0, 0, 0, 0,99,99,99, 3 },  // fp2int      +- firstCastKind
     { 99,99,99,99, 0, 0, 0, 4 },  // fpTrunc     |
     { 99,99,99,99, 2, 8, 2, 4 },  // fpExt       |
-    {  5, 7, 7, 5, 6, 6, 6, 1 },  // retype     -+
+    {  5, 7, 7,11, 6, 6, 6, 1 },  // retype     -+
 };
 
 // This function determines whether to eliminate a cast pair according to castMatrix
@@ -375,6 +375,18 @@ static int IsEliminableCastPair(CastKind firstCastKind, CastKind secondCastKind,
         return secondCastKind;
       }
       // To improved: consider unsigned
+      return -1;
+    }
+    case 11: {
+      // first retype, then int2fp
+      if (IsPrimitiveInteger(srcType)) {
+        if (IsSignedInteger(srcType) != IsSignedInteger(midType1)) {
+          // If sign diffs, use toType of retype
+          // Example: cvt f64 i64 (retype i64 u64)  ==>  cvt f64 i64
+          srcType = midType1;
+        }
+        return secondCastKind;
+      }
       return -1;
     }
     case 99: {

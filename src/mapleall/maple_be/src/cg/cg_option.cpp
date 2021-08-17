@@ -88,6 +88,7 @@ bool CGOptions::simulateSched = false;
 CGOptions::ABIType CGOptions::abiType = kABIHard;
 CGOptions::EmitFileType CGOptions::emitFileType = kAsm;
 bool CGOptions::genLongCalls = false;
+bool CGOptions::functionSections = false;
 bool CGOptions::gcOnly = false;
 bool CGOptions::quiet = false;
 bool CGOptions::doPatchLongBranch = false;
@@ -98,6 +99,7 @@ bool CGOptions::doPreLSRAOpt = false;
 bool CGOptions::doLocalRefSpill = false;
 bool CGOptions::doCalleeToSpill = false;
 bool CGOptions::replaceASM = false;
+bool CGOptions::generalRegOnly = false;
 
 enum OptionIndex : uint64 {
   kCGQuiet = kCommonOptionEnd + 1,
@@ -168,6 +170,7 @@ enum OptionIndex : uint64 {
   kDuplicateToDelPlt,
   kDuplicateToDelPlt2,
   kReplaceAsm,
+  kUseGeneralRegOnly,
   kEmitBlockMarker,
   kInsertSoe,
   kCheckArrayStore,
@@ -185,6 +188,7 @@ enum OptionIndex : uint64 {
   kABIType,
   kEmitFileType,
   kLongCalls,
+  kFunctionSections,
 };
 
 const Descriptor kUsage[] = {
@@ -266,6 +270,16 @@ const Descriptor kUsage[] = {
     kArgCheckPolicyBool,
     "  --replaceasm                \tReplace the the assembly code\n"
     "  --no-replaceasm\n",
+    "mplcg",
+    {} },
+  { kUseGeneralRegOnly,
+    kEnable,
+    "",
+    "general-reg-only",
+    kBuildTypeProduct,
+    kArgCheckPolicyBool,
+    " --general-reg-only           \tdisable floating-point or Advanced SIMD registers\n"
+    " --no-general-reg-only\n",
     "mplcg",
     {} },
   { kCGLazyBinding,
@@ -1004,6 +1018,16 @@ const Descriptor kUsage[] = {
     "  --no-long-calls\n",
     "mplcg",
     {} },
+  { kFunctionSections,
+    kEnable,
+    "",
+    "function-sections",
+    kBuildTypeProduct,
+    kArgCheckPolicyBool,
+    " --function-sections           \t \n"
+    "  --no-function-sections\n",
+    "mplcg",
+    {} },
 // End
   { kUnknown,
     0,
@@ -1239,6 +1263,9 @@ bool CGOptions::SolveOptions(const std::vector<Option> &opts, bool isDebug) {
       case kReplaceAsm:
         (opt.Type() == kEnable) ? EnableReplaceASM() : DisableReplaceASM();
         break;
+      case kUseGeneralRegOnly:
+        (opt.Type() == kEnable) ? EnableGeneralRegOnly() : DisableGeneralRegOnly();
+        break;
       case kCGLazyBinding:
         (opt.Type() == kEnable) ? EnableLazyBinding() : DisableLazyBinding();
         break;
@@ -1361,6 +1388,9 @@ bool CGOptions::SolveOptions(const std::vector<Option> &opts, bool isDebug) {
         break;
       case kLongCalls:
         (opt.Type() == kEnable) ? EnableLongCalls() : DisableLongCalls();
+        break;
+      case kFunctionSections:
+        (opt.Type() == kEnable) ? EnableFunctionSections() : DisableFunctionSections();
         break;
       case kGCOnly:
         (opt.Type() == kEnable) ? EnableGCOnly() : DisableGCOnly();

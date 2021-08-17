@@ -57,7 +57,7 @@ class MeSSALPre : public SSAPre {
   }
 
   void CollectVarForMeExpr(MeExpr &meExpr, std::vector<MeExpr*> &varVec) const override {
-    if (meExpr.GetMeOp() == kMeOpAddrof || 
+    if (meExpr.GetMeOp() == kMeOpAddrof ||
         meExpr.GetMeOp() == kMeOpAddroffunc ||
         meExpr.GetMeOp() == kMeOpConst) {
       return;
@@ -66,7 +66,7 @@ class MeSSALPre : public SSAPre {
   }
 
   void CollectVarForCand(MeRealOcc &realOcc, std::vector<MeExpr*> &varVec) const override {
-    if (realOcc.GetMeExpr()->GetMeOp() == kMeOpAddrof || 
+    if (realOcc.GetMeExpr()->GetMeOp() == kMeOpAddrof ||
         realOcc.GetMeExpr()->GetMeOp() == kMeOpAddroffunc ||
         realOcc.GetMeExpr()->GetMeOp() == kMeOpConst) {
       return;

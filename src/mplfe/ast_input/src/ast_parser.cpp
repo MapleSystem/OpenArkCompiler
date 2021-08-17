@@ -735,7 +735,7 @@ ASTValue *ASTParser::TranslateLValue2ASTValue(
       case clang::Stmt::StringLiteralClass: {
         const clang::StringLiteral &strExpr = llvm::cast<const clang::StringLiteral>(*lvExpr);
         std::string str = "";
-        if (strExpr.isWide()) {
+        if (strExpr.isWide() || strExpr.isUTF16() || strExpr.isUTF32()) {
           str = strExpr.getBytes().str();
         } else {
           str = strExpr.getString().str();

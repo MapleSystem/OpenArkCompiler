@@ -168,10 +168,10 @@ class MeFunction : public FuncEmit {
   void DumpFunctionNoSSA() const;
   void DumpMayDUFunction() const;
   void Dump(bool DumpSimpIr = false) const;
-  virtual void Prepare(unsigned long rangeNum);
+  virtual void Prepare();
   void Verify() const;
   const std::string &GetName() const {
-    return mirModule.CurFunction()->GetName();
+    return mirFunc->GetName();
   }
 
   VersionSt *GetVerSt(size_t veridx) const {

@@ -8759,8 +8759,8 @@ Operand *AArch64CGFunc::SelectCisaligned(IntrinsicopNode &intrnNode) {
   return opnd0;
 }
 
-Operand *AArch64CGFunc::SelectAArch64CSyncFetch(
-    maple::IntrinsicopNode &intrinopNode, PrimType pty, bool CalculBefore, bool isAdd) {
+Operand *AArch64CGFunc::SelectAArch64CSyncFetch(IntrinsicopNode &intrinopNode,
+                                                PrimType pty, bool CalculBefore, bool isAdd) {
   Operand *addrOpnd = HandleExpr(intrinopNode, *intrinopNode.GetNopndAt(kInsnFirstOpnd));
   Operand *calculateEndOpnd = HandleExpr(intrinopNode, *intrinopNode.GetNopndAt(kInsnSecondOpnd));
   addrOpnd = &LoadIntoRegister(*addrOpnd, intrinopNode.GetNopndAt(kInsnFirstOpnd)->GetPrimType());
@@ -8781,8 +8781,8 @@ Operand *AArch64CGFunc::SelectAArch64CSyncFetch(
   /* atomic load */
   RegOperand *fetchVal = &CreateVirtualRegisterOperand(NewVReg(kRegTyInt, regOpndByteSize));
   auto &memOpnd = CreateMemOpnd(*static_cast<RegOperand*>(addrOpnd), 0, GetPrimTypeBitSize(pty));
-  atomicBB->AppendInsn(
-      GetCG()->BuildInstruction<AArch64Insn>(PickLoadStoreExclInsn(stldColomu, false, true), *fetchVal, memOpnd));
+  atomicBB->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(
+      PickLoadStoreExclInsn(stldColomu, false, true), *fetchVal, memOpnd));
   /* select calculation */
   Operand *addResult = CalculBefore ? fetchVal : &CreateVirtualRegisterOperand(NewVReg(kRegTyInt, regOpndByteSize));
   if (isAdd) {
@@ -8792,8 +8792,7 @@ Operand *AArch64CGFunc::SelectAArch64CSyncFetch(
   }
   /* upload value in memory */
   RegOperand *resVal = &CreateVirtualRegisterOperand(NewVReg(kRegTyInt, regOpndByteSize));
-  atomicBB->AppendInsn(
-      GetCG()->BuildInstruction<AArch64Insn>(
+  atomicBB->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(
       PickLoadStoreExclInsn(stldColomu, true, true), *resVal, *addResult, memOpnd));
   /* check the result of atomic store */
   atomicBB->AppendInsn(
@@ -8803,6 +8802,73 @@ Operand *AArch64CGFunc::SelectAArch64CSyncFetch(
   atomicBB->AppendBB(*nextBB);
   SetCurBB(*nextBB);
   return CalculBefore ? addResult : fetchVal;
+}
+
+Operand *AArch64CGFunc::SelectCSyncCmpSwap(IntrinsicopNode &intrinopNode, PrimType pty, bool retBool) {
+  Operand *addrOpnd = HandleExpr(intrinopNode, *intrinopNode.GetNopndAt(kInsnFirstOpnd));
+  Operand *oldVal = HandleExpr(intrinopNode, *intrinopNode.GetNopndAt(kInsnSecondOpnd));
+  Operand *newVal = HandleExpr(intrinopNode, *intrinopNode.GetNopndAt(kInsnThirdOpnd));
+  LabelIdx atomicBBLabIdx = CreateLabel();
+  BB *atomicBB = CreateNewBB();
+  atomicBB->SetKind(BB::kBBIf);
+  atomicBB->SetAtomicBuiltIn();
+  atomicBB->AddLabel(atomicBBLabIdx);
+  SetLab2BBMap(atomicBBLabIdx, *atomicBB);
+  GetCurBB()->AppendBB(*atomicBB);
+  SetCurBB(*atomicBB);
+  uint32 typeByteSize = GetPrimTypeSize(pty);
+  uint32 byteP2Size = typeByteSize == k8ByteSize ? k3ByteSize : k2ByteSize;
+  uint32 regOpndByteSize = typeByteSize == k8ByteSize ? k8ByteSize : k4ByteSize;
+  /* ldaxr */
+  RegOperand *fetchVal = &CreateVirtualRegisterOperand(NewVReg(kRegTyInt, regOpndByteSize));
+  auto &memOpnd = CreateMemOpnd(*static_cast<RegOperand*>(addrOpnd), 0, GetPrimTypeBitSize(pty));
+  atomicBB->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(
+      PickLoadStoreExclInsn(byteP2Size, false, true), *fetchVal, memOpnd));
+  /* cmp */
+  SelectAArch64Cmp(*fetchVal, *oldVal, true, oldVal->GetSize());
+  /* creat clrex; mov w0, wzr; ret */
+  LabelIdx clrexIdx = CreateLabel();
+  BB *atomicCleanBB = CreateNewBB();
+  atomicCleanBB->SetAtomicBuiltIn();
+  atomicCleanBB->AddLabel(clrexIdx);
+  SetLab2BBMap(clrexIdx, *atomicCleanBB);
+  GetCurBB()->AppendBB(*atomicCleanBB);
+  atomicCleanBB->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_clrex));
+  if (retBool) {
+    Operand &zero = AArch64RegOperand::Get32bitZeroRegister();
+    Operand *operand0 = memPool->New<AArch64RegOperand>(R0, k32BitSize, kRegTyInt);
+    atomicCleanBB->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_wmovrr, *operand0, zero));
+  }
+  BB *atomicRetBB = CreateNewBB();
+  atomicRetBB->SetKind(BB::kBBReturn);
+  atomicCleanBB->AppendBB(*atomicRetBB);
+  atomicRetBB->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xret));
+  GetExitBBsVec().emplace_back(atomicRetBB);
+  /* bne ret bb */
+  Operand &rflag = GetOrCreateRflag();
+  LabelOperand &targetOpnd = GetOrCreateLabelOperand(clrexIdx);
+  atomicBB->AppendInsn(
+      GetCG()->BuildInstruction<AArch64Insn>(MOP_bne, rflag, targetOpnd));
+
+  LabelIdx atomicBBLabIdx2 = CreateLabel();
+  BB *atomicBB2 = CreateNewBB();
+  atomicBB2->SetKind(BB::kBBIf);
+  atomicBB2->SetAtomicBuiltIn();
+  atomicBB2->AddLabel(atomicBBLabIdx2);
+  SetLab2BBMap(atomicBBLabIdx2, *atomicBB2);
+  GetCurBB()->AppendBB(*atomicBB2);
+  SetCurBB(*atomicBB2);
+  /* stlxr */
+  RegOperand *resVal = &CreateVirtualRegisterOperand(NewVReg(kRegTyInt, regOpndByteSize));
+  RegOperand &newRegVal = LoadIntoRegister(*newVal, pty);
+  atomicBB2->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(
+      PickLoadStoreExclInsn(byteP2Size, true, true), *resVal, newRegVal, memOpnd));
+  atomicBB2->AppendInsn(
+      GetCG()->BuildInstruction<AArch64Insn>(MOP_wcbnz, *resVal, GetOrCreateLabelOperand(*atomicBB)));
+  BB *nextBB = CreateNewBB();
+  GetCurBB()->AppendBB(*nextBB);
+  SetCurBB(*nextBB);
+  return fetchVal;
 }
 
 Operand *AArch64CGFunc::SelectCSyncAddFetch(maple::IntrinsicopNode &intrinopNode, PrimType pty) {
@@ -8822,28 +8888,55 @@ Operand *AArch64CGFunc::SelectCSyncFetchSub(IntrinsicopNode &intrinopNode, PrimT
 }
 
 Operand *AArch64CGFunc::SelectCSyncBoolCmpSwap(IntrinsicopNode &intrinopNode, PrimType pty) {
-  (void)intrinopNode;
-  (void)pty;
-  CHECK_FATAL(false, "have not implement SelectCSyncBoolCmpSwap yet");
-  return nullptr;
+  return SelectCSyncCmpSwap(intrinopNode, pty, true);
 }
 Operand *AArch64CGFunc::SelectCSyncValCmpSwap(IntrinsicopNode &intrinopNode, PrimType pty) {
-  (void)intrinopNode;
-  (void)pty;
-  CHECK_FATAL(false, "have not implement SelectCSyncValCmpSwap yet");
-  return nullptr;
+  return SelectCSyncCmpSwap(intrinopNode, pty);
 }
 Operand *AArch64CGFunc::SelectCSyncLockTestSet(IntrinsicopNode &intrinopNode, PrimType pty) {
-  (void)intrinopNode;
-  (void)pty;
-  CHECK_FATAL(false, "have not implement SelectCSyncLockTestSet yet");
-  return nullptr;
+  Operand *addrOpnd = HandleExpr(intrinopNode, *intrinopNode.GetNopndAt(kInsnFirstOpnd));
+  Operand *valOpnd = HandleExpr(intrinopNode, *intrinopNode.GetNopndAt(kInsnSecondOpnd));
+  /* Create BB which includes atomic built_in function */
+  LabelIdx atomicBBLabIdx = CreateLabel();
+  BB *atomicBB = CreateNewBB();
+  atomicBB->SetKind(BB::kBBIf);
+  atomicBB->SetAtomicBuiltIn();
+  atomicBB->AddLabel(atomicBBLabIdx);
+  SetLab2BBMap(atomicBBLabIdx, *atomicBB);
+  GetCurBB()->AppendBB(*atomicBB);
+  SetCurBB(*atomicBB);
+
+  uint32 typeByteSize = GetPrimTypeSize(pty);
+  uint32 byteP2Size = typeByteSize == k8ByteSize ? k3ByteSize : k2ByteSize;
+  uint32 regOpndByteSize = typeByteSize == k8ByteSize ? k8ByteSize : k4ByteSize;
+  /* atomic load */
+  RegOperand *fetchVal = &CreateVirtualRegisterOperand(NewVReg(kRegTyInt, regOpndByteSize));
+  auto &memOpnd = CreateMemOpnd(*static_cast<RegOperand*>(addrOpnd), 0, GetPrimTypeBitSize(pty));
+  atomicBB->AppendInsn(
+      GetCG()->BuildInstruction<AArch64Insn>(PickLoadStoreExclInsn(byteP2Size, false, true), *fetchVal, memOpnd));
+  /* upload value in memory */
+  RegOperand *resVal = &CreateVirtualRegisterOperand(NewVReg(kRegTyInt, regOpndByteSize));
+  RegOperand &newRegVal = LoadIntoRegister(*valOpnd, pty);
+  atomicBB->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(
+      PickLoadStoreExclInsn(byteP2Size, true, true), *resVal, newRegVal, memOpnd));
+
+  /* check the result of atomic store */
+  atomicBB->AppendInsn(
+      GetCG()->BuildInstruction<AArch64Insn>(MOP_wcbnz, *resVal, GetOrCreateLabelOperand(*atomicBB)));
+
+  BB *nextBB = CreateNewBB();
+  atomicBB->AppendBB(*nextBB);
+  SetCurBB(*nextBB);
+  return fetchVal;
 }
 Operand *AArch64CGFunc::SelectCSyncLockRelease(IntrinsicopNode &intrinopNode, PrimType pty) {
-  (void)intrinopNode;
-  (void)pty;
-  CHECK_FATAL(false, "have not implement SelectCSyncLockRelease yet");
-  return nullptr;
+  Operand *addrOpnd = HandleExpr(intrinopNode, *intrinopNode.GetNopndAt(kInsnFirstOpnd));
+  MOperator mOp = (pty == PTY_u32) ? MOP_wstlr : MOP_xstlr;
+  AArch64MemOperand *memOperand = memPool->New<AArch64MemOperand>(R0, 0, k64BitSize);
+  Operand &zero =
+      (pty == PTY_u32) ? AArch64RegOperand::Get32bitZeroRegister() : AArch64RegOperand::Get64bitZeroRegister();
+  GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(mOp, zero, *memOperand));
+  return addrOpnd;
 }
 
 Operand *AArch64CGFunc::SelectCalignup(IntrinsicopNode &intrnNode) {
