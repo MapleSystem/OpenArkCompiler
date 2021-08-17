@@ -10,7 +10,7 @@ ADDMODULEPHASE("javaintrnlowering", JAVALANG)
 ADDMODULEPHASE("inline", Options::O2 && Options::useInline)
 ADDMODULEPHASE("simplify", Options::O2)
 ADDMODULEPHASE("ConstantFold", Options::O2)
-// ipa phase
+// ipa phase manager
 // ADDMODULEPHASE("IpaSccPM", Options::O2)
 // me phase manager is also a phase itself.
 ADDMAPLEPHASE("meFuncPM", IsRunMe());

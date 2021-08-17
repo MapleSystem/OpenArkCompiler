@@ -452,6 +452,11 @@ bool EnhanceStrLdrAArch64::IsEnhanceAddImm(MOperator prevMop) {
   return prevMop == MOP_xaddrri12 ||  prevMop == MOP_waddrri12;
 }
 
+bool IsSameRegisterOperation(RegOperand &desMovOpnd, RegOperand &uxtDestOpnd, RegOperand &uxtFromOpnd) {
+  return ((desMovOpnd.GetRegisterNumber() == uxtDestOpnd.GetRegisterNumber()) &&
+          (uxtDestOpnd.GetRegisterNumber() == uxtFromOpnd.GetRegisterNumber()));
+}
+
 /* Combining 2 STRs into 1 stp or 2 LDRs into 1 ldp */
 void CombineContiLoadAndStoreAArch64::Run(BB &bb, Insn &insn) {
   MOperator thisMop = insn.GetMachineOpcode();
@@ -656,7 +661,7 @@ void EliminateSpecifcUXTAArch64::Run(BB &bb, Insn &insn) {
   if (thisMop == MOP_xuxtb32) {
     if (prevInsn->GetMachineOpcode() == MOP_xmovri32 || prevInsn->GetMachineOpcode() == MOP_xmovri64) {
       auto &dstMovOpnd = static_cast<RegOperand&>(prevInsn->GetOperand(kInsnFirstOpnd));
-      if (dstMovOpnd.GetRegisterNumber() != regOpnd1.GetRegisterNumber()) {
+      if (!IsSameRegisterOperation(dstMovOpnd, regOpnd1, regOpnd0)) {
         return;
       }
       Operand &opnd = prevInsn->GetOperand(kInsnSecondOpnd);
@@ -677,6 +682,10 @@ void EliminateSpecifcUXTAArch64::Run(BB &bb, Insn &insn) {
     }
   } else if (thisMop == MOP_xuxth32) {
     if (prevInsn->GetMachineOpcode() == MOP_xmovri32 || prevInsn->GetMachineOpcode() == MOP_xmovri64) {
+      auto &dstMovOpnd = static_cast<RegOperand&>(prevInsn->GetOperand(kInsnFirstOpnd));
+      if (!IsSameRegisterOperation(dstMovOpnd, regOpnd1, regOpnd0)) {
+        return;
+      }
       Operand &opnd = prevInsn->GetOperand(kInsnSecondOpnd);
       if (opnd.IsIntImmediate()) {
         auto &immOpnd = static_cast<ImmOperand&>(opnd);

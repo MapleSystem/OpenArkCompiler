@@ -209,7 +209,8 @@ class AliasClass : public AnalysisResult {
   void SetPtrOpndNextLevNADS(const BaseNode &opnd, AliasElem *aliasElem, bool hasNoPrivateDefEffect);
   void SetPtrOpndsNextLevNADS(unsigned int start, unsigned int end, MapleVector<BaseNode*> &opnds,
                               bool hasNoPrivateDefEffect);
-  void SetAggPtrFieldsNextLevNADS(OriginalSt &ost);
+  void SetAggPtrFieldsNextLevNADS(const OriginalSt &ost);
+  void SetPtrFieldsOfAggNextLevNADS(const BaseNode *opnd, const AliasElem *aliasElem);
   void SetAggOpndPtrFieldsNextLevNADS(MapleVector<BaseNode*> &opnds);
   void ApplyUnionForFieldsInAggCopy(const OriginalSt *lhsost, const OriginalSt *rhsost);
   void ApplyUnionForDassignCopy(AliasElem &lhsAe, AliasElem *rhsAe, BaseNode &rhs);

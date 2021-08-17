@@ -437,7 +437,8 @@ void MPLFEOptions::DumpUsage() const {
 }
 
 void MPLFEOptions::DumpVersion() const {
-  std::cout << "Version: " << std::endl;
+  // 2021.8.16 Version: C Enhanced Evolution 1.0.0.B002
+  std::cout << "Version: C Enhanced Evolution 1.0.0.B002" << std::endl;
 }
 
 bool MPLFEOptions::ProcessHelp(const Option &opt) {

@@ -547,6 +547,7 @@ class DebugInfo {
         builder(nullptr),
         mplSrcIdx(0),
         debugInfoLength(0),
+        curFunction(nullptr),
         compileMsg(nullptr),
         parentDieStack(m->GetMPAllocator().Adapter()),
         idDieMap(std::less<uint32>(), m->GetMPAllocator().Adapter()),
@@ -677,6 +678,14 @@ class DebugInfo {
     return compUnit;
   }
 
+  MIRFunction *GetCurFunction() {
+    return curFunction;
+  }
+
+  void SetCurFunction(MIRFunction *func) {
+    curFunction = func;
+  }
+
   void SetTyidxDieIdMap(const TyIdx tyIdx, const DBGDie *die) {
     tyIdxDieIdMap[tyIdx.GetIdx()] = die->GetId();
   }
@@ -698,7 +707,7 @@ class DebugInfo {
   DBGDie *GetOrCreateVolatileTypeDie(TypeAttrs attr, DBGDie *typedie);
   DBGDie *GetOrCreateFuncDeclDie(MIRFunction *func);
   DBGDie *GetOrCreateFuncDefDie(MIRFunction *func, uint32 lnum);
-  DBGDie *GetOrCreatePrimTypeDie(PrimType pty);
+  DBGDie *GetOrCreatePrimTypeDie(MIRType *ty);
   DBGDie *GetOrCreateTypeDie(MIRType *type);
   DBGDie *GetOrCreatePointTypeDie(const MIRPtrType *type);
   DBGDie *GetOrCreateArrayTypeDie(const MIRArrayType *type);
@@ -717,6 +726,7 @@ class DebugInfo {
   DBGBuilder *builder;
   GStrIdx mplSrcIdx;
   uint32 debugInfoLength;
+  MIRFunction *curFunction;
 
   // for compilation messages
   DBGCompileMsgInfo *compileMsg;

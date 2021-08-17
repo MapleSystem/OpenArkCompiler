@@ -869,6 +869,18 @@ class CGOptions : public MapleDriverOptionBase {
     return replaceASM;
   }
 
+  static void EnableGeneralRegOnly() {
+    generalRegOnly = true;
+  }
+
+  static void DisableGeneralRegOnly() {
+    generalRegOnly = false;
+  }
+
+  static bool UseGeneralRegOnly() {
+    return generalRegOnly;
+  }
+
   static void EnablePrintFunction() {
     printFunction = true;
   }
@@ -1010,6 +1022,18 @@ class CGOptions : public MapleDriverOptionBase {
     return genLongCalls;
   }
 
+  static void EnableFunctionSections() {
+    functionSections = true;
+  }
+
+  static void DisableFunctionSections() {
+    functionSections = false;
+  }
+
+  static bool IsFunctionSections() {
+    return functionSections;
+  }
+
   static void EnableGCOnly() {
     gcOnly = true;
   }
@@ -1095,6 +1119,7 @@ class CGOptions : public MapleDriverOptionBase {
   static EmitFileType emitFileType;
   /* if true generate adrp/ldr/blr */
   static bool genLongCalls;
+  static bool functionSections;
   static bool gcOnly;
   static bool doPreSchedule;
   static bool emitBlockMarker;
@@ -1115,6 +1140,7 @@ class CGOptions : public MapleDriverOptionBase {
   static bool doLocalRefSpill;
   static bool doCalleeToSpill;
   static bool replaceASM;
+  static bool generalRegOnly;
   static std::string literalProfile;
 };
 }  /* namespace maplebe */

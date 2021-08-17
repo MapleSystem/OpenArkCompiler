@@ -103,11 +103,11 @@ void ASTVar::GenerateInitStmt4StringLiteral(ASTExpr *initASTExpr, UniqueFEIRVar 
 }
 
 void ASTVar::GenerateInitStmtImpl(std::list<UniqueFEIRStmt> &stmts) {
-  (void)Translate2MIRSymbol();
+  MIRSymbol *sym = Translate2MIRSymbol();
   if (initExpr == nullptr) {
     return;
   }
-  if (genAttrs.GetAttr(GENATTR_static)) {
+  if (genAttrs.GetAttr(GENATTR_static) && sym->GetKonst() != nullptr) {
     return;
   }
   UniqueFEIRExpr initFeirExpr = initExpr->Emit2FEExpr(stmts);
@@ -136,7 +136,11 @@ MIRSymbol *ASTVar::Translate2MIRSymbol() const {
   MIRSymbol *mirSymbol = feirVar->GenerateMIRSymbol(FEManager::GetMIRBuilder());
   if (initExpr != nullptr && genAttrs.GetAttr(GENATTR_static)) {
     MIRConst *cst = initExpr->GenerateMIRConst();
-    mirSymbol->SetKonst(cst);
+    if (cst->GetKind() != kConstLblConst) {
+      mirSymbol->SetKonst(cst);
+    } else {
+      mirSymbol->SetKonst(nullptr);
+    }
   }
   if (!sectionAttr.empty()) {
     mirSymbol->sectionAttr = GlobalTables::GetUStrTable().GetOrCreateStrIdxFromName(sectionAttr);

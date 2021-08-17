@@ -707,7 +707,7 @@ ASTValue *ASTParser::TranslateConstantValue2ASTValue(MapleAllocator &allocator, 
     } else if (result.Val.isVector()) {
       // vector type var must be init by initListExpr
       return nullptr;
-    } else if (result.Val.isMemberPointer() || result.Val.isAddrLabelDiff()) {
+    } else if (result.Val.isMemberPointer()) {
       CHECK_FATAL(false, "NIY");
     }
     // Others: Agg const processed in `InitListExpr`
@@ -735,7 +735,7 @@ ASTValue *ASTParser::TranslateLValue2ASTValue(
       case clang::Stmt::StringLiteralClass: {
         const clang::StringLiteral &strExpr = llvm::cast<const clang::StringLiteral>(*lvExpr);
         std::string str = "";
-        if (strExpr.isWide()) {
+        if (strExpr.isWide() || strExpr.isUTF16() || strExpr.isUTF32()) {
           str = strExpr.getBytes().str();
         } else {
           str = strExpr.getString().str();

@@ -91,6 +91,7 @@ class AArch64CGFunc : public CGFunc {
   void MergeReturn() override;
   RegOperand *ExtractNewMemBase(MemOperand &memOpnd);
   void SelectDassign(DassignNode &stmt, Operand &opnd0) override;
+  void SelectDassignoff(DassignoffNode &stmt, Operand &opnd0) override;
   void SelectRegassign(RegassignNode &stmt, Operand &opnd0) override;
   void SelectAssertNull(UnaryStmtNode &stmt) override;
   void SelectAsm(AsmNode &stmt) override;
@@ -100,6 +101,7 @@ class AArch64CGFunc : public CGFunc {
   AArch64MemOperand *FixLargeMemOpnd(MOperator mOp, MemOperand &memOpnd, uint32 dSize, uint32 opndIdx);
   void SelectAggDassign(DassignNode &stmt) override;
   void SelectIassign(IassignNode &stmt) override;
+  void SelectIassignoff(IassignoffNode &stmt) override;
   void SelectAggIassign(IassignNode &stmt, Operand &lhsAddrOpnd) override;
   void SelectReturn(Operand *opnd0) override;
   void SelectIgoto(Operand *opnd0) override;
@@ -129,6 +131,7 @@ class AArch64CGFunc : public CGFunc {
   Operand *SelectCSyncValCmpSwap(IntrinsicopNode &intrinopNode, PrimType pty) override;
   Operand *SelectCSyncLockTestSet(IntrinsicopNode &intrinopNode, PrimType pty) override;
   Operand *SelectCSyncLockRelease(IntrinsicopNode &intrinopNode, PrimType pty) override;
+  Operand *SelectCReturnAddress(IntrinsicopNode &intrinopNode) override;
   void SelectMembar(StmtNode &membar) override;
   void SelectComment(CommentNode &comment) override;
 
@@ -138,6 +141,7 @@ class AArch64CGFunc : public CGFunc {
 
   void SelectAddrof(Operand &result, StImmOperand &stImm);
   void SelectAddrof(Operand &result, AArch64MemOperand &memOpnd);
+  Operand *SelectCSyncCmpSwap(IntrinsicopNode &intrinopNode, PrimType pty, bool retBool = false);
   Operand *SelectAddrof(AddrofNode &expr) override;
   Operand &SelectAddrofFunc(AddroffuncNode &expr) override;
   Operand &SelectAddrofLabel(AddroflabelNode &expr) override;
@@ -280,6 +284,7 @@ class AArch64CGFunc : public CGFunc {
   RegOperand *SelectVectorSum(PrimType rtype, Operand *o1, PrimType oType) override;
   RegOperand *SelectVectorTableLookup(PrimType rType, Operand *o1, Operand *o2) override;
 
+  void SelectVectorCvt(Operand *res, PrimType rType, Operand *o1, PrimType oType);
   void SelectVectorZip(PrimType rType, Operand *o1, Operand *o2);
   void PrepareVectorOperands(Operand **o1, PrimType &oty1, Operand **o2, PrimType &oty2);
   RegOperand *AdjustOneElementVectorOperand(PrimType oType, RegOperand *opnd);

@@ -379,7 +379,11 @@ Operand *HandleVectorMerge(IntrinsicopNode &intrnNode, CGFunc &cgFunc) {
     MIRConst *mirConst = static_cast<ConstvalNode *>(index)->GetConstVal();
     iNum = safe_cast<MIRIntConst>(mirConst)->GetValue();
     PrimType ty = intrnNode.Opnd(0)->GetPrimType();
-    iNum *= GetPrimTypeSize(ty) / GetPrimTypeLanes(ty);                /* 64x2: 0-1 -> 0-8 */
+    if (!IsPrimitiveVector(ty)) {
+      iNum = 0;
+    } else {
+      iNum *= GetPrimTypeSize(ty) / GetPrimTypeLanes(ty);              /* 64x2: 0-1 -> 0-8 */
+    }
   } else {                                                             /* 32x4: 0-3 -> 0-12 */
     CHECK_FATAL(0, "VectorMerge does not have const index");
   }
@@ -629,6 +633,8 @@ Operand *HandleIntrinOp(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) 
       return cgFunc.SelectCSyncLockRelease(intrinsicopNode, PTY_i32);
     case INTRN_C___sync_lock_release_8:
       return cgFunc.SelectCSyncLockRelease(intrinsicopNode, PTY_i64);
+    case INTRN_C__builtin_return_address:
+      return cgFunc.SelectCReturnAddress(intrinsicopNode);
     case INTRN_vector_sum_v8u8: case INTRN_vector_sum_v8i8:
     case INTRN_vector_sum_v4u16: case INTRN_vector_sum_v4i16:
     case INTRN_vector_sum_v2u32: case INTRN_vector_sum_v2i32:
@@ -981,6 +987,14 @@ void HandleDassign(StmtNode &stmt, CGFunc &cgFunc) {
   }
 }
 
+void HandleDassignoff(StmtNode &stmt, CGFunc &cgFunc) {
+  auto &dassignoffNode = static_cast<DassignoffNode&>(stmt);
+  BaseNode *rhs = dassignoffNode.GetRHS();
+  CHECK_FATAL(rhs->GetOpCode() == OP_constval, "dassignoffNode without constval");
+  Operand *opnd0 = cgFunc.HandleExpr(dassignoffNode, *rhs);
+  cgFunc.SelectDassignoff(dassignoffNode, *opnd0);
+}
+
 void HandleRegassign(StmtNode &stmt, CGFunc &cgFunc) {
   ASSERT(stmt.GetOpCode() == OP_regassign, "expect regAssign");
   auto &regAssignNode = static_cast<RegassignNode&>(stmt);
@@ -1009,6 +1023,12 @@ void HandleIassign(StmtNode &stmt, CGFunc &cgFunc) {
     }
     cgFunc.SelectAggIassign(iassignNode, *cgFunc.HandleExpr(stmt, *addrNode));
   }
+}
+
+void HandleIassignoff(StmtNode &stmt, CGFunc &cgFunc) {
+  ASSERT(stmt.GetOpCode() == OP_iassignoff, "expect iassignoff");
+  auto &iassignoffNode = static_cast<IassignoffNode&>(stmt);
+  cgFunc.SelectIassignoff(iassignoffNode);
 }
 
 void HandleEval(StmtNode &stmt, CGFunc &cgFunc) {
@@ -1082,8 +1102,10 @@ void InitHandleStmtFactory() {
   RegisterFactoryFunction<HandleStmtFactory>(OP_intrinsiccallwithtype, HandleIntrinCall);
   RegisterFactoryFunction<HandleStmtFactory>(OP_intrinsiccallwithtypeassigned, HandleIntrinCall);
   RegisterFactoryFunction<HandleStmtFactory>(OP_dassign, HandleDassign);
+  RegisterFactoryFunction<HandleStmtFactory>(OP_dassignoff, HandleDassignoff);
   RegisterFactoryFunction<HandleStmtFactory>(OP_regassign, HandleRegassign);
   RegisterFactoryFunction<HandleStmtFactory>(OP_iassign, HandleIassign);
+  RegisterFactoryFunction<HandleStmtFactory>(OP_iassignoff, HandleIassignoff);
   RegisterFactoryFunction<HandleStmtFactory>(OP_eval, HandleEval);
   RegisterFactoryFunction<HandleStmtFactory>(OP_rangegoto, HandleRangeGoto);
   RegisterFactoryFunction<HandleStmtFactory>(OP_membarrelease, HandleMembar);

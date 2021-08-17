@@ -305,8 +305,12 @@ void MeSSALPre::CreateMembarOccAtCatch(BB &bb) {
 
 // only handle the leaf of load, because all other expressions has been done by
 // previous SSAPre
-void MeSSALPre::BuildWorkListExpr(MeStmt &meStmt, int32 seqStmt, MeExpr &meExpr, bool, MeExpr*,
-                                  bool, bool) {
+void MeSSALPre::BuildWorkListExpr(MeStmt &meStmt, int32 seqStmt, MeExpr &meExpr, bool isRebuild, MeExpr *tmpVar,
+                                  bool isRootExpr, bool insertSorted) {
+  (void) isRebuild;
+  (void) tmpVar;
+  (void) isRootExpr;
+  (void) insertSorted;
   MeExprOp meOp = meExpr.GetMeOp();
   switch (meOp) {
     case kMeOpVar: {
@@ -336,6 +340,9 @@ void MeSSALPre::BuildWorkListExpr(MeStmt &meStmt, int32 seqStmt, MeExpr &meExpr,
       if (preKind != kAddrPre) {
         break;
       }
+      if (!MeOption::lpre4Address) {
+        break;
+      }
       auto *addrOfMeExpr = static_cast<AddrofMeExpr *>(&meExpr);
       const OriginalSt *ost = ssaTab->GetOriginalStFromID(addrOfMeExpr->GetOstIdx());
       if (ost->IsLocal()) {  // skip lpre for stack addresses as they are cheap and need keep for rc
@@ -346,6 +353,42 @@ void MeSSALPre::BuildWorkListExpr(MeStmt &meStmt, int32 seqStmt, MeExpr &meExpr,
     }
     case kMeOpAddroffunc: {
       if (preKind != kAddrPre) {
+        break;
+      }
+      if (!MeOption::lpre4Address) {
+        break;
+      }
+      (void)CreateRealOcc(meStmt, seqStmt, meExpr, false);
+      break;
+    }
+    case kMeOpConst: {
+      if (!MeOption::lpre4LargeInt) {
+        break;
+      }
+      if (!IsPrimitiveInteger(meExpr.GetPrimType())) {
+        break;
+      }
+      MIRIntConst *intConst = dynamic_cast<MIRIntConst *>(static_cast<ConstMeExpr&>(meExpr).GetConstVal());
+      if (intConst == nullptr) {
+        break;
+      }
+      if ((intConst->GetValue() >> 12) == 0) {
+        break;  // not promoting if value fits in 12 bits
+      }
+      if (!meStmt.GetBB()->GetAttributes(kBBAttrIsInLoop)) {
+        break;
+      }
+      if (meStmt.GetOp() != OP_brfalse && meStmt.GetOp() != OP_brtrue) {
+        break;
+      }
+      OpMeExpr *compareX = dynamic_cast<OpMeExpr *>(meStmt.GetOpnd(0));
+      if (compareX == nullptr) {
+        break;
+      }
+      if (!kOpcodeInfo.IsCompare(compareX->GetOp())) {
+        break;
+      }
+      if (compareX->GetOpnd(1) != &meExpr) {
         break;
       }
       (void)CreateRealOcc(meStmt, seqStmt, meExpr, false);
@@ -446,9 +489,11 @@ bool MESSALPre::PhaseRun(maple::MeFunction &f) {
       ssaUpdate.Run();
     }
   }
-  MeLowerGlobals lowerGlobals(f, f.GetMeSSATab());
-  lowerGlobals.Run();
-  {
+  if (MeOption::lpre4Address) {
+    MeLowerGlobals lowerGlobals(f, f.GetMeSSATab());
+    lowerGlobals.Run();
+  }
+  if (MeOption::lpre4Address || MeOption::lpre4LargeInt) {
     MeSSALPre ssaLpre(f, *irMap, *dom, *ApplyTempMemPool(), *ApplyTempMemPool(), kAddrPre, lpreLimitUsed);
     ssaLpre.SetSpillAtCatch(MeOption::spillAtCatch);
     if (DEBUGFUNC_NEWPM(f)) {

@@ -2356,6 +2356,24 @@ class AsmMeStmt : public NaryMeStmt, public MuChiMePart, public AssignedPart {
             clobberList = static_cast<const AsmNode *>(stt)->clobberList;
             gotoLabels = static_cast<const AsmNode *>(stt)->gotoLabels;
         }
+
+  AsmMeStmt(MapleAllocator *alloc, const AsmMeStmt *stt)
+      : NaryMeStmt(alloc, stt),
+        MuChiMePart(alloc),
+        AssignedPart(alloc),
+        asmString(alloc->GetMemPool()),
+        inputConstraints(alloc->Adapter()),
+        outputConstraints(alloc->Adapter()),
+        clobberList(alloc->Adapter()),
+        gotoLabels(alloc->Adapter()),
+        qualifiers(stt->qualifiers) {
+    asmString = stt->asmString;
+    inputConstraints = stt->inputConstraints;
+    outputConstraints = stt->outputConstraints;
+    clobberList = stt->clobberList;
+    gotoLabels = stt->gotoLabels;
+  }
+
   virtual ~AsmMeStmt() = default;
   void Dump(const IRMap*) const;
   MapleMap<OStIdx, ScalarMeExpr *> *GetMuList() {
