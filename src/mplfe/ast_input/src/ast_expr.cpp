@@ -430,6 +430,10 @@ MIRConst *ASTCastExpr::GenerateMIRIntConst() const {
           static_cast<int64>(static_cast<MIRAddrofConst*>(childConst)->GetOffset()),
           *GlobalTables::GetTypeTable().GetPrimType(PTY_i64));
     }
+    case kConstLblConst: {
+      // init by initListExpr, Only MIRConst kind is set here.
+      return childConst;
+    }
     default: {
       CHECK_FATAL(false, "Unsupported pty type: %d", GetConstantValue()->pty);
       return nullptr;
@@ -972,7 +976,12 @@ MIRConst *ASTInitListExpr::GenerateMIRConstForArray() const {
   auto arrayMirType = static_cast<MIRArrayType*>(initListType);
   CHECK_FATAL(initExprs.size() <= arrayMirType->GetSizeArrayItem(0), "InitExpr size must less or equal array size");
   for (size_t i = 0; i < initExprs.size(); ++i) {
-    aggConst->AddItem(initExprs[i]->GenerateMIRConst(), 0);
+    auto konst = initExprs[i]->GenerateMIRConst();
+    if (konst->GetKind() == kConstLblConst) {
+      // init by initListExpr, Only MIRConst kind is set here.
+      return konst;
+    }
+    aggConst->AddItem(konst, 0);
   }
   if (HasArrayFiller()) {
     auto fillerConst = arrayFillerExpr->GenerateMIRConst();
@@ -1002,7 +1011,12 @@ MIRConst *ASTInitListExpr::GenerateMIRConstForStruct() const {
     if (initExprs[i] == nullptr) {
       continue;
     }
-    aggConst->AddItem(initExprs[i]->GenerateMIRConst(), i + 1);
+    auto konst = initExprs[i]->GenerateMIRConst();
+    if (konst->GetKind() == kConstLblConst) {
+      // init by initListExpr, Only MIRConst kind is set here.
+      return konst;
+    }
+    aggConst->AddItem(konst, i + 1);
   }
   return aggConst;
 }
@@ -1457,7 +1471,16 @@ MIRConst *ASTMemberExpr::GenerateMIRConstImpl() const {
     fieldOffset += memberExpr->GetFieldOffsetBits() / kOneByte;
     base = memberExpr->GetBaseExpr();
   }
-  MIRAddrofConst *konst = static_cast<MIRAddrofConst*>(base->GenerateMIRConst());
+  MIRConst *baseConst = base->GenerateMIRConst();
+  MIRAddrofConst *konst = nullptr;
+  if (baseConst->GetKind() == kConstAddrof) {
+    konst = static_cast<MIRAddrofConst*>(baseConst);
+  } else if (baseConst->GetKind() == kConstInt) {
+    return FEManager::GetModule().GetMemPool()->New<MIRIntConst>(static_cast<int64>(fieldOffset),
+                                                                 *GlobalTables::GetTypeTable().GetInt64());
+  } else {
+    CHECK_FATAL(false, "base const kind NYI.");
+  }
   MIRType *baseStructType =
       base->GetType()->IsMIRPtrType() ? static_cast<MIRPtrType*>(base->GetType())->GetPointedType() :
       base->GetType();
@@ -1549,7 +1572,6 @@ UniqueFEIRExpr ASTDesignatedInitUpdateExpr::Emit2FEExprImpl(std::list<UniqueFEIR
 MIRConst *ASTBinaryOperatorExpr::GenerateMIRConstImpl() const {
   MIRConst *leftConst = leftExpr->GenerateMIRConst();
   MIRConst *rightConst = nullptr;
-
   if (opcode == OP_lior) {
     if (!leftConst->IsZero()) {
       return GlobalTables::GetIntConstTable().GetOrCreateIntConst(1,
@@ -1566,6 +1588,10 @@ MIRConst *ASTBinaryOperatorExpr::GenerateMIRConstImpl() const {
     }
   }
   rightConst = rightExpr->GenerateMIRConst();
+  if (leftConst->GetKind() == kConstLblConst || rightConst->GetKind() == kConstLblConst) {
+    // init by initListExpr, Only MIRConst kind is set here.
+    return leftConst->GetKind() == kConstLblConst ? leftConst : rightConst;
+  }
   if (opcode == OP_land) {
     if (leftConst->IsZero()) {
       return GlobalTables::GetIntConstTable().GetOrCreateIntConst(0,

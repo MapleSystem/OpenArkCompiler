@@ -294,10 +294,10 @@ void LoopFinder::markExtraEntryAndEncl() {
           }
         }
       }
-      for (int id = 0; id < loopEnclosure.size(); id++) {
-        if (loopEnclosure[id] != nullptr && !inLoop[id]) {
-          loop->InsertLoopMembers(*loopEnclosure[id]);
-        }
+    }
+    for (int id = 0; id < loopEnclosure.size(); id++) {
+      if (loopEnclosure[id] != nullptr && !inLoop[id]) {
+        loop->InsertLoopMembers(*loopEnclosure[id]);
       }
     }
   }

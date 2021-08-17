@@ -147,6 +147,12 @@ bool AddrofNode::IsVolatile(const MIRModule &mod) const {
   return symbol->IsVolatile();
 }
 
+bool DreadoffNode::IsVolatile(const MIRModule &mod) const {
+  auto *symbol = mod.CurFunction()->GetLocalOrGlobalSymbol(stIdx);
+  ASSERT(symbol != nullptr, "null ptr check on symbol");
+  return symbol->IsVolatile();
+}
+
 bool DassignNode::AssigningVolatile(const MIRModule &mod) const {
   auto *symbol = mod.CurFunction()->GetLocalOrGlobalSymbol(stIdx);
   ASSERT(symbol != nullptr, "null ptr check on symbol");
@@ -555,6 +561,14 @@ void AddrofNode::Dump(int32) const {
   }
 }
 
+void DreadoffNode::Dump(int32) const {
+  LogInfo::MapleLogger() << kOpcodeInfo.GetTableItemAt(GetOpCode()).name << " " << GetPrimTypeName(GetPrimType());
+  const MIRSymbol *st = theMIRModule->CurFunction()->GetLocalOrGlobalSymbol(stIdx);
+  LogInfo::MapleLogger() << (stIdx.Islocal() ? " %" : " $");
+  LogInfo::MapleLogger() << st->GetName();
+  LogInfo::MapleLogger() << " " << offset;
+}
+
 void RegreadNode::Dump(int32) const {
   LogInfo::MapleLogger() << kOpcodeInfo.GetTableItemAt(GetOpCode()).name << " " << GetPrimTypeName(GetPrimType());
   if (regIdx >= 0) {
@@ -653,6 +667,20 @@ void DassignNode::Dump(int32 indent) const {
   const MIRSymbol *st = theMIRModule->CurFunction()->GetLocalOrGlobalSymbol(stIdx);
   LogInfo::MapleLogger() << (st->IsLocal() ? " %" : " $");
   LogInfo::MapleLogger() << st->GetName() << " " << fieldID;
+  LogInfo::MapleLogger() << " (";
+  if (GetRHS() != nullptr) {
+    GetRHS()->Dump(indent + 1);
+  } else {
+    LogInfo::MapleLogger() << "/*empty-rhs*/";
+  }
+  LogInfo::MapleLogger() << ")\n";
+}
+
+void DassignoffNode::Dump(int32 indent) const {
+  StmtNode::DumpBase(indent);
+  const MIRSymbol *st = theMIRModule->CurFunction()->GetLocalOrGlobalSymbol(stIdx);
+  LogInfo::MapleLogger() << (st->IsLocal() ? " %" : " $");
+  LogInfo::MapleLogger() << st->GetName() << " " << offset;
   LogInfo::MapleLogger() << " (";
   if (GetRHS() != nullptr) {
     GetRHS()->Dump(indent + 1);
@@ -1238,6 +1266,30 @@ void EmitStr(const MapleString &mplStr) {
   }
 
   LogInfo::MapleLogger() << "\"\n";
+}
+
+AsmNode *AsmNode::CloneTree(MapleAllocator &allocator) const {
+  auto *node = allocator.GetMemPool()->New<AsmNode>(allocator, *this);
+  for (size_t i = 0; i < GetNopndSize(); ++i) {
+    node->GetNopnd().push_back(GetNopndAt(i)->CloneTree(allocator));
+  }
+  for (size_t i = 0; i < inputConstraints.size(); ++i) {
+    node->inputConstraints.push_back(inputConstraints[i]);
+  }
+  for (size_t i = 0; i < asmOutputs.size(); ++i) {
+    node->asmOutputs.push_back(asmOutputs[i]);
+  }
+  for (size_t i = 0; i < outputConstraints.size(); ++i) {
+    node->outputConstraints.push_back(outputConstraints[i]);
+  }
+  for (size_t i = 0; i < clobberList.size(); ++i) {
+    node->clobberList.push_back(clobberList[i]);
+  }
+  for (size_t i = 0; i < gotoLabels.size(); ++i) {
+    node->gotoLabels.push_back(gotoLabels[i]);
+  }
+  node->SetNumOpnds(GetNopndSize());
+  return node;
 }
 
 void AsmNode::DumpOutputs(int32 indent, std::string &uStr) const {

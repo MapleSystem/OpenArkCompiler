@@ -78,6 +78,7 @@ class EnhanceStrLdrAArch64 : public PeepPattern {
 
  private:
   bool IsEnhanceAddImm(MOperator prevMop);
+  bool IsSameRegisterOperation(RegOperand &desMovOpnd, RegOperand &uxtDestOpnd, RegOperand &uxtFromOpnd);
 };
 
 /* Eliminate the sxt[b|h|w] w0, w0;, when w0 is satisify following:

@@ -399,6 +399,10 @@ UniqueFEIRExpr ASTCallExpr::EmitBuiltinSyncLockTestAndSet4(std::list<UniqueFEIRS
   return CreateIntrinsicopForC(stmts, INTRN_C___sync_lock_test_and_set_4);
 }
 
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinReturnAddress(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C__builtin_return_address);
+}
+
 UniqueFEIRExpr ASTCallExpr::EmitBuiltinAlloca(std::list<UniqueFEIRStmt> &stmts) const {
   auto arg = args[0]->Emit2FEExpr(stmts);
   auto alloca = std::make_unique<FEIRExprUnary>(OP_alloca, mirType, std::move(arg));

@@ -569,7 +569,7 @@ void AliasClass::SetPtrOpndsNextLevNADS(unsigned int start, unsigned int end,
   }
 }
 
-void AliasClass::SetAggPtrFieldsNextLevNADS(OriginalSt &ost) {
+void AliasClass::SetAggPtrFieldsNextLevNADS(const OriginalSt &ost) {
   MIRTypeKind typeKind = ost.GetType()->GetKind();
   if (typeKind == kTypeStruct || typeKind == kTypeUnion || typeKind == kTypeStructIncomplete) {
     auto *structType = static_cast<MIRStructType*>(ost.GetType());
@@ -639,6 +639,17 @@ void AliasClass::SetAggOpndPtrFieldsNextLevNADS(MapleVector<BaseNode*> &opnds) {
   }
 }
 
+void AliasClass::SetPtrFieldsOfAggNextLevNADS(const BaseNode *opnd, const AliasElem *aliasElem) {
+  if (opnd->GetPrimType() != PTY_agg) {
+    return;
+  }
+  if (aliasElem == nullptr ||
+      (aliasElem->IsNextLevNotAllDefsSeen() && aliasElem->GetOriginalSt().GetIndirectLev() > 0)) {
+    return;
+  }
+  SetAggPtrFieldsNextLevNADS(aliasElem->GetOriginalSt());
+}
+
 // based on ost1's extra level ost's, ensure corresponding ones exist for ost2
 void AliasClass::CreateMirroringAliasElems(const OriginalSt *ost1, OriginalSt *ost2) {
   if (ost1->IsSameSymOrPreg(ost2)) {
@@ -696,16 +707,14 @@ void AliasClass::ApplyUnionForCopies(StmtNode &stmt) {
     }
     case OP_call:
     case OP_callassigned: {
+      bool callHasSideEffect = CallHasSideEffect(&stmt);
+      bool hasnoprivatedefeffect = CallHasNoPrivateDefEffect(&stmt);
       for (uint32 i = 0; i < stmt.NumOpnds(); ++i) {
-        CreateAliasElemsExpr(*stmt.Opnd(i));
-      }
-      auto &call = static_cast<CallNode&>(stmt);
-      ASSERT(call.GetPUIdx() < GlobalTables::GetFunctionTable().GetFuncTable().size(),
-             "index out of range in AliasClass::ApplyUnionForCopies");
-      if (mirModule.IsCModule() || CallHasSideEffect(&call)) {
-        SetPtrOpndsNextLevNADS(0, static_cast<unsigned int>(call.NumOpnds()), call.GetNopnd(),
-                               CallHasNoPrivateDefEffect(&call));
-        SetAggOpndPtrFieldsNextLevNADS(call.GetNopnd());
+        const AliasInfo &ainfo = CreateAliasElemsExpr(*stmt.Opnd(i));
+        if (mirModule.IsCModule() || callHasSideEffect) {
+          SetPtrOpndNextLevNADS(*stmt.Opnd(i), ainfo.ae, hasnoprivatedefeffect);
+          SetPtrFieldsOfAggNextLevNADS(stmt.Opnd(i), ainfo.ae);
+        }
       }
       break;
     }
@@ -723,21 +732,29 @@ void AliasClass::ApplyUnionForCopies(StmtNode &stmt) {
     case OP_interfaceicallassigned:
     case OP_customcallassigned:
     case OP_polymorphiccallassigned: {
-      if (CallHasSideEffect(&stmt)) {
-        bool hasnoprivatedefeffect = CallHasNoPrivateDefEffect(&stmt);
-        auto &call = static_cast<NaryStmtNode&>(stmt);
-        for (uint32 i = 1; i < call.NumOpnds(); ++i) {
-          AliasInfo ainfo = CreateAliasElemsExpr(*call.Opnd(i));
-          if (IsPotentialAddress(call.Opnd(i)->GetPrimType(), &mirModule) && ainfo.ae != nullptr) {
-            if (call.Opnd(i)->GetOpCode() == OP_addrof && IsReadOnlyOst(ainfo.ae->GetOriginalSt())) {
-              continue;
-            }
-            if (hasnoprivatedefeffect && ainfo.ae->GetOriginalSt().IsPrivate()) {
-              continue;
-            }
-            ainfo.ae->SetNextLevNotAllDefsSeen(true);
-          }
+      bool callHasSideEffect = CallHasSideEffect(&stmt);
+      bool hasnoprivatedefeffect = CallHasNoPrivateDefEffect(&stmt);
+      for (uint32 i = 0; i < stmt.NumOpnds(); ++i) {
+        const AliasInfo &ainfo = CreateAliasElemsExpr(*stmt.Opnd(i));
+        if (ainfo.ae == nullptr) {
+          continue;
         }
+        if (i == 0) {
+          continue;
+        }
+        if (!callHasSideEffect) {
+          continue;
+        }
+        if (hasnoprivatedefeffect && ainfo.ae->GetOriginalSt().IsPrivate()) {
+          continue;
+        }
+        if (!IsPotentialAddress(stmt.Opnd(i)->GetPrimType(), &mirModule)) {
+          continue;
+        }
+        if (stmt.Opnd(i)->GetOpCode() == OP_addrof && IsReadOnlyOst(ainfo.ae->GetOriginalSt())) {
+          continue;
+        }
+        ainfo.ae->SetNextLevNotAllDefsSeen(true);
       }
       break;
     }
@@ -745,29 +762,32 @@ void AliasClass::ApplyUnionForCopies(StmtNode &stmt) {
     case OP_icall:
     case OP_icallassigned: {
       for (uint32 i = 0; i < stmt.NumOpnds(); ++i) {
-        CreateAliasElemsExpr(*stmt.Opnd(i));
+        const AliasInfo &ainfo = CreateAliasElemsExpr(*stmt.Opnd(i));
+        if (stmt.GetOpCode() != OP_asm && i == 0) {
+          continue;
+        }
+        SetPtrOpndNextLevNADS(*stmt.Opnd(i), ainfo.ae, false);
+        SetPtrFieldsOfAggNextLevNADS(stmt.Opnd(i), ainfo.ae);
       }
-      auto &call = static_cast<NaryStmtNode&>(stmt);
-      SetPtrOpndsNextLevNADS((stmt.GetOpCode() == OP_asm) ? 0 : 1,
-          static_cast<unsigned int>(call.NumOpnds()), call.GetNopnd(), false);
-      SetAggOpndPtrFieldsNextLevNADS(call.GetNopnd());
       break;
     }
     case OP_intrinsiccall:
     case OP_intrinsiccallassigned: {
+      bool opndsNextLevNADS = static_cast<IntrinsiccallNode&>(stmt).GetIntrinsic() == INTRN_JAVA_POLYMORPHIC_CALL;
       for (uint32 i = 0; i < stmt.NumOpnds(); ++i) {
-        CreateAliasElemsExpr(*stmt.Opnd(i));
-      }
-      auto &intrnNode = static_cast<IntrinsiccallNode&>(stmt);
-      if (intrnNode.GetIntrinsic() == INTRN_JAVA_POLYMORPHIC_CALL) {
-        SetPtrOpndsNextLevNADS(0, static_cast<unsigned int>(intrnNode.NumOpnds()), intrnNode.GetNopnd(), false);
+        const AliasInfo &ainfo = CreateAliasElemsExpr(*stmt.Opnd(i));
+        if (opndsNextLevNADS) {
+          SetPtrOpndNextLevNADS(*stmt.Opnd(i), ainfo.ae, false);
+        }
       }
       break;
     }
-    default: ;
-  }
-  for (size_t i = 0; i < stmt.NumOpnds(); ++i) {
-    CreateAliasElemsExpr(*stmt.Opnd(i));
+    default: {
+      for (size_t i = 0; i < stmt.NumOpnds(); ++i) {
+        (void)CreateAliasElemsExpr(*stmt.Opnd(i));
+      }
+      break;
+    }
   }
   if (kOpcodeInfo.IsCallAssigned(stmt.GetOpCode())) {
     SetNotAllDefsSeenForMustDefs(stmt);
@@ -884,25 +904,27 @@ void AliasClass::UnionNextLevelOfAliasOst(std::set<AliasElem *> &aesToUnionNextL
         continue;
       }
 
-      for (auto itA = mayAliasOsts.begin(); itA != mayAliasOsts.end(); ++itA) {
-        auto *ostA = *itA;
-        if (ostA->IsFinal()) {
+      auto it = mayAliasOsts.begin();
+      auto *ostA = *it;
+      if (ostA->IsFinal()) {
+        for (; it != mayAliasOsts.end(); ++it) {
+          ostA = *it;
+          if (!ostA->IsFinal()) {
+            break;
+          }
+        }
+      }
+      auto idA = FindAliasElem(*ostA)->GetClassID();
+
+      for (; it != mayAliasOsts.end(); ++it) {
+        auto *ostB = *it;
+        if (ostB->IsFinal()) {
           continue;
         }
-        auto itB = itA;
-        ++itB;
-        for (; itB != mayAliasOsts.end(); ++itB) {
-          auto *ostB = *itB;
-          if (ostB->IsFinal()) {
-            continue;
-          }
-
-          auto idA = FindAliasElem(*ostA)->GetClassID();
-          auto idB = FindAliasElem(*ostB)->GetClassID();
-          if (unionFind.Root(idA) != unionFind.Root(idB)) {
-            unionFind.Union(idA, idB);
-            aesToUnionNextLev.insert(id2Elem[unionFind.Root(idA)]);
-          }
+        auto idB = FindAliasElem(*ostB)->GetClassID();
+        if (unionFind.Root(idA) != unionFind.Root(idB)) {
+          unionFind.Union(idA, idB);
+          aesToUnionNextLev.insert(id2Elem[unionFind.Root(idA)]);
         }
       }
     }

@@ -157,6 +157,9 @@ void HDSE::RemoveNotRequiredStmtsInBB(BB &bb) {
 // Only make sure throw NPE in same BB
 // If must make sure throw at first stmt, much more not null stmt will be inserted
 bool HDSE::NeedNotNullCheck(MeExpr &meExpr, const BB &bb) {
+  if (theMIRModule->IsCModule()) {
+    return false;
+  }
   if (meExpr.GetOp() == OP_addrof) {
     return false;
   }

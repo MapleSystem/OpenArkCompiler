@@ -343,6 +343,9 @@ class CGFunc {
   }
 
   regno_t NewVReg(RegType regType, uint32 size) {
+    if (CGOptions::UseGeneralRegOnly()) {
+      CHECK_FATAL(regType != kRegTyFloat, "cannot use float | SIMD register with --general-reg-only");
+    }
     /* when vRegCount reach to maxRegCount, maxRegCount limit adds 80 every time */
     /* and vRegTable increases 80 elements. */
     if (vRegCount >= maxRegCount) {

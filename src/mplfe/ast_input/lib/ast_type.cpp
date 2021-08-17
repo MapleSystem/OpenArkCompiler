@@ -101,8 +101,6 @@ MIRType *LibAstFile::CvtType(const clang::QualType qualType) {
     if (mirPointeeType == nullptr) {
       return nullptr;
     }
-    MIRPtrType *prtType = static_cast<MIRPtrType*>(
-        GlobalTables::GetTypeTable().GetOrCreatePointerType(*mirPointeeType));
     TypeAttrs attrs;
     // Get alignment from the pointee type
     uint32 alignmentBits = astContext->getTypeAlignIfKnown(srcPteType);
@@ -114,7 +112,15 @@ MIRType *LibAstFile::CvtType(const clang::QualType qualType) {
     if (isOneElementVector(srcPteType)) {
       attrs.SetAttr(ATTR_oneelem_simd);
     }
-    prtType->SetTypeAttrs(attrs);
+    MIRPtrType *prtType;
+    if (attrs == TypeAttrs()) {
+      prtType = static_cast<MIRPtrType*>(GlobalTables::GetTypeTable().GetOrCreatePointerType(*mirPointeeType));
+    } else {
+      std::vector<TypeAttrs> attrsVec;
+      attrsVec.push_back(attrs);
+      prtType = static_cast<MIRPtrType*>(
+          GlobalTables::GetTypeTable().GetOrCreatePointerType(*mirPointeeType, PTY_ptr, attrsVec));
+    }
     return prtType;
   }
 

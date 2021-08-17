@@ -328,7 +328,11 @@ void AArch64AsmEmitter::Run(FuncEmitInfo &funcEmitInfo) {
     std::string sectionName = namemangler::kMuidJavatextPrefixStr;
     (void)emitter.Emit("\t.section  ." + sectionName + ",\"ax\"\n");
   } else {
-    (void)emitter.Emit("\t.text\n");
+    if (CGOptions::IsFunctionSections()) {
+      (void)emitter.Emit("\t.section  .text.").Emit(cgFunc.GetName()).Emit(",\"ax\",@progbits\n");
+    } else {
+      (void)emitter.Emit("\t.text\n");
+    }
   }
   (void)emitter.Emit("\t.align 3\n");
   MIRSymbol *funcSt = GlobalTables::GetGsymTable().GetSymbolFromStidx(cgFunc.GetFunction().GetStIdx().Idx());

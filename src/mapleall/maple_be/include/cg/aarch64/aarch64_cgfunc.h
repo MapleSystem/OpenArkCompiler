@@ -138,6 +138,7 @@ class AArch64CGFunc : public CGFunc {
 
   void SelectAddrof(Operand &result, StImmOperand &stImm);
   void SelectAddrof(Operand &result, AArch64MemOperand &memOpnd);
+  Operand *SelectCSyncCmpSwap(IntrinsicopNode &intrinopNode, PrimType pty, bool retBool = false);
   Operand *SelectAddrof(AddrofNode &expr) override;
   Operand &SelectAddrofFunc(AddroffuncNode &expr) override;
   Operand &SelectAddrofLabel(AddroflabelNode &expr) override;
@@ -280,6 +281,7 @@ class AArch64CGFunc : public CGFunc {
   RegOperand *SelectVectorSum(PrimType rtype, Operand *o1, PrimType oType) override;
   RegOperand *SelectVectorTableLookup(PrimType rType, Operand *o1, Operand *o2) override;
 
+  void SelectVectorCvt(Operand *res, PrimType rType, Operand *o1, PrimType oType);
   void SelectVectorZip(PrimType rType, Operand *o1, Operand *o2);
   void PrepareVectorOperands(Operand **o1, PrimType &oty1, Operand **o2, PrimType &oty2);
   RegOperand *AdjustOneElementVectorOperand(PrimType oType, RegOperand *opnd);
