@@ -663,7 +663,12 @@ MeStmt *IRMapBuild::BuildIassignMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart) 
   IassignMeStmt *meStmt = irMap->NewInPool<IassignMeStmt>(&stmt);
   meStmt->SetTyIdx(iasNode.GetTyIdx());
   meStmt->SetRHS(BuildExpr(*iasNode.GetRHS(), false, false));
-  meStmt->SetLHSVal(irMap->BuildLHSIvar(*baseAddr, *meStmt, iasNode.GetFieldID()));
+  auto *lhsIvar = irMap->BuildLHSIvar(*baseAddr, *meStmt, iasNode.GetFieldID());
+  auto *simplifiedIvar = irMap->SimplifyIvar(lhsIvar);
+  if (simplifiedIvar != nullptr && simplifiedIvar->GetMeOp() == kMeOpIvar) {
+    lhsIvar = static_cast<IvarMeExpr *>(simplifiedIvar);
+  }
+  meStmt->SetLHSVal(lhsIvar);
   irMap->SimplifyCastForAssign(meStmt);
   if (mirModule.IsCModule()) {
     bool isVolt = false;

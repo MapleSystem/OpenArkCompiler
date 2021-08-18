@@ -934,7 +934,6 @@ IvarMeExpr *IRMap::BuildLHSIvar(MeExpr &baseAddr, IassignMeStmt &iassignMeStmt, 
   }
   meDef->SetBase(&baseAddr);
   meDef->SetDefStmt(&iassignMeStmt);
-  SimplifyIvar(meDef);
   PutToBucket(meDef->GetHashIndex() % mapHashLength, *meDef);
   return meDef;
 }
