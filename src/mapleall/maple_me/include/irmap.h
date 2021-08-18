@@ -154,10 +154,10 @@ class IRMap : public AnalysisResult {
   MeExpr *SimplifyCastSingle(MeExpr *castExpr);
   MeExpr *SimplifyCastPair(MeExpr *firstCastExpr, MeExpr *secondCastExpr, bool isFirstCastImplicit);
   MeExpr *CreateMeExprByCastKind(CastKind castKind, PrimType fromType, PrimType toType, MeExpr *opnd);
-  MeExpr* SimplifyIvarWithConstOffset(IvarMeExpr *ivar);
+  MeExpr* SimplifyIvarWithConstOffset(IvarMeExpr *ivar, bool lhsIvar);
   MeExpr *SimplifyIvarWithAddrofBase(IvarMeExpr *ivar);
-  MeExpr *SimplifyIvarWithIaddrofBase(IvarMeExpr *ivar);
-  MeExpr *SimplifyIvar(IvarMeExpr *ivar);
+  MeExpr *SimplifyIvarWithIaddrofBase(IvarMeExpr *ivar, bool lhsIvar);
+  MeExpr *SimplifyIvar(IvarMeExpr *ivar, bool lhsIvar);
 
   template <class T, typename... Arguments>
   T *NewInPool(Arguments&&... args) {

@@ -781,7 +781,7 @@ MeExpr &Prop::PropMeExpr(MeExpr &meExpr, bool &isProped, bool atParm) {
       }
 
       if (propIvarExpr->GetMeOp() == kMeOpIvar) {
-        auto *equivalentVar = irMap.SimplifyIvar(ivarMeExpr);
+        auto *equivalentVar = irMap.SimplifyIvar(ivarMeExpr, false);
         if (equivalentVar != nullptr) {
           MeExpr *propedExpr = &PropMeExpr(utils::ToRef(equivalentVar), subProped, false);
           auto ivarPrimType = ivarMeExpr->GetPrimType();
@@ -918,7 +918,7 @@ void Prop::TraversalMeStmt(MeStmt &meStmt) {
           subProped = false;
         } else {
           ivarStmt.GetLHSVal()->SetBase(propedExpr);
-          auto *simplifiedIvar = irMap.SimplifyIvar(ivarStmt.GetLHSVal());
+          auto *simplifiedIvar = irMap.SimplifyIvar(ivarStmt.GetLHSVal(), true);
           if (simplifiedIvar != nullptr) {
             if (simplifiedIvar->GetMeOp() == kMeOpVar) {
               auto *lhsVar = static_cast<ScalarMeExpr *>(simplifiedIvar);

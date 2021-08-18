@@ -392,7 +392,7 @@ MeExpr *IRMapBuild::BuildExpr(BaseNode &mirNode, bool atParm, bool noProp) {
       if (propedMeExpr->GetMeOp() == kMeOpOp) {
         simplifiedMeexpr = irMap->SimplifyOpMeExpr(static_cast<OpMeExpr *>(propedMeExpr));
       } else if (propedMeExpr->GetMeOp() == kMeOpIvar) {
-        simplifiedMeexpr = irMap->SimplifyIvar(static_cast<IvarMeExpr *>(propedMeExpr));
+        simplifiedMeexpr = irMap->SimplifyIvar(static_cast<IvarMeExpr *>(propedMeExpr), false);
       }
       retmeexpr = simplifiedMeexpr ? simplifiedMeexpr : propedMeExpr;
     } else {
@@ -663,7 +663,12 @@ MeStmt *IRMapBuild::BuildIassignMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart) 
   IassignMeStmt *meStmt = irMap->NewInPool<IassignMeStmt>(&stmt);
   meStmt->SetTyIdx(iasNode.GetTyIdx());
   meStmt->SetRHS(BuildExpr(*iasNode.GetRHS(), false, false));
-  meStmt->SetLHSVal(irMap->BuildLHSIvar(*baseAddr, *meStmt, iasNode.GetFieldID()));
+  auto *lhsIvar = irMap->BuildLHSIvar(*baseAddr, *meStmt, iasNode.GetFieldID());
+  auto *simplifiedIvar = irMap->SimplifyIvar(lhsIvar, true);
+  if (simplifiedIvar != nullptr && simplifiedIvar->GetMeOp() == kMeOpIvar) {
+    lhsIvar = static_cast<IvarMeExpr *>(simplifiedIvar);
+  }
+  meStmt->SetLHSVal(lhsIvar);
   irMap->SimplifyCastForAssign(meStmt);
   if (mirModule.IsCModule()) {
     bool isVolt = false;
