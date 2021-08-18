@@ -105,6 +105,11 @@ RegMeExpr *SSARename2Preg::RenameVar(const VarMeExpr *varmeexpr) {
     pregOst->SetIsFormal(ost->IsFormal());
     sym2reg_map[ost->GetIndex()] = pregOst;
     (void)vstidx2reg_map.insert(std::make_pair(varmeexpr->GetExprID(), curtemp));
+    // set fields in MIRPreg to support rematerialization
+    MIRPreg *preg = pregOst->GetMIRPreg();
+    preg->SetOp(OP_dread);
+    preg->rematInfo.sym = ost->GetMIRSymbol();
+    preg->fieldID = ost->GetFieldID();
     if (ost->IsFormal()) {
       uint32 parmindex = func->GetMirFunc()->GetFormalIndex(mirst);
       CHECK_FATAL(parm_used_vec[parmindex], "parm_used_vec not set correctly");
