@@ -664,12 +664,6 @@ MeStmt *IRMapBuild::BuildIassignMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart) 
   meStmt->SetTyIdx(iasNode.GetTyIdx());
   meStmt->SetRHS(BuildExpr(*iasNode.GetRHS(), false, false));
   auto *lhsIvar = irMap->BuildLHSIvar(*baseAddr, *meStmt, iasNode.GetFieldID());
-  auto *simplifiedIvar = irMap->SimplifyIvar(lhsIvar, true);
-  if (simplifiedIvar != nullptr && simplifiedIvar->GetMeOp() == kMeOpIvar) {
-    lhsIvar = static_cast<IvarMeExpr *>(simplifiedIvar);
-  }
-  meStmt->SetLHSVal(lhsIvar);
-  irMap->SimplifyCastForAssign(meStmt);
   if (mirModule.IsCModule()) {
     bool isVolt = false;
     for (auto &maydefItem : ssaPart.GetMayDefNodes()) {
@@ -680,9 +674,17 @@ MeStmt *IRMapBuild::BuildIassignMeStmt(StmtNode &stmt, AccessSSANodes &ssaPart) 
       }
     }
     if (isVolt) {
-      meStmt->GetLHSVal()->SetVolatileFromBaseSymbol(true);
+      lhsIvar->SetVolatileFromBaseSymbol(true);
     }
   }
+
+  auto *simplifiedIvar = irMap->SimplifyIvar(lhsIvar, true);
+  if (simplifiedIvar != nullptr && simplifiedIvar->GetMeOp() == kMeOpIvar) {
+    lhsIvar = static_cast<IvarMeExpr *>(simplifiedIvar);
+  }
+  meStmt->SetLHSVal(lhsIvar);
+  irMap->SimplifyCastForAssign(meStmt);
+
   BuildChiList(*meStmt, ssaPart.GetMayDefNodes(), *(meStmt->GetChiList()));
   if (propagater) {
     propagater->PropUpdateChiListDef(*meStmt->GetChiList());
