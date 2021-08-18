@@ -806,6 +806,7 @@ MeExpr* IRMap::SimplifyIvarWithConstOffset(IvarMeExpr *ivar, bool lhsIvar) {
         meDef->SetBase(base->GetOpnd(0));
         meDef->SetOffset(offset.val);
         meDef->SetMuVal(ivar->GetMu());
+        meDef->SetVolatileFromBaseSymbol(ivar->GetVolatileFromBaseSymbol());
         PutToBucket(meDef->GetHashIndex() % mapHashLength, *meDef);
         return meDef;
       } else {
@@ -813,6 +814,7 @@ MeExpr* IRMap::SimplifyIvarWithConstOffset(IvarMeExpr *ivar, bool lhsIvar) {
         newIvar.SetBase(base->GetOpnd(0));
         newIvar.SetOffset(offset.val);
         newIvar.SetMuVal(ivar->GetMu());
+        newIvar.SetVolatileFromBaseSymbol(ivar->GetVolatileFromBaseSymbol());
         return HashMeExpr(newIvar);
       }
     }
