@@ -580,6 +580,7 @@ class MIRLabelTable {
  public:
   explicit MIRLabelTable(MapleAllocator &allocator)
       : addrTakenLabels(allocator.Adapter()),
+        caseLabelSet(allocator.Adapter()),
         mAllocator(allocator),
         strIdxToLabIdxMap(std::less<GStrIdx>(), mAllocator.Adapter()),
         labelTable(mAllocator.Adapter()) {
@@ -655,7 +656,9 @@ class MIRLabelTable {
     strIdxToLabIdxMap.erase(idx);
   }
 
+ public:
   MapleUnorderedSet<LabelIdx> addrTakenLabels; // those appeared in addroflabel or MIRLblConst
+  MapleUnorderedSet<LabelIdx> caseLabelSet;    // labels marking starts of switch cases
 
  private:
   static constexpr uint32 kDummyLabel = 0;
