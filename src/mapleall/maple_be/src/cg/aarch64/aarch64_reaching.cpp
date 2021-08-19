@@ -190,6 +190,12 @@ void AArch64ReachingDefinition::GenAllAsmDefRegs(BB &bb, Insn &insn, uint32 inde
   }
 }
 
+void AArch64ReachingDefinition::GenAllAsmUseRegs(BB &bb, Insn &insn, uint32 index) {
+  for (auto reg : static_cast<AArch64ListOperand&>(insn.GetOperand(index)).GetOperands()) {
+    regUse[bb.GetId()]->SetBit(static_cast<RegOperand *>(reg)->GetRegisterNumber());
+  }
+}
+
 /* all caller saved register are modified by call insn */
 void AArch64ReachingDefinition::GenAllCallerSavedRegs(BB &bb) {
   for (uint32 i = R0; i <= V31; ++i) {
@@ -489,7 +495,6 @@ void AArch64ReachingDefinition::DFSFindDefForRegOpnd(const BB &startBB, uint32 r
     if (regGen[predBB->GetId()]->TestBit(regNO)) {
       defInsnVec.clear();
       defInsnVec = FindRegDefBetweenInsn(regNO, predBB->GetFirstInsn(), predBB->GetLastInsn());
-      ASSERT(!defInsnVec.empty(), "opnd must be defined in this bb");
       defInsnSet.insert(defInsnVec.begin(), defInsnVec.end());
     } else if (regIn[predBB->GetId()]->TestBit(regNO)) {
       DFSFindDefForRegOpnd(*predBB, regNO, visitedBB, defInsnSet);
@@ -620,6 +625,7 @@ bool AArch64ReachingDefinition::FindRegUseBetweenInsn(uint32 regNO, Insn *startI
       if (IsRegInAsmList(insn, kAsmOutputListOpnd, regNO, regUseInsnSet)) {
         break;
       }
+      continue;
     }
     /* if insn is call and regNO is caller-saved register, then regNO will not be used later */
     if (insn->IsCall() && IsCallerSavedReg(regNO)) {
@@ -887,6 +893,7 @@ void AArch64ReachingDefinition::InitGenUse(BB &bb, bool firstTime) {
       if (insn->GetMachineOpcode() == MOP_asm) {
         GenAllAsmDefRegs(bb, *insn, kAsmOutputListOpnd);
         GenAllAsmDefRegs(bb, *insn, kAsmClobberListOpnd);
+        GenAllAsmUseRegs(bb, *insn, kAsmInputListOpnd);
         continue;
       } else {
         GenAllCallerSavedRegs(bb);
