@@ -35,7 +35,8 @@ public:
   explicit LoopVecInfo(MapleAllocator &alloc)
       : vecStmtIDs(alloc.Adapter()),
         uniformNodes(alloc.Adapter()),
-        uniformVecNodes(alloc.Adapter()) {
+        uniformVecNodes(alloc.Adapter()),
+        constvalTypes(alloc.Adapter()) {
     largestTypeSize = 8; // i8 bit size
     currentRHSTypeSize = 0;
   }
