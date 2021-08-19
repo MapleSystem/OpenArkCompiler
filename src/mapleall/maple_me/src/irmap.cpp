@@ -198,7 +198,20 @@ static void ComputeCastInfoForExpr(const MeExpr &expr, CastInfo &castInfo) {
       break;
     }
     case OP_retype: {
-      srcType = static_cast<const OpMeExpr&>(expr).GetOpndType();
+      const auto &retypeExpr = static_cast<const OpMeExpr&>(expr);
+      MeExpr *opnd = retypeExpr.GetOpnd(0);
+      if (opnd == nullptr) {
+        break;
+      }
+      // retype's opndType is invalid, we use opnd's primType
+      srcType = opnd->GetPrimType();
+      if (GetPrimTypeActualBitSize(dstType) != GetPrimTypeActualBitSize(srcType)) {
+        // Example: retype u8 <u8> (iread i32 <* i8> 0 ...)
+        // In the above example, dstType is u8, but we get srcType i32 from iread.
+        // We won't optimize such retype unless we can get real opnd type for all kinds of opnds.
+        // We will improve it if possible.
+        break;
+      }
       castKind = CAST_retype;
       break;
     }
@@ -398,16 +411,19 @@ static int IsEliminableCastPair(CastKind firstCastKind, CastKind secondCastKind,
   }
 }
 
-MeExpr *IRMap::CreateMeExprByCastKind(CastKind castKind, PrimType fromType, PrimType toType, MeExpr *opnd) {
+MeExpr *IRMap::CreateMeExprByCastKind(CastKind castKind, PrimType srcType, PrimType dstType, MeExpr *opnd,
+                                      TyIdx dstTyIdx) {
   if (castKind == CAST_zext) {
-    return CreateMeExprExt(OP_zext, toType, GetPrimTypeActualBitSize(fromType), *opnd);
+    return CreateMeExprExt(OP_zext, dstType, GetPrimTypeActualBitSize(srcType), *opnd);
   } else if (castKind == CAST_sext) {
-    return CreateMeExprExt(OP_sext, toType, GetPrimTypeActualBitSize(fromType), *opnd);
-  } else if (castKind == CAST_retype) {
-    // Maybe we can create more concrete expr
-    return CreateMeExprTypeCvt(toType, fromType, *opnd);
+    return CreateMeExprExt(OP_sext, dstType, GetPrimTypeActualBitSize(srcType), *opnd);
+  } else if (castKind == CAST_retype && srcType == opnd->GetPrimType()) {
+    // If srcType is different from opnd->primType, we should create cvt instead of retype.
+    // Because CGFunc::SelectRetype always use opnd->primType as srcType.
+    CHECK_FATAL(dstTyIdx != 0, "must specify valid tyIdx for retype");
+    return CreateMeExprRetype(dstType, dstTyIdx, *opnd);
   } else {
-    return CreateMeExprTypeCvt(toType, fromType, *opnd);
+    return CreateMeExprTypeCvt(dstType, srcType, *opnd);
   }
 }
 
@@ -498,6 +514,8 @@ MeExpr *IRMap::SimplifyCastPair(MeExpr *firstCastExpr, MeExpr *secondCastExpr, b
     }
   }
 
+  // Example: retype u32 <u32> (dread u32 %x)  ==>  dread u32 %x
+  // Example: retype ptr <* <$Foo>> (dread ptr %p)  ==>  dread ptr %p
   if (resultCastKind == CAST_retype && srcType == dstType) {
     return toCastExpr;
   }
@@ -515,7 +533,16 @@ MeExpr *IRMap::SimplifyCastPair(MeExpr *firstCastExpr, MeExpr *secondCastExpr, b
     LogInfo::MapleLogger() << std::endl;
   }
 
-  return CreateMeExprByCastKind(resultCastKind, srcType, dstType, toCastExpr);
+  TyIdx dstTyIdx(0);
+  if (resultCastKind == CAST_retype) {
+    // result retype is generated from `retype t1 t2 (retype t3 t4)`
+    if (secondCastExpr->GetOp() == OP_retype) {
+      dstTyIdx = static_cast<OpMeExpr*>(secondCastExpr)->GetTyIdx();
+    } else {
+      dstTyIdx = TyIdx(dstType);
+    }
+  }
+  return CreateMeExprByCastKind(resultCastKind, srcType, dstType, toCastExpr, dstTyIdx);
 }
 
 // Return a simplified expr if succeed, return nullptr if fail
@@ -1235,6 +1262,14 @@ MeExpr *IRMap::CreateMeExprTypeCvt(PrimType pType, PrimType opndptyp, MeExpr &op
   OpMeExpr opMeExpr(kInvalidExprID, OP_cvt, pType, kOperandNumUnary);
   opMeExpr.SetOpnd(0, &opnd0);
   opMeExpr.SetOpndType(opndptyp);
+  return HashMeExpr(opMeExpr);
+}
+
+MeExpr *IRMap::CreateMeExprRetype(PrimType pType, TyIdx tyIdx, MeExpr &opnd) {
+  OpMeExpr opMeExpr(kInvalidExprID, OP_retype, pType, kOperandNumUnary);
+  opMeExpr.SetOpnd(0, &opnd);
+  opMeExpr.SetTyIdx(tyIdx);
+  opMeExpr.SetOpndType(opnd.GetPrimType());
   return HashMeExpr(opMeExpr);
 }
 

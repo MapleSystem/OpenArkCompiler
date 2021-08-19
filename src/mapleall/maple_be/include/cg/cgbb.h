@@ -792,7 +792,6 @@ class Bfs {
   MapleVector<bool> visitedBBs;
   MapleVector<BB*> sortedBBs;
 };
-
 }  /* namespace maplebe */
 
 #endif  /* MAPLEBE_INCLUDE_CG_CGBB_H */

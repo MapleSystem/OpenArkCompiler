@@ -1163,8 +1163,6 @@ void AArch64CGFunc::SelectAsm(AsmNode &node) {
       isOutputTempNode = true;
     }
     listInConstraint->stringList.push_back(static_cast<StringOperand*>(&CreateStringOperand(str)));
-    std::string prefix = "";
-
     /* process input operands */
     switch (node.Opnd(i)->op) {
       case OP_dread: {

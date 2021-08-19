@@ -26,7 +26,6 @@ namespace maplebe {
  *  NB. As an optimization we can use X8 as a scratch (temporary)
  *     register if the return value is not returned through memory.
  */
-
 Operand *AArch64RegAllocator::HandleRegOpnd(Operand &opnd) {
   ASSERT(opnd.IsRegister(), "Operand should be register operand");
   auto &regOpnd = static_cast<RegOperand&>(opnd);

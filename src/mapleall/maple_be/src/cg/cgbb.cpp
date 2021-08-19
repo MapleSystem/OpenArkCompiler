@@ -16,7 +16,6 @@
 #include "cgfunc.h"
 
 namespace maplebe {
-
 constexpr uint32 kCondBrNum = 2;
 constexpr uint32 kSwitchCaseNum = 5;
 

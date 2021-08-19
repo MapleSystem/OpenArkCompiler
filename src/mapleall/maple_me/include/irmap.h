@@ -131,6 +131,7 @@ class IRMap : public AnalysisResult {
   MeExpr *CreateMeExprCompare(Opcode, PrimType, PrimType, MeExpr&, MeExpr&);
   MeExpr *CreateMeExprSelect(PrimType, MeExpr&, MeExpr&, MeExpr&);
   MeExpr *CreateMeExprTypeCvt(PrimType, PrimType, MeExpr&);
+  MeExpr *CreateMeExprRetype(PrimType, TyIdx, MeExpr&);
   MeExpr *CreateMeExprExt(Opcode, PrimType, uint32, MeExpr&);
   UnaryMeStmt *CreateUnaryMeStmt(Opcode op, MeExpr *opnd);
   UnaryMeStmt *CreateUnaryMeStmt(Opcode op, MeExpr *opnd, BB *bb, const SrcPosition *src);
@@ -153,7 +154,8 @@ class IRMap : public AnalysisResult {
   MeExpr *SimplifyCast(MeExpr *expr);
   MeExpr *SimplifyCastSingle(MeExpr *castExpr);
   MeExpr *SimplifyCastPair(MeExpr *firstCastExpr, MeExpr *secondCastExpr, bool isFirstCastImplicit);
-  MeExpr *CreateMeExprByCastKind(CastKind castKind, PrimType fromType, PrimType toType, MeExpr *opnd);
+  MeExpr *CreateMeExprByCastKind(CastKind castKind, PrimType srcType, PrimType dstType, MeExpr *opnd,
+                                 TyIdx dstTyIdx = TyIdx(0));
   MeExpr* SimplifyIvarWithConstOffset(IvarMeExpr *ivar);
   MeExpr *SimplifyIvarWithAddrofBase(IvarMeExpr *ivar);
   MeExpr *SimplifyIvarWithIaddrofBase(IvarMeExpr *ivar);

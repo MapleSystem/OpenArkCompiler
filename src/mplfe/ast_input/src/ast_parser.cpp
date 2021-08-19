@@ -2237,6 +2237,14 @@ ASTDecl *ASTParser::ProcessDeclFunctionDecl(MapleAllocator &allocator, const cla
   astFunc = ASTDeclsBuilder::ASTFuncBuilder(
       allocator, fileName, funcName, typeDescIn, attrs, paramDecls, funcDecl.getID());
   CHECK_FATAL(astFunc != nullptr, "astFunc is nullptr");
+  clang::AliasAttr *aliasAttr = funcDecl.getAttr<clang::AliasAttr>();
+  if (aliasAttr != nullptr) {
+    astFunc->SetAliasAttr(aliasAttr->getAliasee().str());
+  }
+  clang::WeakRefAttr *weakrefAttr = funcDecl.getAttr<clang::WeakRefAttr>();
+  if (weakrefAttr != nullptr) {
+    astFunc->SetWeakrefAttr(std::pair<bool, std::string> { true, weakrefAttr->getAliasee().str() });
+  }
   if (funcDecl.hasBody()) {
     ASTStmt *astCompoundStmt = ProcessStmt(allocator, *llvm::cast<clang::CompoundStmt>(funcDecl.getBody()));
     if (astCompoundStmt != nullptr) {

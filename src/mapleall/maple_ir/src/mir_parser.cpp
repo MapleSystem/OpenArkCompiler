@@ -1205,6 +1205,9 @@ bool MIRParser::ParseStmtAsm(StmtNodePtr &stmt) {
   while (lexer.GetTokenKind() == TK_string) {
     // parse an input constraint string
     uStrIdx = GlobalTables::GetUStrTable().GetOrCreateStrIdxFromName(lexer.GetName());
+    if (lexer.GetName()[0] == '+') {
+      asmNode->SetHasWriteInputs();
+    }
     if (lexer.NextToken() != TK_lparen) {
       Error("expect ( but get ");
       return false;

@@ -331,6 +331,21 @@ void MIRFunction::Dump(bool withoutBody) {
   theMIRModule = module;
   funcAttrs.DumpAttributes();
 
+  if (symbol->GetWeakrefAttr().first) {
+    LogInfo::MapleLogger() << " weakref";
+    if (symbol->GetWeakrefAttr().second != UStrIdx(0)) {
+      LogInfo::MapleLogger() << " (";
+      PrintString(GlobalTables::GetUStrTable().GetStringFromStrIdx(symbol->GetWeakrefAttr().second));
+      LogInfo::MapleLogger() << " )";
+    }
+  }
+
+  if (symbol->GetAliasAttr() != UStrIdx(0)) {
+    LogInfo::MapleLogger() << " aliasattr (";
+    PrintString(GlobalTables::GetUStrTable().GetStringFromStrIdx(symbol->GetAliasAttr()));
+    LogInfo::MapleLogger() << " )";
+  }
+
   if (module->GetFlavor() < kMmpl) {
     DumpFlavorLoweredThanMmpl();
   }

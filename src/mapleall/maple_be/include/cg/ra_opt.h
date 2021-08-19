@@ -21,7 +21,7 @@
 namespace maplebe {
 class RaOpt {
  public:
-  explicit RaOpt(CGFunc &func, MemPool &pool) : cgFunc(&func), memPool(&pool) {}
+  RaOpt(CGFunc &func, MemPool &pool) : cgFunc(&func), memPool(&pool) {}
 
   virtual ~RaOpt() = default;
 

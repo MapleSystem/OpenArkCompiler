@@ -114,11 +114,10 @@ class VregRenameInfo {
 
 class VregRename {
  public:
-  explicit VregRename(CGFunc *func, MemPool *pool) :
-      cgFunc(func),
-      memPool(pool),
-      alloc(pool),
-      renameInfo(alloc.Adapter()) {
+  VregRename(CGFunc *func, MemPool *pool) : cgFunc(func),
+                                            memPool(pool),
+                                            alloc(pool),
+                                            renameInfo(alloc.Adapter()) {
     renameInfo.resize(cgFunc->GetMaxRegNum());
     ccRegno = static_cast<RegOperand *>(&cgFunc->GetOrCreateRflag())->GetRegisterNumber();
   };
@@ -145,7 +144,7 @@ class VregRename {
 
 class AArch64RaOpt : public RaOpt {
  public:
-  explicit AArch64RaOpt(CGFunc &func, MemPool &pool) : RaOpt(func, pool) {}
+  AArch64RaOpt(CGFunc &func, MemPool &pool) : RaOpt(func, pool) {}
   ~AArch64RaOpt() override = default;
   void Run() override;
 

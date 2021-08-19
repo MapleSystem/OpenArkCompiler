@@ -451,6 +451,22 @@ class MIRSymbol {
     return asmAttr;
   }
 
+  void SetAliasAttr(const UStrIdx &idx) {
+    aliasAttr = idx;
+  }
+
+  const UStrIdx &GetAliasAttr() const {
+    return aliasAttr;
+  }
+
+  void SetWeakrefAttr(const std::pair<bool, UStrIdx> &idx) {
+    weakrefAttr = idx;
+  }
+
+  const std::pair<bool, UStrIdx> &GetWeakrefAttr() const {
+    return weakrefAttr;
+  }
+
   // Please keep order of the fields, avoid paddings.
  private:
   TyIdx tyIdx{ 0 };
@@ -472,6 +488,8 @@ class MIRSymbol {
   StIdx stIdx { 0, 0 };
   TypeAttrs typeAttrs;
   GStrIdx nameStrIdx{ 0 };
+  UStrIdx aliasAttr { 0 };
+  std::pair<bool, UStrIdx> weakrefAttr { false, 0 };
  public:
   UStrIdx asmAttr { 0 }; // if not 0, the string for the name in C's asm attribute
   UStrIdx sectionAttr { 0 }; // if not 0, the string for the name in C's section attribute

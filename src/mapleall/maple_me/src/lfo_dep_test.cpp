@@ -221,12 +221,13 @@ ArrayAccessDesc *DoloopInfo::BuildOneArrayAccessDesc(ArrayNode *arr, BaseNode *p
     CHECK_FATAL(ivarMeExpr->GetMu() != nullptr, "BuildOneArrayAccessDesc: no mu corresponding to iread");
     arryOst = ivarMeExpr->GetMu()->GetOst();
   } else if (parent->op == OP_iassign) {
-    IassignMeStmt *iassMeStmt = static_cast<IassignMeStmt *>(depInfo->preEmit->GetMeStmt(static_cast<IassignNode *>(parent)->GetStmtID()));
+    IassignMeStmt *iassMeStmt = static_cast<IassignMeStmt *>(depInfo->preEmit->
+        GetMeStmt(static_cast<IassignNode *>(parent)->GetStmtID()));
     ivarMeExpr = iassMeStmt->GetLHSVal();
     if (ivarMeExpr->GetMu()) {
       arryOst = ivarMeExpr->GetMu()->GetOst();
     } else {
-      MapleMap<OStIdx, ChiMeNode*> *chiList = iassMeStmt->GetChiList();
+      MapleMap<OStIdx, ChiMeNode *> *chiList = iassMeStmt->GetChiList();
       CHECK_FATAL(!chiList->empty(), "BuildOneArrayAccessDesc: no chi corresponding to iassign");
       arryOst = depInfo->lfoFunc->meFunc->GetMeSSATab()->GetOriginalStFromID(chiList->begin()->first);
     }
