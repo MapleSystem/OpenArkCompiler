@@ -195,6 +195,10 @@ ErrorCode MapleCombCompiler::Compile(MplOptions &options, std::unique_ptr<MIRMod
     PrintCommand(options);
   }
   ErrorCode nErr = runner.Run();
+  // dump vectorized loop counter here
+  if (LoopVectorization::vectorizedLoop > 0) {
+    LogInfo::MapleLogger() << "\n " << LoopVectorization::vectorizedLoop << " loop vectorized\n";
+  }
   return nErr;
 }
 }  // namespace maple

@@ -128,9 +128,9 @@ void MEPregRename::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
 }
 
 bool MEPregRename::PhaseRun(maple::MeFunction &f) {
-  if (f.GetMirFunc()->HasAsm()) {
+  if (f.HasWriteInputAsmNode()) {
     if (!MeOption::quiet) {
-      LogInfo::MapleLogger() << "  == " << PhaseName() << " skipped due to inline asm\n";
+      LogInfo::MapleLogger() << "  == " << PhaseName() << " skipped due to inline asm with wirting input operand\n";
     }
     return false;
   }

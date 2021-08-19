@@ -22,13 +22,14 @@
 
 namespace maplebe {
 using namespace maple;
+
 bool CgRaOpt::PhaseRun(maplebe::CGFunc &f) {
   MemPool *memPool = GetPhaseMemPool();
   RaOpt *raOpt = nullptr;
 #if TARGAARCH64
-  raOpt = memPool->New<AArch64RaOpt>(f);
+  raOpt = memPool->New<AArch64RaOpt>(f, *memPool);
 #elif || TARGRISCV64
-  raOpt = memPool->New<Riscv64RaOpt>(f);
+  raOpt = memPool->New<Riscv64RaOpt>(f, *memPool);
 #endif
 
   if (raOpt) {

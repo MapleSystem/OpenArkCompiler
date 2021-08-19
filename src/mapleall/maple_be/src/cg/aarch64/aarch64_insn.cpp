@@ -728,7 +728,6 @@ void AArch64Insn::EmitInlineAsm(const CG &cg, Emitter &emitter) const {
         sidx++;
     }
   }
-  // stringToEmit += '\0';
   emitter.Emit(stringToEmit);
   emitter.Emit("\n\t//Inline asm end\n");
 }

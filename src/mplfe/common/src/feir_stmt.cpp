@@ -3186,7 +3186,7 @@ FEIRExprIntrinsicopForC::FEIRExprIntrinsicopForC(std::unique_ptr<FEIRType> exprT
 }
 
 std::unique_ptr<FEIRExpr> FEIRExprIntrinsicopForC::CloneImpl() const {
-  return std::make_unique<FEIRExprIntrinsicop>(type->Clone(), intrinsicID, opnds);
+  return std::make_unique<FEIRExprIntrinsicopForC>(type->Clone(), intrinsicID, opnds);
 }
 
 BaseNode *FEIRExprIntrinsicopForC::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {

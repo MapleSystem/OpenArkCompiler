@@ -159,10 +159,28 @@ class ASTFunc : public ASTDecl {
   std::vector<std::unique_ptr<FEIRVar>> GenArgVarList() const;
   std::list<UniqueFEIRStmt> EmitASTStmtToFEIR() const;
 
+  void SetAliasAttr(const std::string &attr) {
+    aliasAttr = attr;
+  }
+
+  const std::string &GetAliasAttr() const {
+    return aliasAttr;
+  }
+
+  void SetWeakrefAttr(const std::pair<bool, std::string> &attr) {
+    weakrefAttr = attr;
+  }
+
+  const std::pair<bool, std::string> &GetWeakrefAttr() const {
+    return weakrefAttr;
+  }
+
  private:
   // typeDesc format: [funcType, retType, arg0, arg1 ... argN]
   ASTStmt *compound;  // func body
   std::vector<ASTDecl*> paramDecls;
+  std::string aliasAttr;
+  std::pair<bool, std::string> weakrefAttr;
 };
 
 class ASTStruct : public ASTDecl {

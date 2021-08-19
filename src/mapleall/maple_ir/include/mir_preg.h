@@ -91,7 +91,7 @@ class MIRPreg {
  private:
   PrimType primType = kPtyInvalid;
   bool needRC = false;
-  Opcode op = OP_undef;// OP_constval, OP_addrof or OP_dread if rematerializable
+  Opcode op = OP_undef; // OP_constval, OP_addrof or OP_dread if rematerializable
   int32 pregNo;  // the number in maple IR after the %
   MIRType *mirType = nullptr;
  public:

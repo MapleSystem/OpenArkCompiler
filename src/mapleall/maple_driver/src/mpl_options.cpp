@@ -39,8 +39,12 @@ namespace maple {
 using namespace mapleOption;
 using namespace maplebe;
 
-const std::string kMapleDriverVersion = "MapleDriver " + std::to_string(Version::kMajorMplVersion) + "." +
-                                        std::to_string(Version::kMinorCompilerVersion) + " 20190929";
+#ifdef ANDROID
+const std::string kMapleDriverVersion = "MapleDriver " + std::to_string(Version::GetMajorVersion()) + "." +
+                                        std::to_string(Version::GetMinorVersion()) + " 20190929";
+#else
+const std::string kMapleDriverVersion = "Maple Version : " + Version::GetVersionStr();
+#endif
 
 const std::vector<std::string> kMapleCompilers = { "jbc2mpl",
     "dex2mpl", "mplipa",
