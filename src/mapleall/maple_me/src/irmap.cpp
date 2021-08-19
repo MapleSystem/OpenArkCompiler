@@ -812,7 +812,7 @@ IvarMeExpr *IRMap::BuildLHSIvar(MeExpr &baseAddr, PrimType primType, const TyIdx
   return meDef;
 }
 
-MeExpr* IRMap::SimplifyIvarWithConstOffset(IvarMeExpr *ivar) {
+MeExpr* IRMap::SimplifyIvarWithConstOffset(IvarMeExpr *ivar, bool lhsIvar) {
   auto *base = ivar->GetBase();
   if (base->GetOp() == OP_add || base->GetOp() == OP_sub) {
     auto offsetNode = base->GetOpnd(1);
@@ -828,11 +828,22 @@ MeExpr* IRMap::SimplifyIvarWithConstOffset(IvarMeExpr *ivar) {
       }
 
       Opcode op = (offset.val == 0) ? OP_iread : OP_ireadoff;
-      IvarMeExpr newIvar(kInvalidExprID, ivar->GetPrimType(), ivar->GetTyIdx(), ivar->GetFieldID(), op);
-      newIvar.SetBase(base->GetOpnd(0));
-      newIvar.SetOffset(offset.val);
-      newIvar.SetMuVal(ivar->GetMu());
-      return HashMeExpr(newIvar);
+      if (lhsIvar) {
+        auto *meDef = New<IvarMeExpr>(exprID++, ivar->GetPrimType(), ivar->GetTyIdx(), ivar->GetFieldID(), op);
+        meDef->SetBase(base->GetOpnd(0));
+        meDef->SetOffset(offset.val);
+        meDef->SetMuVal(ivar->GetMu());
+        meDef->SetVolatileFromBaseSymbol(ivar->GetVolatileFromBaseSymbol());
+        PutToBucket(meDef->GetHashIndex() % mapHashLength, *meDef);
+        return meDef;
+      } else {
+        IvarMeExpr newIvar(kInvalidExprID, ivar->GetPrimType(), ivar->GetTyIdx(), ivar->GetFieldID(), op);
+        newIvar.SetBase(base->GetOpnd(0));
+        newIvar.SetOffset(offset.val);
+        newIvar.SetMuVal(ivar->GetMu());
+        newIvar.SetVolatileFromBaseSymbol(ivar->GetVolatileFromBaseSymbol());
+        return HashMeExpr(newIvar);
+      }
     }
   }
   return nullptr;
@@ -881,22 +892,32 @@ MeExpr *IRMap::SimplifyIvarWithAddrofBase(IvarMeExpr *ivar) {
   if (mu->GetOstIdx() == ostIdx) {
     return static_cast<VarMeExpr*>(mu);
   }
+
   MeStmt *meStmt = ivar->GetMu()->GetDefByMeStmt();
-  if (meStmt == nullptr) {
-    return nullptr;
-  }
-  auto lhs = meStmt->GetVarLHS();
-  if (lhs != nullptr && lhs->GetOstIdx() == ostIdx) {
-    return static_cast<VarMeExpr *>(lhs);
-  }
-  auto *chiList = meStmt->GetChiList();
-  if (chiList->find(ostIdx) != chiList->end()) {
-    return static_cast<VarMeExpr *>(chiList->at(ostIdx)->GetLHS());
+  if (meStmt != nullptr) {
+    auto lhs = meStmt->GetVarLHS();
+    if (lhs != nullptr && lhs->GetOstIdx() == ostIdx) {
+      return static_cast<VarMeExpr *>(lhs);
+    }
+    auto *chiList = meStmt->GetChiList();
+    if (chiList->find(ostIdx) != chiList->end()) {
+      return static_cast<VarMeExpr *>(chiList->at(ostIdx)->GetLHS());
+    }
+  } else if (ivar->GetMu()->GetDefBy() == kDefByPhi) {
+    auto *defBBOfPhi = ivar->GetMu()->GetDefPhi().GetDefBB();
+    if (defBBOfPhi == nullptr) {
+      return nullptr;
+    }
+    const auto &phiList = defBBOfPhi->GetMePhiList();
+    auto it = phiList.find(ostIdx);
+    return (it != phiList.end()) ? it->second->GetLHS() : nullptr;
+  } else if (ivar->GetMu()->GetDefBy() == kDefByNo) {
+    return GetOrCreateZeroVersionVarMeExpr(*fieldOst);
   }
   return nullptr;
 }
 
-MeExpr *IRMap::SimplifyIvarWithIaddrofBase(IvarMeExpr *ivar) {
+MeExpr *IRMap::SimplifyIvarWithIaddrofBase(IvarMeExpr *ivar, bool lhsIvar) {
   if (ivar->GetOffset() != 0) {
     return nullptr;
   }
@@ -919,16 +940,21 @@ MeExpr *IRMap::SimplifyIvarWithIaddrofBase(IvarMeExpr *ivar) {
   }
 
   FieldID newFieldId = ivar->GetFieldID() + iaddrofExpr->GetFieldID();
-  IvarMeExpr newIvar(kInvalidExprID, ivar->GetPrimType(), iaddrofExpr->GetTyIdx(), newFieldId);
-  newIvar.SetBase(baseAddr);
-  newIvar.SetMuVal(ivar->GetMu());
 
-  auto *retExpr = HashMeExpr(newIvar);
-  return retExpr;
+  if (lhsIvar) {
+    return BuildLHSIvar(*baseAddr, ivar->GetPrimType(), iaddrofExpr->GetTyIdx(), newFieldId);
+  } else {
+    IvarMeExpr newIvar(kInvalidExprID, ivar->GetPrimType(), iaddrofExpr->GetTyIdx(), newFieldId);
+    newIvar.SetBase(baseAddr);
+    newIvar.SetMuVal(ivar->GetMu());
+    newIvar.SetVolatileFromBaseSymbol(ivar->GetVolatileFromBaseSymbol());
+    auto *retExpr = HashMeExpr(newIvar);
+    return retExpr;
+  }
 }
 
-MeExpr *IRMap::SimplifyIvar(IvarMeExpr *ivar) {
-  auto *simplifiedIvar = SimplifyIvarWithConstOffset(ivar);
+MeExpr *IRMap::SimplifyIvar(IvarMeExpr *ivar, bool lhsIvar) {
+  auto *simplifiedIvar = SimplifyIvarWithConstOffset(ivar, lhsIvar);
   if (simplifiedIvar != nullptr) {
     return simplifiedIvar;
   }
@@ -938,7 +964,7 @@ MeExpr *IRMap::SimplifyIvar(IvarMeExpr *ivar) {
     return simplifiedIvar;
   }
 
-  simplifiedIvar = SimplifyIvarWithIaddrofBase(ivar);
+  simplifiedIvar = SimplifyIvarWithIaddrofBase(ivar, lhsIvar);
   if (simplifiedIvar != nullptr) {
     return simplifiedIvar;
   }
@@ -961,7 +987,6 @@ IvarMeExpr *IRMap::BuildLHSIvar(MeExpr &baseAddr, IassignMeStmt &iassignMeStmt, 
   }
   meDef->SetBase(&baseAddr);
   meDef->SetDefStmt(&iassignMeStmt);
-  SimplifyIvar(meDef);
   PutToBucket(meDef->GetHashIndex() % mapHashLength, *meDef);
   return meDef;
 }
