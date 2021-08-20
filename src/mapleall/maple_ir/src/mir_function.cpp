@@ -243,11 +243,16 @@ void MIRFunction::SetAttrsFromSe(uint8 specialEffect) {
 }
 
 void FuncAttrs::DumpAttributes() const {
+  const std::string aliasString = "alias";
 #define STRING(s) #s
 #define FUNC_ATTR
-#define ATTR(AT)              \
-  if (GetAttr(FUNCATTR_##AT)) \
-    LogInfo::MapleLogger() << " " << STRING(AT);
+#define ATTR(AT)                                                       \
+  if (GetAttr(FUNCATTR_##AT)) {                                        \
+    LogInfo::MapleLogger() << " " << STRING(AT);                       \
+  }                                                                    \
+  if (aliasString == STRING(AT) && !GetAliasFuncName().empty()) {      \
+    LogInfo::MapleLogger() << " ( \"" << GetAliasFuncName() << "\" )"; \
+  }
 #include "all_attributes.def"
 #undef ATTR
 #undef FUNC_ATTR
@@ -341,7 +346,7 @@ void MIRFunction::Dump(bool withoutBody) {
   }
 
   if (symbol->GetAliasAttr() != UStrIdx(0)) {
-    LogInfo::MapleLogger() << " aliasattr (";
+    LogInfo::MapleLogger() << " alias (";
     PrintString(GlobalTables::GetUStrTable().GetStringFromStrIdx(symbol->GetAliasAttr()));
     LogInfo::MapleLogger() << " )";
   }

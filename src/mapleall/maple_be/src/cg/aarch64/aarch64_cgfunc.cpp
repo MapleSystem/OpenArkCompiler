@@ -2385,7 +2385,7 @@ void AArch64CGFunc::SelectAddrof(Operand &result, StImmOperand &stImm) {
     }
   } else {
     GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xadrp, result, stImm));
-    if (CGOptions::IsPIC() && ((symbol->GetStorageClass() == kScGlobal) || (symbol->GetStorageClass() == kScExtern))) {
+    if (CGOptions::IsPIC() && symbol->NeedPIC()) {
       /* ldr     x0, [x0, #:got_lo12:Ljava_2Flang_2FSystem_3B_7Cout] */
       AArch64OfstOperand &offset = CreateOfstOpnd(*stImm.GetSymbol(), stImm.GetOffset(), stImm.GetRelocs());
       AArch64MemOperand &memOpnd = GetOrCreateMemOpnd(AArch64MemOperand::kAddrModeBOi, kSizeOfPtr * kBitsPerByte,
@@ -2393,8 +2393,8 @@ void AArch64CGFunc::SelectAddrof(Operand &result, StImmOperand &stImm) {
       GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xldr, result, memOpnd));
 
       if (stImm.GetOffset() > 0) {
-        AArch64OfstOperand &ofstOpnd = GetOrCreateOfstOpnd(stImm.GetOffset(), k32BitSize);
-        SelectAdd(result, result, ofstOpnd, PTY_u64);
+        AArch64ImmOperand &immOpnd = CreateImmOperand(stImm.GetOffset(), result.GetSize(), false);
+        SelectAdd(result, result, immOpnd, PTY_u64);
       }
     } else {
       GetCurBB()->AppendInsn(GetCG()->BuildInstruction<AArch64Insn>(MOP_xadrpl12, result, result, stImm));

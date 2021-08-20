@@ -350,6 +350,7 @@ class Emitter {
   void EmitDWRef(const std::string &name);
   void InitRangeIdx2PerfixStr();
   void EmitAddressString(const std::string &address);
+  void EmitAliasAndRef(MIRSymbol &sym); /* handle function symbol which has alias and weak ref */
 
   CG *cg;
   MOperator currentMop = UINT_MAX;

@@ -217,6 +217,8 @@ class MIRSymbol {
 
   bool IsTypeVolatile(int fieldID) const;
 
+  bool NeedPIC() const;
+
   bool IsStatic() const {
     return typeAttrs.GetAttr(ATTR_static);
   }

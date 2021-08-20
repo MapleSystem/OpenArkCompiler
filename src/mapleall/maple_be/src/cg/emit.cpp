@@ -2031,6 +2031,7 @@ void Emitter::EmitLocalVariable(const CGFunc &cgfunc) {
           Emit(asmInfo->GetData());
           Emit("\n");
           EmitAsmLabel(*st, kAsmAlign);
+          EmitAsmLabel(*st, kAsmLocal);
           MIRType *ty = st->GetType();
           MIRConst *ct = st->GetKonst();
           if (ct == nullptr) {
@@ -2172,6 +2173,7 @@ void Emitter::EmitGlobalVariable() {
         continue;
       }
     }
+    EmitAliasAndRef(*mirSymbol);
 
     if (mirSymbol->GetName().find(VTAB_PREFIX_STR) == 0) {
       vtabVec.emplace_back(mirSymbol);
@@ -2412,6 +2414,7 @@ void Emitter::EmitGlobalVariable() {
       Emit(asmInfo->GetData());
       Emit("\n");
       EmitAsmLabel(*mirSymbol, kAsmAlign);
+      EmitAsmLabel(*mirSymbol, kAsmLocal);
       MIRConst *ct = mirSymbol->GetKonst();
       if (ct == nullptr) {
         EmitAsmLabel(*mirSymbol, kAsmComm);
@@ -3381,6 +3384,22 @@ void Emitter::SetupDBGInfo(DebugInfo *mirdi) {
 
   /* compute DIE sizes and offsets */
   mirdi->ComputeSizeAndOffsets();
+}
+
+void Emitter::EmitAliasAndRef(MIRSymbol &sym) {
+  if (sym.GetSKind() == kStFunc && sym.GetFunction() != nullptr) {
+    MIRFunction *mFunc = sym.GetFunction();
+    if (mFunc->GetAttr(FUNCATTR_alias)) {
+      if (mFunc->GetAttr(FUNCATTR_extern)) {
+        Emit(asmInfo->GetGlobal()).Emit(mFunc->GetName()).Emit("\n");
+      }
+      Emit(asmInfo->GetSet());
+      Emit(sym.GetName()).Emit(",").Emit(mFunc->GetAttrs().GetAliasFuncName()).Emit("\n");
+    } else if (mFunc->GetAttr(FUNCATTR_weakref)) {
+      Emit(asmInfo->GetWeakref());
+      Emit(sym.GetName()).Emit(",").Emit(mFunc->GetAttrs().GetAliasFuncName()).Emit("\n");
+    }
+  }
 }
 
 void Emitter::EmitHugeSoRoutines(bool lastRoutine) {

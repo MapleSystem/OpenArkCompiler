@@ -124,6 +124,14 @@ class AsmInfo {
     return asmHidden;
   }
 
+  const MapleString &GetSet() const {
+    return asmSet;
+  }
+
+  const MapleString &GetWeakref() const {
+    return asmWeakref;
+  }
+
   explicit AsmInfo(MemPool &memPool)
 #if TARGX86 || TARGX86_64
       : asmCmnt("\t#\t", &memPool),
@@ -164,7 +172,9 @@ class AsmInfo {
         asmQuad("\t.quad\t", &memPool),
         asmSize("\t.size\t", &memPool),
         asmType("\t.type\t", &memPool),
-        asmHidden("\t.hidden\t", &memPool) {}
+        asmHidden("\t.hidden\t", &memPool),
+        asmSet("\t.set\t", &memPool),
+        asmWeakref("\t.weakref\t", &memPool){}
 
   ~AsmInfo() = default;
 
@@ -190,6 +200,8 @@ class AsmInfo {
   MapleString asmSize;
   MapleString asmType;
   MapleString asmHidden;
+  MapleString asmSet;
+  MapleString asmWeakref;
 };
 }  /* namespace maplebe */
 

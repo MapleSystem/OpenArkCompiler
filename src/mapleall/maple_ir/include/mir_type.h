@@ -348,6 +348,14 @@ class FuncAttrs {
     }
   }
 
+  void SetAliasFuncName(const std::string &name) {
+    aliasFuncName = name;
+  }
+
+  std::string GetAliasFuncName() const {
+    return aliasFuncName;
+  }
+
   void SetAttrFlag(uint64 flag) {
     attrFlag = flag;
   }
@@ -372,6 +380,7 @@ class FuncAttrs {
 
  private:
   uint64 attrFlag = 0;
+  std::string aliasFuncName;
 };
 
 // only for internal use, not emitted
