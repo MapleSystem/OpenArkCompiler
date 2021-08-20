@@ -35,7 +35,8 @@ public:
   explicit LoopVecInfo(MapleAllocator &alloc)
       : vecStmtIDs(alloc.Adapter()),
         uniformNodes(alloc.Adapter()),
-        uniformVecNodes(alloc.Adapter()) {
+        uniformVecNodes(alloc.Adapter()),
+        constvalTypes(alloc.Adapter()) {
     largestTypeSize = 8; // i8 bit size
     currentRHSTypeSize = 0;
   }
@@ -48,7 +49,9 @@ public:
   MapleSet<uint32_t> vecStmtIDs;
   MapleSet<BaseNode *> uniformNodes; // loop invariable scalar set
   MapleMap<BaseNode *, BaseNode *> uniformVecNodes; // new generated vector node
-  // dup scalar to vector stmt may insert before stmt
+  // constval node need to adjust with new PrimType
+  MapleMap<BaseNode *, PrimType>  constvalTypes;
+  //MapleMap<stidx, StmtNode*> inductionStmt; // dup scalar to vector stmt may insert before stmt
 };
 
 // tranform plan for current loop
@@ -103,7 +106,8 @@ class LoopVectorization {
   MemPool *GetLocalMp() { return localMP; }
   MapleMap<DoloopNode *, LoopTransPlan *> *GetVecPlans() { return &vecPlans; }
   std::string PhaseName() const { return "lfoloopvec"; }
-
+  bool CanConvert(uint32_t , uint32_t);
+  bool CanAdjustRhsType(PrimType, ConstvalNode *);
 public:
   static uint32_t vectorizedLoop;
  private:
