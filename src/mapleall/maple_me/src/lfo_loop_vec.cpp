@@ -391,8 +391,6 @@ void LoopVectorization::VectorizeNode(BaseNode *node, LoopTransPlan *tp) {
       MIRType *vecType = GenVecType(ptrType->GetPointedType()->GetPrimType(), tp->vecFactor);
       ASSERT(vecType != nullptr, "vector type should not be null");
       MIRType *pvecType = GlobalTables::GetTypeTable().GetOrCreatePointerType(*vecType, PTY_ptr);
-      ASSERT(ireadnode->GetPrimType() == vecType->GetPrimType(),
-          "iread node vector prim type is not equal to vectorized point to type");
       // update lhs type
       ireadnode->SetTyIdx(pvecType->GetTypeIndex());
       node->SetPrimType(vecType->GetPrimType());
@@ -682,9 +680,9 @@ bool LoopVectorization::ExprVectorizable(DoloopInfo *doloopInfo, LoopVecInfo* ve
 // <short, int> or <int, short> pairs
 bool LoopVectorization::CanConvert(uint32_t lshtypeSize, uint32_t rhstypeSize) {
   if (lshtypeSize >= rhstypeSize) {
-    return ((lshtypeSize/rhstypeSize) <= 2);
+    return ((lshtypeSize / rhstypeSize) <= 2);
   }
-  return ((rhstypeSize/lshtypeSize) <= 2);
+  return ((rhstypeSize / lshtypeSize) <= 2);
 }
 
 bool LoopVectorization::CanAdjustRhsType(PrimType targetType, ConstvalNode *rhs) {
@@ -754,8 +752,8 @@ bool LoopVectorization::Vectorizable(DoloopInfo *doloopInfo, LoopVecInfo* vecInf
           size_t dim = lhsArr->NumOpnds() - 1;
           // check innest loop dimension is complex
           // case like a[abs(i-1)] = 1; depth test will report it's parallelize
-          if (accessDesc->subscriptVec[dim-1]->tooMessy ||
-              accessDesc->subscriptVec[dim-1]->loopInvariant) {
+          if (accessDesc->subscriptVec[dim - 1]->tooMessy ||
+              accessDesc->subscriptVec[dim - 1]->loopInvariant) {
             return false;
           }
           coeff = accessDesc->subscriptVec[dim - 1]->coeff;
@@ -798,7 +796,7 @@ bool LoopVectorization::Vectorizable(DoloopInfo *doloopInfo, LoopVecInfo* vecInf
           vecInfo->vecStmtIDs.insert((stmt)->GetStmtID());
           // update largest type size
           uint32_t maxSize = vecInfo->currentRHSTypeSize > (coeff * lshtypesize) ?
-                           vecInfo->currentRHSTypeSize : (coeff * lshtypesize);
+              vecInfo->currentRHSTypeSize : (coeff * lshtypesize);
           vecInfo->UpdateWidestTypeSize(maxSize);
         } else {
           // early return
