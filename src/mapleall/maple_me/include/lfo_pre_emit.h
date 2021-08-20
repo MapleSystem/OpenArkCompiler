@@ -94,6 +94,7 @@ class LfoPreEmitter : public AnalysisResult {
     return lfopart->mestmt;
   }
   MIRFunction *GetMirFunction() { return mirFunc; }
+  MeIRMap *GetMeIRMap() { return meirmap; }
   MemPool *GetCodeMP()  { return codeMP; }
   MapleAllocator* GetCodeMPAlloc() { return codeMPAlloc; }
   MapleMap<uint32_t, LfoPart *> *GetLfoStmtMap() { return &lfoStmtParts; }

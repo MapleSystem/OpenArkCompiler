@@ -124,6 +124,5 @@ public:
   bool enableDebug;
 };
 
-MAPLE_FUNC_PHASE_DECLARE(MELfoLoopVectorization, MeFunction)
 }  // namespace maple
 #endif  // MAPLE_ME_INCLUDE_LOOP_VEC_H

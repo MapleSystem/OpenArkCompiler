@@ -21,7 +21,6 @@
 #include "inline.h"
 #include "me_phase_manager.h"
 #include "constantfold.h"
-#include "lfo_loop_vec.h"
 
 namespace maple {
 using namespace mapleOption;
