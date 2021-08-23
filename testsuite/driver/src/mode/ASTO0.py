@@ -19,19 +19,19 @@ ASTO0 = {
         C2ast(
             clang="${OUT_ROOT}/tools/bin/clang",
             include_path=[
-                "${OUT_ROOT}/aarch64-clang-release/lib/include"
+                "${OUT_ROOT}/${MAPLE_BUILD_TYPE}/lib/include"
             ],
             option="--target=aarch64",
             infile="${APP}.c",
             outfile="${APP}.ast"
         ),
         Mplfe(
-            mplfe="${OUT_ROOT}/aarch64-clang-release/bin/mplfe",
+            mplfe="${OUT_ROOT}/${MAPLE_BUILD_TYPE}/bin/mplfe",
             infile="${APP}.ast",
             outfile="${APP}.mpl"
         ),
         SimpleMaple(
-            maple="${OUT_ROOT}/aarch64-clang-release/bin/maple",
+            maple="${OUT_ROOT}/${MAPLE_BUILD_TYPE}/bin/maple",
             option="-O0",
             infile="${APP}.mpl"
         ),
