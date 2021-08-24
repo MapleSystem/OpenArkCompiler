@@ -31,6 +31,8 @@
 #endif
 #include "ipa_option.h"
 #include "jbc2mpl_option.h"
+#include "as_option.h"
+#include "cpp2mpl_option.h"
 #include "me_option.h"
 #include "option.h"
 #include "cg_option.h"
@@ -46,9 +48,9 @@ const std::string kMapleDriverVersion = "MapleDriver " + std::to_string(Version:
 const std::string kMapleDriverVersion = "Maple Version : " + Version::GetVersionStr();
 #endif
 
-const std::vector<std::string> kMapleCompilers = { "jbc2mpl",
-    "dex2mpl", "mplipa",
-    "me", "mpl2mpl", "mplcg" };
+const std::vector<std::string> kMapleCompilers = { "jbc2mpl", "mplfe",
+    "dex2mpl", "mplipa", "as",
+    "me", "mpl2mpl", "mplcg", "clang"};
 
 int MplOptions::Parse(int argc, char **argv) {
   optionParser.reset(new OptionParser());
@@ -60,6 +62,9 @@ int MplOptions::Parse(int argc, char **argv) {
 #endif
   optionParser->RegisteUsages(IpaOption::GetInstance());
   optionParser->RegisteUsages(jbcUsage);
+  optionParser->RegisteUsages(cppUsage);
+  // Not sure if this is even required
+  // optionParser->RegisteUsages(asUsage);
   optionParser->RegisteUsages(Options::GetInstance());
   optionParser->RegisteUsages(MeOption::GetInstance());
   optionParser->RegisteUsages(CGOptions::GetInstance());
@@ -130,6 +135,18 @@ ErrorCode MplOptions::HandleGeneralOptions() {
         ret = UpdatePhaseOption(opt.Args(), kBinNameDex2mpl);
         if (ret != kErrorNoError) {
           return ret;
+        }
+        break;
+      case kAsOpt:
+        ret = UpdatePhaseOption(opt.Args(), kBinNameAs);
+        if (ret != kErrorNoError) {
+          return ret;
+        }
+        break;
+      case kCpp2mplOpt:
+        ret = UpdatePhaseOption(opt.Args(), kBinNameCpp2mpl);
+        if (ret != kErrorNoError) {
+            return ret;
         }
         break;
       case kJbc2mplOpt:
@@ -259,6 +276,14 @@ ErrorCode MplOptions::DecideRunningPhases() {
   bool isNeedMapleComb = true;
   bool isNeedMplcg = true;
   switch (inputFileType) {
+    case InputFileType::kFileTypeC:
+    case InputFileType::kFileTypeCpp:
+      UpdateRunningExe(kBinNameClang);
+      UpdateRunningExe(kBinNameCpp2mpl);
+      break;
+    case InputFileType::kFileTypeAst:
+      UpdateRunningExe(kBinNameCpp2mpl);
+      break;
     case InputFileType::kFileTypeJar:
       // fall-through
     case InputFileType::kFileTypeClass:
@@ -363,9 +388,19 @@ bool MplOptions::Init(const std::string &inputFile) {
   else if (extensionName == "dex") {
     inputFileType = InputFileType::kFileTypeDex;
   }
+  else if (extensionName == "c") {
+    inputFileType = InputFileType::kFileTypeC;
+  }
+  else if (extensionName == "cpp") {
+      inputFileType = InputFileType::kFileTypeCpp;
+  }
+  else if (extensionName == "ast") {
+      inputFileType = InputFileType::kFileTypeAst;
+  }
   else if (extensionName == "jar") {
     inputFileType = InputFileType::kFileTypeJar;
-  } else if (extensionName == "mpl" || extensionName == "bpl") {
+  }
+  else if (extensionName == "mpl" || extensionName == "bpl") {
     if (firstInputFile.find("VtableImpl") == std::string::npos) {
       if (firstInputFile.find(".me.mpl") != std::string::npos) {
         inputFileType = InputFileType::kFileTypeMeMpl;
@@ -609,4 +644,4 @@ void MplOptions::PrintDetailCommand(bool isBeforeParse) {
                            << printCommandStr << " " << GetInputFileNameForPrint() << '\n';
   }
 }
-}  // namespace maple
+} // namespace maple
