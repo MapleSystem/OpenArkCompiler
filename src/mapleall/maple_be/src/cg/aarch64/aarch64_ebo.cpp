@@ -824,6 +824,9 @@ bool AArch64Ebo::CombineExtensionAndLoad(Insn *insn, const MapleVector<OpndInfo*
 
 bool AArch64Ebo::CombineMultiplyAdd(Insn *insn, const Insn *prevInsn, InsnInfo *insnInfo, Operand *addOpnd,
                                     bool is64bits, bool isFp) {
+  if (!CGOptions::IsFastMath()) {
+    return false;
+  }
   /* don't use register if it was redefined. */
   OpndInfo *opndInfo1 = insnInfo->origOpnd[kInsnSecondOpnd];
   OpndInfo *opndInfo2 = insnInfo->origOpnd[kInsnThirdOpnd];
@@ -858,6 +861,9 @@ bool AArch64Ebo::CheckCanDoMadd(Insn *insn, OpndInfo *opndInfo, int32 pos, bool 
 }
 
 bool AArch64Ebo::CombineMultiplySub(Insn *insn, OpndInfo *opndInfo, bool is64bits, bool isFp) {
+  if (!CGOptions::IsFastMath()) {
+    return false;
+  }
   if ((opndInfo == nullptr) || (opndInfo->insn == nullptr)) {
     return false;
   }
@@ -888,6 +894,9 @@ bool AArch64Ebo::CombineMultiplySub(Insn *insn, OpndInfo *opndInfo, bool is64bit
 }
 
 bool AArch64Ebo::CombineMultiplyNeg(Insn *insn, OpndInfo *opndInfo, bool is64bits, bool isFp) {
+  if (!CGOptions::IsFastMath()) {
+    return false;
+  }
   if ((opndInfo == nullptr) || (opndInfo->insn == nullptr)) {
     return false;
   }
