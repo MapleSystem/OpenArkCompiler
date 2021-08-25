@@ -64,6 +64,14 @@ class MIRPreg {
     primType = pty;
   }
 
+  Opcode GetOp() const {
+    return op;
+  }
+
+  void SetOp(Opcode o) {
+    this->op = o;
+  }
+
   int32 GetPregNo() const {
     return pregNo;
   }
@@ -83,8 +91,15 @@ class MIRPreg {
  private:
   PrimType primType = kPtyInvalid;
   bool needRC = false;
+  Opcode op = OP_undef; // OP_constval, OP_addrof or OP_dread if rematerializable
   int32 pregNo;  // the number in maple IR after the %
   MIRType *mirType = nullptr;
+ public:
+  union RematInfo {
+    MIRConst *mirConst; // used only when op is OP_constval
+    MIRSymbol *sym;     // used only when op is OP_addrof or OP_dread
+  } rematInfo;
+  FieldID fieldID = 0;  // used only when op is OP_addrof or OP_dread
 };
 
 class MIRPregTable {

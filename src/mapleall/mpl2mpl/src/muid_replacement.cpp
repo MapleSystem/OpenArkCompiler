@@ -1821,9 +1821,9 @@ void MUIDReplacement::GenerateCompilerVersionNum() {
   MIRAggConst *newConst = GetMIRModule().GetMemPool()->New<MIRAggConst>(GetMIRModule(), arrayType);
   MIRType &type = *GlobalTables::GetTypeTable().GetInt32();
   MIRConst *firstConst =
-      GlobalTables::GetIntConstTable().GetOrCreateIntConst(Version::kMajorMplVersion, type);
+      GlobalTables::GetIntConstTable().GetOrCreateIntConst(Version::GetMajorVersion(), type);
   MIRConst *secondConst =
-      GlobalTables::GetIntConstTable().GetOrCreateIntConst(Version::kMinorCompilerVersion, type);
+      GlobalTables::GetIntConstTable().GetOrCreateIntConst(Version::GetMinorVersion(), type);
   newConst->AddItem(firstConst, 0);
   newConst->AddItem(secondConst, 0);
   std::string symName = namemangler::kCompilerVersionNum + GetMIRModule().GetFileNameAsPostfix();

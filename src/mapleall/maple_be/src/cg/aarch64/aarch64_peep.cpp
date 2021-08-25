@@ -453,7 +453,7 @@ bool EnhanceStrLdrAArch64::IsEnhanceAddImm(MOperator prevMop) {
 }
 
 bool IsSameRegisterOperation(RegOperand &desMovOpnd, RegOperand &uxtDestOpnd, RegOperand &uxtFromOpnd) {
-  return ((desMovOpnd.GetRegisterNumber() == uxtDestOpnd.GetRegisterNumber()) ||
+  return ((desMovOpnd.GetRegisterNumber() == uxtDestOpnd.GetRegisterNumber()) &&
           (uxtDestOpnd.GetRegisterNumber() == uxtFromOpnd.GetRegisterNumber()));
 }
 

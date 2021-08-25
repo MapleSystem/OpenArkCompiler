@@ -21,6 +21,7 @@
 #include "inline.h"
 #include "me_phase_manager.h"
 #include "constantfold.h"
+#include "lfo_loop_vec.h"
 
 namespace maple {
 using namespace mapleOption;
@@ -194,7 +195,6 @@ ErrorCode MapleCombCompiler::Compile(MplOptions &options, std::unique_ptr<MIRMod
     PrintCommand(options);
   }
   ErrorCode nErr = runner.Run();
-
   return nErr;
 }
 }  // namespace maple

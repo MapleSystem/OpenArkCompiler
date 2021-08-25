@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2019-2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -41,8 +41,12 @@ namespace maple {
 using namespace mapleOption;
 using namespace maplebe;
 
-const std::string kMapleDriverVersion = "MapleDriver " + std::to_string(Version::kMajorMplVersion) + "." +
-                                        std::to_string(Version::kMinorCompilerVersion) + " 20190929";
+#ifdef ANDROID
+const std::string kMapleDriverVersion = "MapleDriver " + std::to_string(Version::GetMajorVersion()) + "." +
+                                        std::to_string(Version::GetMinorVersion()) + " 20190929";
+#else
+const std::string kMapleDriverVersion = "Maple Version : " + Version::GetVersionStr();
+#endif
 
 const std::vector<std::string> kMapleCompilers = { "jbc2mpl", "mplfe",
     "dex2mpl", "mplipa", "as",
@@ -142,7 +146,7 @@ ErrorCode MplOptions::HandleGeneralOptions() {
       case kCpp2mplOpt:
         ret = UpdatePhaseOption(opt.Args(), kBinNameCpp2mpl);
         if (ret != kErrorNoError) {
-            return ret;
+          return ret;
         }
         break;
       case kJbc2mplOpt:
@@ -388,10 +392,10 @@ bool MplOptions::Init(const std::string &inputFile) {
     inputFileType = InputFileType::kFileTypeC;
   }
   else if (extensionName == "cpp") {
-      inputFileType = InputFileType::kFileTypeCpp;
+    inputFileType = InputFileType::kFileTypeCpp;
   }
   else if (extensionName == "ast") {
-      inputFileType = InputFileType::kFileTypeAst;
+    inputFileType = InputFileType::kFileTypeAst;
   }
   else if (extensionName == "jar") {
     inputFileType = InputFileType::kFileTypeJar;

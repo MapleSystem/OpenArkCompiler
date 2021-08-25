@@ -26,9 +26,6 @@ namespace maplebe {
  *  NB. As an optimization we can use X8 as a scratch (temporary)
  *     register if the return value is not returned through memory.
  */
-constexpr uint32 kCondBrNum = 2;
-constexpr uint32 kSwitchCaseNum = 5;
-
 Operand *AArch64RegAllocator::HandleRegOpnd(Operand &opnd) {
   ASSERT(opnd.IsRegister(), "Operand should be register operand");
   auto &regOpnd = static_cast<RegOperand&>(opnd);
@@ -360,176 +357,6 @@ void AArch64RegAllocator::SaveCalleeSavedReg(RegOperand &regOpnd) {
   }
 }
 
-bool AArch64RegAllocator::AllPredBBVisited(BB &bb) const {
-  bool isAllPredsVisited = true;
-  for (const auto *predBB : bb.GetPreds()) {
-    /* See if pred bb is a loop back edge */
-    bool isBackEdge = false;
-    for (const auto *loopBB : predBB->GetLoopSuccs()) {
-      if (loopBB == &bb) {
-        isBackEdge = true;
-        break;
-      }
-    }
-    if (!isBackEdge && !visitedBBs[predBB->GetId()]) {
-      isAllPredsVisited = false;
-      break;
-    }
-  }
-  for (const auto *predEhBB : bb.GetEhPreds()) {
-    bool isBackEdge = false;
-    for (const auto *loopBB : predEhBB->GetLoopSuccs()) {
-      if (loopBB == &bb) {
-        isBackEdge = true;
-        break;
-      }
-    }
-    if (!isBackEdge && !visitedBBs[predEhBB->GetId()]) {
-      isAllPredsVisited = false;
-      break;
-    }
-  }
-  return isAllPredsVisited;
-}
-
-/*
- * During live interval construction, bb has only one predecessor and/or one
- * successor are stright line bb.  It can be considered to be a single large bb
- * for the purpose of finding live interval.  This is to prevent extending live
- * interval of registers unnecessarily when interleaving bb from other paths.
- */
-BB *AArch64RegAllocator::MarkStraightLineBBInBFS(BB *bb) {
-  while (true) {
-    if ((bb->GetSuccs().size() != 1) || !bb->GetEhSuccs().empty()) {
-      break;
-    }
-    BB *sbb = bb->GetSuccs().front();
-    if (visitedBBs[sbb->GetId()]) {
-      break;
-    }
-    if ((sbb->GetPreds().size() != 1) || !sbb->GetEhPreds().empty()) {
-      break;
-    }
-    sortedBBs.push_back(sbb);
-    visitedBBs[sbb->GetId()] = true;
-    bb = sbb;
-  }
-  return bb;
-}
-
-BB *AArch64RegAllocator::SearchForStraightLineBBs(BB &bb) {
-  if ((bb.GetSuccs().size() != kCondBrNum) || bb.GetEhSuccs().empty()) {
-    return &bb;
-  }
-  BB *sbb1 = bb.GetSuccs().front();
-  BB *sbb2 = bb.GetSuccs().back();
-  size_t predSz1 = sbb1->GetPreds().size();
-  size_t predSz2 = sbb2->GetPreds().size();
-  BB *candidateBB = nullptr;
-  if ((predSz1 == 1) && (predSz2 > kSwitchCaseNum)) {
-    candidateBB = sbb1;
-  } else if ((predSz2 == 1) && (predSz1 > kSwitchCaseNum)) {
-    candidateBB = sbb2;
-  } else {
-    return &bb;
-  }
-  ASSERT(candidateBB->GetId() < visitedBBs.size(), "index out of range in RA::SearchForStraightLineBBs");
-  if (visitedBBs[candidateBB->GetId()]) {
-    return &bb;
-  }
-  if (!candidateBB->GetEhPreds().empty()) {
-    return &bb;
-  }
-  if (candidateBB->GetSuccs().size() != 1) {
-    return &bb;
-  }
-
-  sortedBBs.push_back(candidateBB);
-  visitedBBs[candidateBB->GetId()] = true;
-  return MarkStraightLineBBInBFS(candidateBB);
-}
-
-void AArch64RegAllocator::BFS(BB &curBB) {
-  std::queue<BB*> workList;
-  workList.push(&curBB);
-  ASSERT(curBB.GetId() < cgFunc->NumBBs(), "RA::BFS visitedBBs overflow");
-  ASSERT(curBB.GetId() < visitedBBs.size(), "index out of range in RA::BFS");
-  visitedBBs[curBB.GetId()] = true;
-  do {
-    BB *bb = workList.front();
-    sortedBBs.push_back(bb);
-    ASSERT(bb->GetId() < cgFunc->NumBBs(), "RA::BFS visitedBBs overflow");
-    visitedBBs[bb->GetId()] = true;
-    workList.pop();
-    /* Look for straight line bb */
-    bb = MarkStraightLineBBInBFS(bb);
-    /* Look for an 'if' followed by some straight-line bb */
-    bb = SearchForStraightLineBBs(*bb);
-    for (auto *ibb : bb->GetSuccs()) {
-      /* See if there are unvisited predecessor */
-      if (visitedBBs[ibb->GetId()]) {
-        continue;
-      }
-      if (AllPredBBVisited(*ibb)) {
-        workList.push(ibb);
-        ASSERT(ibb->GetId() < cgFunc->NumBBs(), "GCRA::BFS visitedBBs overflow");
-        visitedBBs[ibb->GetId()] = true;
-      }
-    }
-  } while (!workList.empty());
-}
-
-void AArch64RegAllocator::ComputeBlockOrder() {
-  visitedBBs.clear();
-  sortedBBs.clear();
-  visitedBBs.resize(cgFunc->NumBBs());
-  for (uint32 i = 0; i < cgFunc->NumBBs(); ++i) {
-    visitedBBs[i] = false;
-  }
-  BB *cleanupBB = nullptr;
-  FOR_ALL_BB(bb, cgFunc) {
-    bb->SetInternalFlag1(0);
-    if (bb->GetFirstStmt() == cgFunc->GetCleanupLabel()) {
-      cleanupBB = bb;
-    }
-  }
-  for (BB *bb = cleanupBB; bb != nullptr; bb = bb->GetNext()) {
-    bb->SetInternalFlag1(1);
-  }
-
-  bool changed;
-  size_t sortedCnt = 0;
-  bool done = false;
-  do {
-    changed = false;
-    FOR_ALL_BB(bb, cgFunc) {
-      if (bb->GetInternalFlag1() == 1) {
-        continue;
-      }
-      if (visitedBBs[bb->GetId()]) {
-        continue;
-      }
-      changed = true;
-      if (AllPredBBVisited(*bb)) {
-        BFS(*bb);
-      }
-    }
-    /* Make sure there is no infinite loop. */
-    if (sortedCnt == sortedBBs.size()) {
-      if (!done) {
-        done = true;
-      } else {
-        LogInfo::MapleLogger() << "Error: RA BFS loop " << sortedCnt << " in func " << cgFunc->GetName() << "\n";
-      }
-    }
-    sortedCnt = sortedBBs.size();
-  } while (changed);
-
-  for (BB *bb = cleanupBB; bb != nullptr; bb = bb->GetNext()) {
-    sortedBBs.push_back(bb);
-  }
-}
-
 uint32 AArch64RegAllocator::GetRegLivenessId(Operand *opnd) {
   auto regIt = regLiveness.find(opnd);
   return ((regIt == regLiveness.end()) ? 0 : regIt->second);
@@ -725,7 +552,6 @@ bool DefaultO0RegAllocator::AllocateRegisters() {
       rememberRegs.clear();
     }
   }
-  cgFunc->SetIsAfterRegAlloc();
   return true;
 }
 

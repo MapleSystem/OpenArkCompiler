@@ -1044,16 +1044,27 @@ bool MIRParser::ParseFuncAttrs(FuncAttrs &attrs) {
   do {
     switch (lexer.GetTokenKind()) {
 #define FUNC_ATTR
-#define ATTR(X)                \
-      case TK_##X:                 \
-        attrs.SetAttr(FUNCATTR_##X); \
-        break;
+#define ATTR(X)                       \
+      case TK_##X: {                  \
+        attrs.SetAttr(FUNCATTR_##X);  \
+        break;                        \
+      }
 #include "all_attributes.def"
 #undef ATTR
 #undef FUNC_ATTR
       default:
         return true;
     }  // switch
+    if (lexer.GetTokenKind() == TK_alias) {
+      if (lexer.NextToken() != TK_lparen) {
+        continue;
+      }
+      if (lexer.NextToken() != TK_string) {
+        return false;
+      }
+      attrs.SetAliasFuncName(lexer.GetName());
+      lexer.NextToken();
+    }
     lexer.NextToken();
   } while (true);
 }

@@ -329,7 +329,7 @@ StmtNode &MaydassignMeStmt::EmitStmt(SSATab &ssaTab) {
 void MeStmt::EmitCallReturnVector(CallReturnVector &nRets) {
   MapleVector<MustDefMeNode> *mustDefs = GetMustDefList();
   CHECK_FATAL(mustDefs != nullptr, "EmitCallReturnVector: mustDefList cannot be null");
-  for (MustDefMeNode mustdef : *mustDefs) {
+  for (MustDefMeNode &mustdef : *mustDefs) {
     MeExpr *meExpr = mustdef.GetLHS();
     if (meExpr->GetMeOp() == kMeOpVar) {
       OriginalSt *ost = static_cast<VarMeExpr*>(meExpr)->GetOst();

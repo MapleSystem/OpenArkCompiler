@@ -20,6 +20,7 @@
 #include "mir_module.h"
 #include "mir_builder.h"
 #include "feir_type.h"
+#include "generic_attrs.h"
 
 namespace maple {
 enum FEIRVarTransKind : uint8 {

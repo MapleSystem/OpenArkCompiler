@@ -29,6 +29,12 @@ using namespace namemangler;
 
 uint32 MIRSymbol::lastPrintedLineNum = 0;
 
+bool MIRSymbol::NeedPIC() const {
+  return (storageClass == kScGlobal) ||
+         (storageClass == kScExtern) ||
+         (sKind == kStFunc && !GetFunction()->IsStatic());
+}
+
 bool MIRSymbol::IsTypeVolatile(int fieldID) const {
   const MIRType *ty = GlobalTables::GetTypeTable().GetTypeFromTyIdx(GetTyIdx());
   return ty->IsVolatile(fieldID);

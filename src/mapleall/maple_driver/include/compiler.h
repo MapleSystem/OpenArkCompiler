@@ -136,7 +136,7 @@ class Cpp2MplCompiler : public Compiler {
 
   ~Cpp2MplCompiler() = default;
 
-private:
+ private:
   std::string GetBinPath(const MplOptions &options) const override;
   const std::string &GetBinName() const override;
   std::string GetInputFileName(const MplOptions &options) const override;

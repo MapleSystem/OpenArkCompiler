@@ -306,6 +306,13 @@ BlockNode *SwitchLowerer::LowerSwitch() {
     localBlk->AddStatement(gotoDft);
     return localBlk;
   }
+
+  // add case labels to label table's caseLabelSet
+  MIRLabelTable *labelTab = mirModule.CurFunction()->GetLabelTab();
+  for (CasePair &casePair : stmt->GetSwitchTable()) {
+    labelTab->caseLabelSet.insert(casePair.second);
+  }
+
   MapleVector<Cluster> clusters(ownAllocator->Adapter());
   stmt->SortCasePair(CasePairKeyLessThan);
   FindClusters(clusters);

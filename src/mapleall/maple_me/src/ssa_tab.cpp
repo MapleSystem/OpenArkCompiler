@@ -124,6 +124,11 @@ void SSATab::CreateSSAStmt(StmtNode &stmt, const BB *curbb) {
       stmtsSSAPart.SetSSAPartOf(stmt, stmtsSSAPart.GetSSAPartMp()->New<MayDefPart>(&stmtsSSAPart.GetSSAPartAlloc()));
       return;
     default: {
+      if (stmt.GetOpCode() == OP_asm) {
+        if (static_cast<AsmNode&>(stmt).HasWriteInputs()) {
+          func->SetHasWriteInputAsmNode();
+        }
+      }
       if (kOpcodeInfo.IsCallAssigned(stmt.GetOpCode())) {
         MayDefMayUseMustDefPart *theSSAPart =
             stmtsSSAPart.GetSSAPartMp()->New<MayDefMayUseMustDefPart>(&stmtsSSAPart.GetSSAPartAlloc());

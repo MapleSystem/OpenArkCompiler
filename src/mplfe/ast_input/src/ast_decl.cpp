@@ -73,12 +73,21 @@ void ASTVar::GenerateInitStmt4StringLiteral(ASTExpr *initASTExpr, UniqueFEIRVar 
     auto uSrcExpr = initFeirExpr->Clone();
     argExprList->emplace_back(std::move(uDstExpr));
     argExprList->emplace_back(std::move(uSrcExpr));
-    argExprList->emplace_back(FEIRBuilder::CreateExprConstI32(stringLiteralSize));
+    MIRType *mirArrayType = feirVar->GetType()->GenerateMIRTypeAuto();
+    UniqueFEIRExpr sizeExpr;
+    if (mirArrayType->GetKind() == kTypeArray &&
+      static_cast<MIRArrayType*>(mirArrayType)->GetElemType()->GetSize() != 1) {
+      UniqueFEIRExpr leftExpr = FEIRBuilder::CreateExprConstI32(stringLiteralSize);
+      UniqueFEIRExpr rightExpr = FEIRBuilder::CreateExprConstI32(
+          static_cast<MIRArrayType*>(mirArrayType)->GetElemType()->GetSize());
+      sizeExpr = FEIRBuilder::CreateExprBinary(OP_mul, std::move(leftExpr), std::move(rightExpr));
+    } else {
+      sizeExpr = FEIRBuilder::CreateExprConstI32(stringLiteralSize);
+    }
+    argExprList->emplace_back(sizeExpr->Clone());
     std::unique_ptr<FEIRStmtIntrinsicCallAssign> memcpyStmt = std::make_unique<FEIRStmtIntrinsicCallAssign>(
         INTRN_C_memcpy, nullptr, nullptr, std::move(argExprList));
     stmts.emplace_back(std::move(memcpyStmt));
-
-    MIRType *mirArrayType = feirVar->GetType()->GenerateMIRTypeAuto();
     if (mirArrayType->GetKind() != kTypeArray) {
       return;
     }
@@ -89,8 +98,7 @@ void ASTVar::GenerateInitStmt4StringLiteral(ASTExpr *initASTExpr, UniqueFEIRVar 
     uint32 needInitFurtherCnt = allElemCnt - stringLiteralSize;
     if (needInitFurtherCnt > 0) {
       std::unique_ptr<std::list<UniqueFEIRExpr>> argExprList = std::make_unique<std::list<UniqueFEIRExpr>>();
-      auto addExpr = FEIRBuilder::CreateExprBinary(OP_add, std::move(dstExpr),
-          FEIRBuilder::CreateExprConstI32(stringLiteralSize));
+      auto addExpr = FEIRBuilder::CreateExprBinary(OP_add, std::move(dstExpr), sizeExpr->Clone());
       argExprList->emplace_back(std::move(addExpr));
       argExprList->emplace_back(FEIRBuilder::CreateExprConstI32(0));
       argExprList->emplace_back(FEIRBuilder::CreateExprConstI32(needInitFurtherCnt));

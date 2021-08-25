@@ -16,10 +16,10 @@
 #define MPLFE_AST_FILE_INCLUDE_AST_INTERFACE_H
 #include <string>
 #include "ast_alias.h"
-
 #include "mir_type.h"
 #include "mir_nodes.h"
 #include "mpl_logging.h"
+#include "generic_attrs.h"
 
 namespace maple {
 using Pos = std::pair<uint32, uint32>;

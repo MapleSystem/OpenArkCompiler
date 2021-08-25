@@ -69,6 +69,10 @@ inline bool IsPossible32BitAddress(PrimType tp) {
   return (tp == PTY_ptr || tp == PTY_ref || tp == PTY_u32 || tp == PTY_a32);
 }
 
+inline bool MustBeAddress(PrimType tp) {
+  return (tp == PTY_ptr || tp == PTY_ref || tp == PTY_a64 || tp == PTY_a32);
+}
+
 inline bool IsPrimitivePureScalar(PrimitiveType primitiveType) {
   return primitiveType.IsInteger() && !primitiveType.IsAddress() &&
          !primitiveType.IsDynamic() && !primitiveType.IsVector();
@@ -344,6 +348,14 @@ class FuncAttrs {
     }
   }
 
+  void SetAliasFuncName(const std::string &name) {
+    aliasFuncName = name;
+  }
+
+  std::string GetAliasFuncName() const {
+    return aliasFuncName;
+  }
+
   void SetAttrFlag(uint64 flag) {
     attrFlag = flag;
   }
@@ -368,50 +380,7 @@ class FuncAttrs {
 
  private:
   uint64 attrFlag = 0;
-};
-
-// only for internal use, not emitted
-enum GenericAttrKind {
-#define FUNC_ATTR
-#define TYPE_ATTR
-#define FIELD_ATTR
-#define ATTR(STR) GENATTR_##STR,
-#include "all_attributes.def"
-#undef ATTR
-#undef FUNC_ATTR
-#undef TYPE_ATTR
-#undef FIELD_ATTR
-};
-
-class GenericAttrs {
- public:
-  GenericAttrs() = default;
-  GenericAttrs(const GenericAttrs &ta) = default;
-  GenericAttrs &operator=(const GenericAttrs &p) = default;
-  ~GenericAttrs() = default;
-
-  void SetAttr(GenericAttrKind x) {
-    attrFlag |= (1ULL << x);
-  }
-
-  bool GetAttr(GenericAttrKind x) const {
-    return (attrFlag & (1ULL << x)) != 0;
-  }
-
-  bool operator==(const GenericAttrs &tA) const {
-    return attrFlag == tA.attrFlag;
-  }
-
-  bool operator!=(const GenericAttrs &tA) const {
-    return !(*this == tA);
-  }
-
-  FieldAttrs ConvertToFieldAttrs();
-  TypeAttrs ConvertToTypeAttrs();
-  FuncAttrs ConvertToFuncAttrs();
-
- private:
-  uint64 attrFlag = 0;
+  std::string aliasFuncName;
 };
 
 #if MIR_FEATURE_FULL

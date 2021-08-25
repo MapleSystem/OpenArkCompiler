@@ -1106,7 +1106,7 @@ class ASTCallExpr : public ASTExpr {
   UniqueFEIRExpr ProcessBuiltinFunc(std::list<UniqueFEIRStmt> &stmts, bool &isFinish) const;
   std::unique_ptr<FEIRStmtAssign> GenCallStmt() const;
   void AddArgsExpr(std::unique_ptr<FEIRStmtAssign> &callStmt, std::list<UniqueFEIRStmt> &stmts) const;
-  UniqueFEIRExpr AddRetExpr(std::unique_ptr<FEIRStmtAssign> &callStmt, std::list<UniqueFEIRStmt> &stmts) const;
+  UniqueFEIRExpr AddRetExpr(std::unique_ptr<FEIRStmtAssign> &callStmt) const;
 
  private:
   using FuncPtrBuiltinFunc = UniqueFEIRExpr (ASTCallExpr::*)(std::list<UniqueFEIRStmt> &stmts) const;

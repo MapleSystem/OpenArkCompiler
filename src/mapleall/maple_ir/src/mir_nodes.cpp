@@ -678,6 +678,7 @@ void DassignNode::Dump(int32 indent) const {
 
 void DassignoffNode::Dump(int32 indent) const {
   StmtNode::DumpBase(indent);
+  LogInfo::MapleLogger() << " " << GetPrimTypeName(GetPrimType());
   const MIRSymbol *st = theMIRModule->CurFunction()->GetLocalOrGlobalSymbol(stIdx);
   LogInfo::MapleLogger() << (st->IsLocal() ? " %" : " $");
   LogInfo::MapleLogger() << st->GetName() << " " << offset;
@@ -1042,6 +1043,19 @@ bool HasIreadExpr(const BaseNode *expr) {
     }
   }
   return false;
+}
+
+// layer to leaf node
+size_t MaxDepth(const BaseNode *expr) {
+  if (expr->IsLeaf()) {
+    return 1;
+  }
+  size_t maxSubDepth = 0;
+  for (size_t i = 0; i < expr->GetNumOpnds(); ++i) {
+    size_t depth = MaxDepth(expr->Opnd(i));
+    maxSubDepth = (depth > maxSubDepth) ? depth : maxSubDepth;
+  }
+  return maxSubDepth + 1; // expr itself
 }
 
 MIRType *CallNode::GetCallReturnType() {

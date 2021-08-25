@@ -343,12 +343,10 @@ void MeSSALPre::BuildWorkListExpr(MeStmt &meStmt, int32 seqStmt, MeExpr &meExpr,
       if (!MeOption::lpre4Address) {
         break;
       }
-      if (mirModule->IsJavaModule()) {
-        auto *addrOfMeExpr = static_cast<AddrofMeExpr *>(&meExpr);
-        const OriginalSt *ost = ssaTab->GetOriginalStFromID(addrOfMeExpr->GetOstIdx());
-        if (ost->IsLocal()) {  // skip lpre for stack addresses as they are cheap and need keep for rc
-          break;
-        }
+      auto *addrOfMeExpr = static_cast<AddrofMeExpr *>(&meExpr);
+      const OriginalSt *ost = ssaTab->GetOriginalStFromID(addrOfMeExpr->GetOstIdx());
+      if (ost->IsLocal()) {  // skip lpre for stack addresses as they are cheap and need keep for rc
+        break;
       }
       (void)CreateRealOcc(meStmt, seqStmt, meExpr, false);
       break;
@@ -364,6 +362,9 @@ void MeSSALPre::BuildWorkListExpr(MeStmt &meStmt, int32 seqStmt, MeExpr &meExpr,
       break;
     }
     case kMeOpConst: {
+      if (preKind != kAddrPre) {
+        break;
+      }
       if (!MeOption::lpre4LargeInt) {
         break;
       }

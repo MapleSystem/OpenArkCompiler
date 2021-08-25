@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2019-2020] Huawei Technologies Co.,Ltd.All rights reserved.
+ * Copyright (c) [2021] Huawei Technologies Co.,Ltd.All rights reserved.
  *
  * OpenArkCompiler is licensed under Mulan PSL v2.
  * You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -24,11 +24,10 @@ enum AsOptionIndex {
 const mapleOption::Descriptor asUsage[] = {
   { kUnknown, 0, "", "", mapleOption::kBuildTypeAll, mapleOption::kArgCheckPolicyUnknown,
     "========================================\n"
-         " Usage: as [ options ]\n"
-         " options:\n",
+    " Usage: as [ options ]\n"
+    " options:\n",
     "as",
     {} },
-
 
   { kAsHelp, 0, "h", "help", mapleOption::kBuildTypeExperimental, mapleOption::kArgCheckPolicyNone,
     "   -h, --help          : print usage and exit.\n",

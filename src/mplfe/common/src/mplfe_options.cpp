@@ -20,6 +20,7 @@
 #include "option_parser.h"
 #include "parser_opt.h"
 #include "fe_file_type.h"
+#include "version.h"
 
 namespace maple {
 using namespace mapleOption;
@@ -437,8 +438,7 @@ void MPLFEOptions::DumpUsage() const {
 }
 
 void MPLFEOptions::DumpVersion() const {
-  // 2021.8.16 Version: C Enhanced Evolution 1.0.0.B002
-  std::cout << "Version: C Enhanced Evolution 1.0.0.B002" << std::endl;
+  std::cout << "Maple FE Version : " << Version::GetVersionStr() << std::endl;
 }
 
 bool MPLFEOptions::ProcessHelp(const Option &opt) {

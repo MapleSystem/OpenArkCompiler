@@ -51,6 +51,8 @@
   ATTR(ipaseen)
   ATTR(rclocalunowned)
   ATTR(callersensitive)
+  ATTR(alias)
+  ATTR(weakref)
 #endif
 #if defined(FUNC_ATTR) || defined(TYPE_ATTR)
   ATTR(abstract)

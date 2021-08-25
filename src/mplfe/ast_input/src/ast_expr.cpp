@@ -244,21 +244,11 @@ void ASTCallExpr::AddArgsExpr(std::unique_ptr<FEIRStmtAssign> &callStmt, std::li
   }
 }
 
-UniqueFEIRExpr ASTCallExpr::AddRetExpr(std::unique_ptr<FEIRStmtAssign> &callStmt,
-                                       std::list<UniqueFEIRStmt> &stmts) const {
+UniqueFEIRExpr ASTCallExpr::AddRetExpr(std::unique_ptr<FEIRStmtAssign> &callStmt) const {
   UniqueFEIRVar var = FEIRBuilder::CreateVarNameForC(varName, *retType, false, false);
   UniqueFEIRVar dreadVar = var->Clone();
   if (!IsFirstArgRet()) {
     callStmt->SetVar(var->Clone());
-  }
-  stmts.emplace_back(std::move(callStmt));
-  if (!IsFirstArgRet() && args.size() == 1) {
-    std::stringstream ss;
-    ss << varName << ".mcall";
-    UniqueFEIRVar mCallVar = FEIRBuilder::CreateVarNameForC(ss.str(), *retType, false, false);
-    auto stmt = FEIRBuilder::CreateStmtDAssign(mCallVar->Clone(), FEIRBuilder::CreateExprDRead(dreadVar->Clone()));
-    stmts.emplace_back(std::move(stmt));
-    dreadVar = mCallVar->Clone();
   }
   return FEIRBuilder::CreateExprDRead(dreadVar->Clone());
 }
@@ -301,11 +291,12 @@ UniqueFEIRExpr ASTCallExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) co
   }
   std::unique_ptr<FEIRStmtAssign> callStmt = GenCallStmt();
   AddArgsExpr(callStmt, stmts);
+  UniqueFEIRExpr retExpr = nullptr;
   if (IsNeedRetExpr()) {
-    return AddRetExpr(callStmt, stmts);
+    retExpr = AddRetExpr(callStmt);
   }
   stmts.emplace_back(std::move(callStmt));
-  return nullptr;
+  return retExpr;
 }
 
 // ---------- ASTCastExpr ----------

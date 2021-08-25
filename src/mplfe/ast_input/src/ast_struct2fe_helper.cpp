@@ -217,6 +217,18 @@ bool ASTFunc2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
                                                        argsTypeIdx, isVarg, isStatic);
   mirFunc->GetSrcPosition().SetFileNum(func.GetSrcFileIdx());
   mirFunc->GetSrcPosition().SetLineNum(func.GetSrcFileLineNum());
+  MIRSymbol *funSym = mirFunc->GetFuncSymbol();
+  if (!func.GetAliasAttr().empty()) {
+    funSym->SetAliasAttr(GlobalTables::GetUStrTable().GetOrCreateStrIdxFromName(func.GetAliasAttr()));
+  }
+  if (func.GetWeakrefAttr().first) {
+    std::string attrStr = func.GetWeakrefAttr().second;
+    UStrIdx idx { 0 };
+    if (!attrStr.empty()) {
+      idx = GlobalTables::GetUStrTable().GetOrCreateStrIdxFromName(attrStr);
+    }
+    funSym->SetWeakrefAttr(std::pair<bool, UStrIdx> { true, idx });
+  }
   std::vector<ASTDecl*> paramDecls = func.GetParamDecls();
   if (firstArgRet) {
     ASTDecl *returnParamVar = ASTDeclsBuilder::ASTVarBuilder(

@@ -3186,7 +3186,7 @@ FEIRExprIntrinsicopForC::FEIRExprIntrinsicopForC(std::unique_ptr<FEIRType> exprT
 }
 
 std::unique_ptr<FEIRExpr> FEIRExprIntrinsicopForC::CloneImpl() const {
-  return std::make_unique<FEIRExprIntrinsicop>(type->Clone(), intrinsicID, opnds);
+  return std::make_unique<FEIRExprIntrinsicopForC>(type->Clone(), intrinsicID, opnds);
 }
 
 BaseNode *FEIRExprIntrinsicopForC::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
@@ -3947,6 +3947,11 @@ std::list<StmtNode*> FEIRStmtGCCAsm::GenMIRStmtsImpl(MIRBuilder &mirBuilder) con
                                                  std::move(srcExpr), fieldID);
       std::list<StmtNode*> node = stmt->GenMIRStmts(mirBuilder);
       stmts.splice(stmts.end(), node);
+
+      // The field ID is set to zero when a temporary variable is created for iread and sym is not a struct or union.
+      if (!sym->GetType()->IsStructType()) {
+        fieldID = 0;
+      }
     } else {
       CHECK_FATAL(false, "FEIRStmtGCCAsm NYI.");
     }

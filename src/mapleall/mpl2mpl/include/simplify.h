@@ -41,7 +41,7 @@ class Simplify : public FuncOptimizeImpl {
   bool IsMathMax(const std::string funcName);
   bool SimplifyMathMethod(const StmtNode &stmt, BlockNode &block);
   void SimplifyCallAssigned(const StmtNode &stmt, BlockNode &block);
-  StmtNode *SplitAggCopy(StmtNode *stmt, BlockNode *block, MIRFunction *func);
+  StmtNode *SimplifyToSelect(MIRFunction *func, IfStmtNode *ifNode, BlockNode *block);
 };
 
 MAPLE_MODULE_PHASE_DECLARE(M2MSimplify)
