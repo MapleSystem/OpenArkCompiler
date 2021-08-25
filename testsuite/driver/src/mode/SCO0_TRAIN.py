@@ -1,4 +1,4 @@
-s#
+#
 # Copyright (c) [2021] Huawei Technologies Co.,Ltd.All rights reserved.
 #
 # OpenArkCompiler is licensed under Mulan PSL v2.
