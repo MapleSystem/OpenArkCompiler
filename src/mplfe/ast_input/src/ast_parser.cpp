@@ -689,11 +689,11 @@ ASTValue *ASTParser::TranslateConstantValue2ASTValue(MapleAllocator &allocator, 
         case llvm::APFloat::S_x87DoubleExtended:
           bool LosesInfo;
           if (constMirType->GetPrimType() == PTY_f64) {
-            fValue.convert(llvm::APFloat::IEEEdouble(), llvm::APFloatBase::roundingMode::rmNearestTiesToAway,
+            fValue.convert(llvm::APFloat::IEEEdouble(), llvm::APFloatBase::rmNearestTiesToAway,
                            &LosesInfo);
             astValue->val.f64 = fValue.convertToDouble();
           } else {
-            fValue.convert(llvm::APFloat::IEEEsingle(), llvm::APFloatBase::roundingMode::rmNearestTiesToAway,
+            fValue.convert(llvm::APFloat::IEEEsingle(), llvm::APFloatBase::rmNearestTiesToAway,
                            &LosesInfo);
             astValue->val.f32 = fValue.convertToFloat();
           }
@@ -1667,7 +1667,7 @@ ASTExpr *ASTParser::ProcessExprFloatingLiteral(MapleAllocator &allocator, const 
     astFloatingLiteral->SetVal(val);
   } else if (&fltSem == &llvm::APFloat::IEEEquad() || &fltSem == &llvm::APFloat::x87DoubleExtended()) {
     bool losesInfo;
-    apf.convert(llvm::APFloat::IEEEdouble(), llvm::APFloatBase::roundingMode::rmNearestTiesToAway, &losesInfo);
+    apf.convert(llvm::APFloat::IEEEdouble(), llvm::APFloatBase::rmNearestTiesToAway, &losesInfo);
     val = static_cast<double>(apf.convertToDouble());
     astFloatingLiteral->SetKind(F64);
     astFloatingLiteral->SetVal(val);
@@ -2386,7 +2386,7 @@ ASTDecl *ASTParser::ProcessDeclParmVarDecl(MapleAllocator &allocator, const clan
 
 ASTDecl *ASTParser::ProcessDeclFileScopeAsmDecl(MapleAllocator &allocator, const clang::FileScopeAsmDecl &asmDecl) {
   ASTFileScopeAsm *astAsmDecl = allocator.GetMemPool()->New<ASTFileScopeAsm>(fileName);
-  astAsmDecl->SetAsmStr(asmDecl.getAsmString()->getString());
+  astAsmDecl->SetAsmStr(asmDecl.getAsmString()->getString().str());
   return astAsmDecl;
 }
 
