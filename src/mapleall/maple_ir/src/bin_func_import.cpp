@@ -565,6 +565,10 @@ BlockNode *BinaryMplImport::ImportBlockNode(MIRFunction *func) {
         ImportReturnValues(func, &s->GetReturnVec());
         numOpr = ReadNum();
         s->SetNumOpnds(numOpr);
+        const auto &calleeName = GlobalTables::GetFunctionTable().GetFunctionFromPuidx(s->GetPUIdx())->GetName();
+        if (calleeName == "setjmp") {
+          func->SetHasSetjmp();
+        }
         for (int32 i = 0; i < numOpr; ++i) {
           s->GetNopnd().push_back(ImportExpression(func));
         }

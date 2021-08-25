@@ -409,6 +409,10 @@ std::vector<Insn*> AArch64ReachingDefinition::FindMemDefBetweenInsn(
           break;
         }
 
+        if (!memOpnd.IsSpillMem() && cgFunc->IsAfterRegAlloc()) {
+          break;
+        }
+
         ASSERT(memOpnd.GetOffsetImmediate() != nullptr, "offset must be a immediate value");
         int64 memOffset = memOpnd.GetOffsetImmediate()->GetOffsetValue();
         if ((offset == memOffset) ||

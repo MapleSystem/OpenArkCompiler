@@ -3947,6 +3947,11 @@ std::list<StmtNode*> FEIRStmtGCCAsm::GenMIRStmtsImpl(MIRBuilder &mirBuilder) con
                                                  std::move(srcExpr), fieldID);
       std::list<StmtNode*> node = stmt->GenMIRStmts(mirBuilder);
       stmts.splice(stmts.end(), node);
+
+      // The field ID is set to zero when a temporary variable is created for iread and sym is not a struct or union.
+      if (!sym->GetType()->IsStructType()) {
+        fieldID = 0;
+      }
     } else {
       CHECK_FATAL(false, "FEIRStmtGCCAsm NYI.");
     }

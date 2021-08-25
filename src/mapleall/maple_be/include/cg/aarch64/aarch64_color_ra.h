@@ -1287,7 +1287,7 @@ class GraphColorRegAllocator : public AArch64RegAllocator {
   RegOperand *GetReplaceOpnd(Insn &insn, const Operand &opnd, uint32 &spillIdx, uint64 &usedRegMask, bool isDef);
   void MarkCalleeSaveRegs();
   void MarkUsedRegs(Operand &opnd, uint64 &usedRegMask);
-  uint64 FinalizeRegisterPreprocess(FinalizeRegisterInfo &fInfo, Insn &insn);
+  uint64 FinalizeRegisterPreprocess(FinalizeRegisterInfo &fInfo, Insn &insn, bool &needProcess);
   void OptCallerSave();
   void FinalizeRegisters();
   void GenerateSpillFillRegs(Insn &insn);
@@ -1374,8 +1374,6 @@ class GraphColorRegAllocator : public AArch64RegAllocator {
    */
   static constexpr size_t kSpillMemOpndNum = 4;
   std::array<MemOperand*, kSpillMemOpndNum> spillMemOpnds = { nullptr };
-  regno_t intSpillFillRegs[kSpillMemOpndNum];
-  regno_t fpSpillFillRegs[kSpillMemOpndNum];
   bool operandSpilled[kSpillMemOpndNum];
   bool needExtraSpillReg = false;
 #ifdef USE_LRA

@@ -632,6 +632,10 @@ MeExpr &Prop::PropVar(VarMeExpr &varMeExpr, bool atParm, bool checkPhi) {
     if (rhs->GetDepth() > kPropTreeLevel) {
       return varMeExpr;
     }
+    if (rhs->GetOp() == OP_select) {
+      // select will generate many insn in cg, do not prop
+      return varMeExpr;
+    }
     Propagatability propagatable = Propagatable(rhs, defStmt->GetBB(), atParm, true, &varMeExpr);
     if (propagatable != kPropNo) {
       // mark propagated for iread ref

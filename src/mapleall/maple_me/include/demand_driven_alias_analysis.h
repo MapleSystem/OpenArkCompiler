@@ -85,6 +85,12 @@ class PEGNode {
     }
   }
 
+  void CopyAttrFromValueAliasedNode(const PEGNode *other) {
+    attr[kAliasAttrNextLevNotAllDefsSeen] =
+        attr[kAliasAttrNextLevNotAllDefsSeen] | other->attr[kAliasAttrNextLevNotAllDefsSeen];
+    attr[kAliasAttrEscaped] = attr[kAliasAttrEscaped] | other->attr[kAliasAttrEscaped];
+  }
+
   void SetMultiDefined() {
     multiDefed = true;
   }

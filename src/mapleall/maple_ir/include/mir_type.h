@@ -383,50 +383,6 @@ class FuncAttrs {
   std::string aliasFuncName;
 };
 
-// only for internal use, not emitted
-enum GenericAttrKind {
-#define FUNC_ATTR
-#define TYPE_ATTR
-#define FIELD_ATTR
-#define ATTR(STR) GENATTR_##STR,
-#include "all_attributes.def"
-#undef ATTR
-#undef FUNC_ATTR
-#undef TYPE_ATTR
-#undef FIELD_ATTR
-};
-
-class GenericAttrs {
- public:
-  GenericAttrs() = default;
-  GenericAttrs(const GenericAttrs &ta) = default;
-  GenericAttrs &operator=(const GenericAttrs &p) = default;
-  ~GenericAttrs() = default;
-
-  void SetAttr(GenericAttrKind x) {
-    attrFlag |= (1ULL << x);
-  }
-
-  bool GetAttr(GenericAttrKind x) const {
-    return (attrFlag & (1ULL << x)) != 0;
-  }
-
-  bool operator==(const GenericAttrs &tA) const {
-    return attrFlag == tA.attrFlag;
-  }
-
-  bool operator!=(const GenericAttrs &tA) const {
-    return !(*this == tA);
-  }
-
-  FieldAttrs ConvertToFieldAttrs();
-  TypeAttrs ConvertToTypeAttrs();
-  FuncAttrs ConvertToFuncAttrs();
-
- private:
-  uint64 attrFlag = 0;
-};
-
 #if MIR_FEATURE_FULL
 constexpr size_t kShiftNumOfTypeKind = 8;
 constexpr size_t kShiftNumOfNameStrIdx = 6;

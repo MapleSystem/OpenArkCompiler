@@ -21,6 +21,7 @@
 #include "ast_stmt.h"
 #include "feir_var.h"
 #include "fe_function.h"
+#include "generic_attrs.h"
 
 namespace maple {
 using Pos = std::pair<uint32, uint32>;

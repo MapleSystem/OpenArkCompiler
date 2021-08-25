@@ -1662,13 +1662,18 @@ bool ValueRangePropagation::RemoveUnreachableEdge(
                loopHead2TrueBranch.find(loop->head) != loopHead2TrueBranch.end()) {
       CHECK_FATAL(loop->head->GetPred(0) == loop->latch, "must be latch bb");
       auto it = loopHead2TrueBranch.find(loop->head);
-      CHECK_FATAL(loop->inloopBB2exitBBs.find(bb.GetBBId()) != loop->inloopBB2exitBBs.end(), "must be exit bb");
       bool canDeleteExitBB = true;
-      for (auto pair : loop->inloopBB2exitBBs) {
-        for (auto &predOfExitBB : func.GetCfg()->GetBBFromID(pair.first)->GetPred()) {
-          if (!dom.Dominate(*it->second, *predOfExitBB)) {
-            canDeleteExitBB = false;
+      if (loop->inloopBB2exitBBs.find(bb.GetBBId()) != loop->inloopBB2exitBBs.end()) {
+        for (auto pair : loop->inloopBB2exitBBs) {
+          for (auto &predOfExitBB : func.GetCfg()->GetBBFromID(pair.first)->GetPred()) {
+            if (!dom.Dominate(*it->second, *predOfExitBB)) {
+              canDeleteExitBB = false;
+            }
           }
+        }
+      } else {
+        if (bb.GetPred().size() != 0) {
+          canDeleteExitBB = false;
         }
       }
       // When the edge of inloop bb to exit bb is deleted, The cfg change like this:

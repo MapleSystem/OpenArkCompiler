@@ -2173,7 +2173,9 @@ void Emitter::EmitGlobalVariable() {
         continue;
       }
     }
-    EmitAliasAndRef(*mirSymbol);
+    if (mirSymbol->GetSKind() == kStFunc) {
+      EmitAliasAndRef(*mirSymbol);
+    }
 
     if (mirSymbol->GetName().find(VTAB_PREFIX_STR) == 0) {
       vtabVec.emplace_back(mirSymbol);
@@ -3387,19 +3389,16 @@ void Emitter::SetupDBGInfo(DebugInfo *mirdi) {
 }
 
 void Emitter::EmitAliasAndRef(MIRSymbol &sym) {
-  if (sym.GetSKind() == kStFunc && sym.GetFunction() != nullptr) {
-    MIRFunction *mFunc = sym.GetFunction();
-    if (mFunc->GetAttr(FUNCATTR_alias)) {
-      if (mFunc->GetAttr(FUNCATTR_extern)) {
-        Emit(asmInfo->GetGlobal()).Emit(mFunc->GetName()).Emit("\n");
-      }
-      Emit(asmInfo->GetSet());
-      Emit(sym.GetName()).Emit(",").Emit(mFunc->GetAttrs().GetAliasFuncName()).Emit("\n");
-    } else if (mFunc->GetAttr(FUNCATTR_weakref)) {
-      Emit(asmInfo->GetWeakref());
-      Emit(sym.GetName()).Emit(",").Emit(mFunc->GetAttrs().GetAliasFuncName()).Emit("\n");
-    }
+  MIRFunction *mFunc = sym.GetFunction();
+  if (mFunc == nullptr || !mFunc->GetAttr(FUNCATTR_alias)) {
+    return;
   }
+  if (mFunc->GetAttr(FUNCATTR_extern)) {
+    Emit(asmInfo->GetGlobal()).Emit(mFunc->GetName()).Emit("\n");
+  }
+  auto &aliasPrefix = mFunc->GetAttr(FUNCATTR_weakref) ? asmInfo->GetWeakref() : asmInfo->GetSet();
+  Emit(aliasPrefix);
+  Emit(sym.GetName()).Emit(",").Emit(mFunc->GetAttrs().GetAliasFuncName()).Emit("\n");
 }
 
 void Emitter::EmitHugeSoRoutines(bool lastRoutine) {

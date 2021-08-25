@@ -27,7 +27,7 @@ static MOperator SelectMovMop(bool isFloatOrSIMD, bool is64Bit) {
 
 void AArch64StoreLoadOpt::Run() {
   /* if the number of BB is too large, don't optimize. */
-  if (cgFunc.NumBBs() > kMaxBBNum || cgFunc.GetRD()->GetMaxInsnNO() > kMaxInsnNum) {
+  if (!cgFunc.IsAfterRegAlloc() && (cgFunc.NumBBs() > kMaxBBNum || cgFunc.GetRD()->GetMaxInsnNO() > kMaxInsnNum)) {
     return;
   }
   DoStoreLoadOpt();
@@ -63,6 +63,10 @@ void AArch64StoreLoadOpt::DoLoadToMoveTransfer(Insn &strInsn, short strSrcIdx,
   if (regDefInsnSet.size() != 1) {
     return;
   }
+  std::map<Insn*, bool> InsnState;
+  for (auto *ldrInsn : memUseInsnSet) {
+    InsnState[ldrInsn] = true;
+  }
   for (auto *ldrInsn : memUseInsnSet) {
     if (!ldrInsn->IsLoad() || (ldrInsn->GetResultNum() > 1) || ldrInsn->GetBB()->IsCleanup()) {
       continue;
@@ -77,6 +81,7 @@ void AArch64StoreLoadOpt::DoLoadToMoveTransfer(Insn &strInsn, short strSrcIdx,
     ASSERT(!memDefInsnSet.empty(), "load insn should have definitions.");
     /* If load has multiple definition, continue. */
     if (memDefInsnSet.size() > 1) {
+      InsnState[ldrInsn] = false;
       continue;
     }
 
@@ -95,7 +100,8 @@ void AArch64StoreLoadOpt::DoLoadToMoveTransfer(Insn &strInsn, short strSrcIdx,
     /* Check if use operand of store is live at load insn. */
     if (cgFunc.GetRD()->RegIsLiveBetweenInsn(srcRegOpnd.GetRegisterNumber(), strInsn, *ldrInsn)) {
       GenerateMoveLiveInsn(resRegOpnd, srcRegOpnd, *ldrInsn, strInsn, memSeq);
-    } else {
+      InsnState[ldrInsn] = false;
+    } else if (!cgFunc.IsAfterRegAlloc()) {
       GenerateMoveDeadInsn(resRegOpnd, srcRegOpnd, *ldrInsn, strInsn, memSeq);
     }
 
@@ -108,18 +114,76 @@ void AArch64StoreLoadOpt::DoLoadToMoveTransfer(Insn &strInsn, short strSrcIdx,
       ldrInsn->Dump();
     }
   }
+  auto it = memUseInsnSet.begin();
+  it++;
+  for (; it != memUseInsnSet.end(); it++) {
+    Insn *curInsn = *it;
+    if (InsnState[curInsn] == false) {
+      continue;
+    }
+    if (!curInsn->IsLoad() || (curInsn->GetResultNum() > 1) || curInsn->GetBB()->IsCleanup()) {
+      continue;
+    }
+    InsnSet memDefInsnSet = cgFunc.GetRD()->FindDefForMemOpnd(*curInsn, kInsnSecondOpnd);
+    ASSERT(!memDefInsnSet.empty(), "load insn should have definitions.");
+    if (memDefInsnSet.size() > 1) {
+      continue;
+    }
+    auto prevIt = it;
+    do {
+      prevIt--;
+      Insn *prevInsn = *prevIt;
+      if (InsnState[prevInsn] == false) {
+        continue;
+      }
+      if (prevInsn->GetBB() != curInsn->GetBB()) {
+        break;
+      }
+      if (!prevInsn->IsLoad() || (prevInsn->GetResultNum() > 1) || prevInsn->GetBB()->IsCleanup()) {
+        continue;
+      }
+      InsnSet memDefInsnSet = cgFunc.GetRD()->FindDefForMemOpnd(*curInsn, kInsnSecondOpnd);
+      ASSERT(!memDefInsnSet.empty(), "load insn should have definitions.");
+      if (memDefInsnSet.size() > 1) {
+        break;
+      }
+      Operand &resOpnd = curInsn->GetOperand(kInsnFirstOpnd);
+      Operand &srcOpnd = prevInsn->GetOperand(kInsnFirstOpnd);
+      if (resOpnd.GetSize() != srcOpnd.GetSize()) {
+        continue;
+      }
+
+      auto &resRegOpnd = static_cast<RegOperand&>(resOpnd);
+      auto &srcRegOpnd = static_cast<RegOperand&>(srcOpnd);
+      if (resRegOpnd.GetRegisterType() != srcRegOpnd.GetRegisterType()) {
+        continue;
+      }
+      /* Check if use operand of store is live at load insn. */
+      if (cgFunc.GetRD()->FindRegDefBetweenInsn(srcRegOpnd.GetRegisterNumber(),
+          prevInsn->GetNext(), curInsn->GetPrev()).empty()) {
+        GenerateMoveLiveInsn(resRegOpnd, srcRegOpnd, *curInsn, *prevInsn, memSeq);
+        InsnState[curInsn] = false;
+      }
+      break;
+    } while (prevIt != memUseInsnSet.begin());
+  }
 }
 
 void AArch64StoreLoadOpt::GenerateMoveLiveInsn(RegOperand &resRegOpnd, RegOperand &srcRegOpnd,
                                                Insn &ldrInsn, Insn &strInsn, short memSeq) {
   MOperator movMop = SelectMovMop(resRegOpnd.IsOfFloatOrSIMDClass(), resRegOpnd.GetSize() == k64BitSize);
   Insn *movInsn = nullptr;
-  if (str2MovMap[&strInsn][memSeq] != nullptr) {
+  if (str2MovMap[&strInsn][memSeq] != nullptr && !cgFunc.IsAfterRegAlloc()) {
     Insn *movInsnOfStr = str2MovMap[&strInsn][memSeq];
     auto &vregOpnd = static_cast<RegOperand&>(movInsnOfStr->GetOperand(kInsnFirstOpnd));
     movInsn = &cgFunc.GetCG()->BuildInstruction<AArch64Insn>(movMop, resRegOpnd, vregOpnd);
   } else {
     movInsn = &cgFunc.GetCG()->BuildInstruction<AArch64Insn>(movMop, resRegOpnd, srcRegOpnd);
+  }
+  if (&resRegOpnd == &srcRegOpnd && cgFunc.IsAfterRegAlloc()) {
+    ldrInsn.GetBB()->RemoveInsn(ldrInsn);
+    cgFunc.GetRD()->InitGenUse(*ldrInsn.GetBB(), false);
+    return;
   }
   movInsn->SetId(ldrInsn.GetId());
   ldrInsn.GetBB()->ReplaceInsn(ldrInsn, *movInsn);
@@ -589,7 +653,8 @@ void AArch64StoreLoadOpt::DoStoreLoadOpt() {
         MemProp(*insn);
       }
       if (!insn->IsMachineInstruction() || !insn->IsStore() || !CheckStoreOpCode(mOp) ||
-          a64CgFunc.GetMirModule().IsCModule()) {
+          (a64CgFunc.GetMirModule().IsCModule() && !a64CgFunc.IsAfterRegAlloc()) ||
+          (!a64CgFunc.GetMirModule().IsCModule() && a64CgFunc.IsAfterRegAlloc())) {
         continue;
       }
       if (insn->IsStorePair()) {
@@ -661,6 +726,9 @@ void AArch64StoreLoadOpt::ProcessStrPair(Insn &insn) {
   if ((base == nullptr) || !(cgFunc.GetRD()->IsFrameReg(*base))) {
     return;
   }
+  if (cgFunc.IsAfterRegAlloc() && !memOpnd.IsSpillMem()) {
+    return;
+  }
   ASSERT(memOpnd.GetIndexRegister() == nullptr, "frame MemOperand must not be exist register index");
   InsnSet memUseInsnSet;
   for (int i = 0; i != kMaxMovNum; ++i) {
@@ -692,6 +760,9 @@ void AArch64StoreLoadOpt::ProcessStr(Insn &insn) {
   auto &memOpnd = static_cast<AArch64MemOperand&>(opnd);
   RegOperand *base = memOpnd.GetBaseRegister();
   if ((base == nullptr) || !(cgFunc.GetRD()->IsFrameReg(*base))) {
+    return;
+  }
+  if (cgFunc.IsAfterRegAlloc() && !memOpnd.IsSpillMem()) {
     return;
   }
   ASSERT(memOpnd.GetIndexRegister() == nullptr, "frame MemOperand must not be exist register index");

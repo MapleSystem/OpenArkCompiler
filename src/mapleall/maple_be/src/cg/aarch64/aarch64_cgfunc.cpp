@@ -8907,7 +8907,7 @@ Operand *AArch64CGFunc::SelectCSyncCmpSwap(IntrinsicopNode &intrinopNode, PrimTy
   atomicBB2->AppendInsn(
       GetCG()->BuildInstruction<AArch64Insn>(MOP_wcbnz, *resVal, GetOrCreateLabelOperand(*atomicBB)));
   BB *nextBB = CreateNewBB();
-  GetCurBB()->AppendBB(*nextBB);
+  atomicRetBB->AppendBB(*nextBB);
   SetCurBB(*nextBB);
   return fetchVal;
 }

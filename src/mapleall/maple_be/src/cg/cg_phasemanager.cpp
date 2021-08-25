@@ -193,6 +193,8 @@ void CgFuncPM::DoPhasesPopulate(const MIRModule &module) {
   ADDMAPLECGPHASE("prescheduling", CGOptions::DoPreSchedule());
   ADDMAPLECGPHASE("raopt", CGOptions::DoPreLSRAOpt());
   ADDMAPLECGPHASE("regalloc", true);
+  ADDMAPLECGPHASE("storeloadopt", CLANG && CGOptions::DoStoreLoadOpt())
+  ADDMAPLECGPHASE("clearrdinfo", CLANG && (CGOptions::DoStoreLoadOpt() || CGOptions::DoGlobalOpt()))
   ADDMAPLECGPHASE("generateproepilog", true);
   ADDMAPLECGPHASE("offsetadjustforfplr", true);
   ADDMAPLECGPHASE("dbgfixcallframeoffsets", true);

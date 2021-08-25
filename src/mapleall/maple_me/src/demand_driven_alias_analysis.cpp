@@ -320,6 +320,9 @@ PEGBuilder::PtrValueRecorder PEGBuilder::BuildPEGNodeOfExpr(const BaseNode *expr
       return BuildPEGNodeOfIntrisic(static_cast<const IntrinsicopNode *>(expr));
     }
     default:
+      for (uint32 opndId = 0; opndId < expr->NumOpnds(); ++opndId) {
+        (void)BuildPEGNodeOfExpr(expr->Opnd(opndId));
+      }
       return PtrValueRecorder(nullptr, 0, OffsetType(0));
   }
 
@@ -620,6 +623,9 @@ void PEGBuilder::BuildPEGNodeInStmt(const StmtNode *stmt) {
       break;
     }
     default:
+      for (uint32 opndId = 0; opndId < stmt->NumOpnds(); ++opndId) {
+        (void)BuildPEGNodeOfExpr(stmt->Opnd(opndId));
+      }
       break;
   }
 
@@ -813,7 +819,7 @@ void DemandDrivenAliasAnalysis::Propagate(WorkListType &workList, PEGNode *to, P
   bool insertNewNode = AddReachNode(to, src, state, offset);
   if (insertNewNode) {
     workList.push_back(WorkListItem(to, src, state, offset));
-    to->attr |= src->attr;
+    to->CopyAttrFromValueAliasedNode(src);
     if (enableDebug) {
       LogInfo::MapleLogger() << "===New candidate: ";
       src->ost->Dump();
