@@ -949,7 +949,7 @@ class CGFunc {
   }
 
   void SetDoRename(bool cond) {
-    hasAsm = cond;
+    doRename = cond;
   }
 
  protected:

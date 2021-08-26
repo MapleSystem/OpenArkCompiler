@@ -3344,7 +3344,7 @@ void GraphColorRegAllocator::GenerateSpillFillRegs(Insn &insn) {
       if (base != nullptr && !IsUnconcernedReg(*base)) {
         if (base->IsPhysicalRegister()) {
           usePregs.insert(base->GetRegisterNumber());
-        } else {
+        } else if (base->GetRegisterNumber() < lrVec.size()) {
           LiveRange *lr = lrVec[base->GetRegisterNumber()];
           if (lr->IsSpilled()) {
             useLrs.emplace_back(lr);
@@ -3355,7 +3355,7 @@ void GraphColorRegAllocator::GenerateSpillFillRegs(Insn &insn) {
       if (offset != nullptr) {
         if (offset->IsPhysicalRegister()) {
           usePregs.insert(offset->GetRegisterNumber());
-        } else {
+        } else if (offset->GetRegisterNumber() < lrVec.size()) {
           LiveRange *lr = lrVec[offset->GetRegisterNumber()];
           if (lr->IsSpilled()) {
             useLrs.emplace_back(lr);
@@ -3373,7 +3373,7 @@ void GraphColorRegAllocator::GenerateSpillFillRegs(Insn &insn) {
         if (isUse) {
           if (ropnd->IsPhysicalRegister()) {
             usePregs.insert(ropnd->GetRegisterNumber());
-          } else {
+          } else if (ropnd->GetRegisterNumber() < lrVec.size()) {
             LiveRange *lr = lrVec[ropnd->GetRegisterNumber()];
             if (lr->IsSpilled()) {
               useLrs.emplace_back(lr);
@@ -3383,7 +3383,7 @@ void GraphColorRegAllocator::GenerateSpillFillRegs(Insn &insn) {
         if (isDef){
           if (ropnd->IsPhysicalRegister()) {
             defPregs.insert(ropnd->GetRegisterNumber());
-          } else {
+          } else if (ropnd->GetRegisterNumber() < lrVec.size()) {
             LiveRange *lr = lrVec[ropnd->GetRegisterNumber()];
             if (lr->IsSpilled()) {
               defLrs.emplace_back(lr);

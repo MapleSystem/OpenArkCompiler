@@ -659,7 +659,7 @@ void VregRename::RegionTraverseVreg(BB *headBB, std::set<BB *> &members) {
 void VregRename::RenameLoopAndSwitch(MapleVector<LiveRange*> &lrVec) {
   if (CGOptions::DoLoopRename()) {
     for (const auto *lp : cgFunc->GetLoops()) {
-      LoopRenameRegister(lp, lrVec);
+      FindInnerLoop(lp, lrVec);
     }
   }
   if (CGOptions::DoSwitchRename()) {
