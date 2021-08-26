@@ -71,6 +71,22 @@ void ValueRangePropagation::Execute() {
   DeleteUnreachableBBs();
 }
 
+void ValueRangePropagation::DeleteThePhiNodeWhichOnlyHasOneOpnd(BB &bb) {
+  if (unreachableBBs.find(&bb) != unreachableBBs.end()) {
+    return;
+  }
+  if (bb.GetMePhiList().empty()) {
+    return;
+  }
+  if (bb.GetPred().size() == 1) {
+    for (auto it : bb.GetMePhiList()) {
+      InsertCandsForSSAUpdate(it.first, bb);
+    }
+    bb.GetMePhiList().clear();
+    needUpdateSSA = true;
+  }
+}
+
 bool ValueRange::IsEqual(ValueRange *valueRangeRight) {
   if (valueRangeRight == nullptr) {
     return false;
@@ -260,8 +276,12 @@ void ValueRangePropagation::DeleteUnreachableBBs() {
   isCFGChange = true;
   for (BB *bb : unreachableBBs) {
     InsertCandsForSSAUpdate(*bb);
+    auto succs = bb->GetSucc();
     bb->RemoveAllPred();
     bb->RemoveAllSucc();
+    for (auto &succ : succs) {
+      DeleteThePhiNodeWhichOnlyHasOneOpnd(*succ);
+    }
     UpdateTryAttribute(*bb);
     func.GetCfg()->NullifyBBByID(bb->GetBBId());
     // remove the bb from common_exit_bb's pred list if it is there
@@ -1448,6 +1468,7 @@ void ValueRangePropagation::RemoveUnreachableBB(BB &condGotoBB, BB &trueBranch) 
     } else {
       condGotoBB.SetKind(kBBFallthru);
       condGotoBB.RemoveSucc(*succ1);
+      DeleteThePhiNodeWhichOnlyHasOneOpnd(*succ1);
       condGotoBB.RemoveMeStmt(condGotoBB.GetLastMe());
     }
   } else {
@@ -1456,6 +1477,7 @@ void ValueRangePropagation::RemoveUnreachableBB(BB &condGotoBB, BB &trueBranch) 
     } else {
       condGotoBB.SetKind(kBBFallthru);
       condGotoBB.RemoveSucc(*succ0);
+      DeleteThePhiNodeWhichOnlyHasOneOpnd(*succ0);
       condGotoBB.RemoveMeStmt(condGotoBB.GetLastMe());
     }
   }
@@ -1572,6 +1594,7 @@ bool ValueRangePropagation::CopyFallthruBBAndRemoveUnreachableEdge(BB &pred, BB 
     CopyMeStmts(*currBB, *mergeAllFallthruBBs, true);
     size_t index = FindBBInSuccs(pred, bb);
     pred.RemoveSucc(bb);
+    DeleteThePhiNodeWhichOnlyHasOneOpnd(bb);
     pred.AddSucc(*mergeAllFallthruBBs, index);
     mergeAllFallthruBBs->AddSucc(trueBranch);
     CreateLabelForTargetBB(pred, *mergeAllFallthruBBs);
@@ -1605,12 +1628,14 @@ bool ValueRangePropagation::RemoveTheEdgeOfPredBB(BB &pred, BB &bb, BB &trueBran
     if (OnlyHaveCondGotoStmt(bb)) {
       size_t index = FindBBInSuccs(pred, bb);
       pred.RemoveSucc(bb);
+      DeleteThePhiNodeWhichOnlyHasOneOpnd(bb);
       pred.AddSucc(trueBranch, index);
       CreateLabelForTargetBB(pred, trueBranch);
     } else {
       auto *newBB = CreateNewBasicBlockWithoutCondGotoStmt(bb);
       size_t index = FindBBInSuccs(pred, bb);
       pred.RemoveSucc(bb);
+      DeleteThePhiNodeWhichOnlyHasOneOpnd(bb);
       pred.AddSucc(*newBB, index);
       newBB->AddSucc(trueBranch);
       CreateLabelForTargetBB(pred, *newBB);
