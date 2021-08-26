@@ -50,6 +50,7 @@ Range CGOptions::range = Range();
 std::string CGOptions::fastFuncsAsmFile = "";
 Range CGOptions::spillRanges = Range();
 uint8 CGOptions::fastAllocMode = 0;  /* 0: fast, 1: spill all */
+uint8 CGOptions::doVregRename = 0;
 bool CGOptions::fastAlloc = false;
 uint64 CGOptions::lsraBBOptSize = 150000;
 uint64 CGOptions::lsraInsnOptSize = 200000;
@@ -65,7 +66,6 @@ bool CGOptions::doCFGO = false;
 bool CGOptions::doICO = false;
 bool CGOptions::doStoreLoadOpt = false;
 bool CGOptions::doGlobalOpt = false;
-bool CGOptions::doVregRename = false;
 bool CGOptions::doMultiPassColorRA = true;
 bool CGOptions::doPrePeephole = false;
 bool CGOptions::doPeephole = false;
@@ -430,8 +430,8 @@ const Descriptor kUsage[] = {
     "",
     "vreg-rename",
     kBuildTypeExperimental,
-    kArgCheckPolicyBool,
-    "  --vreg-rename                  \tPerform rename of long live range around loops in coloring RA\n"
+    kArgCheckPolicyRequired,
+    "  --vreg-rename=val           \tPerform rename of long live range around loops in coloring RA\n"
     "  --no-vreg-rename\n",
     "mplcg",
     {} },
@@ -1341,7 +1341,7 @@ bool CGOptions::SolveOptions(const std::vector<Option> &opts, bool isDebug) {
         (opt.Type() == kEnable) ? EnableSchedule() : DisableSchedule();
         break;
       case kVregRename:
-        (opt.Type() == kEnable) ? EnableVregRename() : DisableVregRename();
+        SetVregRenameMode(std::stoul(opt.Args(), nullptr));
         break;
       case kMultiPassRA:
         (opt.Type() == kEnable) ? EnableMultiPassColorRA() : DisableMultiPassColorRA();

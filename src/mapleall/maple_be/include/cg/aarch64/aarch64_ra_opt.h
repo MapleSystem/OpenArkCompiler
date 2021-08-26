@@ -21,6 +21,7 @@
 #include "aarch64_cg.h"
 #include "aarch64_insn.h"
 #include "aarch64_operand.h"
+#include "aarch64_color_ra.h"
 
 namespace maplebe {
 class X0OptInfo {
@@ -96,6 +97,25 @@ class RaX0Opt {
   CGFunc *cgFunc;
 };
 
+class CaseMemberInfo {
+ public:
+  CaseMemberInfo(MemPool *pool) : memPool(pool),
+                                  alloc(pool),
+                                  members(alloc.Adapter()) {}
+
+  ~CaseMemberInfo() = default;
+
+  class LinkNode {
+   public:
+  };
+
+  MemPool *memPool;
+  MapleAllocator alloc;
+  BB *head;
+  MapleList<BB *> members;
+  CaseMemberInfo *next;
+};
+
 class VregRenameInfo {
  public:
   VregRenameInfo() = default;
@@ -112,32 +132,73 @@ class VregRenameInfo {
   uint8 innerMostloopLevelSeen = 0;
 };
 
+class SwitchVregInfo {
+ public:
+  SwitchVregInfo(MemPool *pool) : memPool(pool),
+                                  alloc(pool),
+                                  inRegion(alloc.Adapter()),
+                                  regionHasDef(alloc.Adapter()),
+                                  regionHasUse(alloc.Adapter()) {}
+  MemPool *memPool;
+  MapleAllocator alloc;
+  MapleUnorderedSet<BB *> inRegion;
+  MapleUnorderedMap<uint32, uint32> regionHasDef;
+  MapleUnorderedMap<uint32, uint32> regionHasUse;
+  uint32 globalCount = 0;
+};
+
 class VregRename {
  public:
   VregRename(CGFunc *func, MemPool *pool) : cgFunc(func),
                                             memPool(pool),
                                             alloc(pool),
-                                            renameInfo(alloc.Adapter()) {
-    renameInfo.resize(cgFunc->GetMaxRegNum());
+                                            renameInfo(alloc.Adapter()),
+                                            caseRegInfo(alloc.Adapter()) {
+    renameInfo.resize(cgFunc->GetMaxRegNum() + 1);
+    caseRegInfo.resize(cgFunc->GetMaxRegNum() + 1);
     ccRegno = static_cast<RegOperand *>(&cgFunc->GetOrCreateRflag())->GetRegisterNumber();
   };
 
+  std::string PhaseName() const {
+    return "VregRename";
+  }
+
   void PrintRenameInfo(regno_t regno) const;
   void PrintAllRenameInfo() const;
+  void PrintCaseRegInfo(regno_t regno) const;
+  void PrintAllCaseRegInfo() const;
+  void PrintSwitchRegion() const;
 
+  VregRenameInfo *CreateVregRenameInfo(regno_t reg);
+  SwitchVregInfo *CreateCaseVregInfo(regno_t reg);
   void RenameFindLoopVregs(const CGFuncLoops *loop);
   void RenameFindVregsToRename(const CGFuncLoops *loop);
+  void RenameSwitchRegionReg(RegOperand *ropnd, BB *headBB, const MapleList<BB *> &members);
+  bool RenameProfitableSwitchVreg(RegOperand *ropnd, BB *headBB, const MapleList<BB *> &members);
+  void DetectSwitchRegions();
+  void TraverseSwitchCase(std::queue<BB *> &BBQueue, std::vector<bool> &visited, std::set<BB *> &members);
+  void RegionTraverseVreg(BB *headBB, std::set<BB *> &members);
+  void RegionFindVregForRename();
   bool IsProfitableToRename(VregRenameInfo *info);
-  void RenameProfitableVreg(RegOperand *ropnd, const CGFuncLoops *loop);
+  bool RenameProfitableVreg(RegOperand *ropnd, const CGFuncLoops *loop);
   void RenameGetFuncVregInfo();
   void UpdateVregInfo(regno_t reg, BB *bb, bool isInner, bool isDef);
+  void UpdateVregInfoForRegion(BB *headBB, regno_t reg, bool isDef);
   void VregLongLiveRename();
+  void RenameLoopAndSwitch(MapleVector<LiveRange*> &lrVec);
+  void FindInnerLoop(const CGFuncLoops *loop, MapleVector<LiveRange*> &lrVec);
+  void LoopRenameRegister(const CGFuncLoops *loop, MapleVector<LiveRange*> &lrVec);
+  void SwitchRenameRegister(MapleVector<LiveRange*> &lrVec);
 
   CGFunc *cgFunc;
   MemPool *memPool;
   MapleAllocator alloc;
   Bfs *bfs = nullptr;
+  CaseMemberInfo *caseInfo = nullptr;
   MapleVector<VregRenameInfo*> renameInfo;
+  MapleVector<SwitchVregInfo*> caseRegInfo;
+  uint32 numCases = 0;
+  uint32 maxBBNum = 0;
   uint32 maxRegnoSeen = 0;
   regno_t ccRegno;
 };

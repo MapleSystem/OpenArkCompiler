@@ -944,6 +944,14 @@ class CGFunc {
     return hasAsm;
   }
 
+  bool DoRename() {
+    return doRename;
+  }
+
+  void SetDoRename(bool cond) {
+    hasAsm = cond;
+  }
+
  protected:
   uint32 firstMapleIrVRegNO = 200;        /* positioned after physical regs */
   uint32 firstNonPregVRegNO;
@@ -1069,6 +1077,7 @@ class CGFunc {
   static constexpr int kRegIncrStepLen = 80; /* reg number increate step length */
   const MapleString shortFuncName;
   bool hasAsm = false;
+  bool doRename = false;
 };  /* class CGFunc */
 
 MAPLE_FUNC_PHASE_DECLARE_BEGIN(CgLayoutFrame, maplebe::CGFunc)

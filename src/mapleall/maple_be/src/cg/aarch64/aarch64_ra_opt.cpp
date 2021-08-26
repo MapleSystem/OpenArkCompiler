@@ -19,6 +19,9 @@
 
 namespace maplebe {
 using namespace std;
+
+#define RENAME_DUMP CG_DEBUG_FUNC(*cgFunc)
+
 bool RaX0Opt::PropagateX0CanReplace(Operand *opnd, regno_t replaceReg) const {
   if (opnd != nullptr) {
     RegOperand *regopnd = static_cast<RegOperand*>(opnd);
@@ -319,6 +322,70 @@ void VregRename::PrintAllRenameInfo() const {
   }
 }
 
+void VregRename::PrintCaseRegInfo(regno_t regno) const {
+  SwitchVregInfo *info = (regno <= maxRegnoSeen) ? caseRegInfo[regno] : nullptr;
+  if (info == nullptr) {
+    return;
+  }
+  LogInfo::MapleLogger() << "reg: " << regno;
+  if (info->inRegion.size()) {
+    LogInfo::MapleLogger() << " inRegion:";
+    for (auto *bb : info->inRegion) {
+      LogInfo::MapleLogger() << bb->GetId() << ",";
+    }
+  }
+  if (info->regionHasDef.size()) {
+    LogInfo::MapleLogger() << "regionHasDef";
+    for (auto pr : info->regionHasDef) {
+      LogInfo::MapleLogger() << "(" << pr.first << "," << pr.second << ")";
+    }
+  }
+  if (info->regionHasUse.size()) {
+    LogInfo::MapleLogger() << "regionHasUse";
+    for (auto pr : info->regionHasUse) {
+      LogInfo::MapleLogger() << "(" << pr.first << "," << pr.second << ")";
+    }
+  }
+  std::cout << " gCnt:" << info->globalCount << "\n";
+}
+
+void VregRename::PrintAllCaseRegInfo() const {
+  for (uint32 regno = 0; regno < cgFunc->GetMaxRegNum(); ++regno) {
+    PrintCaseRegInfo(regno);
+  }
+}
+
+void VregRename::PrintSwitchRegion() const {
+  for (CaseMemberInfo *info = caseInfo; info != nullptr; info = info->next) {
+    std::cout << "Head(" << info->head->GetId() << ") ";
+    std::cout << "Members(";
+    for (auto *bb : info->members) {
+      std::cout << bb->GetId() << ",";
+    }
+    std::cout << ")\n";
+  }
+}
+
+VregRenameInfo *VregRename::CreateVregRenameInfo(regno_t vreg) {
+  if (vreg > maxRegnoSeen) {
+    maxRegnoSeen = vreg;
+    renameInfo.resize(maxRegnoSeen + 1);
+  }
+  VregRenameInfo *info = memPool->New<VregRenameInfo>();
+  renameInfo[vreg] = info;
+  return info;
+}
+
+SwitchVregInfo *VregRename::CreateCaseVregInfo(regno_t vreg) {
+  if (vreg > maxRegnoSeen) {
+    maxRegnoSeen = vreg;
+    caseRegInfo.resize(maxRegnoSeen + 1);
+  }
+  SwitchVregInfo *info = memPool->New<SwitchVregInfo>(memPool);
+  caseRegInfo[vreg] = info;
+  return info;
+}
+
 bool VregRename::IsProfitableToRename(VregRenameInfo *info) {
   if ((info->numInnerDefs == 0) && (info->numUses != info->numInnerUses)) {
     return true;
@@ -326,11 +393,11 @@ bool VregRename::IsProfitableToRename(VregRenameInfo *info) {
   return false;
 }
 
-void VregRename::RenameProfitableVreg(RegOperand *ropnd, const CGFuncLoops *loop) {
+bool VregRename::RenameProfitableVreg(RegOperand *ropnd, const CGFuncLoops *loop) {
   regno_t vreg = ropnd->GetRegisterNumber();
   VregRenameInfo *info = (vreg <= maxRegnoSeen) ? renameInfo[vreg] : nullptr;
   if ((info == nullptr) || loop->GetMultiEntries().size() || (IsProfitableToRename(info) == false)) {
-    return;
+    return false;
   }
 
   uint32 size = (ropnd->GetSize() == k64BitSize) ? k8ByteSize : k4ByteSize;
@@ -392,6 +459,7 @@ void VregRename::RenameProfitableVreg(RegOperand *ropnd, const CGFuncLoops *loop
       }
     }
   }
+  return true;
 }
 
 void VregRename::RenameFindLoopVregs(const CGFuncLoops *loop) {
@@ -429,11 +497,7 @@ void VregRename::RenameFindLoopVregs(const CGFuncLoops *loop) {
 void VregRename::UpdateVregInfo(regno_t vreg, BB *bb, bool isInner, bool isDef) {
   VregRenameInfo *info = renameInfo[vreg];
   if (info == nullptr) {
-    info = memPool->New<VregRenameInfo>();
-    renameInfo[vreg] = info;
-    if (vreg > maxRegnoSeen) {
-      maxRegnoSeen = vreg;
-    }
+    info = CreateVregRenameInfo(vreg);
   }
   if (isDef) {
     info->numDefs++;
@@ -446,24 +510,29 @@ void VregRename::UpdateVregInfo(regno_t vreg, BB *bb, bool isInner, bool isDef) 
       info->numInnerUses++;
     }
   }
-  if (info->firstBBLevelSeen) {
-    if (info->firstBBLevelSeen->GetInternalFlag2() > bb->GetInternalFlag2()) {
+  if (CGOptions::DoVregRenameBeforeRA()) {
+    if (info->firstBBLevelSeen) {
+      if (info->firstBBLevelSeen->GetInternalFlag2() > bb->GetInternalFlag2()) {
+        info->firstBBLevelSeen = bb;
+      }
+    } else {
       info->firstBBLevelSeen = bb;
     }
-  } else {
-    info->firstBBLevelSeen = bb;
-  }
-  if (info->lastBBLevelSeen) {
-    if (info->lastBBLevelSeen->GetInternalFlag2() < bb->GetInternalFlag2()) {
+    if (info->lastBBLevelSeen) {
+      if (info->lastBBLevelSeen->GetInternalFlag2() < bb->GetInternalFlag2()) {
+        info->lastBBLevelSeen = bb;
+      }
+    } else {
       info->lastBBLevelSeen = bb;
     }
-  } else {
-    info->lastBBLevelSeen = bb;
   }
 }
 
 void VregRename::RenameGetFuncVregInfo() {
   FOR_ALL_BB(bb, cgFunc) {
+    if (maxBBNum <= bb->GetId()) {
+      maxBBNum = bb->GetId() + 1;
+    }
     bool isInner = bb->GetLoop() ? bb->GetLoop()->GetInnerLoops().empty() : false;
     FOR_BB_INSNS(insn, bb) {
       if (insn->IsImmaterialInsn() || !insn->IsMachineInstruction()) {
@@ -497,6 +566,336 @@ void VregRename::RenameGetFuncVregInfo() {
   }
 }
 
+/* Use breadth first search to detect region */
+void VregRename::TraverseSwitchCase(std::queue<BB *> &BBQueue, std::vector<bool> &visited, std::set<BB *> &members) {
+  while (BBQueue.size()) {
+    BB *bb = BBQueue.front();
+    BBQueue.pop();
+    visited[bb->GetId()] = true;
+    members.insert(bb);
+    if (bb->GetKind() == BB::kBBGoto || bb->GetKind() == BB::kBBReturn) {
+      continue;
+    }
+    for (auto *succ : bb->GetSuccs()) {
+      if (visited[succ->GetId()]) {
+        continue;
+      }
+      bool predAllVisited = true;
+      for (auto *succPred : succ->GetPreds()) {
+        if (visited[succPred->GetId()] == false) {
+          predAllVisited = false;
+          break;
+        }
+      }
+      if (predAllVisited) {
+        BBQueue.push(succ);
+      }
+    }
+  }
+}
+
+void VregRename::UpdateVregInfoForRegion(BB *headBB, regno_t vreg, bool isDef) {
+  SwitchVregInfo *info = (vreg <= maxRegnoSeen) ? caseRegInfo[vreg] : nullptr;
+  if (info == nullptr) {
+    info = CreateCaseVregInfo(vreg);
+  }
+  info->inRegion.insert(headBB);
+  if (isDef) {
+    if (info->regionHasDef.find(headBB->GetId()) == info->regionHasDef.end()) {
+      info->regionHasDef[headBB->GetId()] = 1;
+    } else {
+      info->regionHasDef[headBB->GetId()] ++;
+    }
+  } else {
+    if (info->regionHasUse.find(headBB->GetId()) == info->regionHasUse.end()) {
+      info->regionHasUse[headBB->GetId()] = 1;
+    } else {
+      info->regionHasUse[headBB->GetId()] ++;
+    }
+  }
+  info->globalCount++;
+}
+
+void VregRename::RegionTraverseVreg(BB *headBB, std::set<BB *> &members) {
+  CaseMemberInfo *cInfo = memPool->New<CaseMemberInfo>(memPool);
+  cInfo->next = caseInfo;
+  caseInfo = cInfo;
+  cInfo->head = headBB;
+  for (auto *bb : members) {
+    cInfo->members.push_back(bb);
+    FOR_BB_INSNS(insn, bb) {
+      if (insn->IsImmaterialInsn() || !insn->IsMachineInstruction()) {
+        continue;
+      }
+      const AArch64MD *md = &AArch64CG::kMd[static_cast<const AArch64Insn&>(*insn).GetMachineOpcode()];
+      for (uint32 i = 0; i < insn->GetOperandSize(); ++i) {
+        Operand *opnd = &insn->GetOperand(i);
+        if (opnd->IsList()) {
+          /* call parameters */
+        } else if (opnd->IsMemoryAccessOperand()) {
+          MemOperand *memopnd = static_cast<MemOperand*>(opnd);
+          RegOperand *base = static_cast<RegOperand*>(memopnd->GetBaseRegister());
+          if (base != nullptr && base->IsVirtualRegister()) {
+            regno_t vreg = base->GetRegisterNumber();
+            UpdateVregInfoForRegion(headBB, vreg, false);
+          }
+          RegOperand *offset = static_cast<RegOperand*>(memopnd->GetIndexRegister());
+          if (offset != nullptr && offset->IsVirtualRegister()) {
+            regno_t vreg = offset->GetRegisterNumber();
+            UpdateVregInfoForRegion(headBB, vreg, false);
+          }
+        } else if (opnd->IsRegister() && static_cast<RegOperand *>(opnd)->IsVirtualRegister() &&
+                   static_cast<RegOperand *>(opnd)->GetRegisterNumber() != ccRegno) {
+          bool isdef = static_cast<AArch64OpndProp *>(md->operand[i])->IsRegDef();
+          regno_t vreg = static_cast<RegOperand *>(opnd)->GetRegisterNumber();
+          UpdateVregInfoForRegion(headBB, vreg, isdef);
+        }
+      }
+    }
+  }
+}
+
+/* This is called from coloring RA */
+void VregRename::RenameLoopAndSwitch(MapleVector<LiveRange*> &lrVec) {
+  if (CGOptions::DoLoopRename()) {
+    for (const auto *lp : cgFunc->GetLoops()) {
+      LoopRenameRegister(lp, lrVec);
+    }
+  }
+  if (CGOptions::DoSwitchRename()) {
+    SwitchRenameRegister(lrVec);
+  }
+}
+
+void VregRename::FindInnerLoop(const CGFuncLoops *loop, MapleVector<LiveRange*> &lrVec) {
+ if (loop->GetInnerLoops().empty()) {
+    LoopRenameRegister(loop, lrVec);
+    return;
+  }
+  for (auto inner : loop->GetInnerLoops()) {
+    FindInnerLoop(inner, lrVec);
+  }
+}
+
+void VregRename::LoopRenameRegister(const CGFuncLoops *loop, MapleVector<LiveRange*> &lrVec) {
+  for (auto *bb : loop->GetLoopMembers()) {
+    FOR_BB_INSNS(insn, bb) {
+      if (insn->IsImmaterialInsn() || !insn->IsMachineInstruction()) {
+        continue;
+      }
+      for (uint32 i = 0; i < insn->GetOperandSize(); ++i) {
+        Operand *opnd = &insn->GetOperand(i);
+        if (opnd->IsList()) {
+          /* call parameters */
+        } else if (opnd->IsMemoryAccessOperand()) {
+          MemOperand *memopnd = static_cast<MemOperand*>(opnd);
+          RegOperand *base = static_cast<RegOperand*>(memopnd->GetBaseRegister());
+          if (base != nullptr && base->IsVirtualRegister()) {
+            regno_t regno = base->GetRegisterNumber();
+            if (regno < lrVec.size() && lrVec[regno]->IsSpilled()) {
+              if (RenameProfitableVreg(base, loop)) {
+                lrVec[regno]->SetSpilled(false);
+              }
+            }
+          }
+          RegOperand *offset = static_cast<RegOperand*>(memopnd->GetIndexRegister());
+          if (offset != nullptr && offset->IsVirtualRegister()) {
+            regno_t regno = offset->GetRegisterNumber();
+            if (regno < lrVec.size() && lrVec[regno]->IsSpilled()) {
+              if (RenameProfitableVreg(offset, loop)) {
+                lrVec[regno]->SetSpilled(false);
+              }
+            }
+          }
+        } else if (opnd->IsRegister() && static_cast<RegOperand *>(opnd)->IsVirtualRegister() &&
+                   static_cast<RegOperand *>(opnd)->GetRegisterNumber() != ccRegno) {
+          RegOperand *regOpnd = static_cast<RegOperand *>(opnd);
+          regno_t regno = regOpnd->GetRegisterNumber();
+          if (regno < lrVec.size() && lrVec[regno]->IsSpilled()) {
+            if (RenameProfitableVreg(regOpnd, loop)) {
+              lrVec[regno]->SetSpilled(false);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+void VregRename::SwitchRenameRegister(MapleVector<LiveRange*> &lrVec) {
+  for (CaseMemberInfo *info = caseInfo; info != nullptr; info = info->next) {
+    for (auto *bb : info->members) {
+      FOR_BB_INSNS(insn, bb) {
+        if (insn->IsImmaterialInsn() || !insn->IsMachineInstruction()) {
+          continue;
+        }
+        for (uint32 i = 0; i < insn->GetOperandSize(); ++i) {
+          Operand *opnd = &insn->GetOperand(i);
+          if (opnd->IsList()) {
+            /* call parameters */
+          } else if (opnd->IsMemoryAccessOperand()) {
+            MemOperand *memopnd = static_cast<MemOperand*>(opnd);
+            RegOperand *base = static_cast<RegOperand*>(memopnd->GetBaseRegister());
+            if (base != nullptr && base->IsVirtualRegister()) {
+              regno_t regno = base->GetRegisterNumber();
+              if (regno < lrVec.size() && lrVec[regno]->IsSpilled()) {
+                if (RenameProfitableSwitchVreg(base, info->head, info->members)) {
+                  lrVec[regno]->SetSpilled(false);
+                }
+              }
+            }
+            RegOperand *offset = static_cast<RegOperand*>(memopnd->GetIndexRegister());
+            if (offset != nullptr && offset->IsVirtualRegister()) {
+              regno_t regno = offset->GetRegisterNumber();
+              if (regno < lrVec.size() && lrVec[regno]->IsSpilled()) {
+                if (RenameProfitableSwitchVreg(offset, info->head, info->members)) {
+                  lrVec[regno]->SetSpilled(false);
+                }
+              }
+            }
+          } else if (opnd->IsRegister() && static_cast<RegOperand *>(opnd)->IsVirtualRegister() &&
+                     static_cast<RegOperand *>(opnd)->GetRegisterNumber() != ccRegno) {
+            RegOperand *regOpnd = static_cast<RegOperand *>(opnd);
+            regno_t regno = regOpnd->GetRegisterNumber();
+            if (regno < lrVec.size() && lrVec[regno]->IsSpilled()) {
+              if (RenameProfitableSwitchVreg(regOpnd, info->head, info->members)) {
+                lrVec[regno]->SetSpilled(false);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+void VregRename::RenameSwitchRegionReg(RegOperand *ropnd, BB *headBB, const MapleList<BB *> &members) {
+  uint32 size = (ropnd->GetSize() == k64BitSize) ? k8ByteSize : k4ByteSize;
+  regno_t newRegno = cgFunc->NewVReg(ropnd->GetRegisterType(), size);
+  RegOperand *renameVreg = &cgFunc->CreateVirtualRegisterOperand(newRegno);
+  regno_t vreg = ropnd->GetRegisterNumber();
+  for (auto bb : members) {
+    FOR_BB_INSNS(insn, bb) {
+      if (insn->IsImmaterialInsn() || !insn->IsMachineInstruction()) {
+        continue;
+      }
+      for (uint32 i = 0; i < insn->GetOperandSize(); ++i) {
+        Operand *opnd = &insn->GetOperand(i);
+        if (opnd->IsList()) {
+          /* call parameters */
+       } else if (opnd->IsMemoryAccessOperand()) {
+          MemOperand *memopnd = static_cast<MemOperand*>(opnd);
+          RegOperand *base = static_cast<RegOperand*>(memopnd->GetBaseRegister());
+          MemOperand *newMemOpnd = nullptr;
+          if (base != nullptr && base->IsVirtualRegister() && base->GetRegisterNumber() == vreg) {
+            newMemOpnd = static_cast<MemOperand*>(memopnd->Clone(*cgFunc->GetMemoryPool()));
+            newMemOpnd->SetBaseRegister(*renameVreg);
+            insn->SetOperand(i, *newMemOpnd);
+          }
+          RegOperand *offset = static_cast<RegOperand*>(memopnd->GetIndexRegister());
+          if (offset != nullptr && offset->IsVirtualRegister() && offset->GetRegisterNumber() == vreg) {
+            if (newMemOpnd == nullptr) {
+              newMemOpnd = static_cast<MemOperand*>(memopnd->Clone(*cgFunc->GetMemoryPool()));
+            }
+            newMemOpnd->SetIndexRegister(*renameVreg);
+            insn->SetOperand(i, *newMemOpnd);
+          }
+        } else if (opnd->IsRegister() && static_cast<RegOperand *>(opnd)->IsVirtualRegister() &&
+                   static_cast<RegOperand *>(opnd)->GetRegisterNumber() == vreg) {
+          insn->SetOperand(i, *renameVreg);
+        }
+      }
+    }
+  }
+  /* delay insertion of rename move instruction after region finished renaming */
+  MOperator mOp = (ropnd->GetRegisterType() == kRegTyInt) ?
+      ((size == k8BitSize) ? MOP_xmovrr : MOP_wmovrr) :
+      ((size == k8BitSize) ? MOP_xvmovd : MOP_xvmovs);
+  Insn &newInsn = static_cast<AArch64CGFunc*>(cgFunc)->GetCG()->BuildInstruction<AArch64Insn>(mOp, *renameVreg, *ropnd);
+  Insn *first = headBB->GetFirstInsn();
+  if (first) {
+    headBB->InsertInsnBefore(*first, newInsn);
+  } else {
+    headBB->AppendInsn(newInsn);
+  }
+}
+
+bool VregRename::RenameProfitableSwitchVreg(RegOperand *ropnd, BB *headBB, const MapleList<BB *> &members) {
+  regno_t vreg = ropnd->GetRegisterNumber();
+  SwitchVregInfo *info = (vreg <= maxRegnoSeen) ? caseRegInfo[vreg] : nullptr;
+  if (info == nullptr || info->inRegion.size() < 2) {
+    return false;
+  }
+  uint32 defCnt = 0;
+  uint32 useCnt = 0;
+  for (auto *bb : info->inRegion) {
+    if (info->regionHasDef.find(bb->GetId()) != info->regionHasDef.end()) {
+      defCnt += info->regionHasDef[bb->GetId()];
+    }
+    if (info->regionHasUse.find(bb->GetId()) != info->regionHasUse.end()) {
+      useCnt += info->regionHasUse[bb->GetId()];
+    }
+  }
+  if (defCnt > 0/* || useCnt < 100*/) {
+    return false;
+  }
+  RenameSwitchRegionReg(ropnd, headBB, members);
+  return true;
+}
+
+void VregRename::RegionFindVregForRename() {
+  //std::cout << "numCases " << numCases << "\n";
+  for (CaseMemberInfo *info = caseInfo; info != nullptr; info = info->next) {
+    for (auto *bb : info->members) {
+      FOR_BB_INSNS(insn, bb) {
+        if (insn->IsImmaterialInsn() || !insn->IsMachineInstruction()) {
+          continue;
+        }
+        for (uint32 i = 0; i < insn->GetOperandSize(); ++i) {
+          Operand *opnd = &insn->GetOperand(i);
+          if (opnd->IsList()) {
+            /* call parameters */
+          } else if (opnd->IsMemoryAccessOperand()) {
+            MemOperand *memopnd = static_cast<MemOperand*>(opnd);
+            RegOperand *base = static_cast<RegOperand*>(memopnd->GetBaseRegister());
+            if (base != nullptr && base->IsVirtualRegister()) {
+              RenameProfitableSwitchVreg(base, info->head, info->members);
+            }
+            RegOperand *offset = static_cast<RegOperand*>(memopnd->GetIndexRegister());
+            if (offset != nullptr && offset->IsVirtualRegister()) {
+              RenameProfitableSwitchVreg(offset, info->head, info->members);
+            }
+          } else if (opnd->IsRegister() && static_cast<RegOperand *>(opnd)->IsVirtualRegister() &&
+                     static_cast<RegOperand *>(opnd)->GetRegisterNumber() != ccRegno) {
+            RenameProfitableSwitchVreg(static_cast<RegOperand *>(opnd), info->head, info->members);
+          }
+        }
+      }
+    }
+  }
+}
+
+void VregRename::DetectSwitchRegions() {
+  MIRLabelTable *labelTab = cgFunc->GetMirModule().CurFunction()->GetLabelTab();
+  for (auto labels : labelTab->caseLabelSet) {
+    numCases++;
+    BB *bb = cgFunc->GetBBFromLab2BBMap(labels);
+    std::vector<bool> visited(maxBBNum, false);
+    std::set<BB *> members;
+    std::queue<BB *> BBQueue;
+    BBQueue.push(bb);
+    TraverseSwitchCase(BBQueue, visited, members);
+    RegionTraverseVreg(bb, members);
+  }
+  if (RENAME_DUMP) {
+    PrintSwitchRegion();
+    PrintAllCaseRegInfo();
+  }
+  if (CGOptions::DoVregRenameBeforeRA()) {
+    RegionFindVregForRename();
+  }
+}
+
 void VregRename::RenameFindVregsToRename(const CGFuncLoops *loop) {
  if (loop->GetInnerLoops().empty()) {
     RenameFindLoopVregs(loop);
@@ -507,14 +906,18 @@ void VregRename::RenameFindVregsToRename(const CGFuncLoops *loop) {
   }
 }
 
-
 void VregRename::VregLongLiveRename() {
-  if (cgFunc->GetLoops().size() == 0) {
-    return;
+  if (CGOptions::DoLoopRename() || CGOptions::DoSwitchRename()) {
+    RenameGetFuncVregInfo();
   }
-  RenameGetFuncVregInfo();
-  for (const auto *lp : cgFunc->GetLoops()) {
-    RenameFindVregsToRename(lp);
+  if (cgFunc->GetLoops().size() != 0 && CGOptions::DoVregRenameBeforeRA() && CGOptions::DoLoopRename()) {
+    for (const auto *lp : cgFunc->GetLoops()) {
+      RenameFindVregsToRename(lp);
+    }
+  }
+
+  if (CGOptions::DoSwitchRename()) {
+    DetectSwitchRegions();
   }
 }
 
@@ -522,7 +925,7 @@ void AArch64RaOpt::Run() {
   RaX0Opt x0Opt(cgFunc);
   x0Opt.PropagateX0();
 
-  if (cgFunc->GetMirModule().GetSrcLang() == kSrcLangC && CGOptions::DoVregRename()) {
+  if (cgFunc->GetMirModule().GetSrcLang() == kSrcLangC && CGOptions::DoVregRenameBeforeRA()) {
     /* loop detection considers EH bb.  That is not handled.  So C only for now. */
     LoopFinder *lf = memPool->New<LoopFinder>(*cgFunc, *memPool);
     lf->FormLoopHierarchy();

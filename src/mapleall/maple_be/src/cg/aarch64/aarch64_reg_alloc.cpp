@@ -566,6 +566,7 @@ bool CgRegAlloc::PhaseRun(maplebe::CGFunc &f) {
     dom = static_cast<CgDomAnalysis*>(it)->GetResult();
     CHECK_FATAL(dom != nullptr, "null ptr check");
   }
+  f.SetDoRename(true);
   while (success == false) {
     MemPool *phaseMp = GetPhaseMemPool();
     LiveAnalysis *live = nullptr;

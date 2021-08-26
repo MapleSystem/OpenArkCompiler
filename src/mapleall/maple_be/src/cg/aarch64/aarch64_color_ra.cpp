@@ -13,6 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "aarch64_color_ra.h"
+#include "aarch64_ra_opt.h"
 #include <iostream>
 #include <fstream>
 #include "aarch64_cg.h"
@@ -3435,6 +3436,9 @@ void GraphColorRegAllocator::GenerateSpillFillRegs(Insn &insn) {
 
 RegOperand *GraphColorRegAllocator::CreateSpillFillCode(RegOperand &opnd, Insn &insn, uint32 spillCnt, bool isdef) {
   regno_t vregno = opnd.GetRegisterNumber();
+  if (vregno >= lrVec.size()) {
+    return nullptr;
+  }
   LiveRange *lr = lrVec[vregno];
   if (lr != nullptr && lr->IsSpilled()) {
     AArch64CGFunc *a64cgfunc = static_cast<AArch64CGFunc*>(cgFunc);
@@ -4008,6 +4012,12 @@ void GraphColorRegAllocator::FinalizeRegisters() {
         }
       }
       LogInfo::MapleLogger() << "\n";
+    }
+    if (cgFunc->DoRename() && CGOptions::DoVregRenameInRA()) {
+      cgFunc->SetDoRename(false);
+      VregRename rename(cgFunc, memPool);
+      rename.VregLongLiveRename();
+      rename.RenameLoopAndSwitch(lrVec);
     }
     SpillLiveRangeForSpills();
     return;

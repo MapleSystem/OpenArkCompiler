@@ -663,16 +663,47 @@ class CGOptions : public MapleDriverOptionBase {
   static bool DoGlobalOpt() {
     return doGlobalOpt;
   }
-  static void EnableVregRename() {
-    doVregRename = true;
-  }
 
-  static void DisableVregRename() {
-    doVregRename = false;
+  /* The first two bits tells when to run rename
+   *   bit 1 : enable/disable rename before RA
+   *   bit 2 : enable/disable rename in RA
+   *
+   * The next two bits turns off either rename
+   *   bit 3 : disable loop rename
+   *   bit 4 : disable switch rename
+   */
+  static void EnableVregRenameBeforeRA() {
+    doVregRename |= 0x1;
+    DisableVregRenameInRA();
   }
-
-  static bool DoVregRename() {
-    return doVregRename;
+  static void EnableVregRenameInRA() {
+    doVregRename |= 0x2;
+    DisableVregRenameBeforeRA();
+  }
+  static void DisableVregRenameBeforeRA() {
+    doVregRename &= 0x2;
+  }
+  static void DisableVregRenameInRA() {
+    doVregRename &= 0x1;
+  }
+  static bool DoVregRenameBeforeRA() {
+    return ((doVregRename & 0x1) == 0x1);
+  }
+  static bool DoVregRenameInRA() {
+    return ((doVregRename & 0x2) == 0x2);
+  }
+  static bool DoLoopRename() {
+    return ((doVregRename & 0x4) == 0);
+  }
+  static bool DoSwitchRename() {
+    return ((doVregRename & 0x8) == 0);
+  }
+  static void SetVregRenameMode(uint8 mode) {
+    if ((mode & 0x1) && (mode & 0x2)) {
+      doVregRename = 0x2 | (mode & 0x4) | (mode & 0x8);
+    } else {
+      doVregRename = mode;
+    }
   }
 
   static void EnableMultiPassColorRA() {
@@ -1113,7 +1144,7 @@ class CGOptions : public MapleDriverOptionBase {
   static bool doICO;
   static bool doStoreLoadOpt;
   static bool doGlobalOpt;
-  static bool doVregRename;
+  static uint8 doVregRename;
   static bool doMultiPassColorRA;
   static bool doPrePeephole;
   static bool doPeephole;
