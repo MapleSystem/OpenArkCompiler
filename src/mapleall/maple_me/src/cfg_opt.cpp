@@ -76,6 +76,13 @@ void CfgOpt::PropagateBB(BB &bb, BB *trueBranchBB, BB *falseBranchBB) {
         auto &condGoto = static_cast<CondGotoNode&>(predBB->GetLast());
         SimplifyCondGotoStmt(condGoto);
         BB *branchBB;
+        // check predBB's rhs is same st as bb's rhs
+        if (condGoto.GetRHS()->GetOpCode() == OP_dread) {
+          AddrofNode *rhs = static_cast<AddrofNode *>(condGoto.GetRHS());
+          if (!IsShortCircuitStIdx(rhs->GetStIdx())) {
+            continue;
+          }
+        }
         if (condGoto.GetOpCode() == OP_brfalse) {
           trueBranchBBForPred = predBB->GetSucc(0);
           branchBB = falseBranchBBForPred;
@@ -136,8 +143,13 @@ void CfgOpt::PropagateOuterBBInfo() {
         if (bb->GetFirst().GetOpCode() != OP_brfalse && bb->GetFirst().GetOpCode() != OP_brtrue) {
           PropagateBB(*bb, bb, bb);
         } else if (condGoto.GetOpCode() == OP_brfalse) {
+          // check condgoto rhs is shortcircuit variable
+          CHECK_FATAL((condGoto.GetRHS()->GetOpCode() == OP_dread) && IsShortCircuitStIdx((static_cast<AddrofNode *>(condGoto.GetRHS()))->GetStIdx()),
+                      "expect a shortcircuit varialbe");
           PropagateBB(*bb, bb->GetSucc(0), bb->GetSucc(1));
         } else {
+          CHECK_FATAL((condGoto.GetRHS()->GetOpCode() == OP_dread) && IsShortCircuitStIdx((static_cast<AddrofNode *>(condGoto.GetRHS()))->GetStIdx()),
+                      "expect a shortcircuit variable");
           PropagateBB(*bb, bb->GetSucc(1), bb->GetSucc(0));
         }
         break;
