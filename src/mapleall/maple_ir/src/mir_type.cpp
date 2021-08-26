@@ -363,6 +363,22 @@ PrimType GetUnsignedPrimType(PrimType pty) {
   return pty;
 }
 
+int64 MinValOfSignedInteger(PrimType primType) {
+  switch (primType) {
+    case PTY_i8:
+      return INT8_MIN;
+    case PTY_i16:
+      return INT16_MIN;
+    case PTY_i32:
+      return INT32_MIN;
+    case PTY_i64:
+      return INT64_MIN;
+    default:
+      CHECK_FATAL(false, "NIY");
+      return 0;
+  }
+}
+
 const char *GetPrimTypeName(PrimType primType) {
 #define LOAD_ALGO_PRIMARY_TYPE
   switch (primType) {

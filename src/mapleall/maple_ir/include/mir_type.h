@@ -44,6 +44,7 @@ extern PrimType GetUnsignedPrimType(PrimType pty);                        // ret
 extern uint32 GetPrimTypeLanes(PrimType pty);                             // lane size if vector
 extern const char *GetPrimTypeName(PrimType primType);
 extern const char *GetPrimTypeJavaName(PrimType primType);
+extern int64 MinValOfSignedInteger(PrimType primType);
 
 inline uint32 GetPrimTypeBitSize(PrimType primType) {
   // 1 byte = 8 bits = 2^3 bits
