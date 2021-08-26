@@ -2230,6 +2230,7 @@ ASTDecl *ASTParser::ProcessDeclFunctionDecl(MapleAllocator &allocator, const cla
   }
   GenericAttrs attrs;
   astFile->CollectFuncAttrs(funcDecl, attrs, kPublic);
+  ProcessFuncAttrs(funcDecl, attrs, paramDecls);
   // one element vector type in rettype
   if (LibAstFile::isOneElementVector(qualType)) {
     attrs.SetAttr(GENATTR_oneelem_simd);
@@ -2255,6 +2256,33 @@ ASTDecl *ASTParser::ProcessDeclFunctionDecl(MapleAllocator &allocator, const cla
     }
   }
   return astFunc;
+}
+
+void ASTParser::ProcessFuncAttrs(const clang::FunctionDecl &funcDecl, GenericAttrs &attrs,
+                                 std::vector<ASTDecl*> &paramDecls) {
+  if (funcDecl.hasAttr<clang::ReturnsNonNullAttr>()) {
+    attrs.SetAttr(GENATTR_nonnull);
+  }
+  for (const auto *nonNull : funcDecl.specific_attrs<clang::NonNullAttr>()) {
+    if (!nonNull->args_size()) {
+      // Lack of attribute parameters means that all of the pointer parameters are
+      // implicitly marked as nonnull.
+      for (auto paramDecl : paramDecls) {
+        if (paramDecl->GetTypeDesc().front()->IsMIRPtrType()) {
+          paramDecl->SetAttr(GENATTR_nonnull);
+        }
+      }
+      break;
+    }
+    for (const clang::ParamIdx &paramIdx : nonNull->args()) {
+      // The clang ensures that nonnull attribute only applies to pointer parameter
+      unsigned int idx = paramIdx.getASTIndex();
+      if (idx >= paramDecls.size()) {
+        continue;
+      }
+      paramDecls[idx]->SetAttr(GENATTR_nonnull);
+    }
+  }
 }
 
 ASTDecl *ASTParser::ProcessDeclFieldDecl(MapleAllocator &allocator, const clang::FieldDecl &decl) {

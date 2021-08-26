@@ -1688,8 +1688,13 @@ std::pair<BaseNode*, int64> ConstantFold::FoldBinary(BinaryNode *node) {
       result = l;
       sum = lp.second + cst;
     } else if (op == OP_sub) {
-      result = l;
-      sum = lp.second - cst;
+      if (IsSignedInteger(primType) && MinValOfSignedInteger(primType) <= cst) {
+        result = node;
+        sum = 0;
+      } else {
+        result = l;
+        sum = lp.second - cst;
+      }
     } else if ((op == OP_mul || op == OP_band || op == OP_cand || op == OP_land) && cst == 0) {
       // X * 0 -> 0
       // X & 0 -> 0

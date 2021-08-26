@@ -384,8 +384,14 @@ void BBLayout::AddBB(BB &bb) {
     if (predBB->GetKind() != kBBGoto) {
       return;
     }
-    if (predBB->GetLastMe()->GetOp() == OP_throw) {
-      return;
+    if (func.GetIRMap() != nullptr) {
+      if (predBB->GetLastMe()->GetOp() == OP_throw) {
+        return;
+      }
+    } else {
+      if (predBB->GetLast().GetOpCode() == OP_throw) {
+        return;
+      }
     }
     if (predBB->GetSucc().front() != &bb) {
       return;

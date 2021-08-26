@@ -1207,6 +1207,9 @@ class FEIRStmtNary : public FEIRStmt {
   std::list<StmtNode*> GenMIRStmtsImpl(MIRBuilder &mirBuilder) const override;
   Opcode op;
   std::list<std::unique_ptr<FEIRExpr>> argExprs;
+
+ private:
+  bool SkipNonnullChecking(MIRBuilder &mirBuilder, const UniqueFEIRExpr &opnd) const;
 };
 
 // ---------- FEIRStmtAssign ----------
@@ -1275,14 +1278,23 @@ class FEIRStmtDAssign : public FEIRStmtAssign {
     expr = std::move(argExpr);
   }
 
+  void SetIsNonnullChecking(bool flag) {
+    isNonnullChecking = flag;
+  }
+
  protected:
   std::string DumpDotStringImpl() const override;
   void RegisterDFGNodes2CheckPointImpl(FEIRStmtCheckPoint &checkPoint) override;
   bool CalculateDefs4AllUsesImpl(FEIRStmtCheckPoint &checkPoint, FEIRUseDefChain &udChain) override;
   void InitTrans4AllVarsImpl() override;
   std::list<StmtNode*> GenMIRStmtsImpl(MIRBuilder &mirBuilder) const override;
+
+ private:
+  void InsertNonnullChecking(MIRBuilder &mirBuilder, const MIRSymbol &dstSym, std::list<StmtNode*> &ans) const;
+
   std::unique_ptr<FEIRExpr> expr;
   FieldID fieldID;
+  bool isNonnullChecking = false;  // EnhanceC nonnull checking
 };
 
 // ---------- FEIRStmtIAssign ----------
@@ -1296,12 +1308,21 @@ class FEIRStmtIAssign : public FEIRStmt {
         fieldID(id) {}
   ~FEIRStmtIAssign() = default;
 
+  void SetIsNonnullChecking(bool flag) {
+    isNonnullChecking = flag;
+  }
+
  protected:
   std::list<StmtNode *> GenMIRStmtsImpl(MIRBuilder &mirBuilder) const override;
+
+ private:
+  void InsertNonnullChecking(MIRBuilder &mirBuilder, MIRType &baseType, std::list<StmtNode*> &ans) const;
+
   UniqueFEIRType addrType;
   UniqueFEIRExpr addrExpr;
   UniqueFEIRExpr baseExpr;
   FieldID fieldID;
+  bool isNonnullChecking = false;  // EnhanceC nonnull checking
 };
 
 // ---------- FEIRStmtJavaTypeCheck ----------
@@ -2045,6 +2066,9 @@ class FEIRStmtCallAssign : public FEIRStmtAssign {
 
  private:
   Opcode AdjustMIROp() const;
+  void InsertNonnullInRetVar(MIRSymbol &retVarSym) const;
+  void InsertNonnullCheckingInArgs(const UniqueFEIRExpr &expr, size_t index,
+                                   MIRBuilder &mirBuilder, std::list<StmtNode*> &ans) const;
 
   FEStructMethodInfo &methodInfo;
   Opcode mirOp;

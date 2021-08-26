@@ -44,8 +44,18 @@ extern PrimType GetUnsignedPrimType(PrimType pty);                        // ret
 extern uint32 GetPrimTypeLanes(PrimType pty);                             // lane size if vector
 extern const char *GetPrimTypeName(PrimType primType);
 extern const char *GetPrimTypeJavaName(PrimType primType);
+extern int64 MinValOfSignedInteger(PrimType primType);
 
 inline uint32 GetPrimTypeBitSize(PrimType primType) {
+  // 1 byte = 8 bits = 2^3 bits
+  return GetPrimTypeSize(primType) << 3;
+}
+
+inline uint32 GetPrimTypeActualBitSize(PrimType primType) {
+  // GetPrimTypeSize(PTY_u1) will return 1, so we take it as a special case
+  if (primType == PTY_u1) {
+    return 1;
+  }
   // 1 byte = 8 bits = 2^3 bits
   return GetPrimTypeSize(primType) << 3;
 }
@@ -56,6 +66,7 @@ PrimType GetRegPrimType(PrimType primType);
 PrimType GetDynType(PrimType primType);
 PrimType GetReg64PrimType(PrimType primType);
 PrimType GetNonDynType(PrimType primType);
+PrimType GetIntegerPrimTypeBySizeAndSign(size_t sizeBit, bool isSign);
 
 inline bool IsAddress(PrimitiveType primitiveType) {
   return primitiveType.IsAddress();

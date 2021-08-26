@@ -50,6 +50,10 @@ void IdentifyLoops::SetExitBB(LoopDesc& loop) {
   } else {
     loop.exitBB = headBB->GetSucc()[1];
   }
+  // if it does not post-dominate headBB, do not set it
+  if (!dominance->PostDominate(*loop.exitBB, *headBB)) {
+    loop.exitBB = nullptr;
+  }
 }
 
 bool IdentifyLoops::InsertExitBB(LoopDesc &loop) {

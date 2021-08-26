@@ -418,6 +418,7 @@ class ASTUODerefExpr: public ASTUnaryOperatorExpr {
 
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
+  void InsertNonnullChecking(std::list<UniqueFEIRStmt> &stmts, UniqueFEIRExpr baseExpr) const;
 };
 
 class ASTUOPlusExpr: public ASTUnaryOperatorExpr {
@@ -954,6 +955,7 @@ class ASTMemberExpr : public ASTExpr {
   MIRConst *GenerateMIRConstImpl() const override;
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   const ASTMemberExpr *FindFinalMember(const ASTMemberExpr *startExpr, std::list<std::string> &memberNames) const;
+  void InsertNonnullChecking(std::list<UniqueFEIRStmt> &stmts, UniqueFEIRExpr baseExpr) const;
 
   ASTExpr *baseExpr = nullptr;
   std::string memberName;
@@ -1021,6 +1023,7 @@ class ASTAssignExpr : public ASTBinaryOperatorExpr {
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   void GetActualRightExpr(UniqueFEIRExpr &right, UniqueFEIRExpr &left) const;
+  bool IsInsertNonnullChecking(const UniqueFEIRExpr &rExpr) const;
   bool isCompoundAssign;
 };
 

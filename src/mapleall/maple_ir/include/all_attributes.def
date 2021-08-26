@@ -84,3 +84,4 @@
   ATTR(called_once)
 #endif
   ATTR(oneelem_simd)
+  ATTR(nonnull)
