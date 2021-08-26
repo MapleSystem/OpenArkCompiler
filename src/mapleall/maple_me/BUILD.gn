@@ -91,6 +91,7 @@ src_libmplme = [
   "src/me_subsum_rc.cpp",
   "src/me_func_opt.cpp",
   "src/me_verify.cpp",
+  "src/cast_opt.cpp",
   "src/me_fsaa.cpp",
   "src/lfo_mir_lower.cpp",
   "src/lfo_inject_iv.cpp",

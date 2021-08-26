@@ -159,6 +159,7 @@ class ASTParser {
   ASTDecl *PROCESS_DECL(StaticAssert);
 
  private:
+  void ProcessFuncAttrs(const clang::FunctionDecl &funcDecl,  GenericAttrs &attrs, std::vector<ASTDecl*> &paramDecls);
   ASTValue *TranslateConstantValue2ASTValue(MapleAllocator &allocator, const clang::Expr *expr) const;
   ASTValue *TranslateLValue2ASTValue(MapleAllocator &allocator,
       const clang::Expr::EvalResult &result, const clang::Expr *expr) const;

@@ -246,6 +246,9 @@ void LibAstFile::CollectAttrs(const clang::NamedDecl &decl, GenericAttrs &genAtt
   if (decl.hasAttr<clang::WeakAttr>()) {
     genAttrs.SetAttr(GENATTR_weak);
   }
+  if (decl.hasAttr<clang::NonNullAttr>() && decl.getKind() != clang::Decl::Function) {
+    genAttrs.SetAttr(GENATTR_nonnull);
+  }
 }
 
 void LibAstFile::CollectFuncAttrs(const clang::FunctionDecl &decl, GenericAttrs &genAttrs, AccessKind access) {

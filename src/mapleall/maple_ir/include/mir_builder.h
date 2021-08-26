@@ -209,7 +209,9 @@ class MIRBuilder {
   TypeCvtNode *CreateExprTypeCvt(Opcode o, PrimType toPrimType, PrimType fromPrimType, BaseNode &opnd);
   TypeCvtNode *CreateExprTypeCvt(Opcode o, const MIRType &type, const MIRType &fromtype, BaseNode *opnd);
   ExtractbitsNode *CreateExprExtractbits(Opcode o, const MIRType &type, uint32 bOffset, uint32 bSize, BaseNode *opnd);
+  ExtractbitsNode *CreateExprExtractbits(Opcode o, PrimType type, uint32 bOffset, uint32 bSize, BaseNode *opnd);
   RetypeNode *CreateExprRetype(const MIRType &type, const MIRType &fromType, BaseNode *opnd);
+  RetypeNode *CreateExprRetype(const MIRType &type, PrimType fromType, BaseNode *opnd);
   ArrayNode *CreateExprArray(const MIRType &arrayType);
   ArrayNode *CreateExprArray(const MIRType &arrayType, BaseNode *op);
   ArrayNode *CreateExprArray(const MIRType &arrayType, BaseNode *op1, BaseNode *op2);

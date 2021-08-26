@@ -668,11 +668,20 @@ TypeCvtNode *MIRBuilder::CreateExprTypeCvt(Opcode o, const MIRType &type, const 
 
 ExtractbitsNode *MIRBuilder::CreateExprExtractbits(Opcode o, const MIRType &type, uint32 bOffset, uint32 bSize,
                                                    BaseNode *opnd) {
-  return GetCurrentFuncCodeMp()->New<ExtractbitsNode>(o, type.GetPrimType(), bOffset, bSize, opnd);
+  return CreateExprExtractbits(o, type.GetPrimType(), bOffset, bSize, opnd);
+}
+
+ExtractbitsNode *MIRBuilder::CreateExprExtractbits(Opcode o, PrimType type, uint32 bOffset, uint32 bSize,
+                                                   BaseNode *opnd) {
+  return GetCurrentFuncCodeMp()->New<ExtractbitsNode>(o, type, bOffset, bSize, opnd);
 }
 
 RetypeNode *MIRBuilder::CreateExprRetype(const MIRType &type, const MIRType &fromType, BaseNode *opnd) {
-  return GetCurrentFuncCodeMp()->New<RetypeNode>(type.GetPrimType(), fromType.GetPrimType(), type.GetTypeIndex(), opnd);
+  return CreateExprRetype(type, fromType.GetPrimType(), opnd);
+}
+
+RetypeNode *MIRBuilder::CreateExprRetype(const MIRType &type, PrimType fromType, BaseNode *opnd) {
+  return GetCurrentFuncCodeMp()->New<RetypeNode>(type.GetPrimType(), fromType, type.GetTypeIndex(), opnd);
 }
 
 BinaryNode *MIRBuilder::CreateExprBinary(Opcode opcode, const MIRType &type, BaseNode *opnd0, BaseNode *opnd1) {

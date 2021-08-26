@@ -403,6 +403,14 @@ class FEOptions {
     return useSignedChar;
   }
 
+  void SetNpeCheckDynamic(bool flag) {
+    isNpeCheckDynamic = flag;
+  }
+
+  bool IsNpeCheckDynamic() const {
+    return isNpeCheckDynamic;
+  }
+
  private:
   static FEOptions options;
   // input control options
@@ -468,6 +476,9 @@ class FEOptions {
 
   // symbol resolve
   bool isAOT = false;
+
+  // EnhanceC
+  bool isNpeCheckDynamic = false;
 
   FEOptions();
   ~FEOptions() = default;

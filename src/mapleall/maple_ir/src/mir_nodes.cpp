@@ -134,6 +134,14 @@ bool AddrofNode::CheckNode(const MIRModule &mod) const {
   }
 }
 
+MIRType *IreadNode::GetType() const {
+  MIRPtrType *ptrtype = static_cast<MIRPtrType *>(GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx));
+  if (fieldID == 0) {
+    return ptrtype->GetPointedType();
+  }
+  return GlobalTables::GetTypeTable().GetTypeFromTyIdx(ptrtype->GetPointedTyIdxWithFieldID(fieldID));
+}
+
 bool IreadNode::IsVolatile() const {
   MIRType *type = GlobalTables::GetTypeTable().GetTypeFromTyIdx(tyIdx);
   ASSERT(type != nullptr, "null ptr check");
