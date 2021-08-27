@@ -553,7 +553,7 @@ void M2MAnnotationAnalysis::GetAnalysisDependence(maple::AnalysisDep &aDep) cons
 }
 
 bool M2MAnnotationAnalysis::PhaseRun(maple::MIRModule &m) {
-  auto *kh = GET_ANALYSIS(M2MKlassHierarchy);
+  auto *kh = GET_ANALYSIS(M2MKlassHierarchy, m);
   ASSERT_NOT_NULL(kh);
   MemPool *pragmaMemPool = GetPhaseMemPool();
   aa = pragmaMemPool->New<AnnotationAnalysis>(&m, ApplyTempMemPool(), pragmaMemPool, kh);

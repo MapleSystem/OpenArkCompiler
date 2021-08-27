@@ -34,7 +34,7 @@ void MEIRMapBuild::GetAnalysisDependence(AnalysisDep &aDep) const {
 }
 
 bool MEIRMapBuild::PhaseRun(maple::MeFunction &f) {
-  auto *dom = GET_ANALYSIS(MEDominance);
+  auto *dom = GET_ANALYSIS(MEDominance, f);
   ASSERT_NOT_NULL(dom);
   irMap = GetPhaseAllocator()->New<MeIRMap>(f, *GetPhaseMemPool());
   f.SetIRMap(irMap);

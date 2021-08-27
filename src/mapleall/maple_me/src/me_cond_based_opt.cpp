@@ -249,7 +249,7 @@ void MECondBasedRC::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
 }
 
 bool MECondBasedRC::PhaseRun(maple::MeFunction &f) {
-  auto *dom = GET_ANALYSIS(MEDominance);
+  auto *dom = GET_ANALYSIS(MEDominance, f);
   ASSERT(dom != nullptr, "dominance phase has problem");
   CondBasedRC condBasedRC(f, *dom);
   MeCFG *cfg = f.GetCfg();
@@ -291,7 +291,7 @@ void MECondBasedNPC::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
 }
 
 bool MECondBasedNPC::PhaseRun(maple::MeFunction &f) {
-  auto *dom = GET_ANALYSIS(MEDominance);
+  auto *dom = GET_ANALYSIS(MEDominance, f);
   ASSERT(dom != nullptr, "dominance phase has problem");
   CondBasedNPC condBasedNPC(f, *dom);
   condBasedNPC.DoCondBasedNPC();

@@ -170,7 +170,7 @@ bool MECFGOPT::PhaseRun(MeFunction &f) {
   CfgOpt cfgOpt(f, *f.GetCfg());
   cfgOpt.Run();
   if (cfgOpt.IsCfgChanged()) {
-    GetAnalysisInfoHook()->ForceEraseAnalysisPhase(&MEDominance::id);
+    GetAnalysisInfoHook()->ForceEraseAnalysisPhase(f.GetUniqueID(), &MEDominance::id);
   }
   return false;
 }

@@ -181,11 +181,11 @@ bool MEHdse::PhaseRun(maple::MeFunction &f) {
     return false;
   }
   f.hdseRuns++;
-  auto *dom = GET_ANALYSIS(MEDominance);
+  auto *dom = GET_ANALYSIS(MEDominance, f);
   CHECK_NULL_FATAL(dom);
-  auto *aliasClass = GET_ANALYSIS(MEAliasClass);
+  auto *aliasClass = GET_ANALYSIS(MEAliasClass, f);
   CHECK_NULL_FATAL(aliasClass);
-  auto *hMap = GET_ANALYSIS(MEIRMapBuild);
+  auto *hMap = GET_ANALYSIS(MEIRMapBuild, f);
   CHECK_NULL_FATAL(hMap);
 
   MemPool *memPool = GetPhaseMemPool();

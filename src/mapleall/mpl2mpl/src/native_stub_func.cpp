@@ -707,7 +707,7 @@ const std::string NativeStubFuncGeneration::callSlowNativeFuncs[kSlownativeFuncn
 bool M2MGenerateNativeStubFunc::PhaseRun(maple::MIRModule &m) {
   bool origUsePreg = Options::usePreg;
   Options::usePreg = false;  // As a pre mpl2mpl phase, NativeStubFunc always use symbols
-  OPT_TEMPLATE_NEWPM(NativeStubFuncGeneration);
+  OPT_TEMPLATE_NEWPM(NativeStubFuncGeneration, m);
   Options::usePreg = origUsePreg;
   return true;
 }

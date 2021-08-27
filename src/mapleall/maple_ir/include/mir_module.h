@@ -600,6 +600,10 @@ class MIRModule {
     return inputFileName;
   }
 
+  uint32 GetUniqueID() {
+    return -1;
+  }
+
  private:
   void DumpTypeTreeToCxxHeaderFile(MIRType &ty, std::unordered_set<MIRType*> &dumpedClasses) const;
 

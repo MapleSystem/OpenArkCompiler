@@ -520,13 +520,13 @@ void IVCanon::PerformIVCanon() {
 }
 
 bool MELfoIVCanon::PhaseRun(MeFunction &f) {
-  Dominance *dom = GET_ANALYSIS(MEDominance);
+  Dominance *dom = GET_ANALYSIS(MEDominance, f);
   ASSERT(dom != nullptr, "dominance phase has problem");
 
-  MeIRMap *irmap = GET_ANALYSIS(MEIRMapBuild);
+  MeIRMap *irmap = GET_ANALYSIS(MEIRMapBuild, f);
   ASSERT(irmap != nullptr, "hssamap has problem");
 
-  IdentifyLoops *identLoops = GET_ANALYSIS(MELoopAnalysis);
+  IdentifyLoops *identLoops = GET_ANALYSIS(MELoopAnalysis, f);
   CHECK_FATAL(identLoops != nullptr, "identloops has problem");
 
   LfoFunction *lfoFunc = f.GetLfoFunc();

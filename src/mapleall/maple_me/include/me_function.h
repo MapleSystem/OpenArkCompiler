@@ -318,6 +318,10 @@ class MeFunction : public FuncEmit {
     return hasWriteInputAsmNode;
   }
 
+  uint32 GetUniqueID() {
+    return mirFunc->GetPuidx();
+  }
+
   void PartialInit();
 
   MIRFunction *CurFunction() const {

@@ -832,11 +832,11 @@ void MEDelegateRC::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
 
 bool MEDelegateRC::PhaseRun(maple::MeFunction &f) {
   static uint32 puCount = 0;
-  auto *dom = GET_ANALYSIS(MEDominance);
+  auto *dom = GET_ANALYSIS(MEDominance, f);
   ASSERT(dom != nullptr, "dominance phase has problem");
 
   {
-    auto *aliasClass = GET_ANALYSIS(MEAliasClass);
+    auto *aliasClass = GET_ANALYSIS(MEAliasClass, f);
     auto *hdse = GetPhaseAllocator()->New<MeHDSE>(f, *dom, *f.GetIRMap(), aliasClass, DEBUGFUNC_NEWPM(f));
     // invoke hdse to update isLive only
     hdse->InvokeHDSEUpdateLive();

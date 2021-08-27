@@ -62,16 +62,16 @@ bool MEDse::PhaseRun(maple::MeFunction &f) {
       LogInfo::MapleLogger() << "  == " << PhaseName() << " skipped\n";
     }
   } else {
-    auto *dom = GET_ANALYSIS(MEDominance);
+    auto *dom = GET_ANALYSIS(MEDominance, f);
     CHECK_NULL_FATAL(dom);
-    auto *aliasClass = GET_ANALYSIS(MEAliasClass);
+    auto *aliasClass = GET_ANALYSIS(MEAliasClass, f);
     CHECK_NULL_FATAL(aliasClass);
     MeDSE dse(f, dom, aliasClass, DEBUGFUNC_NEWPM(f));
     dse.RunDSE();
     f.Verify();
     // cfg change , invalid results in MeFuncResultMgr
     if (dse.UpdatedCfg()) {
-      GetAnalysisInfoHook()->ForceEraseAnalysisPhase(&MEDominance::id);
+      GetAnalysisInfoHook()->ForceEraseAnalysisPhase(f.GetUniqueID(), &MEDominance::id);
     }
   }
   if (f.GetMIRModule().IsCModule() && MeOption::performFSAA) {

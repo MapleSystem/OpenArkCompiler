@@ -381,7 +381,7 @@ void JavaIntrnLowering::ProcessJavaIntrnFillNewArray(IntrinsiccallNode &intrinCa
 }
 
 bool M2MJavaIntrnLowering::PhaseRun(maple::MIRModule &m) {
-  OPT_TEMPLATE_NEWPM(JavaIntrnLowering);
+  OPT_TEMPLATE_NEWPM(JavaIntrnLowering, m);
   return true;
 }
 
