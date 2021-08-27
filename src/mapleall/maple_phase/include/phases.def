@@ -11,7 +11,7 @@ ADDMODULEPHASE("inline", Options::O2 && Options::useInline)
 ADDMODULEPHASE("simplify", Options::O2)
 ADDMODULEPHASE("ConstantFold", Options::O2)
 // ipa phase manager
-// ADDMODULEPHASE("IpaSccPM", Options::O2)
+ ADDMODULEPHASE("IpaSccPM", Options::O2)
 // me phase manager is also a phase itself.
 ADDMAPLEPHASE("meFuncPM", IsRunMe());
 ADDMODULEPHASE("clinit", JAVALANG)
@@ -25,6 +25,7 @@ ADDMODULEPHASE("ConstantFold", JAVALANG)
 #ifdef ME_PHASE
 // me phases belong to MeFuncPM phase.
 ADDMAPLEMEPHASE("mecfgbuild", CLANG && MeOption::optLevel >= 3)
+ADDMAPLEMEPHASE("cfgOpt", CLANG && MeOption::optLevel >= 3)
 ADDMAPLEMEPHASE("injectiv", CLANG && MeOption::optLevel >= 3)
 ADDMAPLEMEPHASE("ssatab", CLANG && MeOption::optLevel >= 3)
 ADDMAPLEMEPHASE("aliasclass", CLANG && MeOption::optLevel >= 3)
@@ -38,7 +39,7 @@ ADDMAPLEMEPHASE("lfopreemit", CLANG && MeOption::optLevel >= 3)
 ADDMAPLEMEPHASE("deptest", CLANG && MeOption::optLevel >= 3)
 ADDMAPLEMEPHASE("autovec", CLANG && MeOption::optLevel >= 3)
 ADDMAPLEMEPHASE("mecfgbuild", MeOption::optLevel >= 2 || JAVALANG)
-ADDMAPLEMEPHASE("cfgOpt", CLANG && MeOption::optLevel >= 2)
+//ADDMAPLEMEPHASE("cfgOpt", CLANG && MeOption::optLevel == 2)
 ADDMAPLEMEPHASE("bypatheh", JAVALANG && MeOption::optLevel >= 2)
 ADDMAPLEMEPHASE("loopcanon", MeOption::optLevel >= 2)
 ADDMAPLEMEPHASE("splitcriticaledge", MeOption::optLevel >= 2)
@@ -69,3 +70,4 @@ ADDMAPLEMEPHASE("bblayout", MeOption::optLevel >= 2 || JAVALANG)
 ADDMAPLEMEPHASE("meemit", MeOption::optLevel >= 2 || JAVALANG)
 ADDMAPLEMEPHASE("meverify", JAVALANG && MeOption::meVerify)
 #endif
+

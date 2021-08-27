@@ -26,6 +26,7 @@ include_directories = [
 
 src_libmplipa = [
   "src/ipa_phase_manager.cpp",
+  "src/foo.cpp",
   "src/module_phase_manager.cpp",
   "src/clone.cpp",
   "src/retype.cpp",

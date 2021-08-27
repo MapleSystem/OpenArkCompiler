@@ -45,7 +45,7 @@ class AnalysisDataManager {
   void ClearInVaildAnalysisPhase(uint32 phaseKey, AnalysisDep &ADep);                      // do after transform phase;
   MaplePhase *GetVaildAnalysisPhase(uint32 phaseKey, MaplePhaseID pid);
   bool IsAnalysisPhaseAvailable(uint32 phaseKey, MaplePhaseID pid);
-
+  void Dump();
  private:
   MapleAllocator allocator;  // thread local
   MemPoolCtrler* innerCtrler = nullptr;
@@ -137,7 +137,7 @@ class MaplePhaseManager {
   template <typename phaseT, typename IRTemplate>
   bool RunTransformPhase(const MaplePhaseInfo &phaseInfo,  AnalysisDataManager &adm, IRTemplate &irUnit, int lev = 0);
   template <typename phaseT, typename IRTemplate>
-  bool RunAnalysisPhase(const MaplePhaseInfo &phaseInfo,  AnalysisDataManager &adm, IRTemplate &irUnit, int lev = 0);
+  bool RunAnalysisPhase(const MaplePhaseInfo &phaseInfo, AnalysisDataManager &adm, IRTemplate &irUnit, int lev = 0);
 
  protected:
   MapleAllocator allocator;
@@ -162,6 +162,35 @@ class MaplePhaseManager {
    * Can be deleted after testing
    */
   bool useGlobalMpCtrler = true;
+};
+
+/* manages (module phases) & (funtion phase managers) */
+class ModulePM : public MaplePhase, public MaplePhaseManager {
+ public:
+  ModulePM(MemPool *mp, MaplePhaseID id) : MaplePhase(kModulePM, &id, *mp), MaplePhaseManager(*mp) {}
+  virtual ~ModulePM() = default;
+};
+
+/* manages (function phases) & (loop/region phase managers) */
+class FunctionPM : public MapleModulePhase, public MaplePhaseManager {
+ public:
+  FunctionPM(MemPool *mp, MaplePhaseID id) : MapleModulePhase(&id, mp), MaplePhaseManager(*mp) {}
+  virtual ~FunctionPM() = default;
+};
+
+/* manages (scc phases) */
+class SccPM : public MapleModulePhase, public MaplePhaseManager {
+ public:
+  SccPM(MemPool *mp, MaplePhaseID id) : MapleModulePhase(&id, mp), MaplePhaseManager(*mp) {}
+  virtual ~SccPM() = default;
+};
+
+/* manages (function phases in function phase) */
+template <typename IRType>
+class FunctionPhaseGroup : public MapleFunctionPhase<IRType>, public MaplePhaseManager {
+ public:
+  FunctionPhaseGroup(MemPool *mp, MaplePhaseID id) : MapleFunctionPhase<IRType>(&id, mp), MaplePhaseManager(*mp){}
+  virtual ~FunctionPhaseGroup() = default;
 };
 
 class AnalysisInfoHook {
@@ -192,9 +221,9 @@ class AnalysisInfoHook {
   }
 
   /* Find analysis Data which is at higher IR level */
-  template <typename IRType, typename AIMPHASE, typename IRUnit>
+  template <typename AIMPHASE, typename IRUnit>
   MaplePhase *GetOverIRAnalyisData(IRUnit &u) {
-    MaplePhase *it = static_cast<IRType*>(bindingPM);
+    MaplePhase *it = dynamic_cast<MaplePhase*>(bindingPM);
     ASSERT(it != nullptr, "find Over IR info failed");
     return it->GetAnalysisInfoHook()->FindAnalysisData(u.GetUniqueID(), it, &AIMPHASE::id);
   }
@@ -237,35 +266,6 @@ class AnalysisInfoHook {
   AnalysisDataManager &adManager;
   MaplePhaseManager *bindingPM;
   MapleMap<AnalysisMemKey, MaplePhase*> analysisPhasesData;
-};
-
-/* manages (module phases) & (funtion phase managers) */
-class ModulePM : public MaplePhase, public MaplePhaseManager {
- public:
-  ModulePM(MemPool *mp, MaplePhaseID id) : MaplePhase(kModulePM, &id, *mp), MaplePhaseManager(*mp) {}
-  virtual ~ModulePM() = default;
-};
-
-/* manages (function phases) & (loop/region phase managers) */
-class FunctionPM : public MapleModulePhase, public MaplePhaseManager {
- public:
-  FunctionPM(MemPool *mp, MaplePhaseID id) : MapleModulePhase(&id, mp), MaplePhaseManager(*mp) {}
-  virtual ~FunctionPM() = default;
-};
-
-/* manages (scc phases) */
-class SccPM : public MapleModulePhase, public MaplePhaseManager {
- public:
-  SccPM(MemPool *mp, MaplePhaseID id) : MapleModulePhase(&id, mp), MaplePhaseManager(*mp) {}
-  virtual ~SccPM() = default;
-};
-
-/* manages (function phases in function phase) */
-template <typename IRType>
-class FunctionPhaseGroup : public MapleFunctionPhase<IRType>, public MaplePhaseManager {
- public:
-  FunctionPhaseGroup(MemPool *mp, MaplePhaseID id) : MapleFunctionPhase<IRType>(&id, mp), MaplePhaseManager(*mp){}
-  virtual ~FunctionPhaseGroup() = default;
 };
 }
 #endif //MAPLE_PHASE_MANAGER_H

@@ -97,6 +97,7 @@ bool AliasClass::CallHasNoSideEffectOrPrivateDefEffect(const CallNode &stmt, Fun
   if (callee == nullptr) {
     return false;
   }
+//  callee->Dump(true);
   bool hasAttr = false;
   if (callee->GetFuncAttrs().GetAttr(attrKind)) {
     hasAttr = true;

@@ -129,6 +129,29 @@ bool AnalysisDataManager::IsAnalysisPhaseAvailable(uint32 phaseKey, MaplePhaseID
   return it != availableAnalysisPhases.end();
 }
 
+void AnalysisDataManager::Dump() {
+  LogInfo::MapleLogger() << "availableAnalysisPhases: \n";
+  for (auto &it : availableAnalysisPhases) {
+    LogInfo::MapleLogger() << "<"
+                           << it.first.first
+                           << ", "
+                           << MaplePhaseRegister::GetMaplePhaseRegister()->GetPhaseByID(it.first.second)->PhaseName()
+                           << "> : "
+                           << it.second
+                           << "\n";
+  }
+  LogInfo::MapleLogger() << "analysisPhaseMemPool: \n";
+  for (auto &it : analysisPhaseMemPool) {
+    LogInfo::MapleLogger() << "<"
+                           << it.first.first
+                           << ", "
+                           << MaplePhaseRegister::GetMaplePhaseRegister()->GetPhaseByID(it.first.second)->PhaseName()
+                           << "> : "
+                           << it.second
+                           << "\n";
+  }
+}
+
 void MaplePhaseManager::AddPhase(std::string phaseName, bool condition) {
   if (!condition) {
     return;
@@ -240,13 +263,50 @@ void MaplePhaseManager::RunDependentAnalysisPhase(const MaplePhase &phase,
     RunAnalysisPhase<phaseT, IRTemplate>(*curPhase, adm, irUnit, lev);
   }
 }
+//
+//template <typename phaseT, typename IRTemplate>
+//void MaplePhaseManager::RunDependentIpaAnalysisPhase(const MaplePhase &phase, const SCCNode* scc,
+//                                                  AnalysisDataManager &adm,
+//                                                  IRTemplate &irUnit, int lev) {
+//  AnalysisDep *anaDependence = FindAnalysisDep(&phase);
+//  for (auto requiredAnaPhase : anaDependence->GetRequiredPhase()) {
+//    const MaplePhaseInfo *curPhase = MaplePhaseRegister::GetMaplePhaseRegister()->GetPhaseByID(requiredAnaPhase);
+//    CHECK_FATAL(curPhase->IsAnalysis(), "Must be analysis phase.");
+//    if (adm.IsAnalysisPhaseAvailable(curPhase->GetPhaseID())) {
+//      continue;
+//    }
+//    LogDependence(curPhase, lev);
+//    RunIpaFromPhase<phaseT, IRTemplate>(*curPhase, scc, adm, irUnit, lev);
+//  }
+//}
+//
+///* live range of a phase should be short than mempool */
+//template <typename phaseT, typename IRTemplate>
+//bool MaplePhaseManager::RunIpaPhase(
+//	const MaplePhaseInfo &phaseInfo, const SCCNode* scc, AnalysisDataManager &adm, IRTemplate &irUnit, int lev) {
+//  bool result = false;
+//  auto ipaMempool = AllocateMemPoolInPhaseManager(phaseInfo.PhaseName() + "'s mempool");
+//  auto *phase = static_cast<phaseT*>(phaseInfo.GetConstructor()(ipaMempool.get()));
+//  RunDependentIpaAnalysisPhase<phaseT, IRTemplate>(*phase, scc, adm, irUnit, lev + 1);
+//  phase->SetAnalysisInfoHook(ipaMempool->New<AnalysisInfoHook>(*(ipaMempool.get()), adm, this));
+//  if (phaseTh != nullptr) {
+//    phaseTh->RunBeforePhase(phaseInfo);
+//    result = phase->PhaseRunOnScc(irUnit, scc);
+//    phaseTh->RunAfterPhase(phaseInfo);
+//  } else  {
+//    result = phase->PhaseRunOnScc(irUnit, scc);
+//  }
+//  phase->ClearTempMemPool();
+//  adm.ClearInVaildAnalysisPhase(*FindAnalysisDep(phase));
+//  return result;
+//}
 
 /* live range of a phase should be short than mempool */
 template <typename phaseT, typename IRTemplate>
 bool MaplePhaseManager::RunTransformPhase(const MaplePhaseInfo &phaseInfo,
                                           AnalysisDataManager &adm, IRTemplate &irUnit, int lev) {
   bool result = false;
-  auto transformPhaseMempool = AllocateMemPoolInPhaseManager(phaseInfo.PhaseName() + "'s mempool");
+  auto transformPhaseMempool = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, phaseInfo.PhaseName() + "'s mempool"); //AllocateMemPoolInPhaseManager(phaseInfo.PhaseName() + "'s mempool");
   auto *phase = static_cast<phaseT*>(phaseInfo.GetConstructor()(transformPhaseMempool.get()));
   RunDependentAnalysisPhase<phaseT, IRTemplate>(*phase, adm, irUnit, lev + 1);
   phase->SetAnalysisInfoHook(transformPhaseMempool->New<AnalysisInfoHook>(*(transformPhaseMempool.get()), adm, this));
@@ -261,6 +321,7 @@ bool MaplePhaseManager::RunTransformPhase(const MaplePhaseInfo &phaseInfo,
   adm.ClearInVaildAnalysisPhase(irUnit.GetUniqueID(), *FindAnalysisDep(phase));
   return result;
 }
+
 
 template <typename phaseT, typename IRTemplate>
 bool MaplePhaseManager::RunAnalysisPhase(
@@ -288,6 +349,8 @@ bool MaplePhaseManager::RunAnalysisPhase(
 }
 
 // declaration for functionPhase (template only)
+//template bool MaplePhaseManager::RunIpaPhase<MapleModulePhase, MIRModule>(
+//    const MaplePhaseInfo &phaseInfo, const SCCNode* scc, AnalysisDataManager &adm, MIRModule &irUnit, int lev);
 template bool MaplePhaseManager::RunTransformPhase<MapleModulePhase, MIRModule>(
     const MaplePhaseInfo &phaseInfo, AnalysisDataManager &adm, MIRModule &irUnit, int lev);
 template bool MaplePhaseManager::RunTransformPhase<MapleSccPhase<SCCNode>, SCCNode>(

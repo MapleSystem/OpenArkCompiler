@@ -20,23 +20,28 @@
 #include "mempool_allocator.h"
 #include "mir_module.h"
 #include "mir_function.h"
-#include "maple_phase_manager.h"
+#include "me_phase_manager.h"
+#include "foo.h"
 
 namespace maple {
+
 /* ==== new phase manager ==== */
 class IpaSccPM : public SccPM {
  public:
   explicit IpaSccPM(MemPool *memPool) : SccPM(memPool, &id) {}
-  bool PhaseRun(MIRModule &m) override;
   PHASECONSTRUCTOR(IpaSccPM);
-  ~IpaSccPM() override {}
   std::string PhaseName() const override;
+  ~IpaSccPM() override {}
+
   void SetIpaInput(const std::string &str) {
     ipaInput = str;
   }
+
+  bool PhaseRun(MIRModule &m) override;
  private:
   void GetAnalysisDependence(AnalysisDep &aDep) const override;
-  virtual void DoPhasesPopulate(const MIRModule &m);
+  void DumpIR(MeFunction &f, const std::string phaseName, bool isBefore);
+  void DoPhasesPopulate(const MIRModule &m);
 
   std::string ipaInput = "";
 };

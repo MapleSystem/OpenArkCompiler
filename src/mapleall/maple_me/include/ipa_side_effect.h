@@ -117,10 +117,6 @@ class IpaSideEffect {
   void AnalyzeExpr(MeExpr&, std::set<VarMeExpr*>&, std::set<VarMeExpr*>&, std::set<VarMeExpr*>&, std::set<VarMeExpr*>&);
   bool IsPureFromSummary(const MIRFunction&) const;
 
-  void SetHasDef() {
-    hasDef = true;
-  }
-
   bool isSeen;           // This module is compiled and the effects are valid
   bool notPure;          // Does module produce result purely based on the inputs
   bool hasDefArg;

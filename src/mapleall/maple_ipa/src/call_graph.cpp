@@ -1570,7 +1570,7 @@ bool SCCNode::HasSelfRecursion() const {
 }
 
 void SCCNode::Dump() const {
-  LogInfo::MapleLogger() << "SCC " << id << " contains\n";
+  LogInfo::MapleLogger() << "SCC " << id << " contains " << cgNodes.size() << " node(s)\n";
   for (auto const kIt : cgNodes) {
     CGNode *node = kIt;
     if (node->GetMIRFunction() != nullptr) {

@@ -210,8 +210,12 @@ bool IpaSideEffect::MEAnalyzeDefExpr(MeExpr &baseExprMe, std::vector<MeExpr*> &v
           }
           break;
         }
-        default:
-          CHECK_FATAL(false, "NYI");
+        default: {
+          std::cout << "NYI defStmt: ";
+          dassignMeStmt->Dump(meFunc.GetIRMap());
+          std::cout << std::endl;
+//          CHECK_FATAL(false, "NYI");
+        }
       }
       break;
     }
@@ -503,14 +507,26 @@ void IpaSideEffect::AnalyzeExpr(MeExpr &expr,
       hasThrException = true;
       IvarMeExpr &ivarMeExpr = static_cast<IvarMeExpr&>(expr);
       MeExpr *tmpBase = ivarMeExpr.GetBase();
-      CHECK_FATAL(tmpBase->GetOp() == OP_dread || tmpBase->GetOp() == OP_array, "Must be dread or array");
+//      CHECK_FATAL(tmpBase->GetOp() == OP_dread || tmpBase->GetOp() == OP_array, "Must be dread or array");
       MeExpr *baseNode = nullptr;
       if (tmpBase->GetOp() == OP_array) {
         NaryMeExpr *arrayNode = static_cast<NaryMeExpr*>(tmpBase);
         CHECK_FATAL(arrayNode->GetOpnd(0)->GetOp() == OP_dread, "Must be dread");
         baseNode = arrayNode->GetOpnd(0);
-      } else {
+      } else if (tmpBase->GetOp() == OP_dread) {
         baseNode = tmpBase;
+      } else if (tmpBase->GetOp() == OP_add) {
+        OpMeExpr *opNode = static_cast<OpMeExpr*>(tmpBase);
+//        CHECK_FATAL(opNode->GetOpnd(0)->GetOp() == OP_addrof || opNode->GetOpnd(0)->GetOp() == OP_iaddrof || opNode->GetOpnd(0)->GetOp() == OP_dread, "error");
+        std::cout << "NYI iread base add: ";
+        opNode->GetOpnd(0)->Dump(meFunc.GetIRMap());
+        std::cout << std::endl;
+        break;
+      } else {
+        std::cout << "NYI iread base: ";
+        tmpBase->Dump(meFunc.GetIRMap());
+        std::cout << std::endl;
+        break;
       }
       CHECK_FATAL(baseNode->GetOp() == OP_dread, "must be dread");
       VarMeExpr *dread = static_cast<VarMeExpr*>(baseNode);
@@ -561,6 +577,7 @@ void IpaSideEffect::AnalyzeExpr(MeExpr &expr,
     case OP_lshr:
     case OP_band:
     case OP_add:
+    case OP_mul:
     case OP_ashr:
     case OP_bior:
     case OP_bxor:
@@ -586,12 +603,20 @@ void IpaSideEffect::AnalyzeExpr(MeExpr &expr,
         isGlobalTmp = false;
         isArgTmp = false;
       } else {
-        CHECK_FATAL(false, "NYI");
+        std::cout << "NYI OP_intrinsicopwithtype: ";
+        expr.Dump(meFunc.GetIRMap());
+        std::cout << std::endl;
+        break;
+//        CHECK_FATAL(false, "NYI");
       }
       break;
     }
     default: {
-      CHECK_FATAL(false, "NYI");
+      std::cout << "NYI EXPR OP: ";
+      expr.Dump(meFunc.GetIRMap());
+      std::cout << std::endl;
+      break;
+//      CHECK_FATAL(false, "NYI");
     }
   }
   isGlobal = isGlobal || isGlobalTmp;
@@ -624,20 +649,25 @@ bool IpaSideEffect::UpdateSideEffectWithStmt(MeStmt &meStmt,
       }
       hasThrException = true;
       IassignMeStmt &iasNode = static_cast<IassignMeStmt&>(meStmt);
-      CHECK_FATAL(iasNode.GetLHSVal()->GetBase()->GetOp() == OP_dread ||
-                  iasNode.GetLHSVal()->GetBase()->GetOp() == OP_array, "Must be dread");
+//      CHECK_FATAL(iasNode.GetLHSVal()->GetBase()->GetOp() == OP_dread ||
+//                  iasNode.GetLHSVal()->GetBase()->GetOp() == OP_array, "Must be dread");
       MeExpr *baseNode = nullptr;
       if (iasNode.GetLHSVal()->GetBase()->GetOp() == OP_array) {
         NaryMeExpr *arrayNode = static_cast<NaryMeExpr*>(iasNode.GetLHSVal()->GetBase());
         CHECK_FATAL(arrayNode->GetOpnd(0)->GetOp() == OP_dread, "Must be dread");
         baseNode = arrayNode->GetOpnd(0);
-      } else {
+      } else if (iasNode.GetLHSVal()->GetBase()->GetOp() == OP_dread) {
         baseNode = iasNode.GetLHSVal()->GetBase();
+      } else {
+        std::cout << "NYI iassign base: ";
+        iasNode.GetLHSVal()->GetBase()->Dump(meFunc.GetIRMap());
+        std::cout << std::endl;
+        break;
       }
       VarMeExpr *dread = static_cast<VarMeExpr*>(baseNode);
       const OriginalSt *ost = meFunc.GetMeSSATab()->GetSymbolOriginalStFromID(dread->GetOstIdx());
       if (ost->GetMIRSymbol()->IsGlobal() || globalExprs.find(dread) != globalExprs.end()) {
-        SetHasDef();
+        hasDef = true;
       } else if (meFunc.GetMirFunc()->IsAFormal(ost->GetMIRSymbol()) || argExprs.find(dread) != argExprs.end()) {
         hasDefArg = true;
       }
@@ -669,7 +699,10 @@ bool IpaSideEffect::UpdateSideEffectWithStmt(MeStmt &meStmt,
     case OP_intrinsiccallwithtype: {
       IntrinsiccallMeStmt &callNode = static_cast<IntrinsiccallMeStmt&>(meStmt);
       if (callNode.GetIntrinsic() != INTRN_JAVA_CLINIT_CHECK) {
-        CHECK_FATAL(false, "NYI");
+        std::cout << "NYI OP_intrinsiccall: ";
+        meStmt.Dump(meFunc.GetIRMap());
+        std::cout << std::endl;
+//        CHECK_FATAL(false, "NYI");
       }
       break;
     }
@@ -687,7 +720,7 @@ bool IpaSideEffect::UpdateSideEffectWithStmt(MeStmt &meStmt,
         VarMeExpr *lhsVar = static_cast<VarMeExpr*>(lhs);
         const OriginalSt *ost = meFunc.GetMeSSATab()->GetSymbolOriginalStFromID(lhsVar->GetOstIdx());
         if (ost->GetMIRSymbol()->IsGlobal()) {
-          SetHasDef();
+          hasDef = true;
         }
         if (isGlobal) {
           (void)globalExprs.insert(lhsVar);
@@ -703,7 +736,7 @@ bool IpaSideEffect::UpdateSideEffectWithStmt(MeStmt &meStmt,
         VarMeExpr *lhsVar = static_cast<VarMeExpr*>(lhs);
         const OriginalSt *ost = meFunc.GetMeSSATab()->GetSymbolOriginalStFromID(lhsVar->GetOstIdx());
         if (ost->GetMIRSymbol()->IsGlobal()) {
-          SetHasDef();
+          hasDef = true;
         }
         if (isGlobal) {
           (void)globalExprs.insert(lhsVar);
@@ -713,7 +746,7 @@ bool IpaSideEffect::UpdateSideEffectWithStmt(MeStmt &meStmt,
         }
       } else if (callNode.GetIntrinsic() == INTRN_JAVA_POLYMORPHIC_CALL) {
         hasPrivateDef = hasThrException = true;
-        SetHasDef();
+        hasDef = true;
         CallMeStmt &callMeStmt = static_cast<CallMeStmt&>(meStmt);
         MeExpr *lhs = callMeStmt.GetAssignedLHS();
         if (lhs != nullptr) {
@@ -740,7 +773,7 @@ bool IpaSideEffect::UpdateSideEffectWithStmt(MeStmt &meStmt,
       VarMeExpr *lhsVar = static_cast<VarMeExpr*>(dassignNode.GetVarLHS());
       const OriginalSt *ost = meFunc.GetMeSSATab()->GetSymbolOriginalStFromID(lhsVar->GetOstIdx());
       if (ost->GetMIRSymbol()->IsGlobal()) {
-        SetHasDef();
+        hasDef = true;
       }
       if (isGlobal) {
         (void)globalExprs.insert(lhsVar);
@@ -756,7 +789,7 @@ bool IpaSideEffect::UpdateSideEffectWithStmt(MeStmt &meStmt,
       }
       MaydassignMeStmt &dassignNode = static_cast<MaydassignMeStmt&>(meStmt);
       if (dassignNode.GetMayDassignSym()->GetMIRSymbol()->IsGlobal()) {
-        SetHasDef();
+        hasDef = true;
       }
       if (isGlobal) {
         (void)globalExprs.insert(static_cast<VarMeExpr*>(dassignNode.GetChiList()->begin()->second->GetLHS()));
@@ -806,7 +839,7 @@ bool IpaSideEffect::UpdateSideEffectWithStmt(MeStmt &meStmt,
                 hasThrException = true;
               }
               if (!calleeFunc->IsNoDefEffect()) {
-                SetHasDef();
+                hasDef = true;
               }
               if (!calleeFunc->IsNoDefArgEffect()) {
                 defArg = true;
@@ -827,7 +860,7 @@ bool IpaSideEffect::UpdateSideEffectWithStmt(MeStmt &meStmt,
                 defArg = true;
                 returnGlobal = true;
                 returnArg = true;
-                SetHasDef();
+                hasDef = true;
               }
             }
           }
@@ -843,7 +876,7 @@ bool IpaSideEffect::UpdateSideEffectWithStmt(MeStmt &meStmt,
         VarMeExpr *lhsVar = static_cast<VarMeExpr*>(lhs);
         const OriginalSt *ost = meFunc.GetMeSSATab()->GetSymbolOriginalStFromID(lhsVar->GetOstIdx());
         if (ost->GetMIRSymbol()->IsGlobal()) {
-          SetHasDef();
+          hasDef = true;
         }
         if (returnGlobal) {
           (void)globalExprs.insert(lhsVar);
@@ -858,7 +891,7 @@ bool IpaSideEffect::UpdateSideEffectWithStmt(MeStmt &meStmt,
       }
       if (defArg) {
         if (isGlobal) {
-          SetHasDef();
+          hasDef = true;
         }
         if (isArg) {
           hasDefArg = true;
@@ -897,7 +930,7 @@ bool IpaSideEffect::UpdateSideEffectWithStmt(MeStmt &meStmt,
                 hasThrException = true;
               }
               if (!calleeFunc->IsNoDefEffect()) {
-                SetHasDef();
+                hasDef = true;
               }
               if (!calleeFunc->IsNoDefArgEffect()) {
                 defArg = true;
@@ -910,7 +943,7 @@ bool IpaSideEffect::UpdateSideEffectWithStmt(MeStmt &meStmt,
                 hasPrivateDef = true;
                 hasThrException = true;
                 defArg = true;
-                SetHasDef();
+                hasDef = true;
               }
             }
           }
@@ -919,7 +952,7 @@ bool IpaSideEffect::UpdateSideEffectWithStmt(MeStmt &meStmt,
       }
       if (defArg) {
         if (isGlobal) {
-          SetHasDef();
+          hasDef = true;
         }
         if (isArg) {
           hasDefArg = true;
@@ -935,7 +968,7 @@ bool IpaSideEffect::UpdateSideEffectWithStmt(MeStmt &meStmt,
     case OP_superclasscallassigned:
     case OP_asm: {
       hasPrivateDef = hasThrException = true;
-      SetHasDef();
+      hasDef = true;
       for (size_t i = 0; i < meStmt.NumMeStmtOpnds(); ++i) {
         AnalyzeExpr(*meStmt.GetOpnd(i), globalExprs, argExprs, nextLevelGlobalExprs, nextLevelArgExprs);
       }
@@ -960,7 +993,7 @@ bool IpaSideEffect::UpdateSideEffectWithStmt(MeStmt &meStmt,
     case OP_polymorphiccall:
     case OP_icall: {
       hasPrivateDef = hasThrException = true;
-      SetHasDef();
+      hasDef = true;
       for (size_t i = 0; i < meStmt.NumMeStmtOpnds(); ++i) {
         AnalyzeExpr(*meStmt.GetOpnd(i), globalExprs, argExprs, nextLevelGlobalExprs, nextLevelArgExprs);
       }
@@ -1117,6 +1150,7 @@ void IpaSideEffect::DoAnalysis() {
 
 void MESideEffect::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
   aDep.AddRequired<MEDominance>();
+  aDep.AddRequired<MEIRMapBuild>();
 }
 
 bool MESideEffect::PhaseRun(MeFunction &f) {
@@ -1128,7 +1162,7 @@ bool MESideEffect::PhaseRun(MeFunction &f) {
     dom = GET_ANALYSIS(MEDominance, f);
   }
   CHECK_FATAL(dom != nullptr, "Dominance must be built.");
-  MaplePhase *it = GetAnalysisInfoHook()->GetOverIRAnalyisData<MeFuncPM2, M2MCallGraph, MIRModule>(f.GetMIRModule());
+  MaplePhase *it = GetAnalysisInfoHook()->GetOverIRAnalyisData<M2MCallGraph, MIRModule>(f.GetMIRModule());
   CallGraph *callGraph = static_cast<M2MCallGraph*>(it)->GetResult();
   CHECK_FATAL(callGraph != nullptr, "Call graph must be built.");
   IpaSideEffect ipaSideEffect(f, ApplyTempMemPool(), *callGraph, *dom);
