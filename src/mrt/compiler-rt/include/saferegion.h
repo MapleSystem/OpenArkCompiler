@@ -211,7 +211,7 @@ inline bool Mutator::EnterSaferegion(bool rememberLastJavaFrame) {
 
     if (rememberLastJavaFrame) {
       const uint32_t *ip = reinterpret_cast<const uint32_t*>(__builtin_return_address(0)); // caller pc
-      CallChain *fa = reinterpret_cast<CallChain*>(__builtin_frame_address(1)); // caller frame
+      CallChain *fa = reinterpret_cast<CallChain*>(__builtin_frame_address(0))->callerFrameAddress; // caller frame
       MRT_UpdateLastUnwindContextIfReliable(ip, fa);
     }
 
