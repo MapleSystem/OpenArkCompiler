@@ -18,7 +18,7 @@
 
 namespace maple {
 bool M2MUpdateMplt::PhaseRun(MIRModule &m) {
-  auto *cg = GET_ANALYSIS(M2MCallGraph);
+  auto *cg = GET_ANALYSIS(M2MCallGraph, m);
   CHECK_FATAL(cg != nullptr, "Expecting a valid CallGraph, found nullptr.");
   BinaryMplt *binMplt = m.GetBinMplt();
   CHECK_FATAL(binMplt != nullptr, "Expecting a valid binMplt, found nullptr.");

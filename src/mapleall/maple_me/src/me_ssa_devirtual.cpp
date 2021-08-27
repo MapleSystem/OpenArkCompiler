@@ -24,11 +24,12 @@
 
 namespace maple {
 bool MESSADevirtual::PhaseRun(MeFunction &f) {
-  auto *dom = GET_ANALYSIS(MEDominance);
+  auto *dom = GET_ANALYSIS(MEDominance, f);
   ASSERT(dom != nullptr, "dominance phase has problem");
-  auto *irMap = GET_ANALYSIS(MEIRMapBuild);
+  auto *irMap = GET_ANALYSIS(MEIRMapBuild, f);
   ASSERT(irMap != nullptr, "hssaMap has problem");
-  MaplePhase *it = GetAnalysisInfoHook()->GetOverIRAnalyisData<MeFuncPM, M2MKlassHierarchy>();
+  MaplePhase *it = GetAnalysisInfoHook()->GetOverIRAnalyisData<MeFuncPM, M2MKlassHierarchy,
+                                                               MIRModule>(f.GetMIRModule());
   auto *kh = static_cast<M2MKlassHierarchy *>(it)->GetResult();
 
   ASSERT(kh != nullptr, "KlassHierarchy has problem");
@@ -39,7 +40,7 @@ bool MESSADevirtual::PhaseRun(MeFunction &f) {
   }
   MeSSADevirtual meSSADevirtual(*GetPhaseMemPool(), f.GetMIRModule(), f, *irMap, *kh, *dom, skipReturnTypeOpt);
   if (Options::O2) {
-    it = GetAnalysisInfoHook()->GetOverIRAnalyisData<MeFuncPM, M2MClone>();
+    it = GetAnalysisInfoHook()->GetOverIRAnalyisData<MeFuncPM, M2MClone, MIRModule>(f.GetMIRModule());
     Clone *clone = static_cast<M2MClone*>(it)->GetResult();
     if (clone != nullptr) {
       meSSADevirtual.SetClone(*clone);

@@ -195,7 +195,7 @@ MIRSymbol *ClassInit::GetClassInfo(const std::string &classname) {
 }
 
 bool M2MClassInit::PhaseRun(maple::MIRModule &m) {
-  OPT_TEMPLATE_NEWPM(ClassInit);
+  OPT_TEMPLATE_NEWPM(ClassInit, m);
   return true;
 }
 

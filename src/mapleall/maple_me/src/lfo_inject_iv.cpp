@@ -22,9 +22,9 @@
 
 namespace maple {
 bool MELfoInjectIV::PhaseRun(MeFunction &f) {
-  Dominance *dom = GET_ANALYSIS(MEDominance);
+  Dominance *dom = GET_ANALYSIS(MEDominance, f);
   CHECK_FATAL(dom, "dominance phase has problem");
-  IdentifyLoops *identloops = GET_ANALYSIS(MELoopAnalysis);
+  IdentifyLoops *identloops = GET_ANALYSIS(MELoopAnalysis, f);
   CHECK_FATAL(identloops != nullptr, "identloops has problem");
 
   uint32 ivCount = 0;

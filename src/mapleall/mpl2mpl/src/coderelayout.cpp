@@ -288,7 +288,7 @@ void M2MCodeReLayout::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
 }
 
 bool M2MCodeReLayout::PhaseRun(maple::MIRModule &m) {
-  OPT_TEMPLATE_NEWPM(CodeReLayout);
+  OPT_TEMPLATE_NEWPM(CodeReLayout, m);
   return true;
 }
 }  // namespace maple

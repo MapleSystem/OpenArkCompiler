@@ -813,7 +813,7 @@ void VtableAnalysis::ReplaceInterfaceInvoke(CallNode &stmt) {
 }
 
 bool M2MVtableAnalysis::PhaseRun(maple::MIRModule &m) {
-  OPT_TEMPLATE_NEWPM(VtableAnalysis)
+  OPT_TEMPLATE_NEWPM(VtableAnalysis, m)
   return true;
 }
 

@@ -76,7 +76,7 @@ void Preme::CreateMIRTypeForLowerGlobalDreads() {
 }
 
 bool M2MPreme::PhaseRun(maple::MIRModule &m) {
-  OPT_TEMPLATE_NEWPM(Preme);
+  OPT_TEMPLATE_NEWPM(Preme, m);
   if (MeOption::optLevel == 2) {
     Preme::CreateMIRTypeForLowerGlobalDreads();
   }

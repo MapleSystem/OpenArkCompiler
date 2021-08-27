@@ -1121,9 +1121,9 @@ void MEStmtPre::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
 }
 
 bool MEStmtPre::PhaseRun(maple::MeFunction &f) {
-  auto *dom = GET_ANALYSIS(MEDominance);
+  auto *dom = GET_ANALYSIS(MEDominance, f);
   ASSERT(dom != nullptr, "dominance phase has problem");
-  auto *irMap = GET_ANALYSIS(MEIRMapBuild);
+  auto *irMap = GET_ANALYSIS(MEIRMapBuild, f);
   ASSERT(irMap != nullptr, "irMap phase has problem");
   MeStmtPre ssaPre(f, *irMap, *dom, *ApplyTempMemPool(), *ApplyTempMemPool(), MeOption::stmtprePULimit);
   if (DEBUGFUNC_NEWPM(f)) {

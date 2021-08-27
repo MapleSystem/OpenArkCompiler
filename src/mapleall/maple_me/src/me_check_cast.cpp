@@ -712,8 +712,9 @@ void MECheckCastOpt::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
 }
 
 bool MECheckCastOpt::PhaseRun(maple::MeFunction &f) {
-  auto *dom = GET_ANALYSIS(MEDominance);
-  MaplePhase *it = GetAnalysisInfoHook()->GetOverIRAnalyisData<MeFuncPM, M2MKlassHierarchy>();
+  auto *dom = GET_ANALYSIS(MEDominance, f);
+  MaplePhase *it = GetAnalysisInfoHook()->GetOverIRAnalyisData<MeFuncPM, M2MKlassHierarchy,
+                                                               MIRModule>(f.GetMIRModule());
   auto *kh = static_cast<M2MKlassHierarchy*>(it)->GetResult();
   ASSERT_NOT_NULL(dom);
 

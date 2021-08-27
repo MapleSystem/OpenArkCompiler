@@ -600,9 +600,9 @@ bool CgRegAlloc::PhaseRun(maplebe::CGFunc &f) {
     if (live != nullptr) {
       live->ClearInOutDataInfo();
     }
-    GetAnalysisInfoHook()->ForceEraseAnalysisPhase(&CgLiveAnalysis::id);
+    GetAnalysisInfoHook()->ForceEraseAnalysisPhase(f.GetUniqueID(), &CgLiveAnalysis::id);
   }
-  GetAnalysisInfoHook()->ForceEraseAnalysisPhase(&CgLoopAnalysis::id);
+  GetAnalysisInfoHook()->ForceEraseAnalysisPhase(f.GetUniqueID(), &CgLoopAnalysis::id);
   return false;
 }
 }  /* namespace maplebe */

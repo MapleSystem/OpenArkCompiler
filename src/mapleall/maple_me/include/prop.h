@@ -82,6 +82,8 @@ class Prop {
     return nullptr;
   }
 
+  void PropEqualExpr(const MeExpr *replacedExpr, ConstMeExpr *constExpr, BB *fromBB);
+  void PropConditionBranchStmt(MeStmt *condBranchStmt);
   virtual void TraversalMeStmt(MeStmt &meStmt);
   void CollectSubVarMeExpr(const MeExpr &expr, std::vector<const MeExpr*> &exprVec) const;
   bool IsVersionConsistent(const std::vector<const MeExpr*> &vstVec,

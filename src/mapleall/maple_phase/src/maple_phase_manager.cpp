@@ -15,12 +15,12 @@
 #include "maple_phase_manager.h"
 #include "cgfunc.h"
 #include "mpl_timer.h"
+#include "me_function.h"
 
 namespace maple {
-class SCCNode;
 using meFuncOptTy = MapleFunctionPhase<MeFunction>;
 using cgFuncOptTy = MapleFunctionPhase<maplebe::CGFunc>;
-MemPool *AnalysisDataManager::ApplyMemPoolForAnalysisPhase(const MaplePhaseInfo &pi) {
+MemPool *AnalysisDataManager::ApplyMemPoolForAnalysisPhase(uint32 phaseKey, const MaplePhaseInfo &pi) {
   std::string mempoolName = pi.PhaseName() + " memPool";
   MemPool *phaseMempool = nullptr;
   if (UseGlobalMpCtrler()) {
@@ -28,26 +28,28 @@ MemPool *AnalysisDataManager::ApplyMemPoolForAnalysisPhase(const MaplePhaseInfo 
   } else {
     phaseMempool = innerCtrler->NewMemPool(mempoolName, true);
   }
-
-  (void)analysisPhaseMemPool.emplace(std::pair<MaplePhaseID, MemPool*>(pi.GetPhaseID(), phaseMempool));
+  (void)analysisPhaseMemPool.emplace(std::pair<AnalysisMemKey, MemPool*>(AnalysisMemKey(phaseKey, pi.GetPhaseID()),
+                                                                         phaseMempool));
   return phaseMempool;
 }
 
-void AnalysisDataManager::AddAnalysisPhase(MaplePhase *p) {
+void AnalysisDataManager::AddAnalysisPhase(uint32 phaseKey, MaplePhase *p) {
   CHECK_FATAL(p != nullptr, "invalid phase when AddAnalysisPhase"); // change to assert after testing
-  (void)availableAnalysisPhases.emplace(std::pair<MaplePhaseID, MaplePhase*>(p->GetPhaseID(), p));
+  (void)availableAnalysisPhases.emplace(std::pair<AnalysisMemKey, MaplePhase*>(AnalysisMemKey(phaseKey,
+                                                                                              p->GetPhaseID()), p));
 }
 
 // Erase phase at O2
-void AnalysisDataManager::EraseAnalysisPhase(MaplePhaseID pid) {
-  auto it = analysisPhaseMemPool.find(pid);
-  auto itanother = availableAnalysisPhases.find(pid);
+// This is for the actully phase
+void AnalysisDataManager::EraseAnalysisPhase(uint32 phaseKey, MaplePhaseID pid) {
+  auto it = analysisPhaseMemPool.find(AnalysisMemKey(phaseKey, pid));
+  auto itanother = availableAnalysisPhases.find(AnalysisMemKey(phaseKey, pid));
   if (it != analysisPhaseMemPool.end() && itanother != availableAnalysisPhases.end()) {
-    auto resultanother = availableAnalysisPhases.erase(pid);
+    auto resultanother = availableAnalysisPhases.erase(AnalysisMemKey(phaseKey, pid));
     CHECK_FATAL(resultanother, "Release Failed");
     delete it->second;
     it->second = nullptr;
-    auto result = analysisPhaseMemPool.erase(pid);  // erase to release mempool ?
+    auto result = analysisPhaseMemPool.erase(AnalysisMemKey(phaseKey, pid));  // erase to release mempool ?
     CHECK_FATAL(result, "Release Failed");
   }
 }
@@ -60,7 +62,7 @@ void AnalysisDataManager::EraseAllAnalysisPhase() {
 }
 
 // Erase safely
-void AnalysisDataManager::EraseAnalysisPhase(MapleMap<MaplePhaseID, MaplePhase*>::iterator &anaPhaseMapIt) {
+void AnalysisDataManager::EraseAnalysisPhase(MapleMap<AnalysisMemKey, MaplePhase*>::iterator &anaPhaseMapIt) {
   auto it = analysisPhaseMemPool.find(anaPhaseMapIt->first);
   if (it != analysisPhaseMemPool.end()) {
     anaPhaseMapIt = availableAnalysisPhases.erase(anaPhaseMapIt);
@@ -79,16 +81,20 @@ void AnalysisDataManager::EraseAnalysisPhase(MapleMap<MaplePhaseID, MaplePhase*>
   }
 }
 
-void AnalysisDataManager::ClearInVaildAnalysisPhase(AnalysisDep &ADep) {
+void AnalysisDataManager::ClearInVaildAnalysisPhase(uint32 phaseKey, AnalysisDep &ADep) {
   if (!ADep.GetPreservedAll()) {
     // delete phases which are not preserved
     if (ADep.GetPreservedPhase().empty()) {
       for (auto it = availableAnalysisPhases.begin(); it != availableAnalysisPhases.end();) {
-        EraseAnalysisPhase(it);
+        if (it->first.first == phaseKey) {
+          EraseAnalysisPhase(it);
+        } else {
+          it++;
+        }
       }
     }
     for (auto it = availableAnalysisPhases.begin(); it != availableAnalysisPhases.end();) {
-      if (!ADep.FindIsPreserved(it->first)) {
+      if (!ADep.FindIsPreserved((it->first).second) && it->first.first == phaseKey) {
         EraseAnalysisPhase(it);
       } else {
         ++it;
@@ -97,7 +103,7 @@ void AnalysisDataManager::ClearInVaildAnalysisPhase(AnalysisDep &ADep) {
   } else {
     if (!ADep.GetPreservedExceptPhase().empty()) {
       for (auto exceptPhaseID : ADep.GetPreservedExceptPhase()) {
-        auto it = availableAnalysisPhases.find(exceptPhaseID);
+        auto it = availableAnalysisPhases.find(AnalysisMemKey(phaseKey, exceptPhaseID));
         if (it != availableAnalysisPhases.end()) {
           EraseAnalysisPhase(it);
         }
@@ -106,8 +112,8 @@ void AnalysisDataManager::ClearInVaildAnalysisPhase(AnalysisDep &ADep) {
   }
 }
 
-MaplePhase *AnalysisDataManager::GetVaildAnalysisPhase(MaplePhaseID pid) {
-  auto it = availableAnalysisPhases.find(pid);
+MaplePhase *AnalysisDataManager::GetVaildAnalysisPhase(uint32 phaseKey, MaplePhaseID pid) {
+  auto it = availableAnalysisPhases.find(AnalysisMemKey(phaseKey, pid));
   if (it == availableAnalysisPhases.end()) {
     LogInfo::MapleLogger() << "Required " <<
         MaplePhaseRegister::GetMaplePhaseRegister()->GetPhaseByID(pid)->PhaseName() << " running before \n";
@@ -118,8 +124,8 @@ MaplePhase *AnalysisDataManager::GetVaildAnalysisPhase(MaplePhaseID pid) {
   }
 }
 
-bool AnalysisDataManager::IsAnalysisPhaseAvailable(MaplePhaseID pid) {
-  auto it = availableAnalysisPhases.find(pid);
+bool AnalysisDataManager::IsAnalysisPhaseAvailable(uint32 phaseKey, MaplePhaseID pid) {
+  auto it = availableAnalysisPhases.find(AnalysisMemKey(phaseKey, pid));
   return it != availableAnalysisPhases.end();
 }
 
@@ -227,7 +233,7 @@ void MaplePhaseManager::RunDependentAnalysisPhase(const MaplePhase &phase,
   for (auto requiredAnaPhase : anaDependence->GetRequiredPhase()) {
     const MaplePhaseInfo *curPhase = MaplePhaseRegister::GetMaplePhaseRegister()->GetPhaseByID(requiredAnaPhase);
     CHECK_FATAL(curPhase->IsAnalysis(), "Must be analysis phase.");
-    if (adm.IsAnalysisPhaseAvailable(curPhase->GetPhaseID())) {
+    if (adm.IsAnalysisPhaseAvailable(irUnit.GetUniqueID(), curPhase->GetPhaseID())) {
       continue;
     }
     LogDependence(curPhase, lev);
@@ -237,8 +243,8 @@ void MaplePhaseManager::RunDependentAnalysisPhase(const MaplePhase &phase,
 
 /* live range of a phase should be short than mempool */
 template <typename phaseT, typename IRTemplate>
-bool MaplePhaseManager::RunTransformPhase(
-    const MaplePhaseInfo &phaseInfo, AnalysisDataManager &adm, IRTemplate &irUnit, int lev) {
+bool MaplePhaseManager::RunTransformPhase(const MaplePhaseInfo &phaseInfo,
+                                          AnalysisDataManager &adm, IRTemplate &irUnit, int lev) {
   bool result = false;
   auto transformPhaseMempool = AllocateMemPoolInPhaseManager(phaseInfo.PhaseName() + "'s mempool");
   auto *phase = static_cast<phaseT*>(phaseInfo.GetConstructor()(transformPhaseMempool.get()));
@@ -252,7 +258,7 @@ bool MaplePhaseManager::RunTransformPhase(
     result = phase->PhaseRun(irUnit);
   }
   phase->ClearTempMemPool();
-  adm.ClearInVaildAnalysisPhase(*FindAnalysisDep(phase));
+  adm.ClearInVaildAnalysisPhase(irUnit.GetUniqueID(), *FindAnalysisDep(phase));
   return result;
 }
 
@@ -261,10 +267,10 @@ bool MaplePhaseManager::RunAnalysisPhase(
     const MaplePhaseInfo &phaseInfo, AnalysisDataManager &adm, IRTemplate &irUnit, int lev) {
   bool result = false;
   phaseT *phase = nullptr;
-  if (adm.IsAnalysisPhaseAvailable(phaseInfo.GetPhaseID())) {
+  if (adm.IsAnalysisPhaseAvailable(irUnit.GetUniqueID(), phaseInfo.GetPhaseID())) {
     return result;
   }
-  MemPool *anasPhaseMempool = adm.ApplyMemPoolForAnalysisPhase(phaseInfo);
+  MemPool *anasPhaseMempool = adm.ApplyMemPoolForAnalysisPhase(irUnit.GetUniqueID(), phaseInfo);
   phase = static_cast<phaseT*>(phaseInfo.GetConstructor()(anasPhaseMempool));
   RunDependentAnalysisPhase<phaseT, IRTemplate>(*phase, adm, irUnit, lev + 1);
   // change analysis info hook mempool from ADM Allocator to phase allocator?
@@ -277,7 +283,7 @@ bool MaplePhaseManager::RunAnalysisPhase(
     result = phase->PhaseRun(irUnit);
   }
   phase->ClearTempMemPool();
-  adm.AddAnalysisPhase(phase);
+  adm.AddAnalysisPhase(irUnit.GetUniqueID(), phase);
   return result;
 }
 

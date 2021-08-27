@@ -2249,7 +2249,7 @@ void ReflectionAnalysis::Run() {
 
 bool M2MReflectionAnalysis::PhaseRun(maple::MIRModule &m) {
   auto *memPool = GetPhaseMemPool();
-  auto *kh = GET_ANALYSIS(M2MKlassHierarchy);
+  auto *kh = GET_ANALYSIS(M2MKlassHierarchy, m);
   ASSERT_NOT_NULL(kh);
   maple::MIRBuilder mirBuilder(&m);
   ReflectionAnalysis *rv = memPool->New<ReflectionAnalysis>(&m, memPool, kh, mirBuilder);

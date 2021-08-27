@@ -342,7 +342,7 @@ void M2MScalarReplacement::GetAnalysisDependence(maple::AnalysisDep &aDep) const
 }
 
 bool M2MScalarReplacement::PhaseRun(maple::MIRModule &m) {
-  OPT_TEMPLATE_NEWPM(ScalarReplacement);
+  OPT_TEMPLATE_NEWPM(ScalarReplacement, m);
   return true;
 }
 }  // namespace maple

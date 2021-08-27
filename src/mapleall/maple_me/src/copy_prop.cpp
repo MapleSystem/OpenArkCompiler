@@ -249,6 +249,11 @@ void CopyProp::TraversalMeStmt(MeStmt &meStmt) {
       break;
     }
     case OP_asm: break;
+    case OP_brtrue:
+    case OP_brfalse: {
+      PropConditionBranchStmt(&meStmt);
+      break;
+    }
     default:{
       for (size_t i = 0; i != meStmt.NumMeStmtOpnds(); ++i) {
         auto opnd = meStmt.GetOpnd(i);
@@ -296,8 +301,8 @@ void MECopyProp::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
 }
 
 bool MECopyProp::PhaseRun(maple::MeFunction &f) {
-  auto *dom = GET_ANALYSIS(MEDominance);
-  auto *hMap = GET_ANALYSIS(MEIRMapBuild);
+  auto *dom = GET_ANALYSIS(MEDominance, f);
+  auto *hMap = GET_ANALYSIS(MEIRMapBuild, f);
 
   CopyProp copyProp(&f, *hMap, *dom, *GetPhaseMemPool(), f.GetCfg()->NumBBs(),
       Prop::PropConfig { MeOption::propBase, true, MeOption::propGlobalRef, MeOption::propFinaliLoadRef,

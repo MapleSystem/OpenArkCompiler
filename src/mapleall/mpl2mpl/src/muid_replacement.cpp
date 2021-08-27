@@ -1993,7 +1993,7 @@ void MUIDReplacement::GenerateTables() {
 }
 
 bool M2MMuidReplacement::PhaseRun(maple::MIRModule &m) {
-  OPT_TEMPLATE_NEWPM(MUIDReplacement)
+  OPT_TEMPLATE_NEWPM(MUIDReplacement, m)
   return true;
 }
 

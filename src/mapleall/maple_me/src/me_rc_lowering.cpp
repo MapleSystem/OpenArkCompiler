@@ -1637,15 +1637,16 @@ void RCLowering::FastLowerCallAssignedStmt(MeStmt &stmt) {
 }
 
 bool MERCLowering::PhaseRun(maple::MeFunction &f) {
-  MaplePhase *it = GetAnalysisInfoHook()->GetOverIRAnalyisData<MeFuncPM, M2MKlassHierarchy>();
+  MaplePhase *it = GetAnalysisInfoHook()->GetOverIRAnalyisData<MeFuncPM, M2MKlassHierarchy,
+                                                               MIRModule>(f.GetMIRModule());
   auto *kh = static_cast<M2MKlassHierarchy *>(it)->GetResult();
   ASSERT_NOT_NULL(kh);
-  CHECK_FATAL(GET_ANALYSIS(MEIRMapBuild) != nullptr, "hssamap has problem");
+  CHECK_FATAL(GET_ANALYSIS(MEIRMapBuild, f) != nullptr, "hssamap has problem");
   CHECK_FATAL(f.GetMeSSATab() != nullptr, "ssatab has problem");
   RCLowering rcLowering(f, *kh, DEBUGFUNC_NEWPM(f));
   rcLowering.Prepare();
   if (!rcLowering.GetIsAnalyzed()) {
-    auto *dom = GET_ANALYSIS(MEDominance);
+    auto *dom = GET_ANALYSIS(MEDominance, f);
     CHECK_FATAL(dom != nullptr, "dominance phase has problem");
     rcLowering.SetDominance(*dom);
   }

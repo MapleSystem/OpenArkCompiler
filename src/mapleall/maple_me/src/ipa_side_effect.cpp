@@ -1125,10 +1125,10 @@ bool MESideEffect::PhaseRun(MeFunction &f) {
   }
   Dominance *dom = nullptr;
   if (f.GetMirFunc()->GetBody() != nullptr) {
-    dom = GET_ANALYSIS(MEDominance);
+    dom = GET_ANALYSIS(MEDominance, f);
   }
   CHECK_FATAL(dom != nullptr, "Dominance must be built.");
-  MaplePhase *it = GetAnalysisInfoHook()->GetOverIRAnalyisData<MeFuncPM2, M2MCallGraph>();
+  MaplePhase *it = GetAnalysisInfoHook()->GetOverIRAnalyisData<MeFuncPM2, M2MCallGraph, MIRModule>(f.GetMIRModule());
   CallGraph *callGraph = static_cast<M2MCallGraph*>(it)->GetResult();
   CHECK_FATAL(callGraph != nullptr, "Call graph must be built.");
   IpaSideEffect ipaSideEffect(f, ApplyTempMemPool(), *callGraph, *dom);

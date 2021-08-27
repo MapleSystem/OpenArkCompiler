@@ -422,7 +422,7 @@ void MECfgOpt::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
 
 /* change CFG */
 bool MECfgOpt::PhaseRun(maple::MeFunction &f) {
-  auto *irMap = GET_ANALYSIS(MEIRMapBuild);
+  auto *irMap = GET_ANALYSIS(MEIRMapBuild, f);
   ASSERT_NOT_NULL(irMap);
   MeCfgOpt cfgOpt(irMap);
   auto cfgoptFunc = [](MeFunction &func)->void{

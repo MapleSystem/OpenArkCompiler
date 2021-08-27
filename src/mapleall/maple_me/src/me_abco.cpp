@@ -1088,9 +1088,9 @@ void MEABCOpt::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
 }
 
 bool MEABCOpt::PhaseRun(maple::MeFunction &f) {
-  auto *dom = GET_ANALYSIS(MEDominance);
+  auto *dom = GET_ANALYSIS(MEDominance, f);
   ASSERT(dom != nullptr, "dominance phase has problem");
-  auto *irMap = GET_ANALYSIS(MEIRMapBuild);
+  auto *irMap = GET_ANALYSIS(MEIRMapBuild, f);
   ASSERT(irMap != nullptr, "irMap phase has problem");
   MeABC meABC(f, *dom, *irMap, *GetPhaseMemPool());
   meABC.ExecuteABCO();

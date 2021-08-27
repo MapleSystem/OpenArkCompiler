@@ -134,7 +134,7 @@ bool MEPregRename::PhaseRun(maple::MeFunction &f) {
     }
     return false;
   }
-  auto *irMap = GET_ANALYSIS(MEIRMapBuild);
+  auto *irMap = GET_ANALYSIS(MEIRMapBuild, f);
   PregRenamer pregRenamer(GetPhaseMemPool(), &f, irMap);
   pregRenamer.RunSelf();
   if (DEBUGFUNC_NEWPM(f)) {
@@ -142,7 +142,7 @@ bool MEPregRename::PhaseRun(maple::MeFunction &f) {
     f.Dump(false);
   }
   if (MeOption::meVerify) {
-    GetAnalysisInfoHook()->ForceEraseAnalysisPhase(&MEDominance::id);
+    GetAnalysisInfoHook()->ForceEraseAnalysisPhase(f.GetUniqueID(), &MEDominance::id);
     auto *dom = FORCE_GET(MEDominance);
     ASSERT(dom != nullptr, "dominance phase has problem");
     MeVerify verify(f);
