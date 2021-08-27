@@ -80,7 +80,7 @@
 #include "lfo_iv_canon.h"
 #include "cfg_opt.h"
 #include "lfo_dep_test.h"
-#include "lfo_loop_vec.h"
+#include "me_autovec.h"
 
 namespace maple {
 using meFuncOptTy = MapleFunctionPhase<MeFunction>;

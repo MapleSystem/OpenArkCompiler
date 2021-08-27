@@ -109,6 +109,8 @@ class CGLowerer {
 
   BaseNode *LowerIreadBitfield(IreadNode &iread);
 
+  BaseNode *LowerCastExpr(BaseNode &expr);
+
   void LowerDassign(DassignNode &dassign, BlockNode &block);
 
   void LowerResetStmt(StmtNode &stmt, BlockNode &block);

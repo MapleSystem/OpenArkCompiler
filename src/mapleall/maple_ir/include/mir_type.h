@@ -51,12 +51,22 @@ inline uint32 GetPrimTypeBitSize(PrimType primType) {
   return GetPrimTypeSize(primType) << 3;
 }
 
+inline uint32 GetPrimTypeActualBitSize(PrimType primType) {
+  // GetPrimTypeSize(PTY_u1) will return 1, so we take it as a special case
+  if (primType == PTY_u1) {
+    return 1;
+  }
+  // 1 byte = 8 bits = 2^3 bits
+  return GetPrimTypeSize(primType) << 3;
+}
+
 #endif  // MIR_FEATURE_FULL
 // return the same type with size increased to register size
 PrimType GetRegPrimType(PrimType primType);
 PrimType GetDynType(PrimType primType);
 PrimType GetReg64PrimType(PrimType primType);
 PrimType GetNonDynType(PrimType primType);
+PrimType GetIntegerPrimTypeBySizeAndSign(size_t sizeBit, bool isSign);
 
 inline bool IsAddress(PrimitiveType primitiveType) {
   return primitiveType.IsAddress();

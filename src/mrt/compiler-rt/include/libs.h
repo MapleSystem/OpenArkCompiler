@@ -41,13 +41,12 @@ constexpr int kBufferSize = 128;
 
 #define MRT_UNW_GETCALLERFRAME(frame)             \
   do {                                               \
-    void *ip = __builtin_return_address(0);  \
-    void *fa = __builtin_frame_address(1);   \
+    uint32_t *ip = reinterpret_cast<uint32_t*>(__builtin_return_address(0));  \
+    CallChain *fa = reinterpret_cast<CallChain*>(__builtin_frame_address(0))->callerFrameAddress;   \
     __MRT_ASSERT(fa != nullptr, "frame address is nullptr!"); \
-    CallChain *thisFrame = reinterpret_cast<CallChain*>(fa); \
-    (frame).ip = reinterpret_cast<uint32_t*>(ip);                 \
-    (frame).fa = thisFrame;         \
-    (frame).ra = thisFrame->returnAddress; \
+    (frame).ip = ip;                 \
+    (frame).fa = fa;         \
+    (frame).ra = fa->returnAddress; \
   } while (0)
 
 extern "C" void PrepareArgsForExceptionCatcher();

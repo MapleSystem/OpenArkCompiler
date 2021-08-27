@@ -689,11 +689,11 @@ ASTValue *ASTParser::TranslateConstantValue2ASTValue(MapleAllocator &allocator, 
         case llvm::APFloat::S_x87DoubleExtended:
           bool LosesInfo;
           if (constMirType->GetPrimType() == PTY_f64) {
-            fValue.convert(llvm::APFloat::IEEEdouble(), llvm::APFloatBase::roundingMode::rmNearestTiesToAway,
+            fValue.convert(llvm::APFloat::IEEEdouble(), llvm::APFloatBase::rmNearestTiesToAway,
                            &LosesInfo);
             astValue->val.f64 = fValue.convertToDouble();
           } else {
-            fValue.convert(llvm::APFloat::IEEEsingle(), llvm::APFloatBase::roundingMode::rmNearestTiesToAway,
+            fValue.convert(llvm::APFloat::IEEEsingle(), llvm::APFloatBase::rmNearestTiesToAway,
                            &LosesInfo);
             astValue->val.f32 = fValue.convertToFloat();
           }
@@ -1667,7 +1667,7 @@ ASTExpr *ASTParser::ProcessExprFloatingLiteral(MapleAllocator &allocator, const 
     astFloatingLiteral->SetVal(val);
   } else if (&fltSem == &llvm::APFloat::IEEEquad() || &fltSem == &llvm::APFloat::x87DoubleExtended()) {
     bool losesInfo;
-    apf.convert(llvm::APFloat::IEEEdouble(), llvm::APFloatBase::roundingMode::rmNearestTiesToAway, &losesInfo);
+    apf.convert(llvm::APFloat::IEEEdouble(), llvm::APFloatBase::rmNearestTiesToAway, &losesInfo);
     val = static_cast<double>(apf.convertToDouble());
     astFloatingLiteral->SetKind(F64);
     astFloatingLiteral->SetVal(val);
@@ -2230,6 +2230,7 @@ ASTDecl *ASTParser::ProcessDeclFunctionDecl(MapleAllocator &allocator, const cla
   }
   GenericAttrs attrs;
   astFile->CollectFuncAttrs(funcDecl, attrs, kPublic);
+  ProcessFuncAttrs(funcDecl, attrs, paramDecls);
   // one element vector type in rettype
   if (LibAstFile::isOneElementVector(qualType)) {
     attrs.SetAttr(GENATTR_oneelem_simd);
@@ -2255,6 +2256,33 @@ ASTDecl *ASTParser::ProcessDeclFunctionDecl(MapleAllocator &allocator, const cla
     }
   }
   return astFunc;
+}
+
+void ASTParser::ProcessFuncAttrs(const clang::FunctionDecl &funcDecl, GenericAttrs &attrs,
+                                 std::vector<ASTDecl*> &paramDecls) {
+  if (funcDecl.hasAttr<clang::ReturnsNonNullAttr>()) {
+    attrs.SetAttr(GENATTR_nonnull);
+  }
+  for (const auto *nonNull : funcDecl.specific_attrs<clang::NonNullAttr>()) {
+    if (!nonNull->args_size()) {
+      // Lack of attribute parameters means that all of the pointer parameters are
+      // implicitly marked as nonnull.
+      for (auto paramDecl : paramDecls) {
+        if (paramDecl->GetTypeDesc().front()->IsMIRPtrType()) {
+          paramDecl->SetAttr(GENATTR_nonnull);
+        }
+      }
+      break;
+    }
+    for (const clang::ParamIdx &paramIdx : nonNull->args()) {
+      // The clang ensures that nonnull attribute only applies to pointer parameter
+      unsigned int idx = paramIdx.getASTIndex();
+      if (idx >= paramDecls.size()) {
+        continue;
+      }
+      paramDecls[idx]->SetAttr(GENATTR_nonnull);
+    }
+  }
 }
 
 ASTDecl *ASTParser::ProcessDeclFieldDecl(MapleAllocator &allocator, const clang::FieldDecl &decl) {
@@ -2386,7 +2414,7 @@ ASTDecl *ASTParser::ProcessDeclParmVarDecl(MapleAllocator &allocator, const clan
 
 ASTDecl *ASTParser::ProcessDeclFileScopeAsmDecl(MapleAllocator &allocator, const clang::FileScopeAsmDecl &asmDecl) {
   ASTFileScopeAsm *astAsmDecl = allocator.GetMemPool()->New<ASTFileScopeAsm>(fileName);
-  astAsmDecl->SetAsmStr(asmDecl.getAsmString()->getString());
+  astAsmDecl->SetAsmStr(asmDecl.getAsmString()->getString().str());
   return astAsmDecl;
 }
 

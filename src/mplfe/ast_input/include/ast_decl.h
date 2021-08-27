@@ -75,6 +75,10 @@ class ASTDecl {
     return align;
   }
 
+  void SetAttr(GenericAttrKind attrKind) {
+    genAttrs.SetAttr(attrKind);
+  }
+
   void GenerateInitStmt(std::list<UniqueFEIRStmt> &stmts) {
     return GenerateInitStmtImpl(stmts);
   }

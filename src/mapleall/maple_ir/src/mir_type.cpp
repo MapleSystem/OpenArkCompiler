@@ -136,6 +136,32 @@ PrimType GetNonDynType(PrimType primType) {
 #endif
 }
 
+PrimType GetIntegerPrimTypeBySizeAndSign(size_t sizeBit, bool isSign) {
+  switch (sizeBit) {
+    case 1: {
+      if (isSign) {
+        return PTY_begin;  // There is no 'i1' type
+      }
+      return PTY_u1;
+    }
+    case 8: {
+      return isSign ? PTY_i8 : PTY_u8;
+    }
+    case 16: {
+      return isSign ? PTY_i16 : PTY_u16;
+    }
+    case 32: {
+      return isSign ? PTY_i32 : PTY_u32;
+    }
+    case 64: {
+      return isSign ? PTY_i64 : PTY_u64;
+    }
+    default: {
+      return PTY_begin;  // Invalid integer type
+    }
+  }
+}
+
 bool IsNoCvtNeeded(PrimType toType, PrimType fromType) {
   if (toType == fromType) {
     return true;

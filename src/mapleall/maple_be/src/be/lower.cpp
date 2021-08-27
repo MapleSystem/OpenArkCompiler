@@ -32,6 +32,7 @@
 #endif
 #include "securec.h"
 #include "string_utils.h"
+#include "cast_opt.h"
 
 namespace maplebe {
 namespace arrayNameForLower {
@@ -797,6 +798,15 @@ BaseNode *CGLowerer::LowerIreadBitfield(IreadNode &iread) {
   extrBitsNode->SetOpnd(ireadNode, 0);
 
   return extrBitsNode;
+}
+
+// input node must be cvt, retype, zext or sext
+BaseNode *CGLowerer::LowerCastExpr(BaseNode &expr) {
+  if (CGOptions::GetInstance().GetOptimizeLevel() >= CGOptions::kLevel2) {
+    BaseNode *simplified = MapleCastOpt::SimplifyCast(*mirBuilder, &expr);
+    return simplified != nullptr ? simplified : &expr;
+  }
+  return &expr;
 }
 
 void CGLowerer::LowerTypePtr(BaseNode &node) const {
@@ -2374,6 +2384,11 @@ BaseNode *CGLowerer::LowerExpr(BaseNode &parent, BaseNode &expr, BlockNode &blkN
     case OP_cior:
       expr.SetOpCode(OP_lior);
       return SplitBinaryNodeOpnd1(static_cast<BinaryNode&>(expr), blkNode);
+    case OP_cvt:
+    case OP_retype:
+    case OP_zext:
+    case OP_sext:
+      return LowerCastExpr(expr);
     default:
       return &expr;
   }

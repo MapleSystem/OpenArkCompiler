@@ -39,7 +39,7 @@ include_directories = [
   "${MPLFE_ROOT}/ast_input/include",
   "${MPLFE_ROOT}/ast_input/lib",
   "${LLVMINC}",
-  "${THIRD_PARTY_ROOT}/clang-10.0.0.src/tools",
+  "${THIRD_PARTY_ROOT}/llvm_modified/clang/tools",
 ]
 
 static_library("lib_mplfe_util") {

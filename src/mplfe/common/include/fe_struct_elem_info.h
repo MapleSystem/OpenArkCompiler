@@ -244,6 +244,11 @@ class FEStructMethodInfo : public FEStructElemInfo {
     return funcAttrs;
   }
 
+  const MIRFunction *GetMirFunc() const {
+    CHECK_NULL_FATAL(mirFunc);
+    return mirFunc;
+  }
+
  LLT_PROTECTED:
   void PrepareImpl(MIRBuilder &mirBuilder, bool argIsStatic) override;
 

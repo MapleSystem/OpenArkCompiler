@@ -499,6 +499,8 @@ class IreadNode : public UnaryNode {
 
   bool IsVolatile() const;
 
+  MIRType *GetType() const;
+
  protected:
   TyIdx tyIdx = TyIdx(0);
   FieldID fieldID = 0;

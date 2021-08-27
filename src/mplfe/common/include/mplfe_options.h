@@ -109,6 +109,9 @@ class MPLFEOptions : public maple::MapleDriverOptionBase {
   bool ProcessCollectDepTypes(const mapleOption::Option &opt);
   bool ProcessDepSameNamePolicy(const mapleOption::Option &opt);
 
+  // EnhanceC
+  bool ProcessNpeCheckDynamic(const mapleOption::Option &opt);
+
   // symbol resolve
   bool ProcessAOT(const mapleOption::Option &opt);
 };  // class MPLFEOptions

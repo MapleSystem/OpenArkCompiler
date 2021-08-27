@@ -75,6 +75,8 @@ enum OptionIndex : uint32 {
   kInputFile,
   kCollectDepTypes,
   kDepSameNamePolicy,
+  // EnhanceC
+  kNpeCheckDynamic,
 };
 
 const Descriptor kUsage[] = {
@@ -275,6 +277,10 @@ const Descriptor kUsage[] = {
     "  -DepSameNamePolicy=sys or src\n"\
     "                       : [sys] load type from sys when on-demand load same name type\n"\
     "                       : [src] load type from src when on-demand load same name type", "mplfe", {} },
+  // EnhanceC
+  { kNpeCheckDynamic, 0, "", "npe-check-dynamic",
+    kBuildTypeAll, kArgCheckPolicyNone,
+    "  --npe-check-dynamic     : EnhanceC: nonnull pointr dynamic checking", "mplfe", {} },
   { kUnknown, 0, "", "",
     kBuildTypeAll, kArgCheckPolicyNone,
     "", "mplfe", {} }
@@ -386,6 +392,8 @@ bool MPLFEOptions::InitFactory() {
                                                 &MPLFEOptions::ProcessCollectDepTypes);
   RegisterFactoryFunction<OptionProcessFactory>(kDepSameNamePolicy,
                                                 &MPLFEOptions::ProcessDepSameNamePolicy);
+  RegisterFactoryFunction<OptionProcessFactory>(kNpeCheckDynamic,
+                                                &MPLFEOptions::ProcessNpeCheckDynamic);
   return true;
 }
 
@@ -742,6 +750,13 @@ bool MPLFEOptions::ProcessDepSameNamePolicy(const Option &opt) {
   return true;
 }
 
+// EnhanceC
+bool MPLFEOptions::ProcessNpeCheckDynamic(const mapleOption::Option &opt) {
+  FEOptions::GetInstance().SetNpeCheckDynamic(true);
+  return true;
+}
+
+// AOT
 bool MPLFEOptions::ProcessAOT(const Option &opt) {
   FEOptions::GetInstance().SetIsAOT(true);
   return true;
