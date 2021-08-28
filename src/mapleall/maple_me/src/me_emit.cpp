@@ -19,6 +19,7 @@
 #include "me_irmap.h"
 #include "me_cfg.h"
 #include "constantfold.h"
+#include "me_merge_stmts.h"
 
 namespace maple {
 void MEEmit::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
@@ -34,6 +35,10 @@ bool MEEmit::PhaseRun(maple::MeFunction &f) {
     CHECK_FATAL(f.HasLaidOut(), "Check bb layout phase.");
     // each phase need to keep either irmap or mirfunction is valid
     if (f.GetIRMap()) {
+      if (MeOption::mergeStmts) {
+        MergeStmts mergeStmts(f);
+        mergeStmts.MergeMeStmts();
+      }
       // emit after hssa
       auto layoutBBs = f.GetLaidOutBBs();
       MIRFunction *mirFunction = f.GetMirFunc();
