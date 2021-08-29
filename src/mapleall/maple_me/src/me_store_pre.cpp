@@ -377,11 +377,11 @@ void MEStorePre::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
 }
 
 bool MEStorePre::PhaseRun(maple::MeFunction &f) {
-  auto *dom = GET_ANALYSIS(MEDominance);
+  auto *dom = GET_ANALYSIS(MEDominance, f);
   ASSERT(dom != nullptr, "dominance phase has problem");
-  auto *aliasClass = GET_ANALYSIS(MEAliasClass);
+  auto *aliasClass = GET_ANALYSIS(MEAliasClass, f);
   ASSERT(aliasClass != nullptr, "aliasClass phase has problem");
-  auto *meIrMap = GET_ANALYSIS(MEIRMapBuild);
+  auto *meIrMap = GET_ANALYSIS(MEIRMapBuild, f);
   CHECK_FATAL(meIrMap != nullptr, "irmap phase has problem");
   if (!meIrMap->GetMIRModule().IsCModule()) {
     return false;

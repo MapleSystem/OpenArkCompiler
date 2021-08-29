@@ -192,9 +192,9 @@ void MESSA::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
 }
 
 bool MESSA::PhaseRun(maple::MeFunction &f) {
-  auto *dom = GET_ANALYSIS(MEDominance);
+  auto *dom = GET_ANALYSIS(MEDominance, f);
   CHECK_FATAL(dom != nullptr, "dominance phase has problem");
-  auto *ssaTab = GET_ANALYSIS(MESSATab);
+  auto *ssaTab = GET_ANALYSIS(MESSATab, f);
   CHECK_FATAL(ssaTab != nullptr, "ssaTab phase has problem");
   ssa = GetPhaseAllocator()->New<MeSSA>(f, ssaTab, *dom, *GetPhaseMemPool(), DEBUGFUNC_NEWPM(f));
   auto cfg = f.GetCfg();

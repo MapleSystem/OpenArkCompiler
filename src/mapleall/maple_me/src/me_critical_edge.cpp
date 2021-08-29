@@ -209,7 +209,7 @@ void MESplitCEdge::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
 }
 
 bool MESplitCEdge::PhaseRun(maple::MeFunction &f) {
-  MeCFG *cfg = GET_ANALYSIS(MEMeCfg);
+  MeCFG *cfg = GET_ANALYSIS(MEMeCfg, f);
   std::vector<std::pair<BB*, BB*>> criticalEdge;
   ScanEdgeInFunc(*cfg, criticalEdge);
   if (!criticalEdge.empty()) {

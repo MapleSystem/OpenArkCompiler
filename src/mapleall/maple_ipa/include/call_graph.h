@@ -370,6 +370,9 @@ class SCCNode {
     return id;
   }
 
+  uint32 GetUniqueID() {
+    return GetID() << 16;
+  }
  private:
   uint32 id;
   MapleVector<CGNode*> cgNodes;

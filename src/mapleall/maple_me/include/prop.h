@@ -48,7 +48,7 @@ class Prop {
 
   MeExpr *CheckTruncation(MeExpr *lhs, MeExpr *rhs) const;
   MeExpr &PropVar(VarMeExpr &varmeExpr, bool atParm, bool checkPhi);
-  MeExpr &PropReg(RegMeExpr &regmeExpr, bool atParm);
+  MeExpr &PropReg(RegMeExpr &regmeExpr, bool atParm, bool checkPhi);
   MeExpr &PropIvar(IvarMeExpr &ivarMeExpr);
   void PropUpdateDef(MeExpr &meExpr);
   void PropUpdateChiListDef(const MapleMap<OStIdx, ChiMeNode*> &chiList);
@@ -82,6 +82,8 @@ class Prop {
     return nullptr;
   }
 
+  void PropEqualExpr(const MeExpr *replacedExpr, ConstMeExpr *constExpr, BB *fromBB);
+  void PropConditionBranchStmt(MeStmt *condBranchStmt);
   virtual void TraversalMeStmt(MeStmt &meStmt);
   void CollectSubVarMeExpr(const MeExpr &expr, std::vector<const MeExpr*> &exprVec) const;
   bool IsVersionConsistent(const std::vector<const MeExpr*> &vstVec,

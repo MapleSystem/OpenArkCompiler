@@ -12,24 +12,10 @@
  * FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-#include "update_mplt.h"
-#include "bin_mpl_export.h"
-#include "bin_mplt.h"
-
+#ifndef MAPLE_ME_INCLUDE_AUTOVEC_H
+#define MAPLE_ME_INCLUDE_AUTOVEC_H
+#include "me_function.h"
 namespace maple {
-bool M2MUpdateMplt::PhaseRun(MIRModule &m) {
-  auto *cg = GET_ANALYSIS(M2MCallGraph, m);
-  CHECK_FATAL(cg != nullptr, "Expecting a valid CallGraph, found nullptr.");
-  BinaryMplt *binMplt = m.GetBinMplt();
-  CHECK_FATAL(binMplt != nullptr, "Expecting a valid binMplt, found nullptr.");
-  UpdateMplt update;
-  update.UpdateCgField(*binMplt, *cg);
-  delete m.GetBinMplt();
-  m.SetBinMplt(nullptr);
-  return false;
-}
-
-void M2MUpdateMplt::GetAnalysisDependence(AnalysisDep &aDep) const {
-  aDep.AddRequired<M2MCallGraph>();
-}
+MAPLE_FUNC_PHASE_DECLARE(MEAutoVectorization, MeFunction)
 }  // namespace maple
+#endif  // MAPLE_ME_INCLUDE_AUTOVEC_H

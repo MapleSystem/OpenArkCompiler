@@ -953,6 +953,10 @@ class CGFunc {
     doRename = cond;
   }
 
+  uint32 GetUniqueID() {
+    return func.GetPuidx();
+  }
+
  protected:
   uint32 firstMapleIrVRegNO = 200;        /* positioned after physical regs */
   uint32 firstNonPregVRegNO;

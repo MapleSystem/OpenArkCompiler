@@ -673,7 +673,7 @@ MeExpr &Prop::PropVar(VarMeExpr &varMeExpr, bool atParm, bool checkPhi) {
   return varMeExpr;
 }
 
-MeExpr &Prop::PropReg(RegMeExpr &regMeExpr, bool atParm) {
+MeExpr &Prop::PropReg(RegMeExpr &regMeExpr, bool atParm, bool checkPhi) {
   if (regMeExpr.GetDefBy() == kDefByStmt) {
     AssignMeStmt *defStmt = static_cast<AssignMeStmt*>(regMeExpr.GetDefStmt());
     MeExpr &rhs = utils::ToRef(defStmt->GetRHS());
@@ -687,6 +687,22 @@ MeExpr &Prop::PropReg(RegMeExpr &regMeExpr, bool atParm) {
       }
       return rhs;
     }
+  } else if (checkPhi && regMeExpr.GetDefBy() == kDefByPhi && config.propagateAtPhi) {
+    MePhiNode &defPhi = regMeExpr.GetDefPhi();
+    auto *phiOpndLast = defPhi.GetOpnds().back();
+    MeExpr *opndLastProp = &PropReg(utils::ToRef(phiOpndLast), atParm, false);
+    if (opndLastProp == &regMeExpr) {
+      return regMeExpr;
+    }
+    const auto &opndsVec = defPhi.GetOpnds();
+    for (auto it = opndsVec.rbegin() + 1; it != opndsVec.rend(); ++it) {
+      auto *phiOpnd = *it;
+      MeExpr &opndProp = PropReg(utils::ToRef(phiOpnd), atParm, false);
+      if (&opndProp != opndLastProp) {
+        return regMeExpr;
+      }
+    }
+    return *opndLastProp;
   }
   return regMeExpr;
 }
@@ -748,7 +764,7 @@ MeExpr &Prop::PropMeExpr(MeExpr &meExpr, bool &isProped, bool atParm) {
       if (regExpr.GetRegIdx() < 0) {
         return meExpr;
       }
-      MeExpr &propMeExpr = PropReg(regExpr, atParm);
+      MeExpr &propMeExpr = PropReg(regExpr, atParm, true);
       if (&propMeExpr != &regExpr) {
         isProped = true;
       }
@@ -906,6 +922,124 @@ bool Prop::NoPropUnionAggField(const MeStmt *meStmt, const StmtNode *stmt, const
   return false;
 }
 
+static bool ContainVolatile(const MeExpr *exprA) {
+  switch (exprA->GetMeOp()) {
+    case kMeOpReg:
+      return false;
+    case kMeOpVar:
+      return exprA->IsVolatile();
+    case kMeOpIvar:
+      return exprA->IsVolatile() || ContainVolatile(exprA->GetOpnd(0));
+    default: {
+      for (uint32 id = 0; id < exprA->GetNumOpnds(); ++id) {
+        auto opnd = exprA->GetOpnd(id);
+        if (opnd == nullptr) {
+          return false;
+        }
+        bool containVolatile = ContainVolatile(opnd);
+        if (containVolatile) {
+          return true;
+        }
+      }
+      return false;
+    }
+  }
+}
+
+static void UpdateIncDecAttr(MeStmt *meStmt) {
+  if (!kOpcodeInfo.AssignActualVar(meStmt->GetOp())) {
+    return;
+  }
+  auto *assign = static_cast<AssignMeStmt *>(meStmt);
+  if (assign->GetOpnd(0)->GetMeOp() != kMeOpOp) {
+    assign->isIncDecStmt = false;
+    return;
+  }
+  auto *rhs = static_cast<OpMeExpr *>(assign->GetOpnd(0));
+  if (rhs->GetOp() != OP_add && rhs->GetOp() != OP_sub) {
+    assign->isIncDecStmt = false;
+    return;
+  }
+  if (rhs->GetOpnd(0)->GetMeOp() == kMeOpReg && rhs->GetOpnd(1)->GetMeOp() == kMeOpConst) {
+    assign->isIncDecStmt = assign->GetLHS()->GetOst() == static_cast<ScalarMeExpr *>(rhs->GetOpnd(0))->GetOst();
+  } else {
+    assign->isIncDecStmt = false;
+  }
+}
+
+void Prop::PropEqualExpr(const MeExpr *replacedExpr, ConstMeExpr *constExpr, BB *fromBB) {
+  if (fromBB == nullptr) {
+    return;
+  }
+
+  for (auto &meStmt : fromBB->GetMeStmts()) {
+    bool replaced = irMap.ReplaceMeExprStmt(meStmt, *replacedExpr, *constExpr);
+    if (replaced) {
+      UpdateIncDecAttr(&meStmt);
+    }
+  }
+
+  for (const auto &bbId : dom.GetDomChildren(fromBB->GetBBId())) {
+    PropEqualExpr(replacedExpr, constExpr, irMap.GetBB(bbId));
+  }
+}
+
+void Prop::PropConditionBranchStmt(MeStmt *condBranchStmt) {
+  CHECK_FATAL(kOpcodeInfo.IsCondBr(condBranchStmt->GetOp()), "must be brtrue/brfalse stmt");
+
+  bool proped = false;
+  MeExpr *expr = &PropMeExpr(utils::ToRef(condBranchStmt->GetOpnd(0)), proped, false);
+  (void)proped;
+  condBranchStmt->SetOpnd(0, expr);
+
+  auto *opnd = condBranchStmt->GetOpnd(0);
+  if (ContainVolatile(opnd)) {
+    return;
+  }
+  if (opnd->GetMeOp() == kMeOpConst) {
+    return;
+  }
+
+  uint8 trueBranchId = condBranchStmt->GetOp() == OP_brtrue ? 1 : 0;
+  auto trueBranch = curBB->GetSucc(trueBranchId);
+  if (trueBranch->GetPred().size() == 1) {
+    auto *mirTypeOfU1 = GlobalTables::GetTypeTable().GetUInt1();
+    auto *constTrue = GlobalTables::GetIntConstTable().GetOrCreateIntConst(1, *mirTypeOfU1);
+    auto *constExpr = static_cast<ConstMeExpr *>(irMap.CreateConstMeExpr(PTY_u1, *constTrue));
+    PropEqualExpr(opnd, constExpr, trueBranch);
+  }
+
+  uint8 falseBranchId = condBranchStmt->GetOp() == OP_brfalse ? 1 : 0;
+  auto falseBranch = curBB->GetSucc(falseBranchId);
+  if (falseBranch->GetPred().size() == 1) {
+    auto *mirTypeOfU1 = GlobalTables::GetTypeTable().GetUInt1();
+    auto *constFalse = GlobalTables::GetIntConstTable().GetOrCreateIntConst(0, *mirTypeOfU1);
+    auto *constExpr = static_cast<ConstMeExpr *>(irMap.CreateConstMeExpr(PTY_u1, *constFalse));
+    PropEqualExpr(opnd, constExpr, falseBranch);
+  }
+
+  if (opnd->GetOp() != OP_eq && opnd->GetOp() != OP_ne) {
+    return;
+  }
+
+  auto subOpnd0 = opnd->GetOpnd(0);
+  auto subOpnd1 = opnd->GetOpnd(1);
+  if (subOpnd0->GetMeOp() == kMeOpConst && subOpnd1->GetMeOp() == kMeOpConst) {
+    return;
+  }
+
+  BB *propFromBB = (opnd->GetOp() == OP_eq) ? trueBranch : ((opnd->GetOp() == OP_ne) ? falseBranch : nullptr);
+  if (propFromBB == nullptr || propFromBB->GetPred().size() != 1) {
+    return;
+  }
+
+  if (subOpnd0->GetMeOp() == kMeOpConst) {
+    PropEqualExpr(subOpnd1, static_cast<ConstMeExpr *>(subOpnd0), propFromBB);
+  } else if (subOpnd1->GetMeOp() == kMeOpConst) {
+    PropEqualExpr(subOpnd0, static_cast<ConstMeExpr *>(subOpnd1), propFromBB);
+  }
+}
+
 void Prop::TraversalMeStmt(MeStmt &meStmt) {
   Opcode op = meStmt.GetOp();
 
@@ -977,6 +1111,11 @@ void Prop::TraversalMeStmt(MeStmt &meStmt) {
       break;
     }
     case OP_asm: break;
+    case OP_brtrue:
+    case OP_brfalse: {
+      PropConditionBranchStmt(&meStmt);
+      break;
+    }
     default:
       for (size_t i = 0; i != meStmt.NumMeStmtOpnds(); ++i) {
         MeExpr *expr = &PropMeExpr(utils::ToRef(meStmt.GetOpnd(i)), subProped, kOpcodeInfo.IsCall(op));

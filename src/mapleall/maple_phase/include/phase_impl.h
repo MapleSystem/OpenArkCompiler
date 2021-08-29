@@ -124,8 +124,8 @@ class FuncOptimizeIterator : public MplScheduler {
   opt.Run();
 
 
-#define OPT_TEMPLATE_NEWPM(OPT_NAME)                                                                         \
-  auto *kh = GET_ANALYSIS(M2MKlassHierarchy);                                                                \
+#define OPT_TEMPLATE_NEWPM(OPT_NAME, PHASEKEY)                                  \
+  auto *kh = GET_ANALYSIS(M2MKlassHierarchy, PHASEKEY); \
   ASSERT_NOT_NULL((kh));                                                                                     \
   std::unique_ptr<FuncOptimizeImpl> funcOptImpl = std::make_unique<OPT_NAME>(m, (kh), TRACE_MAPLE_PHASE);    \
   ASSERT_NOT_NULL(funcOptImpl);                                                                              \

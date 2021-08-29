@@ -15,7 +15,6 @@
 #ifndef MAPLE_PHASE_INCLUDE_MAPLE_PHASE_H
 #define MAPLE_PHASE_INCLUDE_MAPLE_PHASE_H
 #include "maple_phase_support.h"
-
 namespace maple {
 class MaplePhase;
 class AnalysisInfoHook;
@@ -63,9 +62,9 @@ class MaplePhase {
   MemPool *ApplyTempMemPool();
   void ClearTempMemPool();
 
+ private:
   MapleAllocator phaseAllocator;  //  mempool for phase
   AnalysisInfoHook *analysisInfo = nullptr;
- private:
   virtual void GetAnalysisDependence(AnalysisDep &aDep) const;
   MaplePhaseKind phaseKind;
   MaplePhaseID phaseID;
@@ -208,8 +207,9 @@ unsigned int CLASSNAME::id = 0;                                                 
 std::string CLASSNAME::PhaseName() const { return #PHASENAME; }                         \
 static RegisterPhase<CLASSNAME> MAPLEPHASE_##PHASENAME(#PHASENAME, false, false, true);
 
-#define GET_ANALYSIS(PHASENAME) \
-static_cast<PHASENAME*>(GetAnalysisInfoHook()->FindAnalysisData(this, &PHASENAME::id))->GetResult()
+#define GET_ANALYSIS(PHASENAME, PHASEKEY)                               \
+static_cast<PHASENAME*>(GetAnalysisInfoHook()->FindAnalysisData(PHASEKEY.GetUniqueID(), this, &PHASENAME::id))-> \
+    GetResult()
 
 #define FORCE_GET(PHASENAME) \
 static_cast<PHASENAME*>(GetAnalysisInfoHook()-> \

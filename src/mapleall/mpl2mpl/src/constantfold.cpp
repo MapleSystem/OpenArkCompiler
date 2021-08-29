@@ -2437,7 +2437,7 @@ void M2MConstantFold::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
 }
 
 bool M2MConstantFold::PhaseRun(maple::MIRModule &m) {
-  OPT_TEMPLATE_NEWPM(ConstantFold);
+  OPT_TEMPLATE_NEWPM(ConstantFold, m);
   if (MeOption::meVerify) {
     VerifyGlobalTypeTable();
   }

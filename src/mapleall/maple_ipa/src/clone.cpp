@@ -245,7 +245,7 @@ void M2MClone::GetAnalysisDependence(AnalysisDep &aDep) const {
 
 bool M2MClone::PhaseRun(maple::MIRModule &m) {
   maple::MIRBuilder dexMirBuilder(&m);
-  KlassHierarchy *kh = GET_ANALYSIS(M2MKlassHierarchy);
+  KlassHierarchy *kh = GET_ANALYSIS(M2MKlassHierarchy, m);
   cl = GetPhaseAllocator()->New<Clone>(&m, GetPhaseMemPool(), dexMirBuilder, kh);
   cl->DoClone();
   return true;

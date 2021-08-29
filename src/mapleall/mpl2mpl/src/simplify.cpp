@@ -390,7 +390,7 @@ void M2MSimplify::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
 }
 
 bool M2MSimplify::PhaseRun(maple::MIRModule &m) {
-  OPT_TEMPLATE_NEWPM(Simplify)
+  OPT_TEMPLATE_NEWPM(Simplify, m)
   return true;
 }
 }  // namespace maple

@@ -68,19 +68,20 @@ bool MESSAEPre::PhaseRun(maple::MeFunction &f) {
     return false;
   }
   // make irmapbuild first because previous phase may invalid all analysis results
-  auto *irMap = GET_ANALYSIS(MEIRMapBuild);
+  auto *irMap = GET_ANALYSIS(MEIRMapBuild, f);
   ASSERT(irMap != nullptr, "irMap phase has problem");
-  auto *dom = GET_ANALYSIS(MEDominance);
+  auto *dom = GET_ANALYSIS(MEDominance, f);
   ASSERT(dom != nullptr, "dominance phase has problem");
 
   KlassHierarchy *kh = nullptr;
   if (f.GetMIRModule().IsJavaModule()) {
-    MaplePhase *it = GetAnalysisInfoHook()->GetOverIRAnalyisData<MeFuncPM, M2MKlassHierarchy>();
+    MaplePhase *it = GetAnalysisInfoHook()->GetOverIRAnalyisData<MeFuncPM, M2MKlassHierarchy,
+                                                                 MIRModule>(f.GetMIRModule());
     kh = static_cast<M2MKlassHierarchy*>(it)->GetResult();
     CHECK_FATAL(kh != nullptr, "KlassHierarchy phase has problem");
   }
 
-  IdentifyLoops *identLoops = GET_ANALYSIS(MELoopAnalysis);
+  IdentifyLoops *identLoops = GET_ANALYSIS(MELoopAnalysis, f);
   CHECK_NULL_FATAL(identLoops);
 
   bool eprePULimitSpecified = MeOption::eprePULimit != UINT32_MAX;

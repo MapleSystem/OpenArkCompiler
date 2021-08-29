@@ -569,7 +569,7 @@ class ComplexMemOperandLSLAArch64 : public PeepPattern {
  public:
   explicit ComplexMemOperandLSLAArch64(CGFunc &cgFunc) : PeepPattern(cgFunc) {}
   ~ComplexMemOperandLSLAArch64() override = default;
-  bool CheckShiftValid(const AArch64MemOperand &memOpnd, BitShiftOperand &lsl) const;
+  bool CheckShiftValid(const Insn &insn, BitShiftOperand &lsl) const;
   void Run(BB &bb, Insn &insn) override;
 };
 

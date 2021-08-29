@@ -28,7 +28,7 @@ bool IpaSccPM::PhaseRun(MIRModule &m) {
   bool changed = false;
   auto admMempool = AllocateMemPoolInPhaseManager("Ipa Phase Manager's Analysis Data Manager mempool");
   auto *serialADM = GetManagerMemPool()->New<AnalysisDataManager>(*(admMempool.get()));
-  CallGraph *cg = GET_ANALYSIS(M2MCallGraph);
+  CallGraph *cg = GET_ANALYSIS(M2MCallGraph, m);
   // Need reverse sccV
   const MapleVector<SCCNode*> &topVec = cg->GetSCCTopVec();
   for (MapleVector<SCCNode*>::const_reverse_iterator it = topVec.rbegin(); it != topVec.rend(); ++it) {

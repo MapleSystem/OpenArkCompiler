@@ -512,7 +512,7 @@ void VtableImpl::Finish() {
 #endif  // ~USE_ARM32_MACRO
 
 bool M2MVtableImpl::PhaseRun(maple::MIRModule &m) {
-  OPT_TEMPLATE_NEWPM(VtableImpl);
+  OPT_TEMPLATE_NEWPM(VtableImpl, m);
   return true;
 }
 

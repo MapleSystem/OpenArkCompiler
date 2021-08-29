@@ -917,7 +917,7 @@ void PreCheckCast::ProcessFunc(MIRFunction *func) {
 }
 
 bool M2MPreCheckCast::PhaseRun(maple::MIRModule &m) {
-  OPT_TEMPLATE_NEWPM(PreCheckCast);
+  OPT_TEMPLATE_NEWPM(PreCheckCast, m);
   return true;
 }
 
@@ -953,7 +953,7 @@ void CheckCastGenerator::ProcessFunc(MIRFunction *func) {
 }
 
 bool M2MCheckCastGeneration::PhaseRun(maple::MIRModule &m) {
-  OPT_TEMPLATE_NEWPM(CheckCastGenerator);
+  OPT_TEMPLATE_NEWPM(CheckCastGenerator, m);
   return true;
 }
 

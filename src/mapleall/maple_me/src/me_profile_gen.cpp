@@ -153,7 +153,7 @@ bool MEProfGen::PhaseRun(maple::MeFunction &f) {
     return false;
   }
 
-  auto *hMap = GET_ANALYSIS(MEIRMapBuild);
+  auto *hMap = GET_ANALYSIS(MEIRMapBuild, f);
   CHECK_FATAL(hMap != nullptr, "hssamap is nullptr");
   MeProfGen profGen(f, *GetPhaseMemPool(), *hMap, DEBUGFUNC_NEWPM(f));
   if (!profGen.CanInstrument()) {

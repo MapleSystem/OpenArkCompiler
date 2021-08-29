@@ -46,9 +46,9 @@ bool MEMeProp::PhaseRun(maple::MeFunction &f) {
     return false;
   }
   f.hpropRuns++;
-  auto *dom = GET_ANALYSIS(MEDominance);
+  auto *dom = GET_ANALYSIS(MEDominance, f);
   CHECK_NULL_FATAL(dom);
-  auto *hMap = GET_ANALYSIS(MEIRMapBuild);
+  auto *hMap = GET_ANALYSIS(MEIRMapBuild, f);
   CHECK_NULL_FATAL(hMap);
   bool propIloadRef = MeOption::propIloadRef;
   if (!propIloadRef) {

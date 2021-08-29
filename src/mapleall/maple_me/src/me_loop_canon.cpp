@@ -525,15 +525,15 @@ void MELoopCanaon::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
 }
 
 bool MELoopCanaon::PhaseRun(maple::MeFunction &f) {
-  auto *dom = GET_ANALYSIS(MEDominance);
+  auto *dom = GET_ANALYSIS(MEDominance, f);
   ASSERT(dom != nullptr, "dom is null in MeDoLoopCanon::Run");
   MemPool *loopCanonMp = GetPhaseMemPool();
   auto *meLoopCanon = loopCanonMp->New<MeLoopCanon>(DEBUGFUNC_NEWPM(f), *loopCanonMp);
   // 1. Converting loops to exhibit the do {} while (condition)
   meLoopCanon->ExecuteLoopCanon(f, *dom);
   if (meLoopCanon->IsCFGChange()) {
-    GetAnalysisInfoHook()->ForceEraseAnalysisPhase(&MEDominance::id);
-    GetAnalysisInfoHook()->ForceEraseAnalysisPhase(&MELoopAnalysis::id);
+    GetAnalysisInfoHook()->ForceEraseAnalysisPhase(f.GetUniqueID(), &MEDominance::id);
+    GetAnalysisInfoHook()->ForceEraseAnalysisPhase(f.GetUniqueID(), &MELoopAnalysis::id);
   }
   meLoopCanon->ResetIsCFGChange();
   dom = FORCE_GET(MEDominance);
@@ -541,8 +541,8 @@ bool MELoopCanaon::PhaseRun(maple::MeFunction &f) {
   // 2. Add preheaderBB and normalization headBB for loop.
   meLoopCanon->NormalizationHeadAndPreHeaderOfLoop(f, *dom);
   if (meLoopCanon->IsCFGChange()) {
-    GetAnalysisInfoHook()->ForceEraseAnalysisPhase(&MEDominance::id);
-    GetAnalysisInfoHook()->ForceEraseAnalysisPhase(&MELoopAnalysis::id);
+    GetAnalysisInfoHook()->ForceEraseAnalysisPhase(f.GetUniqueID(), &MEDominance::id);
+    GetAnalysisInfoHook()->ForceEraseAnalysisPhase(f.GetUniqueID(), &MELoopAnalysis::id);
   }
   meLoopCanon->ResetIsCFGChange();
   IdentifyLoops *meLoop = FORCE_GET(MELoopAnalysis);
@@ -552,8 +552,8 @@ bool MELoopCanaon::PhaseRun(maple::MeFunction &f) {
   // 3. Normalization exitBB for loop.
   meLoopCanon->NormalizationExitOfLoop(f, *meLoop);
   if (meLoopCanon->IsCFGChange()) {
-    GetAnalysisInfoHook()->ForceEraseAnalysisPhase(&MEDominance::id);
-    GetAnalysisInfoHook()->ForceEraseAnalysisPhase(&MELoopAnalysis::id);
+    GetAnalysisInfoHook()->ForceEraseAnalysisPhase(f.GetUniqueID(), &MEDominance::id);
+    GetAnalysisInfoHook()->ForceEraseAnalysisPhase(f.GetUniqueID(), &MELoopAnalysis::id);
   }
   return true;
 }

@@ -283,7 +283,7 @@ void MEGCLowering::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
 }
 
 bool MEGCLowering::PhaseRun(maple::MeFunction &f) {
-  CHECK_NULL_FATAL(GET_ANALYSIS(MEIRMapBuild));
+  CHECK_NULL_FATAL((GET_ANALYSIS(MEIRMapBuild, f)));
 
   GCLowering gcLowering(f, DEBUGFUNC_NEWPM(f));
   gcLowering.Prepare();

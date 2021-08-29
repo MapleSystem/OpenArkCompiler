@@ -337,7 +337,7 @@ bool MESubsumRC::PhaseRun(maple::MeFunction &f) {
   if (MeOption::subsumRC == false) {
     return false;
   }
-  auto *dom = GET_ANALYSIS(MEDominance);
+  auto *dom = GET_ANALYSIS(MEDominance, f);
   ASSERT(dom != nullptr, "dominance phase has problem");
   SubsumRC subsumRC(f, *dom, *GetPhaseMemPool(), DEBUGFUNC_NEWPM(f));
   subsumRC.RunSSUPre();

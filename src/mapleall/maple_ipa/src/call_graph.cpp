@@ -1821,13 +1821,13 @@ MIRFunction *CGNode::HasOneCandidate() const {
 }
 
 bool M2MCallGraph::PhaseRun(maple::MIRModule &m) {
-  KlassHierarchy *klassh = GET_ANALYSIS(M2MKlassHierarchy);
+  KlassHierarchy *klassh = GET_ANALYSIS(M2MKlassHierarchy, m);
   CHECK_NULL_FATAL(klassh);
   cg = GetPhaseAllocator()->New<CallGraph>(m, *GetPhaseMemPool(), *klassh, m.GetFileName());
   cg->InitCallExternal();
   cg->SetDebugFlag(TRACE_MAPLE_PHASE);
   cg->BuildCallGraph();
-  if (!m.IsInIPA() && m.firstInline) {
+  if (m.IsJavaModule() && !m.IsInIPA() && m.firstInline) {
     // do retype
     maple::MIRBuilder dexMirbuilder(&m);
     Retype retype(&m, ApplyTempMemPool());
@@ -1842,7 +1842,7 @@ void M2MCallGraph::GetAnalysisDependence(AnalysisDep &aDep) const {
 }
 
 bool M2MIPODevirtualize::PhaseRun(maple::MIRModule &m) {
-  KlassHierarchy *klassh = GET_ANALYSIS(M2MKlassHierarchy);
+  KlassHierarchy *klassh = GET_ANALYSIS(M2MKlassHierarchy, m);
   CHECK_NULL_FATAL(klassh);
   IPODevirtulize *dev = GetPhaseAllocator()->New<IPODevirtulize>(&m, GetPhaseMemPool(), klassh);
   // Devirtualize vcall of final variable

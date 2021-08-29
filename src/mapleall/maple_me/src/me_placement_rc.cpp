@@ -891,7 +891,7 @@ bool MEPlacementRC::PhaseRun(maple::MeFunction &f) {
   if (whiteListFunc.find(funcName) != whiteListFunc.end() || f.GetMirFunc()->GetAttr(FUNCATTR_rclocalunowned)) {
     return false;
   }
-  auto *cfg = GET_ANALYSIS(MEMeCfg);
+  auto *cfg = GET_ANALYSIS(MEMeCfg, f);
   // Workaround for RCWeakRef-annotated field access: leave it to analyzerc
   for (BB *bb : cfg->GetAllBBs()) {
     if (bb == nullptr) {
@@ -917,9 +917,9 @@ bool MEPlacementRC::PhaseRun(maple::MeFunction &f) {
 
   f.SetHints(f.GetHints() | kPlacementRCed);
 
-  Dominance *dom = GET_ANALYSIS(MEDominance);
+  Dominance *dom = GET_ANALYSIS(MEDominance, f);
   ASSERT_NOT_NULL(dom);
-  MeIRMap *irMap = GET_ANALYSIS(MEIRMapBuild);
+  MeIRMap *irMap = GET_ANALYSIS(MEIRMapBuild, f);
   CHECK_NULL_FATAL(irMap);
   PlacementRC placementRC(f, *dom, *GetPhaseMemPool(), DEBUGFUNC_NEWPM(f));
   placementRC.ApplySSUPre();

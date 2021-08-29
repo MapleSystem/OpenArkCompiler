@@ -237,7 +237,7 @@ void JavaEHLowerer::ProcessFunc(MIRFunction *func) {
 }
 
 bool M2MJavaEHLowerer::PhaseRun(maple::MIRModule &m) {
-  OPT_TEMPLATE_NEWPM(JavaEHLowerer);
+  OPT_TEMPLATE_NEWPM(JavaEHLowerer, m);
   return true;
 }
 

@@ -771,7 +771,7 @@ bool MELfoPreEmission::PhaseRun(MeFunction &f) {
     f.SetLfo(false);
     return false;
   }
-  MeIRMap *hmap = GET_ANALYSIS(MEIRMapBuild);
+  MeIRMap *hmap = GET_ANALYSIS(MEIRMapBuild, f);
   ASSERT(hmap != nullptr, "irmapbuild has problem");
 
   MIRFunction *mirfunction = f.GetMirFunc();

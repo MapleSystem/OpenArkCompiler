@@ -136,11 +136,11 @@ void FSAA::ProcessBB(BB *bb) {
 }
 
 bool MEFSAA::PhaseRun(MeFunction &f) {
-  auto *ssaTab = GET_ANALYSIS(MESSATab);
+  auto *ssaTab = GET_ANALYSIS(MESSATab, f);
   CHECK_NULL_FATAL(ssaTab);
-  auto *ssa = GET_ANALYSIS(MESSA);
+  auto *ssa = GET_ANALYSIS(MESSA, f);
   CHECK_NULL_FATAL(ssa);
-  auto *dom = GET_ANALYSIS(MEDominance);
+  auto *dom = GET_ANALYSIS(MEDominance, f);
   CHECK_NULL_FATAL(dom);
 
   FSAA fsaa(&f, dom);

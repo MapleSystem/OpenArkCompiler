@@ -444,11 +444,11 @@ void MEAnalyzeRC::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
 }
 
 bool MEAnalyzeRC::PhaseRun(maple::MeFunction &f) {
-  auto *dom = GET_ANALYSIS(MEDominance);
+  auto *dom = GET_ANALYSIS(MEDominance, f);
   ASSERT(dom != nullptr, "dominance phase has problem");
-  auto *aliasClass = GET_ANALYSIS(MEAliasClass);
+  auto *aliasClass = GET_ANALYSIS(MEAliasClass, f);
   ASSERT(aliasClass != nullptr, "aliasClass phase has problem");
-  ASSERT_NOT_NULL(GET_ANALYSIS(MEIRMapBuild));
+  ASSERT_NOT_NULL((GET_ANALYSIS(MEIRMapBuild, f)));
   if (DEBUGFUNC_NEWPM(f)) {
     LogInfo::Info() << " Processing " << f.GetMirFunc()->GetName() << '\n';
   }
