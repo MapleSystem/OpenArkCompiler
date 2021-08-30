@@ -1267,6 +1267,7 @@ class MeStmt {
   }
 
   virtual StmtNode &EmitStmt(SSATab &ssaTab);
+
   void RemoveNode() {
     // remove this node from the double link list
     if (prev != nullptr) {
@@ -1882,6 +1883,22 @@ class IassignMeStmt : public MeStmt {
     tyIdx = val->GetTyIdx();
   }
 
+  bool GetOmitEmit() {
+    return omitEmit;
+  }
+
+  void SetOmitEmit(bool val) {
+    omitEmit = val;
+  }
+
+  bool GetEmitIassignoff() {
+    return emitIassignoff;
+  }
+
+  void SetEmitIassignoff(bool val) {
+    emitIassignoff = val;
+  }
+
   StmtNode &EmitStmt(SSATab &ssaTab);
 
  private:
@@ -1891,6 +1908,8 @@ class IassignMeStmt : public MeStmt {
   MapleMap<OStIdx, ChiMeNode*> chiList;
   bool needDecref = false;  // to be determined by analyzerc phase
   bool needIncref = false;  // to be determined by analyzerc phase
+  bool emitIassignoff = false; // Emit Iassignoff instead
+  bool omitEmit = false;       // Skip this stmt instead
 };
 
 class NaryMeStmt : public MeStmt {
