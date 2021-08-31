@@ -595,6 +595,10 @@ class Insn {
     return isReload;
   }
 
+  bool IsSpillInsn() {
+    return (isSpill || isReload);
+  }
+
   void SetIsCallReturnUnsigned(bool unSigned) {
     ASSERT(IsCall(), "Insn should be a call.");
     this->isCallReturnUnsigned = unSigned;

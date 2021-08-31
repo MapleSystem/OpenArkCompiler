@@ -2687,9 +2687,6 @@ MemOperand *GraphColorRegAllocator::GetSpillOrReuseMem(LiveRange &lr, uint32 reg
       }
       ASSERT(baseRegNO != kRinvalid, "invalid base register number");
       memOpnd = GetSpillMem(lr.GetRegNO(), isDef, insn, static_cast<AArch64reg>(baseRegNO), isOutOfRange);
-      if (!isOutOfRange) {
-        (static_cast<AArch64MemOperand*>(memOpnd))->SetIsSpillMem();
-      }
       /* dest's spill reg can only be R15 and R16 () */
       if (isOutOfRange && isDef) {
         ASSERT(lr.GetSpillReg() != R16, "can not find valid memopnd's base register");
@@ -3450,9 +3447,6 @@ RegOperand *GraphColorRegAllocator::CreateSpillFillCode(RegOperand &opnd, Insn &
     loadmem = a64cgfunc->AdjustMemOperandIfOffsetOutOfRange(loadmem, vregno, isdef, insn, R9, isOutOfRange);
     PrimType pty = (lr->GetRegType() == kRegTyInt) ? ((bits > k32BitSize) ? PTY_i64 : PTY_i32)
                                               : ((bits > k32BitSize) ? PTY_f64 : PTY_f32);
-    if (!isOutOfRange) {
-      (static_cast<AArch64MemOperand*>(loadmem))->SetIsSpillMem();
-    }
     regno_t spreg = 0;
     RegType rtype = lr->GetRegType();
     CHECK_FATAL(spillCnt < kSpillMemOpndNum, "spill count exceeded");
