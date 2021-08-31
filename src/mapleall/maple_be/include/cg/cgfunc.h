@@ -138,6 +138,7 @@ class CGFunc {
   void GenerateInstruction();
   bool MemBarOpt(StmtNode &membar);
   void UpdateCallBBFrequency();
+  void BuildStaticBBFrequency();
   void HandleFunction();
   void ProcessExitBBVec();
   virtual void MergeReturn() = 0;

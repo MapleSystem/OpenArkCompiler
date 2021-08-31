@@ -1592,6 +1592,56 @@ void CGFunc::UpdateCallBBFrequency() {
   }
 }
 
+void BBFrequencySet(BB *bb) {
+  uint32 freq = bb->GetFrequency();
+  for (auto pred : bb->GetPreds()) {
+    uint32 predFreq = pred->GetFrequency();
+    if (pred->GetLoop()) {
+      predFreq /= (pred->GetLoop()->GetLoopLevel() * 10);
+    }
+    freq += (predFreq / pred->GetSuccs().size());
+  }
+  if (bb->GetLoop()) {
+    freq *= (bb->GetLoop()->GetLoopLevel() * 10);
+  }
+  bb->SetFrequency(freq);
+}
+
+void BBFrequencyVisitSucc(std::queue<BB *> &BBQueue) {
+  while (BBQueue.size()) {
+    BB *bb = BBQueue.front();
+    BBQueue.pop();
+    BBFrequencySet(bb);
+    for (auto succ : bb->GetSuccs()) {
+      if (succ->GetFrequency()) {
+        continue;
+      }
+      bool allPredVisited = true;
+      for (auto pred : succ->GetPreds()) {
+        auto &loopPred = succ->GetLoopPreds();
+        if (std::find(loopPred.begin(), loopPred.end(), pred) != loopPred.end()) {
+          continue;
+        }
+        if (pred->GetFrequency() == 0) {
+          allPredVisited = false;
+          break;
+        }
+      }
+      if (allPredVisited) {
+        BBQueue.push(succ);
+      }
+    }
+  }
+}
+
+/* build static bb frequency assuming loop detection already done */
+void CGFunc::BuildStaticBBFrequency() {
+  BB *bb = FIRST_BB_OF_FUNC(this);
+  std::queue<BB *> BBQueue;
+  BBQueue.push(bb);
+  BBFrequencyVisitSucc(BBQueue);
+}
+
 void CGFunc::HandleFunction() {
   /* select instruction */
   GenerateInstruction();

@@ -51,8 +51,10 @@ namespace maplebe {
  * R0->GetRegisterNumber() == 1
  * V0->GetRegisterNumber() == 33
  */
+#ifndef USE_BB_FREQUENCY
 constexpr uint32 kLoopWeight = 20;
 constexpr uint32 kAdjustWeight = 2;
+#endif
 constexpr uint32 kInsnStep = 2;
 
 #define GCRA_DUMP CG_DEBUG_FUNC(*cgFunc)
@@ -254,6 +256,9 @@ void GraphColorRegAllocator::CalculatePriority(LiveRange &lr) const {
   }
   return;
 #endif  /* RANDOM_PRIORITY */
+#ifdef USE_BB_FREQUENCY
+  cgFunc->BuildStaticBBFrequency();
+#endif
   float pri = 0.0;
   uint32 bbNum = 0;
   auto calculatePriorityFunc = [&lr, &bbNum, &pri, this] (uint32 bbID) {
@@ -266,6 +271,11 @@ void GraphColorRegAllocator::CalculatePriority(LiveRange &lr) const {
       uint32 mult;
 #ifdef USE_BB_FREQUENCY
       mult = bb->GetFrequency();
+      if (lr.GetNumCall() > 0) {
+        mult *= 2;
+      } else {
+        mult /= 2;
+      }
 #else   /* USE_BB_FREQUENCY */
       if (bb->GetLoop() != nullptr) {
         uint32 loopFactor;
