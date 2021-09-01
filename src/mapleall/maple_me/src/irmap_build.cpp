@@ -29,7 +29,7 @@ static constexpr uint32 kMaxRegParamNum = 8;
 using MeExprBuildFactory = FunctionFactory<Opcode, MeExpr*, const IRMapBuild*, BaseNode&>;
 using MeStmtFactory = FunctionFactory<Opcode, MeStmt*, IRMapBuild*, StmtNode&, AccessSSANodes&>;
 
-VarMeExpr *IRMapBuild::GetOrCreateVarFromVerSt(const VersionSt &vst) {
+VarMeExpr *IRMapBuild::GetOrCreateVarFromVerSt(const VersionSt &vst, PrimType ptyp) {
   size_t vindex = vst.GetIndex();
   ASSERT(vindex < irMap->verst2MeExprTable.size(), "GetOrCreateVarFromVerSt: index %d is out of range", vindex);
   MeExpr *meExpr = irMap->verst2MeExprTable.at(vindex);
@@ -38,8 +38,11 @@ VarMeExpr *IRMapBuild::GetOrCreateVarFromVerSt(const VersionSt &vst) {
   }
   OriginalSt *ost = vst.GetOst();
   ASSERT(ost->IsSymbolOst() || ost->GetIndirectLev() > 0, "GetOrCreateVarFromVerSt: wrong ost_type");
-  auto *varx = irMap->New<VarMeExpr>(irMap->exprID++, ost, vindex,
-      GlobalTables::GetTypeTable().GetTypeTable()[ost->GetTyIdx().GetIdx()]->GetPrimType());
+  PrimType ptypUsed = GlobalTables::GetTypeTable().GetTypeTable()[ost->GetTyIdx().GetIdx()]->GetPrimType();
+  if (GetPrimTypeSize(ptypUsed) < 4 && ptyp != PTY_unknown) {
+    ptypUsed = ptyp;
+  }
+  auto *varx = irMap->New<VarMeExpr>(irMap->exprID++, ost, vindex, ptypUsed);
   ASSERT(!GlobalTables::GetTypeTable().GetTypeTable().empty(), "container check");
   irMap->verst2MeExprTable[vindex] = varx;
   return varx;
@@ -321,9 +324,13 @@ MeExpr *IRMapBuild::BuildExpr(BaseNode &mirNode, bool atParm, bool noProp) {
   if (op == OP_dread) {
     auto &addrOfNode = static_cast<AddrofSSANode&>(mirNode);
     VersionSt *vst = addrOfNode.GetSSAVar();
-    VarMeExpr *varMeExpr = GetOrCreateVarFromVerSt(*vst);
+    VarMeExpr *varMeExpr = GetOrCreateVarFromVerSt(*vst, mirNode.GetPrimType());
     ASSERT(!vst->GetOst()->IsPregOst(), "not expect preg symbol here");
-    varMeExpr->SetPtyp(GlobalTables::GetTypeTable().GetTypeFromTyIdx(vst->GetOst()->GetTyIdx())->GetPrimType());
+    PrimType ptypUsed = GlobalTables::GetTypeTable().GetTypeTable()[vst->GetOst()->GetTyIdx().GetIdx()]->GetPrimType();
+    if (GetPrimTypeSize(ptypUsed) < 4) {
+      ptypUsed = mirNode.GetPrimType();
+    }
+    varMeExpr->SetPtyp(ptypUsed);
     varMeExpr->GetOst()->SetFieldID(addrOfNode.GetFieldID());
     MeExpr *retmeexpr;
     if (propagater && !noProp) {
@@ -337,6 +344,12 @@ MeExpr *IRMapBuild::BuildExpr(BaseNode &mirNode, bool atParm, bool noProp) {
       retmeexpr = varMeExpr;
     }
     uint32 typesize = GetPrimTypeSize(retmeexpr->GetPrimType());
+    if (retmeexpr == varMeExpr) {
+      PrimType varPrimType = GlobalTables::GetTypeTable().GetTypeTable()[varMeExpr->GetOst()->GetTyIdx().GetIdx()]->GetPrimType();
+      if (varPrimType != PTY_u1) {  // special ciase for PTY_u1
+        typesize = GetPrimTypeSize(GlobalTables::GetTypeTable().GetTypeTable()[varMeExpr->GetOst()->GetTyIdx().GetIdx()]->GetPrimType());
+      }
+    }
     if (typesize < GetPrimTypeSize(addrOfNode.GetPrimType()) && typesize != 0) {
       // need to insert a convert
       if (typesize < 4) {

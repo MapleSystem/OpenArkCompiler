@@ -38,7 +38,7 @@ class IRMapBuild {
   void BuildBB(BB &bb, std::vector<bool> &bbIRMapProcessed);
 
  private:
-  VarMeExpr *GetOrCreateVarFromVerSt(const VersionSt &vst);
+  VarMeExpr *GetOrCreateVarFromVerSt(const VersionSt &vst, PrimType ptyp = PTY_unknown);
   RegMeExpr *GetOrCreateRegFromVerSt(const VersionSt &vst);
 
   MeExpr *BuildLHSVar(const VersionSt &vst, DassignMeStmt &defMeStmt);
