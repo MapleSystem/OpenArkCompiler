@@ -130,6 +130,7 @@ OpMeExpr *SSAEPre::FormLFTRCompare(MeRealOcc *compOcc, MeExpr *regorvar) {
       return nullptr;
     }
   }
+  newSide.SetHasAddressValue();
   // check if newSide can be folded
   MeExpr *simplifyExpr = irMap->SimplifyOpMeExpr(&newSide);
   MeExpr *hashedSide = nullptr;
