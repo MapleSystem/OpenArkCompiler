@@ -367,6 +367,13 @@ void GraphColorRegAllocator::InitFreeRegPool() {
       if (IsYieldPointReg(static_cast<AArch64reg>(regNO))) {
         continue;
       }
+      if (regNO == R29) {
+        if (!cgFunc->UseFP()) {
+          (void)intCalleeRegSet.insert(regNO - R0);
+          ++intNum;
+        }
+        continue;
+      }
       if (AArch64Abi::IsCalleeSavedReg(static_cast<AArch64reg>(regNO))) {
         (void)intCalleeRegSet.insert(regNO - R0);
       } else {
@@ -393,8 +400,8 @@ void GraphColorRegAllocator::InitCCReg() {
 }
 
 bool GraphColorRegAllocator::IsUnconcernedReg(regno_t regNO) const {
-  /* RFP = 30, RLR = 31, RSP = 32, RZR = 33 */
-  if ((regNO >= RFP && regNO <= RZR) || regNO == ccReg) {
+  /* RFP = 32, RLR = 31, RSP = 33, RZR = 34 */
+  if ((regNO >= RLR && regNO <= RZR) || regNO == RFP || regNO == ccReg) {
     return true;
   }
 
@@ -1034,15 +1041,24 @@ bool GraphColorRegAllocator::IsLocalReg(LiveRange &lr) const {
   return !lr.GetSplitLr() && (lr.GetNumBBMembers() == 1) && !lr.IsNonLocal();
 }
 
-bool GraphColorRegAllocator::CheckOverlap(uint64 val, uint32 &lastBitSet, uint32 &overlapNum, uint32 i) const {
-  if (val == 0) {
-    return false;
-  }
+bool GraphColorRegAllocator::CheckOverlap(uint64 val, uint32 i, LiveRange &lr1, LiveRange &lr2) const {
+  regno_t lr1RegNO = lr1.GetRegNO();
+  regno_t lr2RegNO = lr2.GetRegNO();
   for (uint32 x = 0; x < kU64; ++x) {
     if ((val & (1ULL << x)) != 0) {
-      ++overlapNum;
-      lastBitSet = i * kU64 + x;
-      if (overlapNum > 1) {
+      uint32 lastBitSet = i * kU64 + x;
+      /*
+       * begin and end should be in the bb info (LU)
+       * Need to rethink this if.
+       * Under some circumstance, lr->begin can occur after lr->end.
+       */
+      auto lu1 = lr1.FindInLuMap(lastBitSet);
+      auto lu2 = lr2.FindInLuMap(lastBitSet);
+      if (lu1 != lr1.EndOfLuMap() && lu2 != lr2.EndOfLuMap() &&
+          !((lu1->second->GetBegin() < lu2->second->GetBegin() && lu1->second->GetEnd() < lu2->second->GetBegin()) ||
+            (lu2->second->GetBegin() < lu1->second->GetEnd() && lu2->second->GetEnd() < lu1->second->GetBegin()))) {
+        lr1.SetConflictBitArrElem(lr2RegNO);
+        lr2.SetConflictBitArrElem(lr1RegNO);
         return true;
       }
     }
@@ -1056,34 +1072,14 @@ void GraphColorRegAllocator::CheckInterference(LiveRange &lr1, LiveRange &lr2) c
     bitArr[i] = lr1.GetBBMember()[i] & lr2.GetBBMember()[i];
   }
 
-  uint32 lastBitSet = 0;
-  uint32 overlapNum = 0;
   for (uint32 i = 0; i < bbBuckets; ++i) {
     uint64 val = bitArr[i];
-    if (CheckOverlap(val, lastBitSet, overlapNum, i)) {
+    if (val == 0) {
+      continue;
+    }
+    if (CheckOverlap(val, i, lr1, lr2)) {
       break;
     }
-  }
-  regno_t lr1RegNO = lr1.GetRegNO();
-  regno_t lr2RegNO = lr2.GetRegNO();
-  if (overlapNum == 1) {
-    /*
-     * begin and end should be in the bb info (LU)
-     * Need to rethink this if.
-     * Under some circumstance, lr->begin can occur after lr->end.
-     */
-    auto lu1 = lr1.FindInLuMap(lastBitSet);
-    auto lu2 = lr2.FindInLuMap(lastBitSet);
-    if (lu1 != lr1.EndOfLuMap() && lu2 != lr2.EndOfLuMap() &&
-        !((lu1->second->GetBegin() < lu2->second->GetBegin() && lu1->second->GetEnd() < lu2->second->GetBegin()) ||
-          (lu2->second->GetBegin() < lu1->second->GetEnd() && lu2->second->GetEnd() < lu1->second->GetBegin()))) {
-      lr1.SetConflictBitArrElem(lr2RegNO);
-      lr2.SetConflictBitArrElem(lr1RegNO);
-    }
-  } else if (overlapNum != 0) {
-    /* interfere */
-    lr1.SetConflictBitArrElem(lr2RegNO);
-    lr2.SetConflictBitArrElem(lr1RegNO);
   }
 }
 
@@ -2195,7 +2191,7 @@ void GraphColorRegAllocator::HandleLocalRaDebug(regno_t regNO, const LocalRegAll
   LogInfo::MapleLogger() << "\tregUsed:";
   uint64 regUsed = localRa.GetPregUsed(isInt);
   regno_t base = isInt ? R0 : V0;
-  regno_t end = isInt ? (RFP - R0) : (V31 - V0);
+  regno_t end = isInt ? (RLR - R0) : (V31 - V0);
 
   for (uint32 i = 0; i <= end; ++i) {
     if ((regUsed & (1ULL << i)) != 0) {
@@ -4140,7 +4136,8 @@ bool GraphColorRegAllocator::AllocateRegisters() {
   auto *a64CGFunc = static_cast<AArch64CGFunc*>(cgFunc);
 
   if (GCRA_DUMP && doMultiPass) {
-    LogInfo::MapleLogger() << "round start: \n";
+    LogInfo::MapleLogger() << "\n round start: \n";
+    cgFunc->DumpCGIR();
   }
   /*
    * we store both FP/LR if using FP or if not using FP, but func has a call

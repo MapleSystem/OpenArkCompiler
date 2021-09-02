@@ -323,7 +323,7 @@ class RegOperand : public Operand {
 enum VaryType : uint8 {
   kNotVary = 0,
   kUnAdjustVary,
-  kAdjustVary
+  kAdjustVary,
 };
 
 class ImmOperand : public Operand {

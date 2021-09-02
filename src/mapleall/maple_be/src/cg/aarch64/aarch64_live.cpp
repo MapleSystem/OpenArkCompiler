@@ -102,7 +102,7 @@ void AArch64LiveAnalysis::GetBBDefUse(BB &bb) {
 
 bool AArch64LiveAnalysis::CleanupBBIgnoreReg(uint32 reg) {
   uint32 regNO = reg + R0;
-  if (regNO < R8 || (R29 <= regNO && regNO <= RZR)) {
+  if (regNO < R8 || (RLR <= regNO && regNO <= RZR)) {
     return true;
   }
   return false;

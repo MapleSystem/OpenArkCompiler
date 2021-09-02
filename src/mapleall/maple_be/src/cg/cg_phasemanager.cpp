@@ -283,6 +283,9 @@ void CgFuncPM::CreateCGAndBeCommon(MIRModule &m) {
     CHECK_FATAL(cgOptions->IsInsertCall(), "handling of --insert-call is not correct");
     cg->SetInstrumentationFunction(cgOptions->GetInstrumentationFunction());
   }
+  if (!m.IsCModule()) {
+    CGOptions::EnableFramePointer();
+  }
 }
 
 void CgFuncPM::PrepareLower(MIRModule &m) {
