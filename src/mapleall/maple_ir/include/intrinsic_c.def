@@ -147,3 +147,5 @@ DEF_MIR_INTRINSIC(C___sync_lock_release_4,\
                   "__sync_lock_release_4"/*dummy*/, INTRNISPURE, kArgTyVoid, kArgTyPtr)
 DEF_MIR_INTRINSIC(C__builtin_return_address,\
                   "__builtin_return_address"/*dummy*/, INTRNISPURE, kArgTyPtr, kArgTyU32)
+DEF_MIR_INTRINSIC(C__builtin_extract_return_addr,\
+                  "__builtin_extract_return_addr"/*dummy*/, INTRNISPURE, kArgTyPtr, kArgTyPtr)

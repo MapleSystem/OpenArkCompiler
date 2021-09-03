@@ -1471,6 +1471,9 @@ class FEIRStmtReturn : public FEIRStmtUseOnly {
 
  protected:
   std::list<StmtNode*> GenMIRStmtsImpl(MIRBuilder &mirBuilder) const override;
+
+ private:
+  void InsertNonnullChecking(MIRBuilder &mirBuilder, std::list<StmtNode*> &ans) const;
 };
 
 // ---------- FEIRStmtPesudoLabel ----------

@@ -128,3 +128,4 @@ BUILTIN_FUNC_EMIT("__sync_lock_test_and_set_4", &ASTCallExpr::EmitBuiltinSyncLoc
 BUILTIN_FUNC_EMIT("__sync_lock_release_8", &ASTCallExpr::EmitBuiltinSyncLockRelease8)
 BUILTIN_FUNC_EMIT("__sync_lock_release_4", &ASTCallExpr::EmitBuiltinSyncLockRelease4)
 BUILTIN_FUNC_EMIT("__builtin_return_address", &ASTCallExpr::EmitBuiltinReturnAddress)
+BUILTIN_FUNC_EMIT("__builtin_extract_return_addr", &ASTCallExpr::EmitBuiltinExtractReturnAddr)

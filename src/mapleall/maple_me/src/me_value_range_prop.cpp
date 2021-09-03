@@ -150,6 +150,9 @@ void ValueRangePropagation::DealWithAssertNonnull(const BB &bb, MeStmt &meStmt) 
 }
 
 void ValueRangePropagation::DealWithOperand(const BB &bb, MeStmt &stmt, MeExpr &meExpr) {
+  if (meExpr.GetOp() == OP_select) {
+    return;
+  }
   if (meExpr.GetMeOp() == kMeOpIvar) {
     auto *base = static_cast<IvarMeExpr&>(meExpr).GetBase();
     auto *valueRange = FindValueRangeInCaches(bb.GetBBId(), base->GetExprID());

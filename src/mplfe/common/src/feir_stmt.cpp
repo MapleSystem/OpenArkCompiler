@@ -785,11 +785,27 @@ std::list<StmtNode*> FEIRStmtReturn::GenMIRStmtsImpl(MIRBuilder &mirBuilder) con
       ans.emplace_back(iNode);
       mirStmt = mirBuilder.CreateStmtReturn(nullptr);
     } else {
+      InsertNonnullChecking(mirBuilder, ans);
       mirStmt = mirBuilder.CreateStmtReturn(srcNode);
     }
   }
   ans.emplace_back(mirStmt);
   return ans;
+}
+
+void FEIRStmtReturn::InsertNonnullChecking(MIRBuilder &mirBuilder, std::list<StmtNode*> &ans) const {
+  if (!FEOptions::GetInstance().IsNpeCheckDynamic() || expr == nullptr) {
+    return;
+  }
+  if (mirBuilder.GetCurrentFunction()->GetAttrs().GetAttr(FUNCATTR_nonnull) &&
+      (expr->GetKind() == kExprDRead || expr->GetKind() == kExprIRead) &&
+      expr->GetPrimType() == PTY_ptr) {
+    std::list<UniqueFEIRExpr> exprs;
+    exprs.emplace_back(expr->Clone());
+    UniqueFEIRStmt stmt = std::make_unique<FEIRStmtNary>(OP_assertnonnull, std::move(exprs));
+    std::list<StmtNode*> stmts = stmt->GenMIRStmts(mirBuilder);
+    ans.splice(ans.end(), stmts);
+  }
 }
 
 // ---------- FEIRStmtGoto ----------
