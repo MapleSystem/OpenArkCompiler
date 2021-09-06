@@ -1048,7 +1048,7 @@ void ContiLDRorSTRToSameMEMAArch64::Run(BB &bb, Insn &insn) {
       nextInsn = nextInsn->GetNext();
     }
     bool moveSameReg = false;
-    if (nextInsn && nextInsn->GetIsSpill()) {
+    if (nextInsn && nextInsn->GetIsSpill() && !IfOperandIsLiveAfterInsn(reg1, *nextInsn)) {
       MOperator nextMop = nextInsn->GetMachineOpcode();
       if ((thisMop == MOP_xldr && nextMop == MOP_xstr) || (thisMop == MOP_wldr && nextMop == MOP_wstr) ||
           (thisMop == MOP_dldr && nextMop == MOP_dstr) || (thisMop == MOP_sldr && nextMop == MOP_sstr)) {
