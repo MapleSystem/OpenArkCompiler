@@ -2683,9 +2683,6 @@ MemOperand *GraphColorRegAllocator::GetSpillOrReuseMem(LiveRange &lr, uint32 reg
       }
       ASSERT(baseRegNO != kRinvalid, "invalid base register number");
       memOpnd = GetSpillMem(lr.GetRegNO(), isDef, insn, static_cast<AArch64reg>(baseRegNO), isOutOfRange);
-      if (!isOutOfRange) {
-        (static_cast<AArch64MemOperand*>(memOpnd))->SetIsSpillMem();
-      }
       /* dest's spill reg can only be R15 and R16 () */
       if (isOutOfRange && isDef) {
         ASSERT(lr.GetSpillReg() != R16, "can not find valid memopnd's base register");
@@ -2734,6 +2731,7 @@ Insn *GraphColorRegAllocator::SpillOperand(Insn &insn, const Operand &opnd, bool
     lr->SetSpillReg(pregNO);
     MemOperand *memOpnd = GetSpillOrReuseMem(*lr, regSize, isOutOfRange, insn, forCall ? false : true);
     spillDefInsn = &cg->BuildInstruction<AArch64Insn>(a64CGFunc->PickStInsn(regSize, stype), phyOpnd, *memOpnd);
+    spillDefInsn->SetIsSpill();
     std::string comment = " SPILL vreg: " + std::to_string(regNO);
     if (isForCallerSave) {
       comment += " for caller save in BB " + std::to_string(insn.GetBB()->GetId());
@@ -2756,6 +2754,7 @@ Insn *GraphColorRegAllocator::SpillOperand(Insn &insn, const Operand &opnd, bool
   lr->SetSpillReg(pregNO);
   MemOperand *memOpnd = GetSpillOrReuseMem(*lr, regSize, isOutOfRange, insn, forCall ? true : false);
   Insn &spillUseInsn = cg->BuildInstruction<AArch64Insn>(a64CGFunc->PickLdInsn(regSize, stype), phyOpnd, *memOpnd);
+  spillUseInsn.SetIsReload();
   std::string comment = " RELOAD vreg: " + std::to_string(regNO);
   if (isForCallerSave) {
     comment += " for caller save in BB " + std::to_string(insn.GetBB()->GetId());
@@ -3444,9 +3443,6 @@ RegOperand *GraphColorRegAllocator::CreateSpillFillCode(RegOperand &opnd, Insn &
     loadmem = a64cgfunc->AdjustMemOperandIfOffsetOutOfRange(loadmem, vregno, isdef, insn, R9, isOutOfRange);
     PrimType pty = (lr->GetRegType() == kRegTyInt) ? ((bits > k32BitSize) ? PTY_i64 : PTY_i32)
                                               : ((bits > k32BitSize) ? PTY_f64 : PTY_f32);
-    if (!isOutOfRange) {
-      (static_cast<AArch64MemOperand*>(loadmem))->SetIsSpillMem();
-    }
     regno_t spreg = 0;
     RegType rtype = lr->GetRegType();
     CHECK_FATAL(spillCnt < kSpillMemOpndNum, "spill count exceeded");
@@ -3456,6 +3452,7 @@ RegOperand *GraphColorRegAllocator::CreateSpillFillCode(RegOperand &opnd, Insn &
     Insn *memInsn;
     if (isdef) {
       memInsn = &cg->BuildInstruction<AArch64Insn>(a64cgfunc->PickStInsn(bits, pty), *regopnd, *loadmem);
+      memInsn->SetIsSpill();
       std::string comment = " SPILLcolor vreg: " + std::to_string(vregno);
       memInsn->SetComment(comment);
       if (isOutOfRange) {
@@ -3465,6 +3462,7 @@ RegOperand *GraphColorRegAllocator::CreateSpillFillCode(RegOperand &opnd, Insn &
       }
     } else {
       memInsn = &cg->BuildInstruction<AArch64Insn>(a64cgfunc->PickLdInsn(bits, pty), *regopnd, *loadmem);
+      memInsn->SetIsReload();
       std::string comment = " RELOADcolor vreg: " + std::to_string(vregno);
       memInsn->SetComment(comment);
       insn.GetBB()->InsertInsnBefore(insn, *memInsn);

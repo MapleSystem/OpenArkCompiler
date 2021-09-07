@@ -813,7 +813,7 @@ void AArch64StoreLoadOpt::ProcessStrPair(Insn &insn) {
   if ((base == nullptr) || !(cgFunc.GetRD()->IsFrameReg(*base))) {
     return;
   }
-  if (cgFunc.IsAfterRegAlloc() && !memOpnd.IsSpillMem()) {
+  if (cgFunc.IsAfterRegAlloc() && !insn.IsSpillInsn()) {
     return;
   }
   ASSERT(memOpnd.GetIndexRegister() == nullptr, "frame MemOperand must not be exist register index");
@@ -849,7 +849,7 @@ void AArch64StoreLoadOpt::ProcessStr(Insn &insn) {
   if ((base == nullptr) || !(cgFunc.GetRD()->IsFrameReg(*base))) {
     return;
   }
-  if (cgFunc.IsAfterRegAlloc() && !memOpnd.IsSpillMem()) {
+  if (cgFunc.IsAfterRegAlloc() && !insn.IsSpillInsn()) {
     return;
   }
   ASSERT(memOpnd.GetIndexRegister() == nullptr, "frame MemOperand must not be exist register index");

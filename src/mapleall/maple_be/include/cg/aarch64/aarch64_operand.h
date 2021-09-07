@@ -664,14 +664,6 @@ class AArch64MemOperand : public MemOperand {
     MemOperand::SetBaseRegister(baseRegOpnd);
   }
 
-  bool IsSpillMem() const {
-    return isSpillMem;
-  }
-
-  void SetIsSpillMem() {
-    isSpillMem = true;
-  }
-
   bool IsStackMem() const {
     return isStackMem;
   }
@@ -869,8 +861,6 @@ class AArch64MemOperand : public MemOperand {
   bool noExtend;
 
   bool isStackMem;
-
-  bool isSpillMem = false;
 };
 
 class AArch64ListOperand : public ListOperand {

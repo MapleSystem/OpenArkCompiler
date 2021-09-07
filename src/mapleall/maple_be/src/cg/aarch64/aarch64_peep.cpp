@@ -1051,8 +1051,23 @@ void ContiLDRorSTRToSameMEMAArch64::Run(BB &bb, Insn &insn) {
     } else if (reg1.GetRegisterType() == kRegTyFloat) {
       newOp = (reg1.GetSize() <= k32BitSize) ? MOP_xvmovs : MOP_xvmovd;
     }
-    CG *cg = cgFunc.GetCG();
-    bb.InsertInsnAfter(*prevInsn, cg->BuildInstruction<AArch64Insn>(newOp, reg1, reg2));
+    Insn *nextInsn = insn.GetNext();
+    while (nextInsn != nullptr && !nextInsn->GetMachineOpcode() && nextInsn != bb.GetLastInsn()) {
+      nextInsn = nextInsn->GetNext();
+    }
+    bool moveSameReg = false;
+    if (nextInsn && nextInsn->GetIsSpill() && !IfOperandIsLiveAfterInsn(reg1, *nextInsn)) {
+      MOperator nextMop = nextInsn->GetMachineOpcode();
+      if ((thisMop == MOP_xldr && nextMop == MOP_xstr) || (thisMop == MOP_wldr && nextMop == MOP_wstr) ||
+          (thisMop == MOP_dldr && nextMop == MOP_dstr) || (thisMop == MOP_sldr && nextMop == MOP_sstr)) {
+        nextInsn->Insn::SetOperand(kInsnFirstOpnd, reg2);
+        moveSameReg = true;
+      }
+    }
+    if (moveSameReg == false) {
+      CG *cg = cgFunc.GetCG();
+      bb.InsertInsnAfter(*prevInsn, cg->BuildInstruction<AArch64Insn>(newOp, reg1, reg2));
+    }
     bb.RemoveInsn(insn);
   } else if (reg1.GetRegisterNumber() == reg2.GetRegisterNumber() &&
              base1->GetRegisterNumber() != reg2.GetRegisterNumber()) {
