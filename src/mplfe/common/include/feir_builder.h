@@ -82,6 +82,7 @@ class FEIRBuilder {
   static UniqueFEIRExpr CreateExprZExt(UniqueFEIRExpr srcExpr, PrimType dstType);
   static UniqueFEIRExpr CreateExprCvtPrim(UniqueFEIRVar srcVar, PrimType dstType);
   static UniqueFEIRExpr CreateExprCvtPrim(UniqueFEIRExpr srcExpr, PrimType dstType);
+  static UniqueFEIRExpr CreateExprCvtPrim(UniqueFEIRExpr srcExpr, PrimType srcType, PrimType dstType);
   static UniqueFEIRExpr CreateExprCvtPrim(Opcode argOp, UniqueFEIRExpr srcExpr, PrimType dstType);
   static UniqueFEIRExpr CreateExprJavaNewInstance(UniqueFEIRType type);
   static UniqueFEIRExpr CreateExprJavaNewInstance(UniqueFEIRType type, uint32 argTypeID);

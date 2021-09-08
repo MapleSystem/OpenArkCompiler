@@ -728,6 +728,10 @@ class FEIRExprTypeCvt : public FEIRExprUnary {
   static std::map<Opcode, bool> InitMapOpNestableForTypeCvt();
   static Opcode ChooseOpcodeByFromVarAndToVar(const FEIRVar &fromVar, const FEIRVar &toVar);
 
+  void SetSrcPrimType(PrimType pty) {
+    srcPrimType = pty;
+  }
+
  protected:
   std::unique_ptr<FEIRExpr> CloneImpl() const override;
   void RegisterDFGNodes2CheckPointImpl(FEIRStmtCheckPoint &checkPoint) override;
@@ -752,6 +756,7 @@ class FEIRExprTypeCvt : public FEIRExprUnary {
 
   static std::map<Opcode, bool> mapOpNestable;
   static std::map<Opcode, FuncPtrGenMIRNode> funcPtrMapForParseExpr;
+  PrimType srcPrimType = PTY_unknown;
 };  // FEIRExprTypeCvt
 
 // ---------- FEIRExprExtractBits ----------

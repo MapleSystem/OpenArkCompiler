@@ -2640,6 +2640,7 @@ FEIRExprTypeCvt::FEIRExprTypeCvt(std::unique_ptr<FEIRType> exprType, Opcode argO
 
 std::unique_ptr<FEIRExpr> FEIRExprTypeCvt::CloneImpl() const {
   std::unique_ptr<FEIRExpr> expr = std::make_unique<FEIRExprTypeCvt>(type->Clone(), op, opnd->Clone());
+  static_cast<FEIRExprTypeCvt*>(expr.get())->SetSrcPrimType(srcPrimType);
   return expr;
 }
 
@@ -2669,7 +2670,11 @@ BaseNode *FEIRExprTypeCvt::GenMIRNodeMode1(MIRBuilder &mirBuilder) const {
   MIRType *mirTypeDst =
       GlobalTables::GetTypeTable().GetTypeFromTyIdx(TyIdx(static_cast<uint32>(GetTypeRef().GetPrimType())));
   MIRType *mirTypeSrc = nullptr;
-  mirTypeSrc = GlobalTables::GetTypeTable().GetTypeFromTyIdx(TyIdx(static_cast<uint32>(opnd->GetPrimType())));
+  if (srcPrimType == PTY_unknown) {
+    mirTypeSrc = GlobalTables::GetTypeTable().GetTypeFromTyIdx(TyIdx(static_cast<uint32>(opnd->GetPrimType())));
+  } else {
+    mirTypeSrc = GlobalTables::GetTypeTable().GetTypeFromTyIdx(TyIdx(static_cast<uint32>(srcPrimType)));
+  }
   BaseNode *nodeOpnd = opnd->GenMIRNode(mirBuilder);
   BaseNode *expr = mirBuilder.CreateExprTypeCvt(op, *mirTypeDst, *mirTypeSrc, nodeOpnd);
   return expr;
