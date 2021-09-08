@@ -774,11 +774,13 @@ void VregRename::RenameSwitchRegionReg(RegOperand *ropnd, BB *headBB, const Mapl
   regno_t newRegno = cgFunc->NewVReg(ropnd->GetRegisterType(), size);
   RegOperand *renameVreg = &cgFunc->CreateVirtualRegisterOperand(newRegno);
   regno_t vreg = ropnd->GetRegisterNumber();
+  std::list<Insn *> insnList;
   for (auto bb : members) {
-    FOR_BB_INSNS(insn, bb) {
+    FOR_BB_INSNS_SAFE(insn, bb, nextI) {
       if (insn->IsImmaterialInsn() || !insn->IsMachineInstruction()) {
         continue;
       }
+      const AArch64MD *md = &AArch64CG::kMd[static_cast<AArch64Insn*>(insn)->GetMachineOpcode()];
       for (uint32 i = 0; i < insn->GetOperandSize(); ++i) {
         Operand *opnd = &insn->GetOperand(i);
         if (opnd->IsList()) {
@@ -803,6 +805,9 @@ void VregRename::RenameSwitchRegionReg(RegOperand *ropnd, BB *headBB, const Mapl
         } else if (opnd->IsRegister() && static_cast<RegOperand *>(opnd)->IsVirtualRegister() &&
                    static_cast<RegOperand *>(opnd)->GetRegisterNumber() == vreg) {
           insn->SetOperand(i, *renameVreg);
+          if (CGOptions::DoSwitchDefRename() && static_cast<AArch64OpndProp*>(md->GetOperand(i))->IsRegDef()) {
+            insnList.push_back(insn);
+          }
         }
       }
     }
@@ -818,6 +823,10 @@ void VregRename::RenameSwitchRegionReg(RegOperand *ropnd, BB *headBB, const Mapl
   } else {
     headBB->AppendInsn(newInsn);
   }
+  for (Insn *insn : insnList) {
+    Insn &newInsn = static_cast<AArch64CGFunc*>(cgFunc)->GetCG()->BuildInstruction<AArch64Insn>(mOp, *ropnd, *renameVreg);
+    insn->GetBB()->InsertInsnAfter(*insn, newInsn);
+  }
 }
 
 bool VregRename::RenameProfitableSwitchVreg(RegOperand *ropnd, BB *headBB, const MapleList<BB *> &members) {
@@ -826,17 +835,8 @@ bool VregRename::RenameProfitableSwitchVreg(RegOperand *ropnd, BB *headBB, const
   if (info == nullptr || info->inRegion.size() < 2) {
     return false;
   }
-  uint32 defCnt = 0;
-  uint32 useCnt = 0;
-  for (auto *bb : info->inRegion) {
-    if (info->regionHasDef.find(bb->GetId()) != info->regionHasDef.end()) {
-      defCnt += info->regionHasDef[bb->GetId()];
-    }
-    if (info->regionHasUse.find(bb->GetId()) != info->regionHasUse.end()) {
-      useCnt += info->regionHasUse[bb->GetId()];
-    }
-  }
-  if (defCnt > 0/* || useCnt < 100*/) {
+  if (!CGOptions::DoSwitchDefRename() && info->regionHasDef.find(headBB->GetId()) != info->regionHasDef.end() &&
+      info->regionHasDef[headBB->GetId()] > 0) {
     return false;
   }
   RenameSwitchRegionReg(ropnd, headBB, members);
@@ -846,8 +846,9 @@ bool VregRename::RenameProfitableSwitchVreg(RegOperand *ropnd, BB *headBB, const
 void VregRename::RegionFindVregForRename() {
   //std::cout << "numCases " << numCases << "\n";
   for (CaseMemberInfo *info = caseInfo; info != nullptr; info = info->next) {
+    bool renamed = false;
     for (auto *bb : info->members) {
-      FOR_BB_INSNS(insn, bb) {
+      FOR_BB_INSNS_SAFE(insn, bb, nextI) {
         if (insn->IsImmaterialInsn() || !insn->IsMachineInstruction()) {
           continue;
         }
@@ -859,17 +860,26 @@ void VregRename::RegionFindVregForRename() {
             MemOperand *memopnd = static_cast<MemOperand*>(opnd);
             RegOperand *base = static_cast<RegOperand*>(memopnd->GetBaseRegister());
             if (base != nullptr && base->IsVirtualRegister()) {
-              RenameProfitableSwitchVreg(base, info->head, info->members);
+              renamed = RenameProfitableSwitchVreg(base, info->head, info->members);
             }
             RegOperand *offset = static_cast<RegOperand*>(memopnd->GetIndexRegister());
             if (offset != nullptr && offset->IsVirtualRegister()) {
-              RenameProfitableSwitchVreg(offset, info->head, info->members);
+              renamed = RenameProfitableSwitchVreg(offset, info->head, info->members);
             }
           } else if (opnd->IsRegister() && static_cast<RegOperand *>(opnd)->IsVirtualRegister() &&
                      static_cast<RegOperand *>(opnd)->GetRegisterNumber() != ccRegno) {
-            RenameProfitableSwitchVreg(static_cast<RegOperand *>(opnd), info->head, info->members);
+            renamed = RenameProfitableSwitchVreg(static_cast<RegOperand *>(opnd), info->head, info->members);
+          }
+          if (renamed) {
+            break;
           }
         }
+        if (renamed) {
+          break;
+        }
+      }
+      if (renamed) {
+        break;
       }
     }
   }

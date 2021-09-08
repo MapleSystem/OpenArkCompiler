@@ -665,12 +665,15 @@ class CGOptions : public MapleDriverOptionBase {
   }
 
   /* The first two bits tells when to run rename
-   *   bit 1 : enable/disable rename before RA
-   *   bit 2 : enable/disable rename in RA
+   *   bit 1 (0x1) : enable/disable rename before RA
+   *   bit 2 (0x2) : enable/disable rename in RA
    *
    * The next two bits turns off either rename
-   *   bit 3 : disable loop rename
-   *   bit 4 : disable switch rename
+   *   bit 3 (0x4) : disable loop rename
+   *   bit 4 (0x8) : disable switch rename
+   *
+   * Next bit allows def in switch region
+   *   bit 5 (0x10) : enable/disable allowing rename def in switch
    */
   static void EnableVregRenameBeforeRA() {
     doVregRename |= 0x1;
@@ -697,6 +700,9 @@ class CGOptions : public MapleDriverOptionBase {
   }
   static bool DoSwitchRename() {
     return ((doVregRename & 0x8) == 0);
+  }
+  static bool DoSwitchDefRename() {
+    return ((doVregRename & 0x10) == 0x10);
   }
   static void SetVregRenameMode(uint8 mode) {
     if ((mode & 0x1) && (mode & 0x2)) {
