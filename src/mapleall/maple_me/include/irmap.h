@@ -65,6 +65,8 @@ class IRMap : public AnalysisResult {
   RegMeExpr *CreateRegMeExprVersion(const RegMeExpr &regx) {
     return CreateRegMeExprVersion(*regx.GetOst());
   }
+
+  ScalarMeExpr *CreateRegOrVarMeExprVersion(OStIdx ostIdx);
   RegMeExpr *CreateRegMeExpr(PrimType);
   RegMeExpr *CreateRegMeExpr(MIRType&);
   RegMeExpr *CreateRegMeExpr(const MeExpr &meexpr) {
