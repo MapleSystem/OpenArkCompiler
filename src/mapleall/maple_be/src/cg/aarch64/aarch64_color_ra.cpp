@@ -368,6 +368,13 @@ void GraphColorRegAllocator::InitFreeRegPool() {
       if (IsYieldPointReg(static_cast<AArch64reg>(regNO))) {
         continue;
       }
+      if (regNO == R29) {
+        if (!cgFunc->UseFP()) {
+          (void)intCalleeRegSet.insert(regNO - R0);
+          ++intNum;
+        }
+        continue;
+      }
       if (AArch64Abi::IsCalleeSavedReg(static_cast<AArch64reg>(regNO))) {
         (void)intCalleeRegSet.insert(regNO - R0);
       } else {
@@ -394,8 +401,8 @@ void GraphColorRegAllocator::InitCCReg() {
 }
 
 bool GraphColorRegAllocator::IsUnconcernedReg(regno_t regNO) const {
-  /* RFP = 30, RLR = 31, RSP = 32, RZR = 33 */
-  if ((regNO >= RFP && regNO <= RZR) || regNO == ccReg) {
+  /* RFP = 32, RLR = 31, RSP = 33, RZR = 34 */
+  if ((regNO >= RLR && regNO <= RZR) || regNO == RFP || regNO == ccReg) {
     return true;
   }
 
@@ -1035,15 +1042,24 @@ bool GraphColorRegAllocator::IsLocalReg(LiveRange &lr) const {
   return !lr.GetSplitLr() && (lr.GetNumBBMembers() == 1) && !lr.IsNonLocal();
 }
 
-bool GraphColorRegAllocator::CheckOverlap(uint64 val, uint32 &lastBitSet, uint32 &overlapNum, uint32 i) const {
-  if (val == 0) {
-    return false;
-  }
+bool GraphColorRegAllocator::CheckOverlap(uint64 val, uint32 i, LiveRange &lr1, LiveRange &lr2) const {
+  regno_t lr1RegNO = lr1.GetRegNO();
+  regno_t lr2RegNO = lr2.GetRegNO();
   for (uint32 x = 0; x < kU64; ++x) {
     if ((val & (1ULL << x)) != 0) {
-      ++overlapNum;
-      lastBitSet = i * kU64 + x;
-      if (overlapNum > 1) {
+      uint32 lastBitSet = i * kU64 + x;
+      /*
+       * begin and end should be in the bb info (LU)
+       * Need to rethink this if.
+       * Under some circumstance, lr->begin can occur after lr->end.
+       */
+      auto lu1 = lr1.FindInLuMap(lastBitSet);
+      auto lu2 = lr2.FindInLuMap(lastBitSet);
+      if (lu1 != lr1.EndOfLuMap() && lu2 != lr2.EndOfLuMap() &&
+          !((lu1->second->GetBegin() < lu2->second->GetBegin() && lu1->second->GetEnd() < lu2->second->GetBegin()) ||
+            (lu2->second->GetBegin() < lu1->second->GetEnd() && lu2->second->GetEnd() < lu1->second->GetBegin()))) {
+        lr1.SetConflictBitArrElem(lr2RegNO);
+        lr2.SetConflictBitArrElem(lr1RegNO);
         return true;
       }
     }
@@ -1057,34 +1073,14 @@ void GraphColorRegAllocator::CheckInterference(LiveRange &lr1, LiveRange &lr2) c
     bitArr[i] = lr1.GetBBMember()[i] & lr2.GetBBMember()[i];
   }
 
-  uint32 lastBitSet = 0;
-  uint32 overlapNum = 0;
   for (uint32 i = 0; i < bbBuckets; ++i) {
     uint64 val = bitArr[i];
-    if (CheckOverlap(val, lastBitSet, overlapNum, i)) {
+    if (val == 0) {
+      continue;
+    }
+    if (CheckOverlap(val, i, lr1, lr2)) {
       break;
     }
-  }
-  regno_t lr1RegNO = lr1.GetRegNO();
-  regno_t lr2RegNO = lr2.GetRegNO();
-  if (overlapNum == 1) {
-    /*
-     * begin and end should be in the bb info (LU)
-     * Need to rethink this if.
-     * Under some circumstance, lr->begin can occur after lr->end.
-     */
-    auto lu1 = lr1.FindInLuMap(lastBitSet);
-    auto lu2 = lr2.FindInLuMap(lastBitSet);
-    if (lu1 != lr1.EndOfLuMap() && lu2 != lr2.EndOfLuMap() &&
-        !((lu1->second->GetBegin() < lu2->second->GetBegin() && lu1->second->GetEnd() < lu2->second->GetBegin()) ||
-          (lu2->second->GetBegin() < lu1->second->GetEnd() && lu2->second->GetEnd() < lu1->second->GetBegin()))) {
-      lr1.SetConflictBitArrElem(lr2RegNO);
-      lr2.SetConflictBitArrElem(lr1RegNO);
-    }
-  } else if (overlapNum != 0) {
-    /* interfere */
-    lr1.SetConflictBitArrElem(lr2RegNO);
-    lr2.SetConflictBitArrElem(lr1RegNO);
   }
 }
 
@@ -1235,7 +1231,11 @@ void GraphColorRegAllocator::Separate() {
     } else if (lr->IsMustAssigned()) {
       mustAssigned.emplace_back(lr);
     } else {
-      constrained.emplace_back(lr);
+      if (lr->GetPrefs().size() && lr->GetNumCall() == 0) {
+        unconstrainedPref.emplace_back(lr);
+      } else {
+        constrained.emplace_back(lr);
+      }
     }
   }
   if (GCRA_DUMP) {
@@ -2058,7 +2058,7 @@ void GraphColorRegAllocator::ColorForOptPrologEpilog() {
  *
  *  Color the unconstrained LRs.
  */
-void GraphColorRegAllocator::SplitAndColorForEachLr(MapleVector<LiveRange*> &targetLrVec, bool isConstrained) {
+void GraphColorRegAllocator::SplitAndColorForEachLr(MapleVector<LiveRange*> &targetLrVec) {
   while (!targetLrVec.empty()) {
     auto highestIt = GetHighPriorityLr(targetLrVec);
     LiveRange *lr = *highestIt;
@@ -2070,10 +2070,6 @@ void GraphColorRegAllocator::SplitAndColorForEachLr(MapleVector<LiveRange*> &tar
     }
     if (AssignColorToLr(*lr)) {
       continue;
-    }
-    if (!isConstrained) {
-      ASSERT(false, "unconstrained lr should be colorable");
-      LogInfo::MapleLogger() << "error: LR should be colorable " << lr->GetRegNO() << "\n";
     }
 #ifdef USE_SPLIT
     SplitLr(*lr);
@@ -2095,16 +2091,16 @@ void GraphColorRegAllocator::SplitAndColorForEachLr(MapleVector<LiveRange*> &tar
 
 void GraphColorRegAllocator::SplitAndColor() {
   /* handle mustAssigned */
-  SplitAndColorForEachLr(mustAssigned, true);
+  SplitAndColorForEachLr(mustAssigned);
+
+  /* assign color for unconstained */
+  SplitAndColorForEachLr(unconstrainedPref);
 
   /* handle constrained */
-  SplitAndColorForEachLr(constrained, true);
+  SplitAndColorForEachLr(constrained);
 
   /* assign color for unconstained */
-  SplitAndColorForEachLr(unconstrainedPref, false);
-
-  /* assign color for unconstained */
-  SplitAndColorForEachLr(unconstrained, false);
+  SplitAndColorForEachLr(unconstrained);
 
 #ifdef OPTIMIZE_FOR_PROLOG
   if (doOptProlog) {
@@ -2196,7 +2192,7 @@ void GraphColorRegAllocator::HandleLocalRaDebug(regno_t regNO, const LocalRegAll
   LogInfo::MapleLogger() << "\tregUsed:";
   uint64 regUsed = localRa.GetPregUsed(isInt);
   regno_t base = isInt ? R0 : V0;
-  regno_t end = isInt ? (RFP - R0) : (V31 - V0);
+  regno_t end = isInt ? (RLR - R0) : (V31 - V0);
 
   for (uint32 i = 0; i <= end; ++i) {
     if ((regUsed & (1ULL << i)) != 0) {
@@ -2688,9 +2684,6 @@ MemOperand *GraphColorRegAllocator::GetSpillOrReuseMem(LiveRange &lr, uint32 reg
       }
       ASSERT(baseRegNO != kRinvalid, "invalid base register number");
       memOpnd = GetSpillMem(lr.GetRegNO(), isDef, insn, static_cast<AArch64reg>(baseRegNO), isOutOfRange);
-      if (!isOutOfRange) {
-        (static_cast<AArch64MemOperand*>(memOpnd))->SetIsSpillMem();
-      }
       /* dest's spill reg can only be R15 and R16 () */
       if (isOutOfRange && isDef) {
         ASSERT(lr.GetSpillReg() != R16, "can not find valid memopnd's base register");
@@ -2739,6 +2732,7 @@ Insn *GraphColorRegAllocator::SpillOperand(Insn &insn, const Operand &opnd, bool
     lr->SetSpillReg(pregNO);
     MemOperand *memOpnd = GetSpillOrReuseMem(*lr, regSize, isOutOfRange, insn, forCall ? false : true);
     spillDefInsn = &cg->BuildInstruction<AArch64Insn>(a64CGFunc->PickStInsn(regSize, stype), phyOpnd, *memOpnd);
+    spillDefInsn->SetIsSpill();
     std::string comment = " SPILL vreg: " + std::to_string(regNO);
     if (isForCallerSave) {
       comment += " for caller save in BB " + std::to_string(insn.GetBB()->GetId());
@@ -2761,6 +2755,7 @@ Insn *GraphColorRegAllocator::SpillOperand(Insn &insn, const Operand &opnd, bool
   lr->SetSpillReg(pregNO);
   MemOperand *memOpnd = GetSpillOrReuseMem(*lr, regSize, isOutOfRange, insn, forCall ? true : false);
   Insn &spillUseInsn = cg->BuildInstruction<AArch64Insn>(a64CGFunc->PickLdInsn(regSize, stype), phyOpnd, *memOpnd);
+  spillUseInsn.SetIsReload();
   std::string comment = " RELOAD vreg: " + std::to_string(regNO);
   if (isForCallerSave) {
     comment += " for caller save in BB " + std::to_string(insn.GetBB()->GetId());
@@ -3452,9 +3447,6 @@ RegOperand *GraphColorRegAllocator::CreateSpillFillCode(RegOperand &opnd, Insn &
     loadmem = a64cgfunc->AdjustMemOperandIfOffsetOutOfRange(loadmem, vregno, isdef, insn, R9, isOutOfRange);
     PrimType pty = (lr->GetRegType() == kRegTyInt) ? ((bits > k32BitSize) ? PTY_i64 : PTY_i32)
                                               : ((bits > k32BitSize) ? PTY_f64 : PTY_f32);
-    if (!isOutOfRange) {
-      (static_cast<AArch64MemOperand*>(loadmem))->SetIsSpillMem();
-    }
     regno_t spreg = 0;
     RegType rtype = lr->GetRegType();
     CHECK_FATAL(spillCnt < kSpillMemOpndNum, "spill count exceeded");
@@ -3464,6 +3456,7 @@ RegOperand *GraphColorRegAllocator::CreateSpillFillCode(RegOperand &opnd, Insn &
     Insn *memInsn;
     if (isdef) {
       memInsn = &cg->BuildInstruction<AArch64Insn>(a64cgfunc->PickStInsn(bits, pty), *regopnd, *loadmem);
+      memInsn->SetIsSpill();
       std::string comment = " SPILLcolor vreg: " + std::to_string(vregno);
       memInsn->SetComment(comment);
       if (isOutOfRange) {
@@ -3473,6 +3466,7 @@ RegOperand *GraphColorRegAllocator::CreateSpillFillCode(RegOperand &opnd, Insn &
       }
     } else {
       memInsn = &cg->BuildInstruction<AArch64Insn>(a64cgfunc->PickLdInsn(bits, pty), *regopnd, *loadmem);
+      memInsn->SetIsReload();
       std::string comment = " RELOADcolor vreg: " + std::to_string(vregno);
       memInsn->SetComment(comment);
       insn.GetBB()->InsertInsnBefore(insn, *memInsn);
@@ -4150,7 +4144,8 @@ bool GraphColorRegAllocator::AllocateRegisters() {
   auto *a64CGFunc = static_cast<AArch64CGFunc*>(cgFunc);
 
   if (GCRA_DUMP && doMultiPass) {
-    LogInfo::MapleLogger() << "round start: \n";
+    LogInfo::MapleLogger() << "\n round start: \n";
+    cgFunc->DumpCGIR();
   }
   /*
    * we store both FP/LR if using FP or if not using FP, but func has a call

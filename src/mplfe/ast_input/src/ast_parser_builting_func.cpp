@@ -403,6 +403,10 @@ UniqueFEIRExpr ASTCallExpr::EmitBuiltinReturnAddress(std::list<UniqueFEIRStmt> &
   return CreateIntrinsicopForC(stmts, INTRN_C__builtin_return_address);
 }
 
+UniqueFEIRExpr ASTCallExpr::EmitBuiltinExtractReturnAddr(std::list<UniqueFEIRStmt> &stmts) const {
+  return CreateIntrinsicopForC(stmts, INTRN_C__builtin_extract_return_addr);
+}
+
 UniqueFEIRExpr ASTCallExpr::EmitBuiltinAlloca(std::list<UniqueFEIRStmt> &stmts) const {
   auto arg = args[0]->Emit2FEExpr(stmts);
   auto alloca = std::make_unique<FEIRExprUnary>(OP_alloca, mirType, std::move(arg));

@@ -510,9 +510,9 @@ MeExpr *Prop::RehashUsingInverse(MeExpr *x) {
                           naryx->GetNumOpnds(), naryx->GetTyIdx(), naryx->GetIntrinsic(), naryx->GetBoundCheck());
       for (i = 0; i < naryx->GetNumOpnds(); i++) {
         if (results[i] != nullptr) {
-          newnaryx.SetOpnd(i, results[i]);
+          newnaryx.PushOpnd(results[i]);
         } else {
-          newnaryx.SetOpnd(i, naryx->GetOpnd(i));
+          newnaryx.PushOpnd(naryx->GetOpnd(i));
         }
       }
       return irMap.HashMeExpr(newnaryx);
@@ -621,7 +621,7 @@ MeExpr *Prop::CheckTruncation(MeExpr *lhs, MeExpr *rhs) const {
 // return varMeExpr itself if no propagation opportunity
 MeExpr &Prop::PropVar(VarMeExpr &varMeExpr, bool atParm, bool checkPhi) {
   const MIRSymbol *st = varMeExpr.GetOst()->GetMIRSymbol();
-  if (st->IsInstrumented() || varMeExpr.IsVolatile() || st->GetAttr(ATTR_oneelem_simd)) {
+  if (st->IsInstrumented() || varMeExpr.IsVolatile() || varMeExpr.GetOst()->HasOneElemSimdAttr()) {
     return varMeExpr;
   }
 

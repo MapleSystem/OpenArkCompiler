@@ -473,14 +473,14 @@ bool HDSE::HasNonDeletableExpr(const MeStmt &meStmt) const {
   }
 }
 
-void HDSE::MarkLastUnconditionalGotoInPredBBRequired(const BB &bb) {
+void HDSE::MarkLastBranchStmtInPredBBRequired(const BB &bb) {
   for (auto predIt = bb.GetPred().begin(); predIt != bb.GetPred().end(); ++predIt) {
     BB *predBB = *predIt;
     if (predBB == &bb || predBB->GetMeStmts().empty()) {
       continue;
     }
     auto &lastStmt = predBB->GetMeStmts().back();
-    if (!lastStmt.GetIsLive() && lastStmt.GetOp() == OP_goto) {
+    if (!lastStmt.GetIsLive() && IsBranch(lastStmt.GetOp())) {
       MarkStmtRequired(lastStmt);
     }
   }
@@ -529,7 +529,7 @@ void HDSE::MarkControlDependenceLive(BB &bb) {
 
   MarkLastBranchStmtInBBRequired(bb);
   MarkLastStmtInPDomBBRequired(bb);
-  MarkLastUnconditionalGotoInPredBBRequired(bb);
+  MarkLastBranchStmtInPredBBRequired(bb);
 }
 
 void HDSE::MarkSingleUseLive(MeExpr &meExpr) {

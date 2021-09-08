@@ -39,7 +39,7 @@ bool AArch64RegOperand::IsSaveReg(MIRType &type, BECommon &beCommon) const {
 }
 
 bool AArch64RegOperand::IsSPOrFP() const {
-  return (IsPhysicalRegister() && (regNO == RSP || regNO == RFP));
+  return (IsPhysicalRegister() && (regNO == RSP || regNO == RFP || (regNO == R29 && CGOptions::UseFramePointer())));
 }
 
 bool AArch64RegOperand::operator==(const AArch64RegOperand &o) const {

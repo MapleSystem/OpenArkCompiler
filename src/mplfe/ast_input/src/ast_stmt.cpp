@@ -76,6 +76,7 @@ std::list<UniqueFEIRStmt> ASTCompoundStmt::Emit2FEStmtImpl() const {
   return stmts;
 }
 
+// ---------- ASTReturnStmt ----------
 std::list<UniqueFEIRStmt> ASTReturnStmt::Emit2FEStmtImpl() const {
   std::list<UniqueFEIRStmt> stmts;
   auto astExpr = exprs.front();
@@ -86,6 +87,7 @@ std::list<UniqueFEIRStmt> ASTReturnStmt::Emit2FEStmtImpl() const {
   return stmts;
 }
 
+// ---------- ASTIfStmt ----------
 std::list<UniqueFEIRStmt> ASTIfStmt::Emit2FEStmtImpl() const {
   std::list<UniqueFEIRStmt> stmts;
   std::list<UniqueFEIRStmt> thenStmts;

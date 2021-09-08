@@ -564,7 +564,7 @@ void AArch64DepAnalysis::BuildCallerSavedDeps(Insn &insn) {
     for (uint32 i = R8; i <= R18; ++i) {
       BuildDepsDefReg(insn, i);
     }
-    for (uint32 i = R29; i <= RSP; ++i) {
+    for (uint32 i = RLR; i <= RSP; ++i) {
       BuildDepsUseReg(insn, i);
     }
     for (uint32 i = V16; i <= V31; ++i) {

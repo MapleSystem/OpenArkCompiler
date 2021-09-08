@@ -409,7 +409,7 @@ std::vector<Insn*> AArch64ReachingDefinition::FindMemDefBetweenInsn(
           break;
         }
 
-        if (!memOpnd.IsSpillMem() && cgFunc->IsAfterRegAlloc()) {
+        if (!insn->IsSpillInsn() && cgFunc->IsAfterRegAlloc()) {
           break;
         }
 

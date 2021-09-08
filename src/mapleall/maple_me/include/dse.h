@@ -103,7 +103,7 @@ class DSE {
     exprRequired[symbol.GetIndex()] = true;
   }
 
-  void AddToWorkList(const utils::SafePtr<const VersionSt> &symbol) {
+  void AddToWorkList(const VersionSt *symbol) {
     workList.push_front(symbol);
   }
 
@@ -126,7 +126,7 @@ class DSE {
   const AliasClass *aliasInfo;
   std::vector<bool> bbRequired;
   std::vector<bool> exprRequired;
-  std::forward_list<utils::SafePtr<const VersionSt>> workList{};
+  std::forward_list<const VersionSt*> workList{};
   std::unordered_map<StmtNode*, std::vector<BaseNode*>> stmt2NotNullExpr;
   std::unordered_map<BaseNode*, std::vector<std::pair<StmtNode*, BB*>>> notNullExpr2Stmt;
   bool cfgUpdated = false;

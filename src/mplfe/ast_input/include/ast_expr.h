@@ -1212,6 +1212,7 @@ class ASTCallExpr : public ASTExpr {
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(SyncLockRelease8);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(SyncLockRelease4);
   UniqueFEIRExpr EMIT_BUILTIIN_FUNC(ReturnAddress);
+  UniqueFEIRExpr EMIT_BUILTIIN_FUNC(ExtractReturnAddr);
 
 // vector builtinfunc
 #define DEF_MIR_INTRINSIC(STR, NAME, INTRN_CLASS, RETURN_TYPE, ...)         \

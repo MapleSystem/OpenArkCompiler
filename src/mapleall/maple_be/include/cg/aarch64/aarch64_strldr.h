@@ -42,7 +42,10 @@ class AArch64StoreLoadOpt : public StoreLoadOpt {
     kPropShift
   };
  private:
+  bool CheckReplaceReg(Insn &defInsn, Insn &currInsn, InsnSet &replaceRegDefSet, regno_t replaceRegNo);
   bool CheckDefInsn(Insn &defInsn, Insn &currInsn);
+  bool CheckNewAmount(Insn &insn, uint32 newAmount);
+  bool CheckNewMemOffset(Insn &insn, AArch64MemOperand *newMemOpnd, uint32 opndIdx);
   AArch64MemOperand *SelectReplaceMem(Insn &defInsn, RegOperand &base, Operand *offset);
   bool CanDoMemProp(Insn *insn);
   void MemPropInit();
@@ -62,6 +65,7 @@ class AArch64StoreLoadOpt : public StoreLoadOpt {
   MapleMap<Insn*, Insn*[kMaxMovNum]> str2MovMap;
   MemPropMode propMode = kUndef;
   uint32 amount = 0;
+  bool removeDefInsn = false;
 };
 }  /* namespace maplebe */
 

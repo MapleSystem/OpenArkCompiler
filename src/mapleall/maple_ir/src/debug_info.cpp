@@ -16,12 +16,12 @@
 #include "mir_builder.h"
 #include "printing.h"
 #include "maple_string.h"
-#include "namemangler.h"
 #include "global_tables.h"
 #include "mir_type.h"
 #include <cstring>
 #include "securec.h"
 #include "mpl_logging.h"
+#include "version.h"
 
 namespace maple {
 extern const char *GetDwTagName(unsigned n);
@@ -234,12 +234,15 @@ void DebugInfo::Init() {
   compUnit = module->GetMemPool()->New<DBGDie>(module, DW_TAG_compile_unit);
   module->SetWithDbgInfo(true);
   ResetParentDie();
+  if (module->GetSrcLang() == kSrcLangC) {
+    varPtrPrefix = "";
+  }
 }
 
 void DebugInfo::SetupCU() {
   compUnit->SetWithChildren(true);
   /* Add the Producer (Compiler) Information */
-  const char *producer = "Maple Version 0.5.0 (tags/RELEASE-xxx/final)";
+  const char *producer = strdup((std::string("Maple Version ") + Version::GetVersionStr()).c_str());
   GStrIdx strIdx = module->GetMIRBuilder()->GetOrCreateStringIndex(producer);
   compUnit->AddAttr(DW_AT_producer, DW_FORM_strp, strIdx.GetIdx());
 
@@ -330,7 +333,8 @@ void DebugInfo::BuildDebugInfo() {
 
   for (size_t i = 0; i < GlobalTables::GetGsymTable().GetSymbolTableSize(); ++i) {
     MIRSymbol *mirSymbol = GlobalTables::GetGsymTable().GetSymbolFromStidx(i);
-    if (mirSymbol == nullptr || mirSymbol->IsDeleted() || mirSymbol->GetStorageClass() == kScUnused) {
+    if (mirSymbol == nullptr || mirSymbol->IsDeleted() || mirSymbol->GetStorageClass() == kScUnused ||
+        mirSymbol->GetStorageClass() == kScExtern) {
       continue;
     }
     if (module->IsCModule() && mirSymbol->IsGlobal() && mirSymbol->IsVar()) {
@@ -490,7 +494,7 @@ DBGDie *DebugInfo::CreateVarDie(MIRSymbol *sym) {
     // global var just use its name as address in .s
     uint64 idx = sym->GetNameStrIdx().GetIdx();
     if ((sym->IsReflectionClassInfo() && !sym->IsReflectionArrayClassInfo()) || sym->IsStatic()) {
-      std::string ptrName = std::string(namemangler::kPtrPrefixStr) + sym->GetName();
+      std::string ptrName = varPtrPrefix + sym->GetName();
       idx = GlobalTables::GetStrTable().GetOrCreateStrIdxFromName(ptrName).GetIdx();
     }
     die->AddGlobalLocAttr(DW_AT_location, DW_FORM_exprloc, idx);
