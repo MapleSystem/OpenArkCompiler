@@ -262,6 +262,10 @@ class CG {
     return cgOption.DoPatchLongBranch();
   }
 
+  uint8 GetRematLevel() const {
+    return cgOption.GetRematLevel();
+  }
+
   bool GenYieldPoint() const {
     return cgOption.GenYieldPoint();
   }

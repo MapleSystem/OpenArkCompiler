@@ -362,7 +362,7 @@ class AArch64CGFunc : public CGFunc {
                                   PrimType targetType);
 
   MemOperand &GetOrCreateMemOpnd(const MIRSymbol &symbol, int32 offset, uint32 size, bool forLocalRef = false,
-                                 bool needLow12 = false);
+                                 bool needLow12 = false, AArch64RegOperand *regOp = nullptr);
 
   AArch64MemOperand &GetOrCreateMemOpnd(AArch64MemOperand::AArch64AddressingMode, uint32, RegOperand*, RegOperand*,
                                         OfstOperand*, const MIRSymbol*);
@@ -589,6 +589,8 @@ class AArch64CGFunc : public CGFunc {
   }
 
   void InsertJumpPad(Insn *insn) override;
+
+  MIRPreg *GetPseudoRegFromVirtualRegNO(const regno_t vRegNO) const;
 
  private:
   enum RelationOperator : uint8 {
