@@ -3497,6 +3497,7 @@ bool CGLowerer::IsIntrinsicOpHandledAtLowerLevel(MIRIntrinsicID intrinsic) {
   case INTRN_C___sync_lock_release_8:
   case INTRN_C___sync_lock_release_4:
   case INTRN_C__builtin_return_address:
+  case INTRN_C__builtin_extract_return_addr:
     return true;
 #endif
   default:

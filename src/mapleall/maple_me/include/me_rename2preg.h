@@ -20,10 +20,11 @@
 namespace maple {
 class SSARename2Preg {
  public:
-  SSARename2Preg(MemPool *mp, MeFunction *f, MeIRMap *hmap, AliasClass *alias)
+  SSARename2Preg(MemPool *mp, MeFunction *f, MeIRMap *hmap, Dominance *domTree, AliasClass *alias)
       : alloc(mp),
         func(f),
         meirmap(hmap),
+        dom(domTree),
         ssaTab(f->GetMeSSATab()),
         mirModule(&f->GetMIRModule()),
         aliasclass(alias),
@@ -32,8 +33,9 @@ class SSARename2Preg {
         parm_used_vec(alloc.Adapter()),
         reg_formal_vec(alloc.Adapter()),
         ostDefedByChi(ssaTab->GetOriginalStTableSize(), false, alloc.Adapter()),
-        ostUsedByMu(ssaTab->GetOriginalStTableSize(), false, alloc.Adapter()),
-        ostUsedByDread(ssaTab->GetOriginalStTableSize(), false, alloc.Adapter()) {}
+        ostDefedByDassign(ssaTab->GetOriginalStTableSize(), false, alloc.Adapter()),
+        ostUsedByDread(ssaTab->GetOriginalStTableSize(), false, alloc.Adapter()),
+        candsForSSAUpdate(alloc.Adapter()) {}
 
   void RunSelf();
   void PromoteEmptyFunction();
@@ -66,6 +68,7 @@ class SSARename2Preg {
   MapleAllocator alloc;
   MeFunction *func;
   MeIRMap *meirmap;
+  Dominance *dom;
   SSATab *ssaTab;
   MIRModule *mirModule;
   AliasClass *aliasclass;
@@ -75,8 +78,9 @@ class SSARename2Preg {
   // if the parameter got promoted, the nth of func->mirFunc->_formal is the nth of reg_formal_vec, otherwise nullptr;
   MapleVector<RegMeExpr *> reg_formal_vec;
   MapleVector<bool> ostDefedByChi;
-  MapleVector<bool> ostUsedByMu;
+  MapleVector<bool> ostDefedByDassign;
   MapleVector<bool> ostUsedByDread;
+  MapleMap<OStIdx, MapleSet<BBId>*> candsForSSAUpdate;
  public:
   uint32 rename2pregCount = 0;
 };
