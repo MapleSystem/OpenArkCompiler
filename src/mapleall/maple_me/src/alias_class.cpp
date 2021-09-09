@@ -302,7 +302,10 @@ AliasInfo AliasClass::CreateAliasElemsExpr(BaseNode &expr) {
       if (iread.GetFieldID() > 0) {
         typeOfField = static_cast<MIRStructType *>(typeOfField)->GetFieldType(iread.GetFieldID());
       }
-      bool typeHasBeenCasted = (typeOfField->GetSize() != GetPrimTypeSize(iread.GetPrimType()));
+      bool typeHasBeenCasted = false;
+      if (!IsPrimitiveScalar(typeOfField->GetPrimType()) || !IsPrimitiveScalar(iread.GetPrimType())) {
+        typeHasBeenCasted = (typeOfField->GetSize() != GetPrimTypeSize(iread.GetPrimType()));
+      }
       return AliasInfo(FindOrCreateExtraLevAliasElem(
           *iread.Opnd(0), iread.GetTyIdx(), iread.GetFieldID(), typeHasBeenCasted), 0, OffsetType(0));
     }
@@ -558,6 +561,19 @@ void AliasClass::SetPtrOpndNextLevNADS(const BaseNode &opnd, AliasElem *aliasEle
       !(hasNoPrivateDefEffect && aliasElem->GetOriginalSt().IsPrivate()) &&
       !(opnd.GetOpCode() == OP_addrof && IsReadOnlyOst(aliasElem->GetOriginalSt()))) {
     aliasElem->SetNextLevNotAllDefsSeen(true);
+
+    auto &ost = aliasElem->GetOriginalSt();
+    auto *prevLevOst = ost.GetPrevLevelOst();
+    if (ost.GetOffset().IsInvalid() && prevLevOst != nullptr) {
+      for (auto *mayValueAliasOst : prevLevOst->GetNextLevelOsts()) {
+        if (!IsPotentialAddress(mayValueAliasOst->GetType()->GetPrimType(), &mirModule)) {
+          continue;
+        }
+        auto *ae = FindOrCreateAliasElem(*mayValueAliasOst);
+        ae->SetNextLevNotAllDefsSeen(true);
+        unionFind.Union(aliasElem->GetClassID(), ae->GetClassID());
+      }
+    }
   }
   if (opnd.GetOpCode() == OP_cvt) {
     SetPtrOpndNextLevNADS(*opnd.Opnd(0), aliasElem, hasNoPrivateDefEffect);
@@ -1513,11 +1529,6 @@ bool AliasClass::MayAliasBasicAA(const OriginalSt *ostA, const OriginalSt *ostB)
   // different zero-level-var not alias each other
   if (ostA->GetMIRSymbol() != ostB->GetMIRSymbol()) {
     return false;
-  }
-
-  // field of union alias with each other
-  if (ostA->GetMIRSymbol()->GetType()->GetKind() == kTypeUnion) {
-    return true;
   }
 
   // alias analysis based on offset, currently only valid for array-element.

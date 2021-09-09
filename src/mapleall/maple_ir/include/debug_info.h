@@ -21,6 +21,7 @@
 #include "types_def.h"
 #include "prim_types.h"
 #include "mir_nodes.h"
+#include "namemangler.h"
 #include "lexer.h"
 #include "Dwarf.h"
 
@@ -564,6 +565,7 @@ class DebugInfo {
     /* valid entry starting from index 1 as abbrevid starting from 1 as well */
     abbrevVec.push_back(nullptr);
     InitMsg();
+    varPtrPrefix = std::string(namemangler::kPtrPrefixStr);
   }
 
   virtual ~DebugInfo() {}
@@ -745,6 +747,7 @@ class DebugInfo {
   MapleMap<MIRFunction *, std::map<uint32, uint32>> funcLstrIdxDieIdMap;
   MapleMap<MIRFunction *, std::map<uint32, LabelIdx>> funcLstrIdxLabIdxMap;
   MapleSet<uint32> strps;
+  std::string varPtrPrefix;
 };
 } // namespace maple
 #endif // MAPLE_IR_INCLUDE_DBG_INFO_H

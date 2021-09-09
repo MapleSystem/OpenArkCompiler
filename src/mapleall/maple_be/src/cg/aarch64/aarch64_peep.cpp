@@ -176,6 +176,7 @@ void AArch64PeepHole0::InitOpts() {
   optimizations[kCmpCsetOpt] = optOwnMemPool->New<CmpCsetAArch64>(cgFunc);
   optimizations[kComplexMemOperandOptAdd] = optOwnMemPool->New<ComplexMemOperandAddAArch64>(cgFunc);
   optimizations[kDeleteMovAfterCbzOrCbnzOpt] = optOwnMemPool->New<DeleteMovAfterCbzOrCbnzAArch64>(cgFunc);
+  optimizations[kRemoveSxtBeforeStrOpt] = optOwnMemPool->New<RemoveSxtBeforeStrAArch64>(cgFunc);
 }
 
 void AArch64PeepHole0::Run(BB &bb, Insn &insn) {
@@ -200,6 +201,11 @@ void AArch64PeepHole0::Run(BB &bb, Insn &insn) {
     case MOP_wcbnz:
     case MOP_xcbnz: {
       (static_cast<DeleteMovAfterCbzOrCbnzAArch64*>(optimizations[kDeleteMovAfterCbzOrCbnzOpt]))->Run(bb, insn);
+      break;
+    }
+    case MOP_wstrh:
+    case MOP_wstrb: {
+      (static_cast<RemoveSxtBeforeStrAArch64*>(optimizations[kRemoveSxtBeforeStrOpt]))->Run(bb, insn);
       break;
     }
     default:
@@ -503,7 +509,9 @@ void CombineContiLoadAndStoreAArch64::Run(BB &bb, Insn &insn) {
     return;
   }
 
-  if (reg1.GetSize() != memOpnd1.GetSize() || reg2.GetSize() != memOpnd2.GetSize()) {
+  uint32 memSize1 = static_cast<const AArch64Insn&>(insn).GetLoadStoreSize();
+  uint32 memSize2 = static_cast<const AArch64Insn&>(*nextInsn).GetLoadStoreSize();
+  if (memSize1 != memSize2) {
     return;
   }
 
@@ -707,7 +715,7 @@ void EliminateSpecifcUXTAArch64::Run(BB &bb, Insn &insn) {
         prevInsn->GetMachineOpcode() == MOP_wldrb || prevInsn->GetMachineOpcode() == MOP_wldrsh ||
         prevInsn->GetMachineOpcode() == MOP_wldrh || prevInsn->GetMachineOpcode() == MOP_wldr) {
       auto &dstOpnd = static_cast<RegOperand&>(prevInsn->GetOperand(kInsnFirstOpnd));
-      if (dstOpnd.GetRegisterNumber() != regOpnd1.GetRegisterNumber()) {
+      if (!IsSameRegisterOperation(dstOpnd, regOpnd1, regOpnd0)) {
         return;
       }
       /* 32-bit ldr does zero-extension by default, so this conversion can be skipped */
@@ -1043,8 +1051,23 @@ void ContiLDRorSTRToSameMEMAArch64::Run(BB &bb, Insn &insn) {
     } else if (reg1.GetRegisterType() == kRegTyFloat) {
       newOp = (reg1.GetSize() <= k32BitSize) ? MOP_xvmovs : MOP_xvmovd;
     }
-    CG *cg = cgFunc.GetCG();
-    bb.InsertInsnAfter(*prevInsn, cg->BuildInstruction<AArch64Insn>(newOp, reg1, reg2));
+    Insn *nextInsn = insn.GetNext();
+    while (nextInsn != nullptr && !nextInsn->GetMachineOpcode() && nextInsn != bb.GetLastInsn()) {
+      nextInsn = nextInsn->GetNext();
+    }
+    bool moveSameReg = false;
+    if (nextInsn && nextInsn->GetIsSpill() && !IfOperandIsLiveAfterInsn(reg1, *nextInsn)) {
+      MOperator nextMop = nextInsn->GetMachineOpcode();
+      if ((thisMop == MOP_xldr && nextMop == MOP_xstr) || (thisMop == MOP_wldr && nextMop == MOP_wstr) ||
+          (thisMop == MOP_dldr && nextMop == MOP_dstr) || (thisMop == MOP_sldr && nextMop == MOP_sstr)) {
+        nextInsn->Insn::SetOperand(kInsnFirstOpnd, reg2);
+        moveSameReg = true;
+      }
+    }
+    if (moveSameReg == false) {
+      CG *cg = cgFunc.GetCG();
+      bb.InsertInsnAfter(*prevInsn, cg->BuildInstruction<AArch64Insn>(newOp, reg1, reg2));
+    }
     bb.RemoveInsn(insn);
   } else if (reg1.GetRegisterNumber() == reg2.GetRegisterNumber() &&
              base1->GetRegisterNumber() != reg2.GetRegisterNumber()) {
@@ -3060,5 +3083,34 @@ void AndCmpBranchesToTbzAArch64::Run(BB &bb, Insn &insn) {
     bb.RemoveInsn(*prevInsn);
     bb.RemoveInsn(*prevPrevInsn);
   }
+}
+
+void RemoveSxtBeforeStrAArch64::Run(BB &bb , Insn &insn) {
+  MOperator mop = insn.GetMachineOpcode();
+  Insn *prevInsn = insn.GetPreviousMachineInsn();
+  if (prevInsn == nullptr) {
+    return;
+  }
+  MOperator prevMop = prevInsn->GetMachineOpcode();
+  if (!(mop == MOP_wstrh && prevMop == MOP_xsxth32) && !(mop == MOP_wstrb && prevMop == MOP_xsxtb32)) {
+    return;
+  }
+  auto &prevOpnd0 = static_cast<RegOperand&>(prevInsn->GetOperand(kInsnFirstOpnd));
+  if (IfOperandIsLiveAfterInsn(prevOpnd0, insn)) {
+    return;
+  }
+  auto &prevOpnd1 = static_cast<RegOperand&>(prevInsn->GetOperand(kInsnSecondOpnd));
+  regno_t prevRegNO0 = prevOpnd0.GetRegisterNumber();
+  regno_t prevRegNO1 = prevOpnd1.GetRegisterNumber();
+  regno_t regNO0 = static_cast<RegOperand&>(insn.GetOperand(kInsnFirstOpnd)).GetRegisterNumber();
+  if (prevRegNO0 != prevRegNO1) {
+    return;
+  }
+  if (prevRegNO0 == regNO0) {
+    bb.RemoveInsn(*prevInsn);
+    return;
+  }
+  insn.SetOperand(0, prevOpnd1);
+  bb.RemoveInsn(*prevInsn);
 }
 }  /* namespace maplebe */

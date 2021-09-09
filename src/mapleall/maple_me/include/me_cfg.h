@@ -199,6 +199,14 @@ class MeCFG : public AnalysisResult {
     return nextBBId;
   }
 
+  uint32 ValidBBNum() const {
+    uint32 num = 0;
+    for (auto bbit = valid_begin(); bbit != valid_end(); ++bbit) {
+      ++num;
+    }
+    return num;
+  }
+
   const MapleUnorderedMap<LabelIdx, BB*> &GetLabelBBIdMap() const {
     return labelBBIdMap;
   }
@@ -236,6 +244,9 @@ class MeCFG : public AnalysisResult {
   }
 
   BB *GetFirstBB() const {
+    if (GetCommonEntryBB()->GetUniqueSucc()) {
+      return GetCommonEntryBB()->GetUniqueSucc();
+    }
     return *(++(++valid_begin()));
   }
 

@@ -164,6 +164,8 @@ class BB {
   void InsertInsnBegin(Insn &insn) {
     if (lastInsn == nullptr) {
       firstInsn = lastInsn = &insn;
+      insn.SetNext(nullptr);
+      insn.SetPrev(nullptr);
       insn.SetBB(this);
     } else {
       InsertInsnBefore(*firstInsn, insn);

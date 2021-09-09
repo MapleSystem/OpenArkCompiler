@@ -27,7 +27,10 @@ using namespace maple;
 
 class AArch64GenProEpilog : public GenProEpilog {
  public:
-  explicit AArch64GenProEpilog(CGFunc &func) : GenProEpilog(func) {}
+  explicit AArch64GenProEpilog(CGFunc &func) : GenProEpilog(func) {
+    useFP = func.UseFP();
+    stackBaseReg = useFP ? R29 : RSP;
+  }
   ~AArch64GenProEpilog() override = default;
 
   bool TailCallOpt() override;
@@ -39,10 +42,12 @@ class AArch64GenProEpilog : public GenProEpilog {
   bool HasLoop();
   bool OptimizeTailBB(BB &bb, std::set<Insn*> &callInsns);
   void TailCallBBOpt(const BB &exitBB, std::set<Insn*> &callInsns);
-  void ForwardPropagateAndRename(Insn &mv, Insn &ld, const BB &terminateBB);
-  void ReplaceMachedOperand(Insn &orig, Insn &target, const RegOperand &match, bool replaceOrigSrc);
-  bool BackwardFindDependency(BB &ifbb, RegOperand &tgtOpnd, Insn *&ld, Insn *&mov,
-                              Insn *&depMov, std::list<Insn*> &list);
+  bool InsertOpndRegs(Operand &opnd, std::set<regno_t> &vecRegs);
+  bool InsertInsnRegs(Insn &insn, bool insetSource, std::set<regno_t> &vecSourceRegs,
+                      bool insertTarget, std::set<regno_t> &vecTargetRegs);
+  bool FindRegs(Operand &insn, std::set<regno_t> &vecRegs);
+  bool BackwardFindDependency(BB &ifbb, std::set<regno_t> &vecReturnSourceReg,
+                              std::list<Insn*> &existingInsns, std::list<Insn*> &moveInsns);
   BB *IsolateFastPath(BB&);
   AArch64MemOperand *SplitStpLdpOffsetForCalleeSavedWithAddInstruction(const AArch64MemOperand &mo, uint32 bitLen,
                                                                        AArch64reg baseReg = AArch64reg::kRinvalid);
@@ -71,6 +76,10 @@ class AArch64GenProEpilog : public GenProEpilog {
                                                           RegType rty, bool isAllocate);
   static constexpr const int32 kOffset8MemPos = 8;
   static constexpr const int32 kOffset16MemPos = 16;
+
+  bool useFP = true;
+  /* frame pointer(x29) is available as a general-purpose register if useFP is set as false */
+  AArch64reg stackBaseReg = RFP;
 };
 }  /* namespace maplebe */
 

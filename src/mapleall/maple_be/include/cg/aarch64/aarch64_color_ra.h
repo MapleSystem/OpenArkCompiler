@@ -1236,14 +1236,14 @@ class GraphColorRegAllocator : public AArch64RegAllocator {
   void ComputeLiveRangesUpdateLiveUnitInsnRange(BB &bb, uint32 currPoint);
   void ComputeLiveRanges();
   MemOperand *CreateSpillMem(uint32 spillIdx, SpillMemCheck check);
-  bool CheckOverlap(uint64 val, uint32 &lastBitSet, uint32 &overlapNum, uint32 i) const;
+  bool CheckOverlap(uint64 val, uint32 i, LiveRange &lr1, LiveRange &lr2) const;
   void CheckInterference(LiveRange &lr1, LiveRange &lr2) const;
   void BuildInterferenceGraphSeparateIntFp(std::vector<LiveRange*> &intLrVec, std::vector<LiveRange*> &fpLrVec);
   void BuildInterferenceGraph();
   void SetBBInfoGlobalAssigned(uint32 bbID, regno_t regNO);
   bool HaveAvailableColor(const LiveRange &lr, uint32 num) const;
   void Separate();
-  void SplitAndColorForEachLr(MapleVector<LiveRange*> &targetLrVec, bool isConstrained);
+  void SplitAndColorForEachLr(MapleVector<LiveRange*> &targetLrVec);
   void SplitAndColor();
   void ColorForOptPrologEpilog();
   bool IsLocalReg(regno_t regNO) const;

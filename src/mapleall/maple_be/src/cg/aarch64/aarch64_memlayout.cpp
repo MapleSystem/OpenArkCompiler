@@ -406,6 +406,7 @@ void AArch64MemLayout::LayoutStackFrame(int32 &structCopySize, int32 &maxParmSta
   LayoutActualParams();
 
   fixStackSize = RealStackFrameSize();
+  cgFunc->SetUseFP(cgFunc->UseFP() || fixStackSize > kMaxPimm32);
 }
 
 void AArch64MemLayout::AssignSpillLocationsToPseudoRegisters() {

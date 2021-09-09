@@ -318,7 +318,7 @@ void MIRLower::LowerBrCondition(BlockNode &block) {
           auto *newCondGoto = mirModule.CurFuncCodeMemPool()->New<CondGotoNode>(Opcode(stmt->GetOpCode()));
           newCondGoto->SetOpnd(cond->GetBOpnd(1), 0);
           newCondGoto->SetOffset(condGoto->GetOffset());
-          block.InsertAfter(newCondGoto, condGoto);
+          block.InsertAfter(condGoto, newCondGoto);
           nextStmt = stmt;  // so it will be re-processed if another cand/cior
         } else {            // short-circuit target is next statement
           LabelIdx lIdx;
@@ -355,7 +355,9 @@ void MIRLower::LowerFunc(MIRFunction &func) {
   ASSERT(origBody != nullptr, "nullptr check");
   BlockNode *newBody = LowerBlock(*origBody);
   ASSERT(newBody != nullptr, "nullptr check");
-  LowerBrCondition(*newBody);
+  if (!InLFO()) {
+    LowerBrCondition(*newBody);
+  }
   func.SetBody(newBody);
 }
 
@@ -514,7 +516,7 @@ BaseNode *MIRLower::LowerCArray(ArrayNode *array) {
                 GetRegPrimType(resNode->GetPrimType()), resNode);
           } else {
             resNode = mirModule.CurFuncCodeMemPool()->New<TypeCvtNode>(OP_cvt, array->GetPrimType(),
-                GetRegPrimType(resNode->GetPrimType()), resNode);
+                GetSignedPrimType(GetRegPrimType(resNode->GetPrimType())), resNode);
           }
         }
         mpyNode->SetOpnd(resNode, 0);
@@ -560,7 +562,7 @@ BaseNode *MIRLower::LowerCArray(ArrayNode *array) {
           GetRegPrimType(resNode->GetPrimType()), resNode);
     } else {
       resNode = mirModule.CurFuncCodeMemPool()->New<TypeCvtNode>(OP_cvt, array->GetPrimType(),
-          GetRegPrimType(resNode->GetPrimType()), resNode);
+          GetSignedPrimType(GetRegPrimType(resNode->GetPrimType())), resNode);
     }
   }
   rMul->SetPrimType(resNode->GetPrimType());
