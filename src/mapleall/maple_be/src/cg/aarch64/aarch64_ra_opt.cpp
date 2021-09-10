@@ -531,6 +531,7 @@ void AArch64RaOpt::Run() {
     rename.bfs = &localBfs;
     rename.bfs->ComputeBlockOrder();
     rename.VregLongLiveRename();
+    cgFunc->ClearLoopInfo();
   }
 }
 }  /* namespace maplebe */
