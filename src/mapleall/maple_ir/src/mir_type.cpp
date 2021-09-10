@@ -1919,6 +1919,23 @@ int64 MIRStructType::GetBitOffsetFromBaseAddr(FieldID fieldID) {
   return kOffsetUnknown;
 }
 
+// Whether the memory layout of struct has paddings
+bool MIRStructType::HasPadding() const {
+  size_t sumValidSize = 0;
+  for (size_t i = 0; i < fields.size(); ++i) {
+    TyIdxFieldAttrPair pair = GetTyidxFieldAttrPair(i);
+    MIRType *fieldType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(pair.first);
+    if (fieldType->IsStructType() && static_cast<MIRStructType*>(fieldType)->HasPadding()) {
+      return true;
+    }
+    sumValidSize += fieldType->GetSize();
+  }
+  if (sumValidSize < this->GetSize()) {
+    return true;
+  }
+  return false;
+}
+
 // set hasVolatileField to true if parent type has volatile field, otherwise flase.
 static bool ParentTypeHasVolatileField(const TyIdx parentTyIdx, bool &hasVolatileField) {
   hasVolatileField = (GlobalTables::GetTypeTable().GetTypeFromTyIdx(parentTyIdx)->HasVolatileField());

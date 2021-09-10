@@ -2467,6 +2467,7 @@ class FEIRStmtGCCAsm : public FEIRStmt {
 
  protected:
   std::list<StmtNode*> GenMIRStmtsImpl(MIRBuilder &mirBuilder) const override;
+  bool HandleConstraintPlusQ(MIRBuilder &mirBuilder, AsmNode *asmNode, uint32 index) const;
 
  private:
   std::vector<std::tuple<std::string, std::string, bool>> outputs;

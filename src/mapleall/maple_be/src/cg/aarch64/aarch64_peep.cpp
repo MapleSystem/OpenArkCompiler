@@ -518,7 +518,9 @@ void CombineContiLoadAndStoreAArch64::Run(BB &bb, Insn &insn) {
   uint32 size = reg1.GetSize() >> kLog2BitsPerByte;
   int offsetVal1 = offset1->GetOffsetValue();
   int offsetVal2 = offset2->GetOffsetValue();
-  if ((base1->GetRegisterNumber() == RFP || base1->GetRegisterNumber() == RSP) &&
+  // There is no register restriction for str
+  bool isStore = (thisMop == MOP_xstr || thisMop == MOP_wstr || thisMop == MOP_dstr || thisMop == MOP_sstr);
+  if ((isStore || base1->GetRegisterNumber() == RFP || base1->GetRegisterNumber() == RSP) &&
       base1->GetRegisterNumber() == base2->GetRegisterNumber() &&
       reg1.GetRegisterType() == reg2.GetRegisterType() && reg1.GetSize() == reg2.GetSize() &&
       abs(offsetVal1 - offsetVal2) == static_cast<int>(size)) {

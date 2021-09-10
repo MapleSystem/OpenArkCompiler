@@ -152,7 +152,8 @@ class AArch64CGFunc : public CGFunc {
 
   PrimType GetDestTypeFromAggSize(uint32 bitSize) const;
 
-  Operand *SelectIread(const BaseNode &parent, IreadNode &expr) override;
+  Operand *SelectIread(const BaseNode &parent, IreadNode &expr,
+                       int extraOffset = 0, PrimType finalBitFieldDestType = kPtyInvalid) override;
 
   Operand *SelectIntConst(MIRIntConst &intConst) override;
   Operand *HandleFmovImm(PrimType stype, int64 val, MIRConst &mirConst);
@@ -210,6 +211,7 @@ class AArch64CGFunc : public CGFunc {
   Operand *SelectAbs(UnaryNode &node, Operand &opnd0) override;
   Operand *SelectBnot(UnaryNode &node, Operand &opnd0) override;
   Operand *SelectExtractbits(ExtractbitsNode &node, Operand &opnd0, const BaseNode &parent) override;
+  Operand *SelectRegularBitFieldLoad(ExtractbitsNode &node, const BaseNode &parent) override;
   Operand *SelectDepositBits(DepositbitsNode &node, Operand &opnd0, Operand &opnd1) override;
   Operand *SelectLnot(UnaryNode &node, Operand &opnd0) override;
   Operand *SelectNeg(UnaryNode &node, Operand &opnd0) override;
