@@ -1093,10 +1093,10 @@ void AArch64CGFunc::SelectDassign(StIdx stIdx, FieldID fieldId, PrimType rhsPTyp
 void AArch64CGFunc::SelectDassignoff(DassignoffNode &stmt, Operand &opnd0) {
   MIRSymbol *symbol = GetFunction().GetLocalOrGlobalSymbol(stmt.stIdx);
   int32 offset = stmt.offset;
-  int32 size = GetPrimTypeSize(stmt.GetPrimType());
-  MOperator mOp = (size == k2ByteSize) ? MOP_wstrh :
-                      ((size == k4ByteSize) ? MOP_wstr :
-                          ((size == k8ByteSize) ? MOP_xstr : MOP_undef));
+  int32 size = GetPrimTypeSize(stmt.GetPrimType()) * k8ByteSize;
+  MOperator mOp = (size == k16BitSize) ? MOP_wstrh :
+                      ((size == k32BitSize) ? MOP_wstr :
+                          ((size == k64BitSize) ? MOP_xstr : MOP_undef));
   CHECK_FATAL(mOp != MOP_undef, "illegal size for dassignoff");
   MemOperand *memOpnd = &GetOrCreateMemOpnd(*symbol, offset, size);
   AArch64MemOperand &archMemOperand = *static_cast<AArch64MemOperand*>(memOpnd);
