@@ -2085,8 +2085,12 @@ class DassignoffNode : public UnaryStmtNode {
 
   explicit DassignoffNode(PrimType typ) : UnaryStmtNode(OP_dassignoff, typ), stIdx() {}
 
-  DassignoffNode(PrimType typ, BaseNode *opnd) : UnaryStmtNode(OP_dassign, typ, opnd), stIdx() {}
+  DassignoffNode(PrimType typ, BaseNode *opnd) : UnaryStmtNode(OP_dassignoff, typ, opnd), stIdx() {}
 
+  DassignoffNode(StIdx lhsStIdx, int32 dOffset, PrimType rhsType, BaseNode *rhsNode) : DassignoffNode(rhsType, rhsNode) {
+    stIdx = lhsStIdx;
+    offset = dOffset;
+  }
   virtual ~DassignoffNode() = default;
 
   void Dump(int32 indent) const override;
