@@ -1155,6 +1155,9 @@ void AArch64Insn::Emit(const CG &cg, Emitter &emitter) const {
       EmitStringIndexOf(emitter);
       return;
     }
+    case MOP_pseudo_none: {
+      return;
+    }
     default:
       break;
   }
