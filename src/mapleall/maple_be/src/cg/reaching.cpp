@@ -66,6 +66,12 @@ void ReachingDefinition::InitOut(const BB &bb) {
 /* when DataInfo will not be used later, they should be cleared. */
 void ReachingDefinition::ClearDefUseInfo() {
   for (auto insn : pseudoInsns) {
+    /* Keep return pseudo to extend the return register liveness to 'ret'.
+     * Backward propagation can move the return register definition far from the return.
+     */
+    if (insn->IsReturnPseudoInstruction()) {
+      continue;
+    }
     insn->GetBB()->RemoveInsn(*insn);
   }
   FOR_ALL_BB(bb, cgFunc) {

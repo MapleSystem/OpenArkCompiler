@@ -228,6 +228,14 @@ Operand *HandleBnot(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
 
 Operand *HandleExtractBits(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   (void)parent;
+  ExtractbitsNode &node = static_cast<ExtractbitsNode&>(expr);
+  uint8 bitOffset = node.GetBitsOffset();
+  uint8 bitSize = node.GetBitsSize();
+  if ((bitSize == k8BitSize || bitSize == k16BitSize) && GetPrimTypeBitSize(node.GetPrimType()) != k64BitSize &&
+      (bitOffset == 0 || bitOffset == k8BitSize || bitOffset == k16BitSize || bitOffset == k24BitSize) &&
+      expr.Opnd(0)->GetOpCode() == OP_iread && node.GetOpCode() == OP_extractbits) {
+    return cgFunc.SelectRegularBitFieldLoad(node, parent);
+  }
   return cgFunc.SelectExtractbits(static_cast<ExtractbitsNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)), parent);
 }
 

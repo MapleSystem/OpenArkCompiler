@@ -29,8 +29,9 @@ class LFOMIRLower : public MIRLower {
         func(f),
         lfoFunc(f->GetLfoFunc()) {}
 
-  BlockNode *LowerWhileStmt(WhileStmtNode&);
-  BlockNode *LowerIfStmt(IfStmtNode &ifstmt, bool recursive = true);
+  BlockNode *LowerWhileStmt(WhileStmtNode&) override;
+  BlockNode *LowerIfStmt(IfStmtNode &ifstmt, bool recursive = true) override;
+  bool InLFO() const override { return true; }
 };
 }
 #endif  // MAPLE_ME_INCLUDE_LFO_MIR_LOWER_H

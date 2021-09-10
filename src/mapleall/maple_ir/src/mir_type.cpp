@@ -179,9 +179,10 @@ bool IsNoCvtNeeded(PrimType toType, PrimType fromType) {
     case PTY_i16:
       return fromType == PTY_i32;
     case PTY_u64:
+    case PTY_a64:
       return fromType == PTY_ptr;
     case PTY_ptr:
-      return fromType == PTY_u64;
+      return fromType == PTY_u64 || fromType == PTY_a64;
     default:
       return false;
   }
@@ -1916,6 +1917,23 @@ int64 MIRStructType::GetBitOffsetFromBaseAddr(FieldID fieldID) {
   }
   CHECK_FATAL(false, "Should never reach here!");
   return kOffsetUnknown;
+}
+
+// Whether the memory layout of struct has paddings
+bool MIRStructType::HasPadding() const {
+  size_t sumValidSize = 0;
+  for (size_t i = 0; i < fields.size(); ++i) {
+    TyIdxFieldAttrPair pair = GetTyidxFieldAttrPair(i);
+    MIRType *fieldType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(pair.first);
+    if (fieldType->IsStructType() && static_cast<MIRStructType*>(fieldType)->HasPadding()) {
+      return true;
+    }
+    sumValidSize += fieldType->GetSize();
+  }
+  if (sumValidSize < this->GetSize()) {
+    return true;
+  }
+  return false;
 }
 
 // set hasVolatileField to true if parent type has volatile field, otherwise flase.

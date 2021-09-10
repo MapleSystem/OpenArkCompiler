@@ -18,6 +18,71 @@
 #include "factory.h"
 #include "maple_phase_manager.h"
 namespace maple {
+// MemEntry models a memory entry with high level type information.
+struct MemEntry {
+  enum MemEntryKind {
+    kMemEntryUnknown,
+    kMemEntryPrimitive,
+    kMemEntryStruct,
+    kMemEntryArray
+  };
+
+  static bool ComputeMemEntry(BaseNode &expr, MIRFunction &func, MemEntry &memEntry);
+  MemEntry() = default;
+  MemEntry(BaseNode *addrExpr, MIRType *memType) : addrExpr(addrExpr), memType(memType) {}
+
+  MemEntryKind GetKind() const {
+    auto typeKind = memType->GetKind();
+    if (typeKind == kTypeScalar || typeKind == kTypePointer) {
+      return kMemEntryPrimitive;
+    } else if (typeKind == kTypeArray) {
+      return kMemEntryArray;
+    } else if (memType->IsStructType()) {
+      return kMemEntryStruct;
+    }
+    return kMemEntryUnknown;
+  }
+
+  BaseNode *BuildAsRhsExpr(MIRFunction &func) const;
+  bool Memset(int64 byte, int64 size, MIRFunction &func,
+              CallNode &callStmt, BlockNode &block, bool isLowLevel, bool debug) const;
+  bool Memcpy(MemEntry &srcMem, int64 copySize, MIRFunction &func,
+              CallNode &callStmt, BlockNode &block, bool isLowLevel, bool debug) const;
+  static StmtNode *GenMemopRetAssign(CallNode &callStmt, MIRFunction &func, bool isLowLevel);
+
+  BaseNode *addrExpr = nullptr;   // memory address
+  MIRType *memType = nullptr;     // memory type
+};
+
+enum MemOpKind {
+  MEM_OP_unknown,
+  MEM_OP_memset,
+  MEM_OP_memcpy
+};
+
+// For simplifying memory operation, either memset or memcpy/memmove.
+class SimplifyMemOp {
+ public:
+  static MemOpKind ComputeMemOpKind(StmtNode &stmt);
+  SimplifyMemOp() = default;
+  explicit SimplifyMemOp(MIRFunction *func, bool debug = false) : func(func), debug(debug) {}
+  void SetFunction(MIRFunction *f) {
+    func = f;
+  }
+  void SetDebug(bool dbg) {
+    debug = dbg;
+  }
+
+  bool AutoSimplify(StmtNode &stmt, BlockNode &block, bool isLowLevel) const;
+  bool SimplifyMemset(StmtNode &stmt, BlockNode &block, bool isLowLevel) const;
+  bool SimplifyMemcpy(StmtNode &stmt, BlockNode &block, bool isLowLevel) const;
+ private:
+  static const uint32 thresholdMemsetExpand;
+  static const uint32 thresholdMemcpyExpand;
+  MIRFunction *func = nullptr;
+  bool debug = false;
+};
+
 class Simplify : public FuncOptimizeImpl {
  public:
   Simplify(MIRModule &mod, KlassHierarchy *kh, bool dump) : FuncOptimizeImpl(mod, kh, dump), mirMod(mod) {
@@ -35,12 +100,13 @@ class Simplify : public FuncOptimizeImpl {
 
  private:
   MIRModule &mirMod;
+  SimplifyMemOp simplifyMemOp;
   bool IsMathSqrt(const std::string funcName);
   bool IsMathAbs(const std::string funcName);
   bool IsMathMin(const std::string funcName);
   bool IsMathMax(const std::string funcName);
   bool SimplifyMathMethod(const StmtNode &stmt, BlockNode &block);
-  void SimplifyCallAssigned(const StmtNode &stmt, BlockNode &block);
+  void SimplifyCallAssigned(StmtNode &stmt, BlockNode &block);
   StmtNode *SimplifyToSelect(MIRFunction *func, IfStmtNode *ifNode, BlockNode *block);
 };
 

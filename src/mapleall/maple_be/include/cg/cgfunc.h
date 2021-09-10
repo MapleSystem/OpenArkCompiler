@@ -209,7 +209,8 @@ class CGFunc {
   virtual Operand *SelectAddrof(AddrofNode &expr) = 0;
   virtual Operand &SelectAddrofFunc(AddroffuncNode &expr) = 0;
   virtual Operand &SelectAddrofLabel(AddroflabelNode &expr) = 0;
-  virtual Operand *SelectIread(const BaseNode &parent, IreadNode &expr) = 0;
+  virtual Operand *SelectIread(const BaseNode &parent, IreadNode &expr,
+                               int extraOffset = 0, PrimType finalBitFieldDestType = kPtyInvalid) = 0;
   virtual Operand *SelectIntConst(MIRIntConst &intConst) = 0;
   virtual Operand *SelectFloatConst(MIRFloatConst &floatConst) = 0;
   virtual Operand *SelectDoubleConst(MIRDoubleConst &doubleConst) = 0;
@@ -246,6 +247,7 @@ class CGFunc {
   virtual Operand *SelectBnot(UnaryNode &node, Operand &opnd0) = 0;
   virtual Operand *SelectExtractbits(ExtractbitsNode &node, Operand &opnd0, const BaseNode &parent) = 0;
   virtual Operand *SelectDepositBits(DepositbitsNode &node, Operand &opnd0, Operand &opnd1) = 0;
+  virtual Operand *SelectRegularBitFieldLoad(ExtractbitsNode &node, const BaseNode &parent) = 0;
   virtual Operand *SelectLnot(UnaryNode &node, Operand &opnd0) = 0;
   virtual Operand *SelectNeg(UnaryNode &node, Operand &opnd0) = 0;
   virtual Operand *SelectRecip(UnaryNode &node, Operand &opnd0) = 0;

@@ -55,6 +55,9 @@ BaseNode *SSATab::CreateSSAExpr(BaseNode *expr) {
     ssaNode->SetSSAVar(*versionStTable.GetZeroVersionSt(ost));
     return ssaNode;
   } else if (expr->GetOpCode() == OP_iread) {
+    if (expr->IsSSANode()) {
+      return mirModule.CurFunction()->GetCodeMemPool()->New<IreadSSANode>(*static_cast<IreadSSANode*>(expr));
+    }
     IreadNode *ireadNode = static_cast<IreadNode*>(expr);
     IreadSSANode *ssaNode = mirModule.CurFunction()->GetCodeMempool()->New<IreadSSANode>(*ireadNode);
     BaseNode *newOpnd = CreateSSAExpr(ireadNode->Opnd(0));

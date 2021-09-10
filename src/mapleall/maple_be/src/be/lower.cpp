@@ -33,6 +33,7 @@
 #include "securec.h"
 #include "string_utils.h"
 #include "cast_opt.h"
+#include "simplify.h"
 
 namespace maplebe {
 namespace arrayNameForLower {
@@ -1271,6 +1272,34 @@ BlockNode *CGLowerer::GenBlockNode(StmtNode &newCall, const CallReturnVector &p2
   return blk;
 }
 
+// try to expand memset and memcpy
+BlockNode *CGLowerer::LowerMemop(StmtNode &stmt) {
+  auto memOpKind = SimplifyMemOp::ComputeMemOpKind(stmt);
+  if (memOpKind == MEM_OP_unknown) {
+    return nullptr;
+  }
+  auto *prev = stmt.GetPrev();
+  auto *next = stmt.GetNext();
+  auto *blk = mirModule.CurFuncCodeMemPool()->New<BlockNode>();
+  blk->AddStatement(&stmt);
+  bool success = simplifyMemOp.AutoSimplify(stmt, *blk, true);
+  stmt.SetPrev(prev);
+  stmt.SetNext(next);  // recover callStmt's position
+  if (!success) {
+    return nullptr;
+  }
+  // lower new generated stmts
+  auto *currStmt = blk->GetFirst();
+  while (currStmt != nullptr) {
+    auto *nextStmt = currStmt->GetNext();
+    for (uint32 i = 0; i < currStmt->NumOpnds(); ++i) {
+      currStmt->SetOpnd(LowerExpr(*currStmt, *currStmt->Opnd(i), *blk), i);
+    }
+    currStmt = nextStmt;
+  }
+  return blk;
+}
+
 BlockNode *CGLowerer::LowerCallAssignedStmt(StmtNode &stmt, bool uselvar) {
   StmtNode *newCall = nullptr;
   CallReturnVector *p2nRets = nullptr;
@@ -1281,6 +1310,12 @@ BlockNode *CGLowerer::LowerCallAssignedStmt(StmtNode &stmt, bool uselvar) {
     case OP_virtualcallassigned:
     case OP_superclasscallassigned:
     case OP_interfacecallassigned: {
+      if (CGOptions::GetInstance().GetOptimizeLevel() >= CGOptions::kLevel2) {
+        BlockNode *blkLowered = LowerMemop(stmt);
+        if (blkLowered != nullptr) {
+          return blkLowered;
+        }
+      }
       auto &origCall = static_cast<CallNode&>(stmt);
       newCall = GenCallNode(stmt, funcCalled, origCall);
       p2nRets = &origCall.GetReturnVec();

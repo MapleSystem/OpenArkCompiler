@@ -221,7 +221,11 @@ bool AArch64GenProEpilog::TailCallOpt() {
   }
   SetTailcallExitBB(exitBB);
 
-  CHECK_FATAL(exitBB->GetFirstMachineInsn() == nullptr, "exit bb should be empty.");
+  FOR_BB_INSNS(insn, exitBB) {
+    if (insn->IsMachineInstruction() && !insn->IsPseudoInstruction()) {
+      CHECK_FATAL(false, "exit bb should be empty.");
+    }
+  }
 
   std::set<Insn*> &callInsns = GetCallSitesMap();
   callInsns.clear();

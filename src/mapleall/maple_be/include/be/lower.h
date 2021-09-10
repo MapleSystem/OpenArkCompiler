@@ -28,6 +28,7 @@
 #include "mir_module.h"
 #include "mir_function.h"
 #include "mir_lower.h"
+#include "simplify.h"
 
 namespace maplebe {
 class CGLowerer {
@@ -146,6 +147,7 @@ class CGLowerer {
   void LowerCallStmt(StmtNode&, StmtNode*&, BlockNode&, MIRType *retty = nullptr, bool uselvar = false);
   BlockNode *LowerCallAssignedStmt(StmtNode &stmt, bool uselvar = false);
   bool LowerStructReturn(BlockNode &blk, StmtNode *stmt, StmtNode *nextStmt, bool &lvar);
+  BlockNode *LowerMemop(StmtNode&);
 
   BaseNode *LowerRem(BaseNode &rem, BlockNode &block);
 
@@ -214,6 +216,7 @@ class CGLowerer {
   BlockNode *currentBlock = nullptr;  /* current block for lowered statements to be inserted to */
   bool checkLoadStore = false;
   int64 seed = 0;
+  SimplifyMemOp simplifyMemOp;
   static const std::string kIntrnRetValPrefix;
 
   static constexpr PUIdx kFuncNotFound = PUIdx(-1);
@@ -240,6 +243,13 @@ class CGLowerer {
 
   void SetCurrentFunc(MIRFunction *func) {
     mirModule.SetCurFunction(func);
+    simplifyMemOp.SetFunction(func);
+    if (func != nullptr) {
+      const std::string &dumpFunc = CGOptions::GetDumpFunc();
+      const bool debug = CGOptions::GetDumpPhases().find("cglower") != CGOptions::GetDumpPhases().end() &&
+          (dumpFunc == "*" || dumpFunc == func->GetName());
+      simplifyMemOp.SetDebug(debug);
+    }
   }
 
   bool ShouldAddAdditionalComment() const {
