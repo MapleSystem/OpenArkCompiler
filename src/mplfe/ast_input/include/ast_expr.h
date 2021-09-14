@@ -419,6 +419,7 @@ class ASTUODerefExpr: public ASTUnaryOperatorExpr {
  private:
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
   void InsertNonnullChecking(std::list<UniqueFEIRStmt> &stmts, UniqueFEIRExpr baseExpr) const;
+  void InsertBoundaryChecking(std::list<UniqueFEIRStmt> &stmts, UniqueFEIRExpr expr) const;
 };
 
 class ASTUOPlusExpr: public ASTUnaryOperatorExpr {
@@ -867,6 +868,8 @@ class ASTArraySubscriptExpr : public ASTExpr {
   MIRConst *GenerateMIRConstImpl() const override;
   bool CheckFirstDimIfZero() const;
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
+  void InsertBoundaryChecking(std::list<UniqueFEIRStmt> &stmts, UniqueFEIRExpr idxExpr, UniqueFEIRExpr baseExpr) const;
+
   ASTExpr *baseExpr = nullptr;
   MIRType *arrayType = nullptr;
   ASTExpr *idxExpr = nullptr;

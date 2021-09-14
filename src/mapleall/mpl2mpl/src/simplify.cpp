@@ -510,7 +510,7 @@ static bool IsComplexExpr(BaseNode *expr, MIRFunction &func) {
 }
 
 // Input a address expr, output a memEntry to abstract this expr
-bool MemEntry::ComputeMemEntry(BaseNode &expr, MIRFunction &func, MemEntry &memEntry) {
+bool MemEntry::ComputeMemEntry(BaseNode &expr, MIRFunction &func, MemEntry &memEntry, bool isLowLevel) {
   Opcode op = expr.GetOpCode();
   MIRType *memType = nullptr;
   switch (op) {
@@ -571,6 +571,11 @@ bool MemEntry::ComputeMemEntry(BaseNode &expr, MIRFunction &func, MemEntry &memE
       break;
     }
     default: {
+      if (isLowLevel && IsPrimitivePoint(expr.GetPrimType())) {
+        memEntry.addrExpr = &expr;
+        memEntry.memType = nullptr;  // we cannot infer high level memory type, this is allowed for low level expand
+        return true;
+      }
       break;
     }
   }
@@ -603,12 +608,15 @@ BaseNode *MemEntry::BuildAsRhsExpr(MIRFunction &func) const {
 bool MemEntry::Memset(int64 byte, int64 size, MIRFunction &func,
                       CallNode &callStmt, BlockNode &block, bool isLowLevel, bool debug) const {
   MemOpKind memOpKind = MEM_OP_memset;
-  if (memType->GetSize() != size) {
-    MayPrintLog(debug, false, memOpKind, "dst size and size arg are not equal");
-    return false;
-  }
   MemEntryKind memKind = GetKind();
-  CHECK_FATAL(memKind != kMemEntryUnknown, "invalid memKind");
+  // we don't check size equality in the low level expand
+  if (!isLowLevel) {
+    CHECK_FATAL(memKind != kMemEntryUnknown, "invalid memKind");
+    if (memType->GetSize() != size) {
+      MayPrintLog(debug, false, memOpKind, "dst size and size arg are not equal");
+      return false;
+    }
+  }
   MIRBuilder *mirBuilder = func.GetModule()->GetMIRBuilder();
 
   if (isLowLevel) {  // For cglower, replace memset with a series of low-level iassignoff
@@ -761,11 +769,11 @@ bool MemEntry::Memset(int64 byte, int64 size, MIRFunction &func,
 bool MemEntry::Memcpy(MemEntry &srcMem, int64 copySize, MIRFunction &func,
                       CallNode &callStmt, BlockNode &block, bool isLowLevel, bool debug) const {
   MemOpKind memOpKind = MEM_OP_memcpy;
-  if (!isLowLevel) {  // check type consistency for high level expand
-    CHECK_FATAL(memType == srcMem.memType, "dest type and src type are different");
-  }
   MemEntryKind memKind = GetKind();
-  CHECK_FATAL(memKind != kMemEntryUnknown, "invalid memKind");
+  if (!isLowLevel) {  // check type consistency and memKind only for high level expand
+    CHECK_FATAL(memType == srcMem.memType, "dest type and src type are different");
+    CHECK_FATAL(memKind != kMemEntryUnknown, "invalid memKind");
+  }
   MIRBuilder *mirBuilder = func.GetModule()->GetMIRBuilder();
   StmtNode *newAssign = nullptr;
   if (isLowLevel) {  // For cglower, replace memcpy with a series of low-level iassignoff
@@ -796,6 +804,7 @@ bool MemEntry::Memcpy(MemEntry &srcMem, int64 copySize, MIRFunction &func,
         realSrcExpr = mirBuilder->CreateExprRegread(PTY_ptr, pregIdx);
       }
     }
+    auto *ptrType = GlobalTables::GetTypeTable().GetPtrType();
     for (auto curSize : blocks) {
       // low level memcpy expand result:
       // It seems ireadoff has not been supported by cg HandleFunction, so we use iread instead of ireadoff
@@ -803,11 +812,13 @@ bool MemEntry::Memcpy(MemEntry &srcMem, int64 copySize, MIRFunction &func,
       // [ok] iassignoff <prim-type> <offset> (dstAddrExpr, iread <prim-type> <type> (add ptr (srcAddrExpr, offset)))
       PrimType constType = GetIntegerPrimTypeBySizeAndSign(curSize * 8, false);
       MIRType *constMIRType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(TyIdx(constType));
-      auto *offsetConstExpr = ConstructConstvalNode(offset, PTY_u64, *mirBuilder);
-      auto *ptrType = GlobalTables::GetTypeTable().GetPtrType();
       auto *constMIRPtrType = GlobalTables::GetTypeTable().GetOrCreatePointerType(*constMIRType);
-      auto *newSrcAddrExpr = mirBuilder->CreateExprBinary(OP_add, *ptrType, realSrcExpr, offsetConstExpr);
-      BaseNode *rhsExpr = mirBuilder->CreateExprIread(*constMIRType, *constMIRPtrType, 0, newSrcAddrExpr);
+      BaseNode *rhsAddrExpr = realSrcExpr;
+      if (offset != 0) {
+        auto *offsetConstExpr = ConstructConstvalNode(offset, PTY_u64, *mirBuilder);
+        rhsAddrExpr = mirBuilder->CreateExprBinary(OP_add, *ptrType, realSrcExpr, offsetConstExpr);
+      }
+      BaseNode *rhsExpr = mirBuilder->CreateExprIread(*constMIRType, *constMIRPtrType, 0, rhsAddrExpr);
       auto *iassignoff = mirBuilder->CreateStmtIassignoff(constType, offset, realDstExpr, rhsExpr);
       block.InsertBefore(&callStmt, iassignoff);
       if (debug) {
@@ -1008,7 +1019,7 @@ bool SimplifyMemOp::SimplifyMemset(StmtNode &stmt, BlockNode &block, bool isLowL
   }
 
   MemEntry dstMemEntry;
-  bool valid = MemEntry::ComputeMemEntry(*callStmt.Opnd(0), *func, dstMemEntry);
+  bool valid = MemEntry::ComputeMemEntry(*callStmt.Opnd(0), *func, dstMemEntry, isLowLevel);
   if (!valid) {
     MayPrintLog(debug, false, memOpKind, "dstMemEntry is invalid");
     return false;
@@ -1050,13 +1061,13 @@ bool SimplifyMemOp::SimplifyMemcpy(StmtNode &stmt, BlockNode &block, bool isLowL
     return false;
   }
   MemEntry dstMemEntry;
-  bool valid = MemEntry::ComputeMemEntry(*callStmt.Opnd(0), *func, dstMemEntry);
+  bool valid = MemEntry::ComputeMemEntry(*callStmt.Opnd(0), *func, dstMemEntry, isLowLevel);
   if (!valid) {
     MayPrintLog(debug, false, memOpKind, "dstMemEntry is invalid");
     return false;
   }
   MemEntry srcMemEntry;
-  valid = MemEntry::ComputeMemEntry(*callStmt.Opnd(kSecondOpnd), *func, srcMemEntry);
+  valid = MemEntry::ComputeMemEntry(*callStmt.Opnd(kSecondOpnd), *func, srcMemEntry, isLowLevel);
   if (!valid) {
     MayPrintLog(debug, false, memOpKind, "srcMemEntry is invalid");
     return false;

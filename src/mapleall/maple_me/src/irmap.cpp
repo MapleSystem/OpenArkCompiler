@@ -223,7 +223,7 @@ IvarMeExpr *IRMap::BuildLHSIvar(MeExpr &baseAddr, PrimType primType, const TyIdx
 }
 
 static MeExpr *GetTerminalBase(MeExpr *baseExpr) {
-  if (baseExpr->GetMeOp() == kMeOpOp && 
+  if (baseExpr->GetMeOp() == kMeOpOp &&
       IsPrimitiveInteger(baseExpr->GetPrimType()) &&
       (baseExpr->GetOp() == OP_add || baseExpr->GetOp() == OP_sub || baseExpr->GetOp() == OP_cvt)) {
       return GetTerminalBase(static_cast<OpMeExpr *>(baseExpr)->GetOpnd(0));
@@ -1034,7 +1034,8 @@ MeExpr *IRMap::SimplifyAddExpr(OpMeExpr *addExpr) {
       if (opndA->GetMeOp() == kMeOpConst) {
         // (constA + constB) + opnd1
         if (opndB->GetMeOp() == kMeOpConst) {
-          retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_add, opnd1, OP_add, opndA, opndB));
+          retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_add, opnd1,
+                                                                          OP_add, opndA, opndB));
           if (addExpr->hasAddressValue) {
             retOpMeExpr->hasAddressValue = true;
           }
@@ -1042,14 +1043,16 @@ MeExpr *IRMap::SimplifyAddExpr(OpMeExpr *addExpr) {
         }
         // (constA + a) + constB --> a + (constA + constB)
         if (opnd1->GetMeOp() == kMeOpConst) {
-          retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_add, opndB, OP_add, opndA, opnd1));
+          retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_add, opndB,
+                                                                          OP_add, opndA, opnd1));
           if (addExpr->hasAddressValue) {
             retOpMeExpr->hasAddressValue = true;
           }
           return retOpMeExpr;
         }
         // (const + a) + b --> (a + b) + const
-        retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_add, OP_add, opndB, opnd1, opndA));
+        retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_add, OP_add,
+                                                                        opndB, opnd1, opndA));
         if (addExpr->hasAddressValue) {
           retOpMeExpr->hasAddressValue = true;
           if (retOpMeExpr->GetOpnd(0)->GetMeOp() == kMeOpOp) {
@@ -1062,14 +1065,16 @@ MeExpr *IRMap::SimplifyAddExpr(OpMeExpr *addExpr) {
       if (opndB->GetMeOp() == kMeOpConst) {
         // (a + constA) + constB --> a + (constA + constB)
         if (opnd1->GetMeOp() == kMeOpConst) {
-          retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_add, opndA, OP_add, opndB, opnd1));
+          retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_add, opndA,
+                                                                          OP_add, opndB, opnd1));
           if (addExpr->hasAddressValue) {
             retOpMeExpr->hasAddressValue = true;
           }
           return retOpMeExpr;
         }
         // (a + const) + b --> (a + b) + const
-        retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_add, OP_add, opndA, opnd1, opndB));
+        retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_add, OP_add,
+                                                                        opndA, opnd1, opndB));
         if (addExpr->hasAddressValue) {
           retOpMeExpr->hasAddressValue = true;
           if (retOpMeExpr->GetOpnd(0)->GetMeOp() == kMeOpOp) {
@@ -1089,7 +1094,8 @@ MeExpr *IRMap::SimplifyAddExpr(OpMeExpr *addExpr) {
       if (opndA->GetMeOp() == kMeOpConst) {
         // (constA - constB) + opnd1
         if (opndB->GetMeOp() == kMeOpConst) {
-          retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_add, opnd1, OP_sub, opndA, opndB));
+          retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_add, opnd1,
+                                                                          OP_sub, opndA, opndB));
           if (addExpr->hasAddressValue) {
             retOpMeExpr->hasAddressValue = true;
           }
@@ -1097,14 +1103,16 @@ MeExpr *IRMap::SimplifyAddExpr(OpMeExpr *addExpr) {
         }
         // (constA - a) + constB --> (constA + constB) - a
         if (opnd1->GetMeOp() == kMeOpConst) {
-          retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_sub, OP_add, opndA, opnd1, opndB));
+          retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_sub, OP_add,
+                                                                          opndA, opnd1, opndB));
           if (addExpr->hasAddressValue) {
             retOpMeExpr->hasAddressValue = true;
           }
           return retOpMeExpr;
         }
         // (const - a) + b --> (b - a) + const
-        retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_add, OP_sub, opnd1, opndB, opndA));
+        retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_add, OP_sub,
+                                                                        opnd1, opndB, opndA));
         if (addExpr->hasAddressValue) {
           retOpMeExpr->hasAddressValue = true;
           if (retOpMeExpr->GetOpnd(0)->GetMeOp() == kMeOpOp) {
@@ -1117,14 +1125,16 @@ MeExpr *IRMap::SimplifyAddExpr(OpMeExpr *addExpr) {
       if (opndB->GetMeOp() == kMeOpConst) {
         // (a - constA) + constB --> a + (constB - constA)
         if (opnd1->GetMeOp() == kMeOpConst) {
-          retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_add, opndA, OP_sub, opnd1, opndB));
+          retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_add, opndA,
+                                                                          OP_sub, opnd1, opndB));
           if (addExpr->hasAddressValue) {
             retOpMeExpr->hasAddressValue = true;
           }
           return retOpMeExpr;
         }
         // (a - const) + b --> (a + b) - const
-        retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_sub, OP_add, opndA, opnd1, opndB));
+        retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_sub, OP_add,
+                                                                        opndA, opnd1, opndB));
         if (addExpr->hasAddressValue) {
           retOpMeExpr->hasAddressValue = true;
           if (retOpMeExpr->GetOpnd(0)->GetMeOp() == kMeOpOp) {

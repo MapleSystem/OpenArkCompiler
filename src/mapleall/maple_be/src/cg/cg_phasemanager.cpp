@@ -82,7 +82,7 @@ bool CgFuncPM::FuncLevelRun(CGFunc &cgFunc, AnalysisDataManager &serialADM) {
     SolveSkipFrom(CGOptions::GetSkipFromPhase(), i);
     const MaplePhaseInfo *curPhase = MaplePhaseRegister::GetMaplePhaseRegister()->GetPhaseByID(phasesSequence[i]);
     if (!IsQuiet()) {
-      LogInfo::MapleLogger() << "---Run " << (curPhase->IsAnalysis() ? "analysis" : "transform")
+      LogInfo::MapleLogger() << "---Run MplCG " << (curPhase->IsAnalysis() ? "analysis" : "transform")
                              << " Phase [ " << curPhase->PhaseName() << " ]---\n";
     }
     if (curPhase->IsAnalysis()) {

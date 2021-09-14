@@ -891,7 +891,7 @@ class OpMeExpr : public MeExpr {
     }
     return nullptr;
   }
-  void SetHasAddressValue() { 
+  void SetHasAddressValue() {
     if (hasAddressValue) {
       return;
     }

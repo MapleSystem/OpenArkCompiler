@@ -983,6 +983,22 @@ class MIRFunction {
     return profileDesc;
   }
 
+  MapleMap<uint32, std::pair<StIdx, StIdx>> &GetBoundaryMap() {
+    if (boundaryMap == nullptr) {
+      boundaryMap = module->GetMemPool()->New<MapleMap<uint32, std::pair<StIdx, StIdx>>>(
+          module->GetMPAllocator().Adapter());
+    }
+    return *boundaryMap;
+  }
+
+  void SetBoundaryMap(uint32 tag, std::pair<StIdx, StIdx> boundaryVar) {
+    if (boundaryMap == nullptr) {
+      boundaryMap = module->GetMemPool()->New<MapleMap<uint32, std::pair<StIdx, StIdx>>>(
+          module->GetMPAllocator().Adapter());
+    }
+    (*boundaryMap)[tag] = boundaryVar;
+  }
+
  private:
   MIRModule *module;     // the module that owns this function
   PUIdx puIdx = 0;           // the PU index of this function
@@ -1073,6 +1089,7 @@ class MIRFunction {
   MemPool *codeMemPoolTmp{nullptr};
   MapleAllocator codeMemPoolTmpAllocator{nullptr};
   bool useTmpMemPool = false;
+  MapleMap<uint32, std::pair<StIdx, StIdx>> *boundaryMap = nullptr; // EnhanceC boundary var
 
   void DumpFlavorLoweredThanMmpl() const;
   MIRFuncType *ReconstructFormals(const std::vector<MIRSymbol*> &symbols, bool clearOldArgs);

@@ -1124,6 +1124,14 @@ void CGLowerer::LowerCallStmt(StmtNode &stmt, StmtNode *&nextStmt, BlockNode &ne
   }
   newStmt->SetSrcPos(stmt.GetSrcPos());
   newBlk.AddStatement(newStmt);
+  if (CGOptions::GetInstance().GetOptimizeLevel() >= CGOptions::kLevel2 && stmt.GetOpCode() == OP_intrinsiccall) {
+    // Try to expand memset and memcpy call lowered from intrinsiccall
+    BlockNode *blkLowered = LowerMemop(*newStmt);
+    if (blkLowered != nullptr) {
+      newBlk.RemoveStmt(newStmt);
+      newBlk.AppendStatementsFromBlock(*blkLowered);
+    }
+  }
 }
 
 StmtNode *CGLowerer::GenCallNode(const StmtNode &stmt, PUIdx &funcCalled, CallNode& origCall) {

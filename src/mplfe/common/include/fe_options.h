@@ -411,6 +411,14 @@ class FEOptions {
     return isNpeCheckDynamic;
   }
 
+  void SetBoundaryCheckDynamic(bool flag) {
+    isBoundaryCheckDynamic = flag;
+  }
+
+  bool IsBoundaryCheckDynamic() const {
+    return isBoundaryCheckDynamic;
+  }
+
  private:
   static FEOptions options;
   // input control options
@@ -479,6 +487,7 @@ class FEOptions {
 
   // EnhanceC
   bool isNpeCheckDynamic = false;
+  bool isBoundaryCheckDynamic = false;
 
   FEOptions();
   ~FEOptions() = default;

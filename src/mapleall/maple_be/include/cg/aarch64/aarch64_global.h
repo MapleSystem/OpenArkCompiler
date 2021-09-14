@@ -293,11 +293,11 @@ class ExtendShiftOptPattern : public OptimizePattern {
 };
 
 /*
- * uxtw vreg:R215 validBitNum:[64], vreg:R214 validBitNum:[32]
+ * uxtw vreg:Rm validBitNum:[64], vreg:Rn validBitNum:[32]
  *
- * CG IR After globalopt:
+ * globalopt:UxtwMovPattern
  *
- * mov vreg:R215 validBitNum:[64], vreg:R214 validBitNum:[32]
+ * mov vreg:Rm validBitNum:[64], vreg:Rn validBitNum:[32]
  */
 class UxtwMovPattern : public OptimizePattern{
  public:

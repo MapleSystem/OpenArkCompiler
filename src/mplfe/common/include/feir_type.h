@@ -131,7 +131,7 @@ class FEIRType {
     return IsEqualToImpl(argType);
   }
 
-  size_t Hash() const {
+  uint32 Hash() const {
     return HashImpl();
   }
 
@@ -154,7 +154,7 @@ class FEIRType {
   virtual TypeDim ArrayDecrDimImpl(TypeDim delta) = 0;
   virtual bool IsEqualToImpl(const std::unique_ptr<FEIRType> &argType) const;
   virtual bool IsEqualToImpl(const FEIRType &argType) const;
-  virtual size_t HashImpl() const = 0;
+  virtual uint32 HashImpl() const = 0;
   virtual PrimType GetPrimTypeImpl() const {
     return PTY_begin;  // Means no valid primtype
   }
@@ -224,7 +224,7 @@ class FEIRTypeDefault : public FEIRType {
   TypeDim ArrayDecrDimImpl(TypeDim delta) override;
   bool IsEqualToImpl(const FEIRType &argType) const override;
   bool IsEqualToImpl(const std::unique_ptr<FEIRType> &argType) const override;
-  size_t HashImpl() const override;
+  uint32 HashImpl() const override;
   bool IsScalarImpl() const override;
   PrimType GetPrimTypeImpl() const override;
   void SetPrimTypeImpl(PrimType pt) override;
@@ -269,7 +269,7 @@ class FEIRTypeByName : public FEIRTypeDefault {
   std::unique_ptr<FEIRType> CloneImpl() const override;
   MIRType *GenerateMIRTypeImpl(bool usePtr, PrimType ptyPtr) const override;
   bool IsEqualToImpl(const FEIRType &argType) const override;
-  size_t HashImpl() const override;
+  uint32 HashImpl() const override;
   bool IsScalarImpl() const override;
   bool IsPreciseImpl() const override {
     return IsScalarPrimType(primType) || !typeName.empty();
@@ -303,7 +303,7 @@ class FEIRTypeNative : public FEIRType {
   std::unique_ptr<FEIRType> CloneImpl() const override;
   MIRType *GenerateMIRTypeImpl(bool usePtr, PrimType ptyPtr) const override;
   bool IsEqualToImpl(const FEIRType &argType) const override;
-  size_t HashImpl() const override;
+  uint32 HashImpl() const override;
   std::string GetTypeNameImpl() const override;
   bool IsScalarImpl() const override;
   bool IsRefImpl() const override;
@@ -344,7 +344,7 @@ class FEIRTypePointer : public FEIRType {
   std::unique_ptr<FEIRType> CloneImpl() const override;
   MIRType *GenerateMIRTypeImpl(bool usePtr, PrimType ptyPtr) const override;
   bool IsEqualToImpl(const FEIRType &argType) const override;
-  size_t HashImpl() const override;
+  uint32 HashImpl() const override;
   bool IsScalarImpl() const override;
   TypeDim ArrayIncrDimImpl(TypeDim delta) override;
   TypeDim ArrayDecrDimImpl(TypeDim delta) override;

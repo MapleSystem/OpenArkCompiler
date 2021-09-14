@@ -108,7 +108,8 @@ void SSATab::CreateSSAStmt(StmtNode &stmt, const BB *curbb) {
             AddrofSSANode *dread = static_cast<AddrofSSANode *>(rhs->Opnd(0));
             MIRSymbol *st2 = mirModule.CurFunction()->GetLocalOrGlobalSymbol(dread->GetStIdx());
             CHECK_FATAL(st2 != nullptr, "null ptr check");
-            OriginalSt *ost2 = FindOrCreateSymbolOriginalSt(*st2, mirModule.CurFunction()->GetPuidx(), dread->GetFieldID());
+            OriginalSt *ost2 = FindOrCreateSymbolOriginalSt(*st2, mirModule.CurFunction()->GetPuidx(),
+                                                            dread->GetFieldID());
             if (ost == ost2) {
               ost->isPtrWithIncDec = true;
             }

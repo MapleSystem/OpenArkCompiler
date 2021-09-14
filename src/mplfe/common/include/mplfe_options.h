@@ -111,6 +111,7 @@ class MPLFEOptions : public maple::MapleDriverOptionBase {
 
   // EnhanceC
   bool ProcessNpeCheckDynamic(const mapleOption::Option &opt);
+  bool ProcessBoundaryCheckDynamic(const mapleOption::Option &opt);
 
   // symbol resolve
   bool ProcessAOT(const mapleOption::Option &opt);

@@ -310,7 +310,8 @@ BaseNode* MIRLower::LowerEmbeddedCandCior(BaseNode *x, StmtNode *curstmt, BlockN
     LabelIdx labIdx = mirFunc->GetLabelTab()->CreateLabel();
     (void)mirFunc->GetLabelTab()->AddToStringLabelMap(labIdx);
     BaseNode *cond = builder->CreateExprRegread(PTY_u8, pregIdx);
-    CondGotoNode *cgoto = mirFunc->GetCodeMempool()->New<CondGotoNode>(x->GetOpCode() == OP_cior ? OP_brtrue : OP_brfalse);
+    CondGotoNode *cgoto = mirFunc->GetCodeMempool()->New<CondGotoNode>(
+        x->GetOpCode() == OP_cior ? OP_brtrue : OP_brfalse);
     cgoto->SetOpnd(cond, 0);
     cgoto->SetOffset(labIdx);
     blk->InsertBefore(curstmt, cgoto);

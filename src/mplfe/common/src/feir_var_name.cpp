@@ -53,7 +53,7 @@ bool FEIRVarName::EqualsToImpl(const std::unique_ptr<FEIRVar> &var) const {
   return ptrVarName->nameIdx == nameIdx && GetType()->IsEqualTo(ptrVarName->GetType());
 }
 
-size_t FEIRVarName::HashImpl() const {
+uint32 FEIRVarName::HashImpl() const {
   return std::hash<uint32>{}(nameIdx);
 }
 }  // namespace maple

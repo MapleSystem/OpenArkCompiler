@@ -14,6 +14,7 @@
  */
 #include "ast_struct2fe_helper.h"
 #include "fe_manager.h"
+#include "feir_builder.h"
 #include "fe_utils_ast.h"
 #include "ast_util.h"
 #include "ast_decl_builder.h"
@@ -243,6 +244,16 @@ bool ASTFunc2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
     sym->SetSKind(kStVar);
     sym->AddAttrs(paramDecls[i]->GetGenericAttrs().ConvertToTypeAttrs());
     mirFunc->AddArgument(sym);
+    if (paramDecls[i]->IsBoundaryAttr()) {
+      UniqueFEIRExpr tmpExpr = FEIRBuilder::CreateExprDRead(
+          FEIRBuilder::CreateVarNameForC(paramDecls[i]->GetName(), *argMIRTypes[i]));
+      std::string tag = "_boundary." + paramDecls[i]->GetName();
+      std::string lowerName = tag + ".lower_0_0";
+      MIRSymbol *lowerSym = FEManager::GetMIRBuilder().GetOrCreateDeclInFunc(lowerName, *argMIRTypes[i], *mirFunc);
+      std::string upperName = tag + ".upper_0_0";
+      MIRSymbol *upperSym = FEManager::GetMIRBuilder().GetOrCreateDeclInFunc(upperName, *argMIRTypes[i], *mirFunc);
+      mirFunc->SetBoundaryMap(tmpExpr->Hash(), std::make_pair(lowerSym->GetStIdx(), upperSym->GetStIdx()));
+    }
   }
   mirMethodPair.first = mirFunc->GetStIdx();
   mirMethodPair.second.first = mirFunc->GetMIRFuncType()->GetTypeIndex();
