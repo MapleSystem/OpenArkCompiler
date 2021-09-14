@@ -124,6 +124,7 @@ MeExpr *MeSSAUpdate::RenameExpr(MeExpr &meExpr, bool &changed) {
         newMeExpr.SetBitsSize(meOpExpr.GetBitsSize());
         newMeExpr.SetTyIdx(meOpExpr.GetTyIdx());
         newMeExpr.SetFieldID(meOpExpr.GetFieldID());
+        newMeExpr.SetHasAddressValue();
         return irMap.HashMeExpr(newMeExpr);
       }
       return &meExpr;

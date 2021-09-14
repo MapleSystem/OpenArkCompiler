@@ -1087,6 +1087,7 @@ void SSAPre::Rename2() {
               alldom = false;
             }
           }
+          opmeexpr.SetHasAddressValue();
           exprY = irMap->HashMeExpr(opmeexpr);
         } else {
           for (size_t ii = 0; ii < varVecY.size(); ++ii) {
