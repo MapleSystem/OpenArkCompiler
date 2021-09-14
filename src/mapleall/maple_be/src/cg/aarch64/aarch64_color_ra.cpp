@@ -55,6 +55,10 @@ constexpr uint32 kLoopWeight = 20;
 constexpr uint32 kAdjustWeight = 2;
 constexpr uint32 kInsnStep = 2;
 constexpr uint32 kMaxSplitCount = 3;
+constexpr uint32 kPriorityDefThreashold = 1;
+constexpr uint32 kPriorityUseThreashold = 5;
+constexpr uint32 kPriorityBBThreashold = 1000;
+constexpr float  kPriorityRatioThreashold = 0.9;
 
 #define GCRA_DUMP CG_DEBUG_FUNC(*cgFunc)
 
@@ -257,12 +261,16 @@ void GraphColorRegAllocator::CalculatePriority(LiveRange &lr) const {
 #endif  /* RANDOM_PRIORITY */
   float pri = 0.0;
   uint32 bbNum = 0;
-  auto calculatePriorityFunc = [&lr, &bbNum, &pri, this] (uint32 bbID) {
+  uint32 numDefs = 0;
+  uint32 numUses = 0;
+  auto calculatePriorityFunc = [&lr, &bbNum, &numDefs, &numUses, &pri, this] (uint32 bbID) {
     auto lu = lr.FindInLuMap(bbID);
     ASSERT(lu != lr.EndOfLuMap(), "can not find live unit");
     BB *bb = bbVec[bbID];
     if (bb->GetFirstInsn() != nullptr && !bb->IsSoloGoto()) {
       ++bbNum;
+      numDefs += lu->second->GetDefNum();
+      numUses += lu->second->GetUseNum();
       uint32 useCnt = lu->second->GetDefNum() + lu->second->GetUseNum();
       uint32 mult;
 #ifdef USE_BB_FREQUENCY
@@ -270,7 +278,7 @@ void GraphColorRegAllocator::CalculatePriority(LiveRange &lr) const {
 #else   /* USE_BB_FREQUENCY */
       if (bb->GetLoop() != nullptr) {
         uint32 loopFactor;
-        if (lr.GetNumCall() > 0) {
+        if (bb->HasCall()) {
           loopFactor = bb->GetLoop()->GetLoopLevel() * kAdjustWeight;
         } else {
           loopFactor = bb->GetLoop()->GetLoopLevel() / kAdjustWeight;
@@ -288,6 +296,12 @@ void GraphColorRegAllocator::CalculatePriority(LiveRange &lr) const {
   if (bbNum != 0) {
     lr.SetPriority(pri - bbNum);
   } else {
+    lr.SetPriority(0.0);
+  }
+  if (lr.GetPriority() > 0 && numDefs <= kPriorityDefThreashold && numUses <= kPriorityUseThreashold &&
+      cgFunc->NumBBs() > kPriorityBBThreashold &&
+      (float(lr.GetNumBBMembers()) / cgFunc->NumBBs()) > kPriorityRatioThreashold) {
+    /* for large functions, delay allocating long LR with few defs and uses */
     lr.SetPriority(0.0);
   }
 }
@@ -4111,6 +4125,7 @@ bool GraphColorRegAllocator::LoopNeedSplit(const CGFuncLoops &loop, std::set<reg
       }
     }
   }
+  /* regPressure is lr only within the loop body that either spilled or is a caller crossing calls */
   if (regPressure.size() != 0) {
     for (auto reg: regPressure) {
       LiveRange *lr = lrVec[reg];
@@ -4164,6 +4179,7 @@ void GraphColorRegAllocator::AnalysisLoop(const CGFuncLoops &loop) {
   auto comparator = [=](const LiveRange *lr1, const LiveRange *lr2) -> bool {
       return lr1->GetPriority() < lr2->GetPriority();
   };
+  /* lrs is a priority sorted list of int live ranges with calls that is live across the loop body  */
   std::sort(lrs.begin(), lrs.end(), comparator);
   const MapleVector<BB*> &exits = loop.GetExits();
   std::set<BB*> loopExits;
