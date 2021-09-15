@@ -495,8 +495,16 @@ static void SplitMemoryIntoBlocks(size_t totalMemorySize, std::vector<uint32> &b
 
 static bool IsComplexExpr(BaseNode *expr, MIRFunction &func) {
   Opcode op = expr->GetOpCode();
-  if (op == OP_dread || op == OP_regread) {
+  if (op == OP_regread) {
     return false;
+  }
+  if (op == OP_dread) {
+    auto *symbol = func.GetLocalOrGlobalSymbol(static_cast<DreadNode*>(expr)->GetStIdx());
+    if (symbol->IsGlobal() || symbol->GetStorageClass() == kScPstatic) {
+      return true;  // dread global/static var is complex expr because it will be lowered to adrp + add
+    } else {
+      return false;
+    }
   }
   if (op == OP_addrof) {
     auto *symbol = func.GetLocalOrGlobalSymbol(static_cast<AddrofNode*>(expr)->GetStIdx());
@@ -771,7 +779,9 @@ bool MemEntry::Memcpy(MemEntry &srcMem, int64 copySize, MIRFunction &func,
   MemOpKind memOpKind = MEM_OP_memcpy;
   MemEntryKind memKind = GetKind();
   if (!isLowLevel) {  // check type consistency and memKind only for high level expand
-    CHECK_FATAL(memType == srcMem.memType, "dest type and src type are different");
+    if (memType != srcMem.memType) {
+      return false;
+    }
     CHECK_FATAL(memKind != kMemEntryUnknown, "invalid memKind");
   }
   MIRBuilder *mirBuilder = func.GetModule()->GetMIRBuilder();
