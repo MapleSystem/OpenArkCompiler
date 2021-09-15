@@ -178,11 +178,11 @@ bool IsNoCvtNeeded(PrimType toType, PrimType fromType) {
     case PTY_i8:
     case PTY_i16:
       return fromType == PTY_i32;
+    case PTY_i64:
     case PTY_u64:
     case PTY_a64:
-      return fromType == PTY_ptr;
     case PTY_ptr:
-      return fromType == PTY_u64 || fromType == PTY_a64;
+      return fromType == PTY_ptr || fromType == PTY_u64 || fromType == PTY_a64 || fromType == PTY_i64;
     default:
       return false;
   }
