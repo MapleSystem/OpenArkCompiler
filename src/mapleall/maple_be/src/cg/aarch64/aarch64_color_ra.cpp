@@ -51,11 +51,15 @@ namespace maplebe {
  * R0->GetRegisterNumber() == 1
  * V0->GetRegisterNumber() == 33
  */
-#ifndef USE_BB_FREQUENCY
 constexpr uint32 kLoopWeight = 20;
 constexpr uint32 kAdjustWeight = 2;
-#endif
 constexpr uint32 kInsnStep = 2;
+constexpr uint32 kPriorityDefThreashold = 1;
+constexpr uint32 kPriorityUseThreashold = 5;
+constexpr uint32 kPriorityBBThreashold = 1000;
+constexpr float  kPriorityRatioThreashold = 0.9;
+constexpr float  kPriorityCallMult = 1.1;
+constexpr float  kPriorityNoCallMult = 0.9;
 
 #define GCRA_DUMP CG_DEBUG_FUNC(*cgFunc)
 
@@ -256,39 +260,43 @@ void GraphColorRegAllocator::CalculatePriority(LiveRange &lr) const {
   }
   return;
 #endif  /* RANDOM_PRIORITY */
-#ifdef USE_BB_FREQUENCY
-  cgFunc->BuildStaticBBFrequency();
-#endif
+  if (CGOptions::UseRaBBFreq()) {
+    cgFunc->BuildStaticBBFrequency();
+  }
   float pri = 0.0;
   uint32 bbNum = 0;
-  auto calculatePriorityFunc = [&lr, &bbNum, &pri, this] (uint32 bbID) {
+  uint32 numDefs = 0;
+  uint32 numUses = 0;
+  auto calculatePriorityFunc = [&lr, &bbNum, &numDefs, &numUses, &pri, this] (uint32 bbID) {
     auto lu = lr.FindInLuMap(bbID);
     ASSERT(lu != lr.EndOfLuMap(), "can not find live unit");
     BB *bb = bbVec[bbID];
     if (bb->GetFirstInsn() != nullptr && !bb->IsSoloGoto()) {
       ++bbNum;
+      numDefs += lu->second->GetDefNum();
+      numUses += lu->second->GetUseNum();
       uint32 useCnt = lu->second->GetDefNum() + lu->second->GetUseNum();
       uint32 mult;
-#ifdef USE_BB_FREQUENCY
-      mult = bb->GetFrequency();
-      if (lr.GetNumCall() > 0) {
-        mult *= 2;
-      } else {
-        mult /= 2;
-      }
-#else   /* USE_BB_FREQUENCY */
-      if (bb->GetLoop() != nullptr) {
-        uint32 loopFactor;
-        if (lr.GetNumCall() > 0) {
-          loopFactor = bb->GetLoop()->GetLoopLevel() * kAdjustWeight;
+      if (CGOptions::UseRaBBFreq()) {
+        mult = bb->GetFrequency();
+        if (bb->HasCall()) {
+          mult *= kPriorityCallMult;
         } else {
-          loopFactor = bb->GetLoop()->GetLoopLevel() / kAdjustWeight;
+          mult *= kPriorityNoCallMult;
         }
-        mult = static_cast<uint32>(pow(kLoopWeight, loopFactor));
       } else {
-        mult = 1;
+        if (bb->GetLoop() != nullptr) {
+          uint32 loopFactor;
+          if (bb->HasCall()) {
+            loopFactor = bb->GetLoop()->GetLoopLevel() * kAdjustWeight;
+          } else {
+            loopFactor = bb->GetLoop()->GetLoopLevel() / kAdjustWeight;
+          }
+          mult = static_cast<uint32>(pow(kLoopWeight, loopFactor));
+        } else {
+          mult = 1;
+        }
       }
-#endif  /* USE_BB_FREQUENCY */
       pri += useCnt * mult;
     }
   };
@@ -297,6 +305,12 @@ void GraphColorRegAllocator::CalculatePriority(LiveRange &lr) const {
   if (bbNum != 0) {
     lr.SetPriority(pri - bbNum);
   } else {
+    lr.SetPriority(0.0);
+  }
+  if (lr.GetPriority() > 0 && numDefs <= kPriorityDefThreashold && numUses <= kPriorityUseThreashold &&
+      cgFunc->NumBBs() > kPriorityBBThreashold &&
+      (float(lr.GetNumBBMembers()) / cgFunc->NumBBs()) > kPriorityRatioThreashold) {
+    /* for large functions, delay allocating long LR with few defs and uses */
     lr.SetPriority(0.0);
   }
 }

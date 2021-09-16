@@ -66,6 +66,7 @@ bool CGOptions::doICO = false;
 bool CGOptions::doStoreLoadOpt = false;
 bool CGOptions::doGlobalOpt = false;
 bool CGOptions::doVregRename = false;
+bool CGOptions::useRaBBFreq = true;
 bool CGOptions::doMultiPassColorRA = true;
 bool CGOptions::doPrePeephole = false;
 bool CGOptions::doPeephole = false;
@@ -125,6 +126,7 @@ enum OptionIndex : uint64 {
   kPreSchedule,
   kSchedule,
   kVregRename,
+  kRaBBFreq,
   kMultiPassRA,
   kWriteRefFieldOpt,
   kDumpOlog,
@@ -435,6 +437,16 @@ const Descriptor kUsage[] = {
     kArgCheckPolicyBool,
     "  --vreg-rename                  \tPerform rename of long live range around loops in coloring RA\n"
     "  --no-vreg-rename\n",
+    "mplcg",
+    {} },
+  { kRaBBFreq,
+    kEnable,
+    "",
+    "ra-freq",
+    kBuildTypeExperimental,
+    kArgCheckPolicyBool,
+    "  --ra-freq                  \tUse BB frequency for coloring RA\n"
+    "  --no-ra-freq\n",
     "mplcg",
     {} },
   { kMultiPassRA,
@@ -1354,6 +1366,9 @@ bool CGOptions::SolveOptions(const std::vector<Option> &opts, bool isDebug) {
         break;
       case kVregRename:
         (opt.Type() == kEnable) ? EnableVregRename() : DisableVregRename();
+        break;
+      case kRaBBFreq:
+        (opt.Type() == kEnable) ? EnableUseRaBBFreq() : DisableUseRaBBFreq();
         break;
       case kMultiPassRA:
         (opt.Type() == kEnable) ? EnableMultiPassColorRA() : DisableMultiPassColorRA();

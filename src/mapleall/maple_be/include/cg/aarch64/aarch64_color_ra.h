@@ -27,7 +27,6 @@ namespace maplebe {
 
 #define USE_LRA
 #define USE_SPLIT
-#define USE_BB_FREQUENCY
 #define OPTIMIZE_FOR_PROLOG
 #undef REUSE_SPILLMEM
 #undef COLOR_SPLIT

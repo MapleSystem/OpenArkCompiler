@@ -663,6 +663,7 @@ class CGOptions : public MapleDriverOptionBase {
   static bool DoGlobalOpt() {
     return doGlobalOpt;
   }
+
   static void EnableVregRename() {
     doVregRename = true;
   }
@@ -673,6 +674,18 @@ class CGOptions : public MapleDriverOptionBase {
 
   static bool DoVregRename() {
     return doVregRename;
+  }
+
+  static void EnableUseRaBBFreq() {
+    useRaBBFreq = true;
+  }
+
+  static void DisableUseRaBBFreq() {
+    useRaBBFreq = false;
+  }
+
+  static bool UseRaBBFreq() {
+    return useRaBBFreq;
   }
 
   static void EnableMultiPassColorRA() {
@@ -1126,6 +1139,7 @@ class CGOptions : public MapleDriverOptionBase {
   static bool doStoreLoadOpt;
   static bool doGlobalOpt;
   static bool doVregRename;
+  static bool useRaBBFreq;
   static bool doMultiPassColorRA;
   static bool doPrePeephole;
   static bool doPeephole;
