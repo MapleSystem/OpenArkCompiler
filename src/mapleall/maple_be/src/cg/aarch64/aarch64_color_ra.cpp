@@ -54,6 +54,7 @@ namespace maplebe {
 constexpr uint32 kLoopWeight = 20;
 constexpr uint32 kAdjustWeight = 2;
 constexpr uint32 kInsnStep = 2;
+constexpr uint32 kMaxSplitCount = 3;
 constexpr uint32 kPriorityDefThreashold = 1;
 constexpr uint32 kPriorityUseThreashold = 5;
 constexpr uint32 kPriorityBBThreashold = 1000;
@@ -120,7 +121,7 @@ void GraphColorRegAllocator::PrintLiveUnitMap(const LiveRange &lr) const {
       continue;
     }
     auto lu = lr.GetLuMap().find(i);
-    if (lu != lr.GetLuMap().end()) {
+    if (lu != lr.GetLuMap().end() && (lu->second->GetDefNum() || lu->second->GetUseNum())) {
       LogInfo::MapleLogger() << "(" << i << " ";
       lu->second->PrintLiveUnit();
       LogInfo::MapleLogger() << ")";
@@ -3542,7 +3543,11 @@ void GraphColorRegAllocator::SpillLiveRangeForSpills() {
           }
         } else if (opnd->IsRegister()) {
           bool isdef = static_cast<AArch64OpndProp *>(md->operand[i])->IsRegDef();
+          bool isuse = static_cast<AArch64OpndProp *>(md->operand[i])->IsRegUse();
           RegOperand *replace = CreateSpillFillCode(*static_cast<RegOperand*>(opnd), *insn, spillCnt, isdef);
+          if (isuse && isdef) {
+            (void)CreateSpillFillCode(*static_cast<RegOperand*>(opnd), *insn, spillCnt, false);
+          }
           if (replace != nullptr) {
             if (isdef == false) {
               spillCnt++;
@@ -4015,6 +4020,227 @@ void GraphColorRegAllocator::OptCallerSave() {
   callerSavePre.ApplySSAPRE();
 }
 
+void GraphColorRegAllocator::SplitVregAroundLoop(const CGFuncLoops &loop, const std::vector<LiveRange*> &lrs,
+                                                 BB &headerPred, BB &exitSucc, std::set<regno_t> &cands) {
+  uint32 maxSplitCount = lrs.size() - intCalleeRegSet.size();
+  maxSplitCount = maxSplitCount > kMaxSplitCount ? kMaxSplitCount : maxSplitCount;
+  uint32 splitCount = 0;
+  auto it = cands.begin();
+  uint32 candsSize = cands.size();
+  maxSplitCount = maxSplitCount > candsSize ? candsSize : maxSplitCount;
+  for (auto &lr: lrs) {
+    if (lr->IsSpilled()) {
+      continue;
+    }
+    if (!AArch64Abi::IsCalleeSavedReg(static_cast<AArch64reg>(lr->GetAssignedRegNO()))) {
+      continue;
+    }
+    bool hasRef = false;
+    for (auto *bb : loop.GetLoopMembers()) {
+      LiveUnit *lu = lr->GetLiveUnitFromLuMap(bb->GetId());
+      if (lu != nullptr && (lu->GetDefNum() != 0 || lu->GetUseNum() != 0)) {
+        hasRef = true;
+        break;
+      }
+    }
+    if (hasRef == false) {
+      splitCount++;
+      RegOperand *ropnd = &cgFunc->GetOrCreateVirtualRegisterOperand(lr->GetRegNO());
+      RegOperand &phyOpnd = static_cast<AArch64CGFunc*>(cgFunc)->GetOrCreatePhysicalRegisterOperand(
+          static_cast<AArch64reg>(lr->GetAssignedRegNO()), ropnd->GetSize(),
+          (lr->GetRegType()));
+
+      Insn *headerCom = &(static_cast<AArch64CGFunc*>(cgFunc)->CreateCommentInsn("split around loop begin"));
+      headerPred.AppendInsn(*headerCom);
+      Insn *last = headerPred.GetLastInsn();
+      SpillOperand(*last, *ropnd, true, phyOpnd);
+
+      Insn *exitCom = &(static_cast<AArch64CGFunc*>(cgFunc)->CreateCommentInsn("split around loop end"));
+      exitSucc.InsertInsnBegin(*exitCom);
+      Insn *first = exitSucc.GetFirstInsn();
+      SpillOperand(*first, *ropnd, false, phyOpnd);
+
+      LiveRange *replacedLr = lrVec[*it];
+      replacedLr->SetAssignedRegNO(lr->GetAssignedRegNO());
+      replacedLr->SetSpilled(false);
+      it++;
+    }
+    if (splitCount >= maxSplitCount) {
+      break;
+    }
+  }
+}
+
+bool GraphColorRegAllocator::LrGetBadReg(LiveRange &lr) {
+  if (lr.IsSpilled()) {
+    return true;
+  }
+  if (lr.GetNumCall() != 0 &&
+      !AArch64Abi::IsCalleeSavedReg(static_cast<AArch64reg>(lr.GetAssignedRegNO()))) {
+    return true;
+  }
+  return false;
+}
+
+bool GraphColorRegAllocator::LoopNeedSplit(const CGFuncLoops &loop, std::set<regno_t> &cands) {
+  std::set<regno_t> regPressure;
+  const BB *header = loop.GetHeader();
+  const MapleSet<regno_t> &liveIn = header->GetLiveInRegNO();
+  std::set<BB*> loopBBs;
+  for (auto *bb : loop.GetLoopMembers()) {
+    loopBBs.insert(bb);
+    FOR_BB_INSNS(insn, bb) {
+      if (!insn->IsMachineInstruction()) {
+        continue;
+      }
+      if (insn->GetId() == 0) {
+        continue;
+      }
+      uint32 opndNum = insn->GetOperandSize();
+      for (uint32 i = 0; i < opndNum; ++i) {
+        Operand &opnd = insn->GetOperand(i);
+        if (opnd.IsList()) {
+          continue;
+        } else if (opnd.IsMemoryAccessOperand()) {
+          auto &memOpnd = static_cast<MemOperand &>(opnd);
+          Operand *base = memOpnd.GetBaseRegister();
+          Operand *offset = memOpnd.GetIndexRegister();
+          if (base != nullptr && base->IsRegister()) {
+            RegOperand *regOpnd = static_cast<RegOperand *>(base);
+            regno_t regNO = regOpnd->GetRegisterNumber();
+            LiveRange *lr = lrVec[regNO];
+            if (lr != nullptr && lr->GetRegType() == kRegTyInt && LrGetBadReg(*lr) &&
+                liveIn.find(regNO) == liveIn.end()) {
+              regPressure.insert(regOpnd->GetRegisterNumber());
+            }
+          }
+          if (offset != nullptr && offset->IsRegister()) {
+            RegOperand *regOpnd = static_cast<RegOperand *>(offset);
+            regno_t regNO = regOpnd->GetRegisterNumber();
+            LiveRange *lr = lrVec[regNO];
+            if (lr != nullptr && lr->GetRegType() == kRegTyInt && LrGetBadReg(*lr) &&
+                liveIn.find(regNO) == liveIn.end()) {
+              regPressure.insert(regOpnd->GetRegisterNumber());
+            }
+          }
+        } else if (opnd.IsRegister()) {
+          auto &regOpnd = static_cast<RegOperand &>(opnd);
+          regno_t regNO = regOpnd.GetRegisterNumber();
+          LiveRange *lr = lrVec[regNO];
+          if (lr != nullptr && lr->GetRegType() == kRegTyInt && LrGetBadReg(*lr) &&
+              liveIn.find(regNO) == liveIn.end()) {
+            regPressure.insert(regOpnd.GetRegisterNumber());
+          }
+        }
+      }
+    }
+  }
+  if (regPressure.size() != 0) {
+    for (auto reg: regPressure) {
+      LiveRange *lr = lrVec[reg];
+      std::vector<BB*> smember;
+      ForEachBBArrElem(lr->GetBBMember(), [this, &smember](uint32 bbID) { (void)smember.emplace_back(bbVec[bbID]); });
+      bool liveBeyondLoop = false;
+      for (auto bb: smember) {
+        if (loopBBs.find(bb) == loopBBs.end()) {
+          liveBeyondLoop = true;
+          break;
+        }
+      }
+      if (liveBeyondLoop) {
+        continue;
+      }
+      cands.insert(reg);
+    }
+    if (cands.empty()) {
+      return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+void GraphColorRegAllocator::AnalysisLoop(const CGFuncLoops &loop) {
+  const BB *header = loop.GetHeader();
+  const MapleSet<regno_t> &liveIn = header->GetLiveInRegNO();
+  std::vector<LiveRange*> lrs;
+  uint32 intCalleeNum = intCalleeRegSet.size();
+  for (auto regno: liveIn) {
+    LiveRange *lr = lrVec[regno];
+    if (lr != nullptr && lr->GetRegType() == kRegTyInt && lr->GetNumCall() != 0) {
+      lrs.emplace_back(lr);
+    }
+  }
+  if (lrs.size() < intCalleeNum) {
+    return;
+  }
+  bool hasCall = false;
+  std::set<BB*> loopBBs;
+  for (auto *bb : loop.GetLoopMembers()) {
+    if (bb->HasCall()) {
+      hasCall = true;
+    }
+    loopBBs.insert(bb);
+  }
+  if (!hasCall) {
+    return;
+  }
+  auto comparator = [=](const LiveRange *lr1, const LiveRange *lr2) -> bool {
+      return lr1->GetPriority() < lr2->GetPriority();
+  };
+  std::sort(lrs.begin(), lrs.end(), comparator);
+  const MapleVector<BB*> &exits = loop.GetExits();
+  std::set<BB*> loopExits;
+  for (auto &bb: exits) {
+    for (auto &succ: bb->GetSuccs()) {
+      if (loopBBs.find(succ) != loopBBs.end()) {
+        continue;
+      }
+      if (succ->IsSoloGoto() || succ->IsEmpty()) {
+        BB *realSucc = cgFunc->GetTheCFG()->GetTargetSuc(*succ);
+        if (realSucc != nullptr) {
+          loopExits.insert(realSucc);
+        }
+      } else {
+        loopExits.insert(succ);
+      }
+    }
+  }
+  std::set<BB*> loopEntra;
+  for (auto &pred: header->GetPreds()) {
+    if (loopBBs.find(pred) != loopBBs.end()) {
+      continue;
+    }
+    loopEntra.insert(pred);
+  }
+  if (loopEntra.size() != 1 || loopExits.size() != 1) {
+    return;
+  }
+  BB *headerPred = *loopEntra.begin();
+  BB *exitSucc = *loopExits.begin();
+  if (headerPred->GetKind() != BB::kBBFallthru) {
+    return;
+  }
+  if (exitSucc->GetPreds().size() != loop.GetExits().size()) {
+    return;
+  }
+  std::set<regno_t> cands;
+  if (!LoopNeedSplit(loop, cands)) {
+    return;
+  }
+  SplitVregAroundLoop(loop, lrs, *headerPred, *exitSucc, cands);
+}
+void GraphColorRegAllocator::AnalysisLoopPressureAndSplit(const CGFuncLoops &loop) {
+  if (loop.GetInnerLoops().empty()) {
+    // only handle inner-most loop
+    AnalysisLoop(loop);
+    return;
+  }
+  for (const auto *lp : loop.GetInnerLoops()) {
+    AnalysisLoopPressureAndSplit(*lp);
+  }
+}
+
 /* Iterate through all instructions and change the vreg to preg. */
 void GraphColorRegAllocator::FinalizeRegisters() {
   if (doMultiPass && hasSpill) {
@@ -4031,6 +4257,11 @@ void GraphColorRegAllocator::FinalizeRegisters() {
     return;
   }
   if (CLANG) {
+    if (!cgFunc->GetLoops().empty()) {
+      for (const auto *lp : cgFunc->GetLoops()) {
+        AnalysisLoopPressureAndSplit(*lp);
+      }
+    }
     OptCallerSave();
   }
   for (auto *bb : bfs->sortedBBs) {

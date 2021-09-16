@@ -89,6 +89,7 @@ class ForwardPropPattern : public OptimizePattern {
   void Init() final;
  private:
   InsnSet firstRegUseInsnSet;
+  void RemoveMopUxtwToMov(Insn &insn);
   std::set<BB*, BBIdCmp> modifiedBB;
 };
 
@@ -289,6 +290,28 @@ class ExtendShiftOptPattern : public OptimizePattern {
   ExtendShiftOperand::ExtendOp extendOp;
   BitShiftOperand::ShiftOp shiftOp;
   Insn *defInsn;
+};
+
+/*
+ * uxtw vreg:Rm validBitNum:[64], vreg:Rn validBitNum:[32]
+ *
+ * globalopt:UxtwMovPattern
+ *
+ * mov vreg:Rm validBitNum:[64], vreg:Rn validBitNum:[32]
+ */
+class UxtwMovPattern : public OptimizePattern{
+ public:
+  explicit UxtwMovPattern(CGFunc &cgFunc) : OptimizePattern(cgFunc) {}
+  ~UxtwMovPattern() override = default;
+  bool CheckCondition(Insn &insn) final;
+  void Optimize(Insn &insn) final;
+  void Run() final;
+
+ protected:
+  void Init() final;
+
+ private:
+  bool CheckHideUxtw(Insn &insn, regno_t regno);
 };
 }  /* namespace maplebe */
 

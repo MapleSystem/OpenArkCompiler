@@ -422,4 +422,33 @@ TEST_F(FEIRStmtTest, FEIRStmtJavaFillArrayData) {
   EXPECT_EQ(MPLFEUTRegx::Match(dumpStr, pattern), true);
   RestoreCout();
 }
+
+TEST_F(FEIRStmtTest, FEIRExpr_hash) {
+  std::unique_ptr<FEIRVar> varReg0 = FEIRBuilder::CreateVarReg(0, PTY_i32);
+  std::unique_ptr<FEIRVar> varReg1 = FEIRBuilder::CreateVarReg(1, PTY_i8);
+  UniqueFEIRExpr exprDRead0 = std::make_unique<FEIRExprDRead>(std::move(varReg0));
+  UniqueFEIRExpr exprDRead1 = std::make_unique<FEIRExprDRead>(std::move(varReg1));
+  UniqueFEIRExpr exprDRead2 = exprDRead0->Clone();
+  EXPECT_EQ(exprDRead0->Hash() == exprDRead1->Hash(), false);
+  EXPECT_EQ(exprDRead0->Hash() == exprDRead2->Hash(), true);
+
+  UniqueFEIRVar Var0 = FEIRBuilder::CreateVarNameForC("a", *GlobalTables::GetTypeTable().GetInt32());
+  UniqueFEIRVar Var1 = FEIRBuilder::CreateVarNameForC("b", *GlobalTables::GetTypeTable().GetInt32());
+  UniqueFEIRVar Var2 = Var0->Clone();
+  UniqueFEIRExpr exprDRead10 = std::make_unique<FEIRExprDRead>(std::move(Var0));
+  UniqueFEIRExpr exprDRead11 = std::make_unique<FEIRExprDRead>(std::move(Var1));
+  UniqueFEIRExpr exprDRead12 = exprDRead10->Clone();
+  EXPECT_EQ(exprDRead10->Hash() == exprDRead11->Hash(), false);
+  EXPECT_EQ(exprDRead10->Hash() == exprDRead12->Hash(), true);
+  UniqueFEIRType retType = FEIRTypeHelper::CreateTypeNative(*GlobalTables::GetTypeTable().GetInt32());
+  MIRType *ptr = GlobalTables::GetTypeTable().GetOrCreatePointerType(*GlobalTables::GetTypeTable().GetInt32());
+  UniqueFEIRType ptrType = FEIRTypeHelper::CreateTypeNative(*ptr);
+  UniqueFEIRExpr exprIread0 = FEIRBuilder::CreateExprIRead(retType->Clone(), ptrType->Clone(), exprDRead10->Clone());
+  UniqueFEIRExpr exprIread1 = FEIRBuilder::CreateExprIRead(retType->Clone(), ptrType->Clone(), exprDRead11->Clone());
+  UniqueFEIRExpr exprIread2 = FEIRBuilder::CreateExprIRead(retType->Clone(), ptrType->Clone(), exprDRead12->Clone());
+  UniqueFEIRExpr exprIread3 = exprIread0->Clone();
+  EXPECT_EQ(exprIread0->Hash() == exprIread1->Hash(), false);
+  EXPECT_EQ(exprIread0->Hash() == exprIread2->Hash(), true);
+  EXPECT_EQ(exprIread0->Hash() == exprIread3->Hash(), true);
+}
 }  // namespace maple

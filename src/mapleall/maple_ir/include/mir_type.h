@@ -1206,6 +1206,8 @@ class MIRStructType : public MIRType {
 
   int64 GetBitOffsetFromBaseAddr(FieldID fieldID) override;
 
+  bool HasPadding() const;
+
  protected:
   FieldVector fields{};
   std::vector<TyIdx> fieldInferredTyIdx{};

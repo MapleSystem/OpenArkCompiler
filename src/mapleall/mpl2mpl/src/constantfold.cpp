@@ -1468,7 +1468,7 @@ std::pair<BaseNode*, int64> ConstantFold::FoldTypeCvt(TypeCvtNode *node) {
       return p; // the cvt is redundant
     }
   } else if (node->GetOpCode() == OP_cvt && p.second != 0 &&
-             IsUnsignedInteger(node->GetPrimType()) && IsSignedInteger(node->FromType()) &&
+             IsPrimitiveInteger(node->GetPrimType()) && IsSignedInteger(node->FromType()) &&
              GetPrimTypeSize(node->GetPrimType()) > GetPrimTypeSize(node->FromType())) {
     result = mirModule->CurFuncCodeMemPool()->New<TypeCvtNode>(OP_cvt, node->GetPrimType(), node->FromType(), p.first);
     if (IsUnsignedInteger(p.first->GetPrimType())) {
@@ -1688,10 +1688,13 @@ std::pair<BaseNode*, int64> ConstantFold::FoldBinary(BinaryNode *node) {
       result = l;
       sum = lp.second + cst;
     } else if (op == OP_sub) {
+#if 0  // this is preventing good optimizations
       if (IsSignedInteger(primType) && MinValOfSignedInteger(primType) <= cst) {
         result = node;
         sum = 0;
-      } else {
+      } else 
+#endif
+      {
         result = l;
         sum = lp.second - cst;
       }

@@ -40,7 +40,7 @@ class FEIRVarTypeScatter : public FEIRVar {
   std::string GetNameRawImpl() const override;
   std::unique_ptr<FEIRVar> CloneImpl() const override;
   bool EqualsToImpl(const std::unique_ptr<FEIRVar> &argVar) const override;
-  size_t HashImpl() const override;
+  uint32 HashImpl() const override;
 
  private:
   UniqueFEIRVar var;

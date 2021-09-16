@@ -27,6 +27,7 @@
 #include "bc_util.h"
 #include "rc_setter.h"
 #include "fe_utils.h"
+#include "enhance_c_checker.h"
 
 namespace maple {
 std::string GetFEIRNodeKindDescription(FEIRNodeKind kindArg) {
@@ -223,7 +224,9 @@ FEIRStmtNary::FEIRStmtNary(Opcode opIn, std::list<std::unique_ptr<FEIRExpr>> arg
 std::list<StmtNode*> FEIRStmtNary::GenMIRStmtsImpl(MIRBuilder &mirBuilder) const {
   std::list<StmtNode*> stmts;
   StmtNode *stmt = nullptr;
-  if (argExprs.size() > 1) {
+  if (op == OP_assertlt || op == OP_assertge) {
+    stmt = ReplaceBoundaryVar(mirBuilder);
+  } else if (argExprs.size() > 1) {
     MapleVector<BaseNode*> args(mirBuilder.GetCurrentFuncCodeMpAllocator()->Adapter());
     for (const auto &arg : argExprs) {
       BaseNode *node = arg->GenMIRNode(mirBuilder);
@@ -231,9 +234,6 @@ std::list<StmtNode*> FEIRStmtNary::GenMIRStmtsImpl(MIRBuilder &mirBuilder) const
     }
     stmt = mirBuilder.CreateStmtNary(op, std::move(args));
   } else if (argExprs.size() == 1) {
-    if (SkipNonnullChecking(mirBuilder, argExprs.front())) {
-      return stmts;
-    }
     BaseNode *node = argExprs.front()->GenMIRNode(mirBuilder);
     if (op == OP_eval && argExprs.front()->IsAddrof()) {
       node = ReplaceAddrOfNode(node);  // addrof va_list
@@ -242,35 +242,10 @@ std::list<StmtNode*> FEIRStmtNary::GenMIRStmtsImpl(MIRBuilder &mirBuilder) const
   } else {
     CHECK_FATAL(false, "Invalid arg size for MIR StmtNary");
   }
-  stmts.emplace_back(stmt);
+  if (stmt != nullptr) {
+    stmts.emplace_back(stmt);
+  }
   return stmts;
-}
-
-bool FEIRStmtNary::SkipNonnullChecking(MIRBuilder &mirBuilder, const UniqueFEIRExpr &opnd) const {
-  if (op != OP_assertnonnull) {
-    return false;
-  }
-  if (opnd->GetKind() == kExprDRead) {
-    FEIRExprDRead *dread = static_cast<FEIRExprDRead*>(opnd.get());
-    MIRSymbol *symbol = dread->GetVar()->GenerateMIRSymbol(mirBuilder);
-    return symbol->GetAttr(ATTR_nonnull);
-  } else if (opnd->GetKind() == kExprIRead) {
-    FieldID fieldID = opnd->GetFieldID();
-    if (fieldID == 0) {  // Skip multi-dimensional array pointer
-      return true;
-    }
-    FEIRExprIRead *iread = static_cast<FEIRExprIRead*>(opnd.get());
-    iread->GetClonedPtrType()->GenerateMIRTypeAuto();
-    MIRType *pointerType = iread->GetClonedPtrType()->GenerateMIRTypeAuto();
-    CHECK_FATAL(pointerType->IsMIRPtrType(), "Must be ptr type!");
-    MIRType *baseType = static_cast<MIRPtrType*>(pointerType)->GetPointedType();
-    CHECK_FATAL(baseType->IsStructType(), "basetype must be StructType");
-    FieldPair fieldPair = static_cast<MIRStructType*>(baseType)->TraverseToFieldRef(fieldID);
-    return fieldPair.second.second.GetAttr(FLDATTR_nonnull);
-  } else {
-    CHECK_FATAL(false, "invalid assertnonnull args!");
-    return true;
-  }
 }
 
 // ---------- FEStmtAssign ----------
@@ -344,15 +319,15 @@ std::list<StmtNode*> FEIRStmtDAssign::GenMIRStmtsImpl(MIRBuilder &mirBuilder) co
   InsertNonnullChecking(mirBuilder, *dstSym, ans);
   StmtNode *mirStmt = mirBuilder.CreateStmtDassign(*dstSym, fieldID, srcNode);
   ans.push_back(mirStmt);
+  AssignBoundaryVar(mirBuilder, ans);
+  InsertBoundaryChecking(mirBuilder, ans);
   return ans;
 }
 
 void FEIRStmtDAssign::InsertNonnullChecking(MIRBuilder &mirBuilder, const MIRSymbol &dstSym,
                                             std::list<StmtNode*> &ans) const {
   if (isNonnullChecking && dstSym.GetAttr(ATTR_nonnull)) {
-    std::list<UniqueFEIRExpr> exprs;
-    exprs.emplace_back(expr->Clone());
-    UniqueFEIRStmt stmt = std::make_unique<FEIRStmtNary>(OP_assertnonnull, std::move(exprs));
+    UniqueFEIRStmt stmt = std::make_unique<FEIRStmtUseOnly>(OP_assertnonnull, expr->Clone());
     std::list<StmtNode*> stmts = stmt->GenMIRStmts(mirBuilder);
     ans.splice(ans.end(), stmts);
   }
@@ -752,10 +727,39 @@ bool FEIRStmtUseOnly::CalculateDefs4AllUsesImpl(FEIRStmtCheckPoint &checkPoint, 
 std::list<StmtNode*> FEIRStmtUseOnly::GenMIRStmtsImpl(MIRBuilder &mirBuilder) const {
   std::list<StmtNode*> ans;
   ASSERT_NOT_NULL(expr);
+  if (SkipNonnullChecking(mirBuilder)) {
+    return ans;
+  }
   BaseNode *srcNode = expr->GenMIRNode(mirBuilder);
   StmtNode *mirStmt = mirBuilder.CreateStmtNary(op, srcNode);
   ans.push_back(mirStmt);
   return ans;
+}
+
+bool FEIRStmtUseOnly::SkipNonnullChecking(MIRBuilder &mirBuilder) const {
+  if (op != OP_assertnonnull) {
+    return false;
+  }
+  if (expr->GetKind() == kExprDRead) {
+    FEIRExprDRead *dread = static_cast<FEIRExprDRead*>(expr.get());
+    MIRSymbol *symbol = dread->GetVar()->GenerateMIRSymbol(mirBuilder);
+    return symbol->GetAttr(ATTR_nonnull);
+  } else if (expr->GetKind() == kExprIRead) {
+    FieldID fieldID = expr->GetFieldID();
+    if (fieldID == 0) {  // Skip multi-dimensional array pointer
+      return true;
+    }
+    FEIRExprIRead *iread = static_cast<FEIRExprIRead*>(expr.get());
+    MIRType *pointerType = iread->GetClonedPtrType()->GenerateMIRTypeAuto();
+    CHECK_FATAL(pointerType->IsMIRPtrType(), "Must be ptr type!");
+    MIRType *baseType = static_cast<MIRPtrType*>(pointerType)->GetPointedType();
+    CHECK_FATAL(baseType->IsStructType(), "basetype must be StructType");
+    FieldPair fieldPair = static_cast<MIRStructType*>(baseType)->TraverseToFieldRef(fieldID);
+    return fieldPair.second.second.GetAttr(FLDATTR_nonnull);
+  } else {
+    CHECK_FATAL(false, "invalid assertnonnull arg!");
+    return true;
+  }
 }
 
 std::string FEIRStmtUseOnly::DumpDotStringImpl() const {
@@ -800,9 +804,7 @@ void FEIRStmtReturn::InsertNonnullChecking(MIRBuilder &mirBuilder, std::list<Stm
   if (mirBuilder.GetCurrentFunction()->GetAttrs().GetAttr(FUNCATTR_nonnull) &&
       (expr->GetKind() == kExprDRead || expr->GetKind() == kExprIRead) &&
       expr->GetPrimType() == PTY_ptr) {
-    std::list<UniqueFEIRExpr> exprs;
-    exprs.emplace_back(expr->Clone());
-    UniqueFEIRStmt stmt = std::make_unique<FEIRStmtNary>(OP_assertnonnull, std::move(exprs));
+    UniqueFEIRStmt stmt = std::make_unique<FEIRStmtUseOnly>(OP_assertnonnull, expr->Clone());
     std::list<StmtNode*> stmts = stmt->GenMIRStmts(mirBuilder);
     ans.splice(ans.end(), stmts);
   }
@@ -1787,9 +1789,7 @@ void FEIRStmtCallAssign::InsertNonnullCheckingInArgs(const UniqueFEIRExpr &expr,
   if (methodInfo.GetMirFunc()->GetNthParamAttr(index).GetAttr(ATTR_nonnull)) {
     if ((expr->GetKind() == kExprDRead && expr->GetPrimType() == PTY_ptr) ||
         (expr->GetKind() == kExprIRead && expr->GetFieldID() != 0 && expr->GetPrimType() == PTY_ptr)) {
-      std::list<UniqueFEIRExpr> exprs;
-      exprs.emplace_back(expr->Clone());
-      UniqueFEIRStmt stmt = std::make_unique<FEIRStmtNary>(OP_assertnonnull, std::move(exprs));
+      UniqueFEIRStmt stmt = std::make_unique<FEIRStmtUseOnly>(OP_assertnonnull, expr->Clone());
       std::list<StmtNode*> stmts = stmt->GenMIRStmts(mirBuilder);
       ans.splice(ans.end(), stmts);
     }
@@ -2557,15 +2557,6 @@ FEIRExprUnary::FEIRExprUnary(std::unique_ptr<FEIRType> argType, Opcode argOp, st
     : FEIRExpr(kExprUnary, std::move(argType)),
       op(argOp) {
   SetOpnd(std::move(argOpnd));
-  SetExprTypeByOp();
-}
-
-FEIRExprUnary::FEIRExprUnary(Opcode argOp, MIRType *type, std::unique_ptr<FEIRExpr> argOpnd)
-    : FEIRExpr(kExprUnary),
-      op(argOp),
-      subType(type) {
-  SetOpnd(std::move(argOpnd));
-  SetExprTypeByOp();
 }
 
 std::map<Opcode, bool> FEIRExprUnary::InitMapOpNestableForExprUnary() {
@@ -2586,12 +2577,8 @@ std::unique_ptr<FEIRExpr> FEIRExprUnary::CloneImpl() const {
 }
 
 BaseNode *FEIRExprUnary::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
-  MIRType *mirType = nullptr;
-  if (subType == nullptr) {
-    mirType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(TyIdx(static_cast<uint32>(GetTypeRef().GetPrimType())));
-  } else {
-    mirType = subType;
-  }
+  MIRType *mirType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(
+      TyIdx(static_cast<uint32>(GetTypeRef().GetPrimType())));
   ASSERT(mirType != nullptr, "mir type is nullptr");
   BaseNode *nodeOpnd = opnd->GenMIRNode(mirBuilder);
   BaseNode *expr = mirBuilder.CreateExprUnary(op, *mirType, nodeOpnd);
@@ -2871,6 +2858,14 @@ void FEIRExprBinary::SetOpnd0(std::unique_ptr<FEIRExpr> argOpnd) {
 void FEIRExprBinary::SetOpnd1(std::unique_ptr<FEIRExpr> argOpnd) {
   CHECK_FATAL(argOpnd != nullptr, "input is nullptr");
   opnd1 = std::move(argOpnd);
+}
+
+const std::unique_ptr<FEIRExpr> &FEIRExprBinary::GetOpnd0() const {
+  return opnd0;
+}
+
+const std::unique_ptr<FEIRExpr> &FEIRExprBinary::GetOpnd1() const {
+  return opnd1;
 }
 
 bool FEIRExprBinary::IsComparative() const {
@@ -3941,13 +3936,14 @@ std::list<StmtNode*> FEIRStmtIAssign::GenMIRStmtsImpl(MIRBuilder &mirBuilder) co
   BaseNode *addrNode = addrExpr->GenMIRNode(mirBuilder);
   BaseNode *baseNode = baseExpr->GenMIRNode(mirBuilder);
   if (fieldID != 0) {
-    MIRType *baseType = static_cast<MIRPtrType*>(mirType)->GetPointedType();
+    MIRType * baseType = static_cast<MIRPtrType*>(mirType)->GetPointedType();
     CHECK_FATAL((baseType->GetKind() == MIRTypeKind::kTypeStruct || baseType->GetKind() == MIRTypeKind::kTypeUnion),
                 "If fieldID is not 0, then the computed address must correspond to a structure");
     InsertNonnullChecking(mirBuilder, *baseType, ans);
   }
   IassignNode *iAssignNode = mirBuilder.CreateStmtIassign(*mirType, fieldID, addrNode, baseNode);
   ans.emplace_back(iAssignNode);
+  AssignBoundaryVarAndChecking(mirBuilder, ans);
   return ans;
 }
 
@@ -3959,9 +3955,7 @@ void FEIRStmtIAssign::InsertNonnullChecking(MIRBuilder &mirBuilder, MIRType &bas
   FieldID tmpID = fieldID;
   FieldPair fieldPair = static_cast<MIRStructType&>(baseType).TraverseToFieldRef(tmpID);
   if (fieldPair.second.second.GetAttr(FLDATTR_nonnull)) {
-    std::list<UniqueFEIRExpr> exprs;
-    exprs.emplace_back(baseExpr->Clone());
-    UniqueFEIRStmt stmt = std::make_unique<FEIRStmtNary>(OP_assertnonnull, std::move(exprs));
+    UniqueFEIRStmt stmt = std::make_unique<FEIRStmtUseOnly>(OP_assertnonnull, baseExpr->Clone());
     std::list<StmtNode*> stmts = stmt->GenMIRStmts(mirBuilder);
     ans.splice(ans.end(), stmts);
   }
@@ -4020,6 +4014,38 @@ std::list<StmtNode*> FEIRStmtAtomic::GenMIRStmtsImpl(MIRBuilder &mirBuilder) con
   return stmts;
 }
 
+bool FEIRStmtGCCAsm::HandleConstraintPlusQ(MIRBuilder &mirBuilder, AsmNode *asmNode, uint32 index) const {
+  if (std::get<1>(outputs[index]) != "+Q") {
+    return false;
+  }
+  FieldID fieldID = outputsExprs[index]->GetFieldID();
+  MIRSymbol *sym = outputsExprs[index]->GetVarUses().front()->GenerateMIRSymbol(mirBuilder);
+
+  CallReturnPair retPair(sym->GetStIdx(), RegFieldPair(fieldID, 0));
+  asmNode->asmOutputs.emplace_back(retPair);
+  UStrIdx strIdx = GlobalTables::GetUStrTable().GetOrCreateStrIdxFromName(std::get<1>(outputs[index]));
+  asmNode->outputConstraints.emplace_back(strIdx);
+
+  BaseNode *node;
+  if (outputsExprs[index]->GetKind() == kExprDRead) {
+    node = static_cast<BaseNode*>(mirBuilder.CreateExprAddrof(fieldID, *sym));
+  } else if (outputsExprs[index]->GetKind() == kExprIRead) {
+    FEIRExprIRead *iread = static_cast<FEIRExprIRead*>(outputsExprs[index].get());
+    if (iread->GetFieldID() == 0) {
+      node = iread->GetClonedOpnd()->GenMIRNode(mirBuilder);
+    } else {
+      auto addrOfExpr = std::make_unique<FEIRExprIAddrof>(iread->GetClonedPtrType(), iread->GetFieldID(),
+                                                          iread->GetClonedOpnd());
+      node = addrOfExpr->GenMIRNode(mirBuilder);
+    }
+  } else {
+    CHECK_FATAL(false, "FEIRStmtGCCAsm NYI.");
+  }
+  asmNode->PushOpnd(node);
+  asmNode->inputConstraints.emplace_back(strIdx);
+  return true;
+}
+
 std::list<StmtNode*> FEIRStmtGCCAsm::GenMIRStmtsImpl(MIRBuilder &mirBuilder) const {
   std::list<StmtNode*> stmts;
   std::list<StmtNode*> initStmts;
@@ -4033,10 +4059,12 @@ std::list<StmtNode*> FEIRStmtGCCAsm::GenMIRStmtsImpl(MIRBuilder &mirBuilder) con
     asmNode->inputConstraints.emplace_back(strIdx);
   }
   for (uint32 i = 0; i < outputs.size(); ++i) {
+    if (HandleConstraintPlusQ(mirBuilder, asmNode, i)) {
+      continue;
+    }
     FieldID fieldID = 0;
     MIRSymbol *sym = nullptr;
     UniqueFEIRVar asmOut;
-    UStrIdx strIdx = GlobalTables::GetUStrTable().GetOrCreateStrIdxFromName(std::get<1>(outputs[i]));
     if (outputsExprs[i]->GetKind() == kExprDRead) {
       FEIRExprDRead *dread = static_cast<FEIRExprDRead*>(outputsExprs[i].get());
       fieldID = dread->GetFieldID();
@@ -4045,31 +4073,17 @@ std::list<StmtNode*> FEIRStmtGCCAsm::GenMIRStmtsImpl(MIRBuilder &mirBuilder) con
     } else if (outputsExprs[i]->GetKind() == kExprIRead) {
       FEIRExprIRead *iread = static_cast<FEIRExprIRead*>(outputsExprs[i].get());
       fieldID = iread->GetFieldID();
-      if (std::get<1>(outputs[i]) != "+Q") {
-        asmOut = FEIRBuilder::CreateVarNameForC(FEUtils::GetSequentialName("asm_out_"), iread->GetClonedRetType());
-        sym = asmOut->GenerateLocalMIRSymbol(mirBuilder);
-        UniqueFEIRExpr srcExpr = FEIRBuilder::CreateExprDRead(asmOut->Clone());
-        auto stmt = FEIRBuilder::CreateStmtIAssign(iread->GetClonedPtrType(), iread->GetClonedOpnd(),
-                                                   std::move(srcExpr), fieldID);
-        std::list<StmtNode*> node = stmt->GenMIRStmts(mirBuilder);
-        stmts.splice(stmts.end(), node);
+      asmOut = FEIRBuilder::CreateVarNameForC(FEUtils::GetSequentialName("asm_out_"), iread->GetClonedRetType());
+      sym = asmOut->GenerateLocalMIRSymbol(mirBuilder);
+      UniqueFEIRExpr srcExpr = FEIRBuilder::CreateExprDRead(asmOut->Clone());
+      auto stmt = FEIRBuilder::CreateStmtIAssign(iread->GetClonedPtrType(), iread->GetClonedOpnd(),
+                                                 std::move(srcExpr), fieldID);
+      std::list<StmtNode*> node = stmt->GenMIRStmts(mirBuilder);
+      stmts.splice(stmts.end(), node);
 
-        // The field ID is set to zero when a temporary variable is created for iread and sym is not a struct or union.
-        if (!sym->GetType()->IsStructType()) {
-          fieldID = 0;
-        }
-      } else {
-        BaseNode *node;
-        if (iread->GetFieldID() == 0) {
-          node = iread->GetClonedOpnd()->GenMIRNode(mirBuilder);
-        } else {
-          auto addrOfExpr = std::make_unique<FEIRExprIAddrof>(iread->GetClonedPtrType(), iread->GetFieldID(),
-                                                              iread->GetClonedOpnd());
-          node = addrOfExpr->GenMIRNode(mirBuilder);
-        }
-        asmNode->PushOpnd(node);
-        asmNode->inputConstraints.emplace_back(strIdx);
-        continue;
+      // The field ID is set to zero when a temporary variable is created for iread and sym is not a struct or union.
+      if (!sym->GetType()->IsStructType()) {
+        fieldID = 0;
       }
     } else {
       CHECK_FATAL(false, "FEIRStmtGCCAsm NYI.");
@@ -4077,6 +4091,7 @@ std::list<StmtNode*> FEIRStmtGCCAsm::GenMIRStmtsImpl(MIRBuilder &mirBuilder) con
 
     CallReturnPair retPair(sym->GetStIdx(), RegFieldPair(fieldID, 0));
     asmNode->asmOutputs.emplace_back(retPair);
+    UStrIdx strIdx = GlobalTables::GetUStrTable().GetOrCreateStrIdxFromName(std::get<1>(outputs[i]));
     asmNode->outputConstraints.emplace_back(strIdx);
 
     // If this is a read/write, copy the initial value into the temp before and added to the input list

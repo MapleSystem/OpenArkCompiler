@@ -192,6 +192,13 @@ class AliasClass : public AnalysisResult {
     return acAlloc;
   }
 
+  static inline bool IreadedMemInconsistentWithPointedType(PrimType ireadedPrimType, PrimType pointedPrimType) {
+    if (IsPrimitiveVector(ireadedPrimType) || IsPrimitiveVector(pointedPrimType)) {
+      return (GetPrimTypeSize(ireadedPrimType) != GetPrimTypeSize(pointedPrimType));
+    }
+    return false;
+  }
+
  protected:
   virtual bool InConstructorLikeFunc() const {
     return true;

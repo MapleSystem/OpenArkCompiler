@@ -108,6 +108,14 @@ class ASTDecl {
 
   std::string GenerateUniqueVarName() const;
 
+  bool IsBoundaryAttr() const {
+    return isBoundaryAttr;
+  }
+
+  void SetIsBoundaryAttr(bool flag) {
+    isBoundaryAttr = flag;
+  }
+
  protected:
   virtual MIRConst *Translate2MIRConstImpl() const {
     CHECK_FATAL(false, "Maybe implemented for other ASTDecls");
@@ -125,6 +133,7 @@ class ASTDecl {
   uint32 srcFileIdx = 0;
   uint32 srcFileLineNum = 0;
   DeclKind declKind = kASTDecl;
+  bool isBoundaryAttr = false;
 };
 
 class ASTField : public ASTDecl {

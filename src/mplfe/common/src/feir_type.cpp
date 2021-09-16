@@ -151,7 +151,7 @@ bool FEIRTypeDefault::IsEqualToImpl(const std::unique_ptr<FEIRType> &argType) co
   return IsEqualToImpl(*(argType.get()));
 }
 
-size_t FEIRTypeDefault::HashImpl() const {
+uint32 FEIRTypeDefault::HashImpl() const {
   return std::hash<uint32>{}(typeNameIdx);
 }
 
@@ -384,8 +384,8 @@ bool FEIRTypeByName::IsEqualToImpl(const FEIRType &argType) const {
   }
 }
 
-size_t FEIRTypeByName::HashImpl() const {
-  return std::hash<std::string>{}(typeName);
+uint32 FEIRTypeByName::HashImpl() const {
+  return static_cast<uint32>(std::hash<std::string>{}(typeName));
 }
 
 bool FEIRTypeByName::IsScalarImpl() const {
@@ -415,7 +415,7 @@ bool FEIRTypePointer::IsEqualToImpl(const FEIRType &argType) const {
   return baseType->IsEqualTo(argTypePointer.baseType);
 }
 
-size_t FEIRTypePointer::HashImpl() const {
+uint32 FEIRTypePointer::HashImpl() const {
   ASSERT(baseType != nullptr, "base type is nullptr");
   return baseType->Hash();
 }
@@ -485,8 +485,8 @@ bool FEIRTypeNative::IsEqualToImpl(const FEIRType &argType) const {
   return &argTypeNative.mirType == &mirType;
 }
 
-size_t FEIRTypeNative::HashImpl() const {
-  return mirType.GetHashIndex();
+uint32 FEIRTypeNative::HashImpl() const {
+  return static_cast<uint32>(mirType.GetHashIndex());
 }
 
 std::string FEIRTypeNative::GetTypeNameImpl() const {

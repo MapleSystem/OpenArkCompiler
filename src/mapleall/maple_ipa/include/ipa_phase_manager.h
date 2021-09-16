@@ -20,9 +20,10 @@
 #include "mempool_allocator.h"
 #include "mir_module.h"
 #include "mir_function.h"
-#include "maple_phase_manager.h"
+#include "me_phase_manager.h"
 
 namespace maple {
+
 /* ==== new phase manager ==== */
 class IpaSccPM : public SccPM {
  public:
@@ -31,14 +32,35 @@ class IpaSccPM : public SccPM {
   PHASECONSTRUCTOR(IpaSccPM);
   ~IpaSccPM() override {}
   std::string PhaseName() const override;
-  void SetIpaInput(const std::string &str) {
-    ipaInput = str;
-  }
+
  private:
   void GetAnalysisDependence(AnalysisDep &aDep) const override;
   virtual void DoPhasesPopulate(const MIRModule &m);
+};
 
-  std::string ipaInput = "";
+class SCCPrepare : public MapleSccPhase<SCCNode>, public MaplePhaseManager {
+ public:
+  explicit SCCPrepare(MemPool *mp) : MapleSccPhase<SCCNode>(&id, mp), MaplePhaseManager(*mp) {}
+  ~SCCPrepare() override = default;
+  std::string PhaseName() const override;
+  PHASECONSTRUCTOR(SCCPrepare);
+  bool PhaseRun(SCCNode &f) override;
+  AnalysisDataManager *GetResult() {
+    return result;
+  }
+ private:
+  AnalysisDataManager *result = nullptr;
+};
+
+class SCCEmit : public MapleSccPhase<SCCNode>, public MaplePhaseManager {
+ public:
+  explicit SCCEmit(MemPool *mp) : MapleSccPhase<SCCNode>(&id, mp), MaplePhaseManager(*mp) {}
+  ~SCCEmit() override = default;
+  std::string PhaseName() const override;
+  PHASECONSTRUCTOR(SCCEmit);
+  bool PhaseRun(SCCNode &f) override;
+ private:
+  void GetAnalysisDependence(maple::AnalysisDep &aDep) const override;
 };
 }  // namespace maple
 #endif  // MAPLE_IPA_INCLUDE_IPA_PHASE_MANAGER_H

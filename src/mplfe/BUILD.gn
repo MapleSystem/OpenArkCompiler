@@ -82,6 +82,7 @@ static_library("lib_mplfe_util") {
     "${MPLFE_ROOT}/common/src/simple_xml.cpp",
     "${MPLFE_ROOT}/common/src/simple_zip.cpp",
     "${MPLFE_ROOT}/common/src/generic_attrs.cpp",
+    "${MPLFE_ROOT}/common/src/enhance_c_checker.cpp",
   ]
   include_dirs = include_directories
   output_dir = "${root_out_dir}/ar"

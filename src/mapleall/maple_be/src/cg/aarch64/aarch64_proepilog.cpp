@@ -185,8 +185,11 @@ bool AArch64GenProEpilog::TailCallOpt() {
   } else {
     exitBB = cgFunc.GetExitBBsVec().front();
   }
-
-  CHECK_FATAL(exitBB->GetFirstMachineInsn() == nullptr, "exit bb should be empty.");
+  FOR_BB_INSNS(insn, exitBB) {
+    if (insn->IsMachineInstruction() && !insn->IsPseudoInstruction()) {
+      CHECK_FATAL(false, "exit bb should be empty.");
+    }
+  }
 
   std::set<Insn*> callInsns;
   TailCallBBOpt(*exitBB, callInsns);
@@ -418,10 +421,10 @@ bool AArch64GenProEpilog::InsertInsnRegs(Insn &insn, bool insertSource, std::set
   Insn *curInsn = &insn;
   for (uint32 o = 0; o < curInsn->GetOperandSize(); ++o) {
     Operand &opnd = curInsn->GetOperand(o);
-    if (insertSource == 1 && curInsn->OpndIsUse(o)) {
+    if (insertSource == true && curInsn->OpndIsUse(o)) {
       InsertOpndRegs(opnd, vecSourceRegs);
     }
-    if (insertTarget == 1 && curInsn->OpndIsDef(o)) {
+    if (insertTarget == true && curInsn->OpndIsDef(o)) {
       InsertOpndRegs(opnd, vecTargetRegs);
     }
   }
@@ -517,7 +520,7 @@ bool AArch64GenProEpilog::BackwardFindDependency(BB &ifbb, std::set<regno_t> &ve
             insn->IsStore() || insn->IsStorePair())) {
           bl = true;
         }
-        InsertInsnRegs(*insn, 1, vecSourceRegs, 1, vecTargetRegs);
+        InsertInsnRegs(*insn, true, vecSourceRegs, true, vecTargetRegs);
         existingInsns.push_back(insn);
         continue;
       }
@@ -544,13 +547,17 @@ bool AArch64GenProEpilog::BackwardFindDependency(BB &ifbb, std::set<regno_t> &ve
         }
       }
       /* if a result_dst not allowed, this insn can be allowed on the condition of mov Rx,R0/R1,
-       * and tje existing insns cannot be blr */
+       * and tje existing insns cannot be blr
+       * RLR 31, RFP 32, RSP 33, RZR 34 */
       if (!ifPred && !bl && !allow && (insn->GetMachineOpcode() == MOP_xmovrr ||
           insn->GetMachineOpcode() == MOP_wmovrr)) {
         Operand *resultOpnd = &(insn->GetOperand(0));
         Operand *srcOpnd = &(insn->GetOperand(1));
+        regno_t resultNO = static_cast<RegOperand *>(resultOpnd)->GetRegisterNumber();
+        regno_t srcNO = static_cast<RegOperand *>(srcOpnd)->GetRegisterNumber();
         if (!FindRegs(*resultOpnd, vecTargetRegs) && !FindRegs(*srcOpnd, vecTargetRegs) &&
-            !FindRegs(*srcOpnd, vecSourceRegs) && !FindRegs(*srcOpnd, vecReturnSourceRegs)) {
+            !FindRegs(*srcOpnd, vecSourceRegs) && !FindRegs(*srcOpnd, vecReturnSourceRegs) &&
+            (srcNO < RLR || srcNO > RZR)) {
           allow = true; /* allow on the conditional mov Rx,Rxx */
           for (auto *exit : existingInsns) {
             /* the registers of kOpdMem are complex to be detected */
@@ -565,8 +572,7 @@ bool AArch64GenProEpilog::BackwardFindDependency(BB &ifbb, std::set<regno_t> &ve
               }
               /* Distinguish between 32-bit regs and 64-bit regs */
               if (opd->IsRegister() &&
-                  static_cast<RegOperand *>(opd)->GetRegisterNumber() ==
-                  static_cast<RegOperand *>(resultOpnd)->GetRegisterNumber() &&
+                  static_cast<RegOperand *>(opd)->GetRegisterNumber() == resultNO &&
                   opd != resultOpnd) {
                 allow = false;
                 break;
@@ -591,7 +597,7 @@ bool AArch64GenProEpilog::BackwardFindDependency(BB &ifbb, std::set<regno_t> &ve
       }
       if (!allow) { /* all result_dsts are not target register */
         /* code sinking fails */
-        InsertInsnRegs(*insn, 1, vecSourceRegs, 1, vecTargetRegs);
+        InsertInsnRegs(*insn, true, vecSourceRegs, true, vecTargetRegs);
         existingInsns.push_back(insn);
       } else {
         moveInsns.push_back(insn);
@@ -710,14 +716,14 @@ BB *AArch64GenProEpilog::IsolateFastPath(BB &bb) {
     if (insn->IsBranch() || insn->IsCall() || insn->IsStore() || insn->IsStorePair()) {
       return nullptr;
     }
-    InsertInsnRegs(*insn, 1, vecReturnSourceRegs, 0, vecReturnSourceRegs);
+    InsertInsnRegs(*insn, true, vecReturnSourceRegs, false, vecReturnSourceRegs);
     existingInsns.push_back(insn);
   }
   FOR_BB_INSNS_REV(insn, returnBB->GetSuccs().front()) {
     if (insn->IsBranch() || insn->IsCall() || insn->IsStore() || insn->IsStorePair()) {
       return nullptr;
     }
-    InsertInsnRegs(*insn, 1, vecReturnSourceRegs, 0, vecReturnSourceRegs);
+    InsertInsnRegs(*insn, true, vecReturnSourceRegs, false, vecReturnSourceRegs);
     existingInsns.push_back(insn);
   }
   /*

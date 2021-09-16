@@ -77,6 +77,7 @@ enum OptionIndex : uint32 {
   kDepSameNamePolicy,
   // EnhanceC
   kNpeCheckDynamic,
+  kBoundaryCheckDynamic,
 };
 
 const Descriptor kUsage[] = {
@@ -281,6 +282,9 @@ const Descriptor kUsage[] = {
   { kNpeCheckDynamic, 0, "", "npe-check-dynamic",
     kBuildTypeAll, kArgCheckPolicyNone,
     "  --npe-check-dynamic     : EnhanceC: nonnull pointr dynamic checking", "mplfe", {} },
+  { kBoundaryCheckDynamic, 0, "", "boundary-check-dynamic",
+    kBuildTypeAll, kArgCheckPolicyNone,
+    "  --boundary-check-dynamic: EnhanceC: boundary dynamic checking", "mplfe", {} },
   { kUnknown, 0, "", "",
     kBuildTypeAll, kArgCheckPolicyNone,
     "", "mplfe", {} }
@@ -392,8 +396,11 @@ bool MPLFEOptions::InitFactory() {
                                                 &MPLFEOptions::ProcessCollectDepTypes);
   RegisterFactoryFunction<OptionProcessFactory>(kDepSameNamePolicy,
                                                 &MPLFEOptions::ProcessDepSameNamePolicy);
+  // EnhanceC
   RegisterFactoryFunction<OptionProcessFactory>(kNpeCheckDynamic,
                                                 &MPLFEOptions::ProcessNpeCheckDynamic);
+  RegisterFactoryFunction<OptionProcessFactory>(kBoundaryCheckDynamic,
+                                                &MPLFEOptions::ProcessBoundaryCheckDynamic);
   return true;
 }
 
@@ -753,6 +760,11 @@ bool MPLFEOptions::ProcessDepSameNamePolicy(const Option &opt) {
 // EnhanceC
 bool MPLFEOptions::ProcessNpeCheckDynamic(const mapleOption::Option &opt) {
   FEOptions::GetInstance().SetNpeCheckDynamic(true);
+  return true;
+}
+
+bool MPLFEOptions::ProcessBoundaryCheckDynamic(const mapleOption::Option &opt) {
+  FEOptions::GetInstance().SetBoundaryCheckDynamic(true);
   return true;
 }
 
