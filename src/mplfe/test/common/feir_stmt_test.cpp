@@ -26,6 +26,7 @@
 #include "feir_builder.h"
 #include "mplfe_ut_regx.h"
 #include "fe_utils_java.h"
+#include "ror.h"
 #define private public
 #undef private
 
@@ -450,5 +451,31 @@ TEST_F(FEIRStmtTest, FEIRExpr_hash) {
   EXPECT_EQ(exprIread0->Hash() == exprIread1->Hash(), false);
   EXPECT_EQ(exprIread0->Hash() == exprIread2->Hash(), true);
   EXPECT_EQ(exprIread0->Hash() == exprIread3->Hash(), true);
+}
+
+TEST_F(FEIRStmtTest, FEIRStmtRor) {
+  RedirectCout();
+  MIRType *type = GlobalTables::GetTypeTable().GetUInt64();
+  UniqueFEIRVar baseVar = FEIRBuilder::CreateVarNameForC("a", *type, false, false);
+  UniqueFEIRExpr baseExpr = FEIRBuilder::CreateExprDRead(std::move(baseVar));
+  UniqueFEIRVar baseShiftVar = FEIRBuilder::CreateVarNameForC("b", *type, false, false);
+  UniqueFEIRExpr baseShiftExpr = FEIRBuilder::CreateExprDRead(std::move(baseShiftVar));
+  UniqueFEIRExpr constExpr1 = FEIRBuilder::CreateExprConstI32(64);
+  UniqueFEIRExpr constExpr2 = FEIRBuilder::CreateExprConstI32(63);
+  UniqueFEIRExpr andExpr = FEIRBuilder::CreateExprBinary(OP_band, baseShiftExpr->Clone(), constExpr2->Clone());
+  UniqueFEIRExpr leftExpr = FEIRBuilder::CreateExprBinary(OP_lshr, baseExpr->Clone(), andExpr->Clone());
+  UniqueFEIRExpr subExpr = FEIRBuilder::CreateExprBinary(OP_sub, constExpr1->Clone(), andExpr->Clone());
+  UniqueFEIRExpr rightExpr = FEIRBuilder::CreateExprBinary(OP_shl, baseExpr->Clone(), subExpr->Clone());
+  UniqueFEIRExpr orExpr = FEIRBuilder::CreateExprBinary(OP_bior, leftExpr->Clone(), rightExpr->Clone());
+  // ror optimize
+  auto orExprPtr = static_cast<FEIRExprBinary*>(orExpr.get());
+  Ror ror(orExprPtr->GetOp(), orExprPtr->GetOpnd0(), orExprPtr->GetOpnd1());
+  UniqueFEIRExpr target = ror.Emit2FEExpr();
+  BaseNode *node = target->GenMIRNode(mirBuilder);
+  node->Dump();
+  std::string dumpStr = GetBufferString();
+  std::string pattern = std::string("ror u64 \\(dread u64 %a, dread u64 %b\\)") + MPLFEUTRegx::Any();
+  EXPECT_EQ(MPLFEUTRegx::Match(dumpStr, pattern), true);
+  RestoreCout();
 }
 }  // namespace maple

@@ -24,6 +24,9 @@ class MeSplitCEdge {
  public:
   explicit MeSplitCEdge(bool enableDebug) : isDebugFunc(enableDebug) {}
   void BreakCriticalEdge(MeFunction &func, BB &pred, BB &succ) const;
+  static bool IsCriticalEdgeBB(const BB &bb); // Is a critical edge cut by bb
+  void SplitCriticalEdgeForMeFunc(MeFunction &func) const; // find all critical edge in func and split
+  bool SplitCriticalEdgeForBB(MeFunction &func, BB &bb) const; // find critical edge around bb
  private:
   void UpdateGotoLabel(BB &newBB, MeFunction &func, BB &pred, BB &succ) const;
   void UpdateCaseLabel(BB &newBB, MeFunction &func, BB &pred, BB &succ) const;

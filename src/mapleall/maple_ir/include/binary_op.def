@@ -37,6 +37,7 @@ BINARYOP(ne)
 BINARYOP(ge)
 BINARYOP(rem)
 BINARYOP(shl)
+BINARYOP(ror)
 BINARYOP(sub)
 BINARYOP(CG_array_elem_add)
 

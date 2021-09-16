@@ -269,7 +269,7 @@ bool BBLayout::HasSameBranchCond(BB &bb1, BB &bb2) const {
 // target is a BB with only a single goto statement, optimize the branch target
 // to the eventual target
 // (2) bb's last statement is a conditonal branch, if the branch target is a BB with a single
-// condtioal branch statement and has the same condtion as bb's last statement, optimize the
+// conditional branch statement and has the same condition as bb's last statement, optimize the
 // branch target to the eventual target.
 void BBLayout::OptimizeBranchTarget(BB &bb) {
   if (bbVisited[bb.GetBBId().GetIdx()]) {

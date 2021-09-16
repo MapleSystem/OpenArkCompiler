@@ -134,6 +134,7 @@ BaseNode &OpMeExpr::EmitExpr(SSATab &ssaTab) {
     case OP_mul:
     case OP_rem:
     case OP_shl:
+    case OP_ror:
     case OP_sub: {
       auto *binaryNode =
           ssaTab.GetModule().CurFunction()->GetCodeMempool()->New<BinaryNode>(Opcode(GetOp()),

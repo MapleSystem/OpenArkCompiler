@@ -980,6 +980,14 @@ class ExtendShiftOperand : public Operand {
     return memPool.Clone<ExtendShiftOperand>(*this);
   }
 
+  uint32 GetShiftAmount() {
+    return shiftAmount;
+  }
+
+  ExtendOp GetExtendOp() {
+    return extendOp;
+  }
+
   void Emit(Emitter &emitter, const OpndProp *prop) const override;
 
   bool Less(const Operand &right) const override;
@@ -1018,6 +1026,10 @@ class BitShiftOperand : public Operand {
 
   uint32 GetShiftAmount() {
     return shiftAmount;
+  }
+
+  ShiftOp GetShiftOp() {
+    return shiftOp;
   }
 
   void Dump() const override {

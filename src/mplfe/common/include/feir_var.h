@@ -77,6 +77,14 @@ class FEIRVar {
     return kind;
   }
 
+  bool operator==(const FEIRVar &var) const {
+    return GetNameRaw() == var.GetNameRaw();
+  }
+
+  bool operator!=(const FEIRVar &var) const {
+    return GetNameRaw() != var.GetNameRaw();
+  }
+
   const UniqueFEIRType &GetType() const {
     return type;
   }

@@ -1362,8 +1362,12 @@ void IntrinsiccallMeStmt::Dump(const IRMap *irMap) const {
 }
 
 void AsmMeStmt::Dump(const IRMap *irMap) const {
-  LogInfo::MapleLogger() << "||MEIR|| " << kOpcodeInfo.GetTableItemAt(GetOp()).name <<
-      " " << '\"' << asmString << '\"' << std::endl;
+  LogInfo::MapleLogger() << "||MEIR|| " << kOpcodeInfo.GetTableItemAt(GetOp()).name << " \"";
+  if (!asmString.empty()) {
+    LogInfo::MapleLogger() << asmString.c_str();
+  }
+  LogInfo::MapleLogger() << " \"\n";
+
   DumpOpnds(irMap);
   DumpMuList(irMap, muList);
   DumpChiList(irMap, chiList);

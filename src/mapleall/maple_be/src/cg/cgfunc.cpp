@@ -53,10 +53,10 @@ Operand *HandleConstVal(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) 
     return cgFunc.SelectIntConst(*mirIntConst);
   } else if (mirConst->GetKind() == kConstFloatConst) {
     auto *mirFloatConst = safe_cast<MIRFloatConst>(mirConst);
-    return cgFunc.SelectFloatConst(*mirFloatConst);
+    return cgFunc.SelectFloatConst(*mirFloatConst, parent);
   } else if (mirConst->GetKind() == kConstDoubleConst) {
     auto *mirDoubleConst = safe_cast<MIRDoubleConst>(mirConst);
-    return cgFunc.SelectDoubleConst(*mirDoubleConst);
+    return cgFunc.SelectDoubleConst(*mirDoubleConst, parent);
   } else {
     CHECK_FATAL(false, "NYI");
   }
@@ -111,7 +111,7 @@ Operand *HandleAdd(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
 
 Operand *HandleCGArrayElemAdd(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   (void)parent;
-  return &cgFunc.SelectCGArrayElemAdd(static_cast<BinaryNode&>(expr));
+  return &cgFunc.SelectCGArrayElemAdd(static_cast<BinaryNode&>(expr), parent);
 }
 
 BaseNode *IsConstantInVectorFromScalar(BaseNode *expr) {
@@ -144,11 +144,17 @@ Operand *HandleShift(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   BaseNode *cExpr = IsConstantInVectorFromScalar(expr.Opnd(1));
   if (cExpr == nullptr) {
     return cgFunc.SelectShift(static_cast<BinaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)),
-                              *cgFunc.HandleExpr(expr, *expr.Opnd(1)));
+                              *cgFunc.HandleExpr(expr, *expr.Opnd(1)), parent);
   } else {
     return cgFunc.SelectShift(static_cast<BinaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)),
-                              *cgFunc.HandleExpr(*expr.Opnd(1), *cExpr));
+                              *cgFunc.HandleExpr(*expr.Opnd(1), *cExpr), parent);
   }
+}
+
+Operand *HandleRor(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
+  (void)parent;
+  return cgFunc.SelectRor(static_cast<BinaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)),
+                          *cgFunc.HandleExpr(expr, *expr.Opnd(1)), parent);
 }
 
 Operand *HandleMpy(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
@@ -160,31 +166,31 @@ Operand *HandleMpy(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
 Operand *HandleDiv(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   (void)parent;
   return cgFunc.SelectDiv(static_cast<BinaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)),
-                          *cgFunc.HandleExpr(expr, *expr.Opnd(1)));
+                          *cgFunc.HandleExpr(expr, *expr.Opnd(1)), parent);
 }
 
 Operand *HandleRem(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   (void)parent;
   return cgFunc.SelectRem(static_cast<BinaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)),
-                          *cgFunc.HandleExpr(expr, *expr.Opnd(1)));
+                          *cgFunc.HandleExpr(expr, *expr.Opnd(1)), parent);
 }
 
 Operand *HandleAddrof(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   (void)parent;
   auto &addrofNode = static_cast<AddrofNode&>(expr);
-  return cgFunc.SelectAddrof(addrofNode);
+  return cgFunc.SelectAddrof(addrofNode, parent);
 }
 
 Operand *HandleAddroffunc(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   (void)parent;
   auto &addroffuncNode = static_cast<AddroffuncNode&>(expr);
-  return &cgFunc.SelectAddrofFunc(addroffuncNode);
+  return &cgFunc.SelectAddrofFunc(addroffuncNode, parent);
 }
 
 Operand *HandleAddrofLabel(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   (void)parent;
   auto &addrofLabelNode = static_cast<AddroflabelNode&>(expr);
-  return &cgFunc.SelectAddrofLabel(addrofLabelNode);
+  return &cgFunc.SelectAddrofLabel(addrofLabelNode, parent);
 }
 
 Operand *HandleIread(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
@@ -223,7 +229,7 @@ Operand *HandleAbs(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
 
 Operand *HandleBnot(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   (void)parent;
-  return cgFunc.SelectBnot(static_cast<UnaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)));
+  return cgFunc.SelectBnot(static_cast<UnaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)), parent);
 }
 
 Operand *HandleExtractBits(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
@@ -242,65 +248,65 @@ Operand *HandleExtractBits(const BaseNode &parent, BaseNode &expr, CGFunc &cgFun
 Operand *HandleDepositBits(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   (void)parent;
   return cgFunc.SelectDepositBits(static_cast<DepositbitsNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)),
-                                  *cgFunc.HandleExpr(expr, *expr.Opnd(1)));
+                                  *cgFunc.HandleExpr(expr, *expr.Opnd(1)), parent);
 }
 
 Operand *HandleLnot(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   (void)parent;
-  return cgFunc.SelectLnot(static_cast<UnaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)));
+  return cgFunc.SelectLnot(static_cast<UnaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)), parent);
 }
 
 Operand *HandleLand(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   (void)parent;
   return cgFunc.SelectLand(static_cast<BinaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)),
-                           *cgFunc.HandleExpr(expr, *expr.Opnd(1)));
+                           *cgFunc.HandleExpr(expr, *expr.Opnd(1)), parent);
 }
 
 Operand *HandleLor(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   if (parent.IsCondBr()) {
     return cgFunc.SelectLor(static_cast<BinaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)),
-                            *cgFunc.HandleExpr(expr, *expr.Opnd(1)), true);
+                            *cgFunc.HandleExpr(expr, *expr.Opnd(1)), parent, true);
   } else {
     return cgFunc.SelectLor(static_cast<BinaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)),
-                            *cgFunc.HandleExpr(expr, *expr.Opnd(1)));
+                            *cgFunc.HandleExpr(expr, *expr.Opnd(1)), parent);
   }
 }
 
 Operand *HandleMin(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   (void)parent;
   return cgFunc.SelectMin(static_cast<BinaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)),
-                          *cgFunc.HandleExpr(expr, *expr.Opnd(1)));
+                          *cgFunc.HandleExpr(expr, *expr.Opnd(1)), parent);
 }
 
 Operand *HandleMax(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   (void)parent;
   return cgFunc.SelectMax(static_cast<BinaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)),
-                          *cgFunc.HandleExpr(expr, *expr.Opnd(1)));
+                          *cgFunc.HandleExpr(expr, *expr.Opnd(1)), parent);
 }
 
 Operand *HandleNeg(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   (void)parent;
-  return cgFunc.SelectNeg(static_cast<UnaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)));
+  return cgFunc.SelectNeg(static_cast<UnaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)), parent);
 }
 
 Operand *HandleRecip(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   (void)parent;
-  return cgFunc.SelectRecip(static_cast<UnaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)));
+  return cgFunc.SelectRecip(static_cast<UnaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)), parent);
 }
 
 Operand *HandleSqrt(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   (void)parent;
-  return cgFunc.SelectSqrt(static_cast<UnaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)));
+  return cgFunc.SelectSqrt(static_cast<UnaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)), parent);
 }
 
 Operand *HandleCeil(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   (void)parent;
-  return cgFunc.SelectCeil(static_cast<TypeCvtNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)));
+  return cgFunc.SelectCeil(static_cast<TypeCvtNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)), parent);
 }
 
 Operand *HandleFloor(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   (void)parent;
-  return cgFunc.SelectFloor(static_cast<TypeCvtNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)));
+  return cgFunc.SelectFloor(static_cast<TypeCvtNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)), parent);
 }
 
 Operand *HandleRetype(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
@@ -314,12 +320,12 @@ Operand *HandleCvt(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
 
 Operand *HandleRound(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   (void)parent;
-  return cgFunc.SelectRound(static_cast<TypeCvtNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)));
+  return cgFunc.SelectRound(static_cast<TypeCvtNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)), parent);
 }
 
 Operand *HandleTrunc(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   (void)parent;
-  return cgFunc.SelectTrunc(static_cast<TypeCvtNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)));
+  return cgFunc.SelectTrunc(static_cast<TypeCvtNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)), parent);
 }
 
 static bool HasCompare(BaseNode *expr) {
@@ -337,13 +343,14 @@ static bool HasCompare(BaseNode *expr) {
 Operand *HandleSelect(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
   (void)parent;
   /* 0,1,2 represent the first opnd and the second opnd and the third opnd of expr */
-  bool isCompare = false;
+  bool hasCompare = false;
   if (HasCompare(expr.Opnd(1)) || HasCompare(expr.Opnd(2))) {
-    isCompare = true;
+    hasCompare = true;
   }
-  return cgFunc.SelectSelect(static_cast<TernaryNode&>(expr), *cgFunc.HandleExpr(expr, *expr.Opnd(0)),
-                             *cgFunc.HandleExpr(expr, *expr.Opnd(1)), *cgFunc.HandleExpr(expr, *expr.Opnd(2)),
-                             isCompare);
+  Operand &trueOpnd = *cgFunc.HandleExpr(expr, *expr.Opnd(1));
+  Operand &falseOpnd = *cgFunc.HandleExpr(expr, *expr.Opnd(2));
+  Operand &cond = *cgFunc.HandleExpr(expr, *expr.Opnd(0));
+  return cgFunc.SelectSelect(static_cast<TernaryNode&>(expr), cond, trueOpnd, falseOpnd, hasCompare);
 }
 
 Operand *HandleCmp(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
@@ -761,6 +768,7 @@ void InitHandleExprFactory() {
   RegisterFactoryFunction<HandleExprFactory>(OP_ashr, HandleShift);
   RegisterFactoryFunction<HandleExprFactory>(OP_lshr, HandleShift);
   RegisterFactoryFunction<HandleExprFactory>(OP_shl, HandleShift);
+  RegisterFactoryFunction<HandleExprFactory>(OP_ror, HandleRor);
   RegisterFactoryFunction<HandleExprFactory>(OP_mul, HandleMpy);
   RegisterFactoryFunction<HandleExprFactory>(OP_div, HandleDiv);
   RegisterFactoryFunction<HandleExprFactory>(OP_rem, HandleRem);

@@ -743,6 +743,9 @@ class ASTBinaryOperatorExpr : public ASTExpr {
  protected:
   MIRConst *GenerateMIRConstImpl() const override;
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
+  UniqueFEIRExpr Emit2FEExprComplexCalculations(std::list<UniqueFEIRStmt> &stmts) const;
+  UniqueFEIRExpr Emit2FEExprComplexCompare(std::list<UniqueFEIRStmt> &stmts) const;
+  UniqueFEIRExpr Emit2FEExprLogicOperate(std::list<UniqueFEIRStmt> &stmts) const;
 
   Opcode opcode = OP_undef;
   MIRType *retType = nullptr;
