@@ -652,6 +652,10 @@ ASTValue *ASTParser::TranslateConstantValue2ASTValue(MapleAllocator &allocator, 
           }
           astValue->pty = PTY_i64;
           break;
+        case PTY_i128:
+          astValue->val.i64 = static_cast<int64>(result.Val.getInt().getSExtValue());
+          astValue->pty = PTY_i128;
+          break;
         case PTY_u8:
           astValue->val.u8 = static_cast<uint8>(result.Val.getInt().getExtValue());
           astValue->pty = PTY_u8;
@@ -671,6 +675,10 @@ ASTValue *ASTParser::TranslateConstantValue2ASTValue(MapleAllocator &allocator, 
             astValue->val.u64 = static_cast<uint64>(result.Val.getInt().getExtValue());
           }
           astValue->pty = PTY_u64;
+          break;
+        case PTY_u128:
+          astValue->val.u64 = static_cast<uint64>(result.Val.getInt().getZExtValue());
+          astValue->pty = PTY_u128;
           break;
         case PTY_u1:
           astValue->val.u8 = (result.Val.getInt().getExtValue() == 0 ? 0 : 1);

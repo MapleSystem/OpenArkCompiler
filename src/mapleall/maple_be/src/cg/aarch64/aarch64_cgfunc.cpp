@@ -123,6 +123,9 @@ MOperator PickLdStInsn(bool isLoad, uint32 bitSize, PrimType primType, AArch64is
     }
 
     /* __builtin_ffs(x) returns: 8 -> 4, 16 -> 5, 32 -> 6, 64 -> 7 */
+    if (primType == PTY_i128 || primType == PTY_u128) {
+      bitSize = k64BitSize;
+    }
     uint32 size = static_cast<uint32>(__builtin_ffs(static_cast<int32>(bitSize))) - 4;
     ASSERT(size <= 3, "wrong bitSize");
     return table[signedUnsigned][size];
@@ -175,9 +178,15 @@ MOperator AArch64CGFunc::PickExtInsn(PrimType dtype, PrimType stype) const {
   if (IsPrimitiveInteger(stype) && IsPrimitiveInteger(dtype)) {
     MOperator(*table)[kIntByteSizeDimension];
     table = IsUnsignedInteger(stype) ? uextIs : extIs;
+    if (stype == PTY_i128 || stype == PTY_u128) {
+      sBitSize = k64BitSize;
+    }
     /* __builtin_ffs(x) returns: 8 -> 4, 16 -> 5, 32 -> 6, 64 -> 7 */
     uint32 row = static_cast<uint32>(__builtin_ffs(static_cast<int32>(sBitSize))) - k4BitSize;
     ASSERT(row <= 3, "wrong bitSize");
+    if (dtype == PTY_i128 || dtype == PTY_u128) {
+      dBitSize = k64BitSize;
+    }
     uint32 col = static_cast<uint32>(__builtin_ffs(static_cast<int32>(dBitSize))) - k4BitSize;
     ASSERT(col <= 3, "wrong bitSize");
     return table[row][col];
@@ -205,6 +214,8 @@ MOperator AArch64CGFunc::PickMovInsn(PrimType primType) {
     case PTY_a64:
     case PTY_u64:
     case PTY_i64:
+    case PTY_u128:
+    case PTY_i128:
       return MOP_xmovrr;
     case PTY_f32:
       return MOP_xvmovs;
@@ -4886,7 +4897,13 @@ void AArch64CGFunc::SelectCvtFloat2Float(Operand &resOpnd, Operand &srcOpnd, Pri
 void AArch64CGFunc::SelectCvtInt2Int(const BaseNode *parent, Operand *&resOpnd, Operand *opnd0, PrimType fromType,
                                      PrimType toType) {
   uint32 fsize = GetPrimTypeBitSize(fromType);
+  if (fromType == PTY_i128 || fromType == PTY_u128) {
+    fsize = k64BitSize;
+  }
   uint32 tsize = GetPrimTypeBitSize(toType);
+  if (toType == PTY_i128 || toType == PTY_u128) {
+    tsize = k64BitSize;
+  }
   bool isExpand = tsize > fsize;
   bool is64Bit = (tsize == k64BitSize);
   if ((parent != nullptr) && opnd0->IsIntImmediate() &&
@@ -5089,11 +5106,11 @@ bool AArch64CGFunc::CanLtOptimized(BaseNode &node) {
 }
 
 Operand *AArch64CGFunc::SelectSelect(TernaryNode &node, Operand &opnd0, Operand &opnd1, Operand &opnd2,
-                                     bool hasCompare) {
+                                     const BaseNode &parent, bool hasCompare) {
   PrimType dtype = node.GetPrimType();
   PrimType ctype = node.Opnd(0)->GetPrimType();
 
-  RegOperand &resOpnd = CreateRegisterOperandOfType(dtype);
+  RegOperand &resOpnd = GetOrCreateResOperand(parent, dtype);
   AArch64CC_t cc = CC_NE;
   Opcode opcode = node.Opnd(0)->GetOpCode();
   PrimType cmpType = static_cast<CompareNode *>(node.Opnd(0))->GetOpndType();
@@ -5610,8 +5627,9 @@ RegOperand &AArch64CGFunc::CreateRegisterOperandOfType(PrimType primType) {
 
 RegOperand &AArch64CGFunc::CreateRegisterOperandOfType(RegType regty, uint32 byteLen) {
   /* BUG: if half-precision floating point operations are supported? */
+  /* AArch64 has 32-bit and 64-bit registers only */
   if (byteLen < k4ByteSize) {
-    byteLen = k4ByteSize;  /* AArch64 has 32-bit and 64-bit registers only */
+    byteLen = k4ByteSize;
   }
   regno_t vRegNO = NewVReg(regty, byteLen);
   return CreateVirtualRegisterOperand(vRegNO);

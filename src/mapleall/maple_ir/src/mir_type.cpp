@@ -231,6 +231,8 @@ uint32 GetPrimTypeSize(PrimType primType) {
     case PTY_v8u8:
     case PTY_v2f32:
       return 8;
+    case PTY_u128:
+    case PTY_i128:
     case PTY_c128:
     case PTY_f128:
     case PTY_v2i64:

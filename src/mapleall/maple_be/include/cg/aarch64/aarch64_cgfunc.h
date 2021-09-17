@@ -228,7 +228,7 @@ class AArch64CGFunc : public CGFunc {
   Operand *SelectCvt(const BaseNode &parent, TypeCvtNode &node, Operand &opnd0) override;
   Operand *SelectTrunc(TypeCvtNode &node, Operand &opnd0, const BaseNode &parent) override;
   Operand *SelectSelect(TernaryNode &node, Operand &opnd0, Operand &opnd1, Operand &opnd2,
-                        bool hasCompare = false) override;
+                        const BaseNode &parent, bool hasCompare = false) override;
   Operand *SelectMalloc(UnaryNode &call, Operand &opnd0) override;
   Operand *SelectAlloca(UnaryNode &call, Operand &opnd0) override;
   Operand *SelectGCMalloc(GCMallocNode &call) override;

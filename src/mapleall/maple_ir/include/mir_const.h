@@ -95,7 +95,11 @@ class MIRIntConst : public MIRConst {
   using value_type = int64;
   MIRIntConst(int64 val, MIRType &type) : MIRConst(type, kConstInt), value(val) {
     if (!IsPrimitiveDynType(type.GetPrimType())) {
-      Trunc(GetPrimTypeBitSize(type.GetPrimType()));
+      if (type.GetPrimType() == PTY_u128 || type.GetPrimType() == PTY_i128) {
+        Trunc(64u);
+      } else {
+        Trunc(GetPrimTypeBitSize(type.GetPrimType()));
+      }
     }
   }
 

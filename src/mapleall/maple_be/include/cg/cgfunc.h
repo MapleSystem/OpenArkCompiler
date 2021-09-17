@@ -261,7 +261,7 @@ class CGFunc {
   virtual Operand *SelectCvt(const BaseNode &parent, TypeCvtNode &node, Operand &opnd0) = 0;
   virtual Operand *SelectTrunc(TypeCvtNode &node, Operand &opnd0, const BaseNode &parent) = 0;
   virtual Operand *SelectSelect(TernaryNode &node, Operand &opnd0, Operand &opnd1, Operand &opnd2,
-                                bool hasCompare = false) = 0;
+                                const BaseNode &parent, bool hasCompare = false) = 0;
   virtual Operand *SelectMalloc(UnaryNode &call, Operand &opnd0) = 0;
   virtual RegOperand &SelectCopy(Operand &src, PrimType srcType, PrimType dstType) = 0;
   virtual Operand *SelectAlloca(UnaryNode &call, Operand &opnd0) = 0;
@@ -368,6 +368,12 @@ class CGFunc {
     if (size < k4ByteSize) {
       size = k4ByteSize;
     }
+#if TARGAARCH64
+    /* cannot handle 128 size register */
+    if (regType == kRegTyInt && size > k8ByteSize) {
+      size = k8ByteSize;
+    }
+#endif
     ASSERT(size == k4ByteSize || size == k8ByteSize || size == k16ByteSize, "check size");
 #endif
     new (&vRegTable[vRegCount]) VirtualRegNode(regType, size);
@@ -392,6 +398,8 @@ class CGFunc {
       case PTY_a32:
       case PTY_a64:
       case PTY_ptr:
+      case PTY_i128:
+      case PTY_u128:
       case PTY_agg:
         return kRegTyInt;
       case PTY_f32:
