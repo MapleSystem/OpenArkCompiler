@@ -261,9 +261,6 @@ void GraphColorRegAllocator::CalculatePriority(LiveRange &lr) const {
   }
   return;
 #endif  /* RANDOM_PRIORITY */
-  if (CGOptions::UseRaBBFreq()) {
-    cgFunc->BuildStaticBBFrequency();
-  }
   float pri = 0.0;
   uint32 bbNum = 0;
   uint32 numDefs = 0;

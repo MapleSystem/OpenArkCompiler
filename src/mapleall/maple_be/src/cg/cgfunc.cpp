@@ -1645,7 +1645,11 @@ void BBFrequencyVisitSucc(std::queue<BB *> &BBQueue) {
 
 /* build static bb frequency assuming loop detection already done */
 void CGFunc::BuildStaticBBFrequency() {
+  FOR_ALL_BB(bb, this) {
+    bb->SetFrequency(0);
+  }
   BB *bb = FIRST_BB_OF_FUNC(this);
+  bb->SetFrequency(kFreqBase);
   std::queue<BB *> BBQueue;
   BBQueue.push(bb);
   BBFrequencyVisitSucc(BBQueue);

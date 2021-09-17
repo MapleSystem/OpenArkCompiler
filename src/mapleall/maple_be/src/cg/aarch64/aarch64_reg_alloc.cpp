@@ -566,6 +566,9 @@ bool CgRegAlloc::PhaseRun(maplebe::CGFunc &f) {
         &CgDomAnalysis::id, f);
     dom = static_cast<CgDomAnalysis*>(it)->GetResult();
     CHECK_FATAL(dom != nullptr, "null ptr check");
+    if (CGOptions::UseRaBBFreq()) {
+      f.BuildStaticBBFrequency();
+    }
   }
   while (success == false) {
     MemPool *phaseMp = GetPhaseMemPool();
