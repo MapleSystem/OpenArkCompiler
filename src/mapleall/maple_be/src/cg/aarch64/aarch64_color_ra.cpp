@@ -4305,7 +4305,7 @@ void GraphColorRegAllocator::SplitVregAroundLoop(const CGFuncLoops &loop, const 
     if (hasRef == false) {
       splitCount++;
       RegOperand *ropnd = &cgFunc->GetOrCreateVirtualRegisterOperand(lr->GetRegNO());
-      RegOperand &phyOpnd = static_cast<AArch64CGFunc*>(cgFunc)->GetOrCreatePhysicalRegisterOperand(
+      AArch64RegOperand &phyOpnd = static_cast<AArch64CGFunc*>(cgFunc)->GetOrCreatePhysicalRegisterOperand(
           static_cast<AArch64reg>(lr->GetAssignedRegNO()), ropnd->GetSize(),
           (lr->GetRegType()));
 
