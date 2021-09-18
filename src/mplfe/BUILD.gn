@@ -110,7 +110,10 @@ static_library("lib_mplfe_util") {
 }
 
 static_library("lib_mplfe_optimize") {
-  sources = [ "${MPLFE_ROOT}/optimize/src/ror.cpp" ]
+  sources = [
+    "${MPLFE_ROOT}/optimize/src/ror.cpp",
+    "${MPLFE_ROOT}/optimize/src/conditional_operator.cpp",
+  ]
   include_dirs = include_directories
   output_dir = "${root_out_dir}/ar"
 }

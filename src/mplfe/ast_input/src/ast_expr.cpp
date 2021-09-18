@@ -25,6 +25,7 @@
 #include "ast_util.h"
 #include "enhance_c_checker.h"
 #include "ror.h"
+#include "conditional_operator.h"
 
 namespace maple {
 const uint32 kOneByte = 8;
@@ -1874,6 +1875,9 @@ UniqueFEIRExpr ASTAssignExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) 
     auto dreadFEExpr = static_cast<FEIRExprDRead*>(leftFEExpr.get());
     FieldID fieldID = dreadFEExpr->GetFieldID();
     UniqueFEIRVar var = dreadFEExpr->GetVar()->Clone();
+    if (ConditionalOptimize::DeleteRedundantTmpVar(rightFEExpr, stmts, var, leftFEExpr->GetPrimType(), fieldID)) {
+      return leftFEExpr;
+    }
     GetActualRightExpr(rightFEExpr, leftFEExpr);
     auto preStmt = std::make_unique<FEIRStmtDAssign>(std::move(var), rightFEExpr->Clone(), fieldID);
     preStmt->SetIsNonnullChecking(IsInsertNonnullChecking(rightFEExpr));
@@ -2017,7 +2021,11 @@ UniqueFEIRExpr ASTConditionalOperator::Emit2FEExprImpl(std::list<UniqueFEIRStmt>
   falseStmts.emplace_back(std::move(retFalseStmt));
   UniqueFEIRStmt stmtIf = FEIRBuilder::CreateStmtIf(std::move(condFEIRExpr), trueStmts, falseStmts);
   stmts.emplace_back(std::move(stmtIf));
-  return FEIRBuilder::CreateExprDRead(std::move(tempVarCloned2));
+  UniqueFEIRExpr expr = FEIRBuilder::CreateExprDRead(std::move(tempVarCloned2));
+  if (!FEOptions::GetInstance().IsNpeCheckDynamic()) {
+    expr->SetKind(kExprTernary);
+  }
+  return expr;
 }
 
 // ---------- ASTConstantExpr ----------

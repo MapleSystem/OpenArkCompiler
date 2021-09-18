@@ -320,6 +320,10 @@ class FEIRExpr {
     return kind;
   }
 
+  void SetKind(FEIRNodeKind specKind) {
+    kind = specKind;
+  }
+
   FEIRType *GetType() const {
     return GetTypeImpl();
   }
@@ -480,11 +484,11 @@ class FEIRExprDRead : public FEIRExpr {
   }
 
   bool operator==(const FEIRExpr &expr) const override {
-    return expr.GetKind() == kExprDRead && *varSrc == *(expr.GetVarUses().front());
+    return expr.GetKind() == kExprDRead && *varSrc == *(expr.GetVarUses().front()) && fieldID == expr.GetFieldID();
   }
 
   bool operator!=(const FEIRExpr &expr) const override {
-    return expr.GetKind() != kExprDRead || *varSrc != *(expr.GetVarUses().front());
+    return expr.GetKind() != kExprDRead || *varSrc != *(expr.GetVarUses().front()) || fieldID != expr.GetFieldID();
   }
 
   UniqueFEIRVarTrans CreateTransDirect() {
@@ -2420,6 +2424,14 @@ class FEIRStmtIf : public FEIRStmt {
 
   void SetElseStmts(std::list<UniqueFEIRStmt> &stmts) {
     std::move(begin(stmts), end(stmts), std::inserter(elseStmts, end(elseStmts)));
+  }
+
+  std::list<UniqueFEIRStmt> &GetThenStmt() {
+    return thenStmts;
+  }
+
+  std::list<UniqueFEIRStmt> &GetElseStmt() {
+    return elseStmts;
   }
 
  protected:
