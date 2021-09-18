@@ -322,7 +322,7 @@ class OriginalSt {
   bool ignoreRC = false;         // base on MIRSymbol's IgnoreRC()
   bool epreLocalRefVar = false;  // is a localrefvar temp created by epre phase
  public:
-  bool isPtrWithIncDec = false;  // is a pointer with self-increment/decrement
+  bool hasSelfIncDec = false;    // has appeared in self-increment/decrement
  private:
   SymOrPreg symOrPreg;
   PUIdx puIdx;

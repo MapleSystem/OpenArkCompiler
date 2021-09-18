@@ -100,8 +100,8 @@ void SSATab::CreateSSAStmt(StmtNode &stmt, const BB *curbb) {
       if (stmt.GetOpCode() == OP_maydassign) {
         theSSAPart->InsertMayDefNode(MayDefNode(theSSAPart->GetSSAVar(), &dNode));
       }
-      // set ost->isPtrWithIncDec
-      if (ost->GetType()->IsMIRPtrType()) {
+      // set ost->hasSelfIncDec
+      if (IsPrimitiveInteger(ost->GetType()->GetPrimType())) {
         if (dNode.GetRHS()->GetOpCode() == OP_add || dNode.GetRHS()->GetOpCode() == OP_sub) {
           BinaryNode *rhs = static_cast<BinaryNode *>(dNode.GetRHS());
           if (rhs->Opnd(0)->GetOpCode() == OP_dread && rhs->Opnd(1)->GetOpCode() == OP_constval) {
@@ -111,7 +111,7 @@ void SSATab::CreateSSAStmt(StmtNode &stmt, const BB *curbb) {
             OriginalSt *ost2 = FindOrCreateSymbolOriginalSt(*st2, mirModule.CurFunction()->GetPuidx(),
                                                             dread->GetFieldID());
             if (ost == ost2) {
-              ost->isPtrWithIncDec = true;
+              ost->hasSelfIncDec = true;
             }
           }
         }
@@ -126,14 +126,14 @@ void SSATab::CreateSSAStmt(StmtNode &stmt, const BB *curbb) {
       versionStTable.CreateZeroVersionSt(ost);
       VersionSt *vst = versionStTable.GetZeroVersionSt(ost);
       stmtsSSAPart.SetSSAPartOf(stmt, vst);
-      // set ost->isPtrWithIncDec
-      if (ost->GetType()->IsMIRPtrType()) {
+      // set ost->hasSelfIncDec
+      if (IsPrimitiveInteger(ost->GetType()->GetPrimType())) {
         if (regNode.GetRHS()->GetOpCode() == OP_add || regNode.GetRHS()->GetOpCode() == OP_sub) {
           BinaryNode *rhs = static_cast<BinaryNode *>(regNode.GetRHS());
           if (rhs->Opnd(0)->GetOpCode() == OP_regread && rhs->Opnd(1)->GetOpCode() == OP_constval) {
             RegreadSSANode *regread = static_cast<RegreadSSANode *>(rhs->Opnd(0));
             if (regNode.GetRegIdx() == regread->GetRegIdx()) {
-              ost->isPtrWithIncDec = true;
+              ost->hasSelfIncDec = true;
             }
           }
         }

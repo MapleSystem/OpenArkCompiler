@@ -269,7 +269,7 @@ MeExpr* IRMap::SimplifyIvarWithConstOffset(IvarMeExpr *ivar, bool lhsIvar) {
       MeExpr *newBase = nullptr;
       Opcode op = OP_iread;
       int32 offsetVal = 0;
-      if ((ptrVar == nullptr || ptrVar->GetOst()->isPtrWithIncDec)) {
+      if ((ptrVar == nullptr || ptrVar->GetOst()->hasSelfIncDec)) {
         // get offset value
         auto *mirConst = static_cast<ConstMeExpr*>(offsetNode)->GetConstVal();
         CHECK_FATAL(mirConst->GetKind() == kConstInt, "must be integer const");
@@ -423,22 +423,246 @@ MeExpr *IRMap::SimplifyIvarWithIaddrofBase(IvarMeExpr *ivar, bool lhsIvar) {
   }
 }
 
+// form and return the final reassociated expression
+MeExpr *IRMap::FormReassociatedExpr(ReassociatedParts reassoc) {
+  if (reassoc.ivPart != nullptr ^ reassoc.nonIVPart != nullptr) {
+    CHECK_FATAL(!reassoc.ivPartNegated && !reassoc.nonIVPartNegated,
+                "SimplifyIvar: top level reassociated address expression must not be negated");
+    // no re-association
+    if (reassoc.ivPart != nullptr) {
+      if (!reassoc.ivPartNegated) {
+        return reassoc.ivPart;
+      }
+      return CreateMeExprUnary(OP_neg, reassoc.ivPart->GetPrimType(), *reassoc.ivPart);
+    }
+    if (!reassoc.nonIVPartNegated) {
+      return reassoc.nonIVPart;
+    }
+    return CreateMeExprUnary(OP_neg, reassoc.nonIVPart->GetPrimType(), *reassoc.nonIVPart);
+  }
+  CHECK_FATAL(!(reassoc.ivPart->HasAddressValue() && reassoc.nonIVPart->HasAddressValue()),
+              "SimplifyIvar: Conflicting settings of HasAddressValue() in reassociated operands");
+  if (reassoc.ivPart->HasAddressValue()) {
+    CHECK_FATAL(!reassoc.ivPartNegated, "SimplifyIvar: cannot negate an address value");
+    Opcode opToUse = reassoc.nonIVPartNegated ? OP_sub : OP_add;
+    OpMeExpr opMeExpr(kInvalidExprID, opToUse, PTY_u64, 2);
+    opMeExpr.SetOpnd(0, reassoc.ivPart);
+    opMeExpr.SetOpnd(1, reassoc.nonIVPart);
+    MeExpr *finalMeExpr = HashMeExpr(opMeExpr);
+    static_cast<OpMeExpr *>(finalMeExpr)->hasAddressValue = true;
+    return finalMeExpr;
+  } else if (reassoc.nonIVPart->HasAddressValue()) {
+    CHECK_FATAL(!reassoc.nonIVPartNegated, "SimplifyIvar: cannot negate an address value");
+    Opcode opToUse = reassoc.ivPartNegated ? OP_sub : OP_add;
+    OpMeExpr opMeExpr(kInvalidExprID, opToUse, PTY_u64, 2);
+    opMeExpr.SetOpnd(0, reassoc.nonIVPart);
+    opMeExpr.SetOpnd(1, reassoc.ivPart);
+    MeExpr *finalMeExpr = HashMeExpr(opMeExpr);
+    static_cast<OpMeExpr *>(finalMeExpr)->hasAddressValue = true;
+    return finalMeExpr;
+  } else {  // not sure which part has address value
+    CHECK_FATAL(!(reassoc.ivPartNegated && reassoc.nonIVPartNegated), "SimplifyIvar: negative address expression cannot be negated");
+    if (reassoc.nonIVPartNegated) {
+      OpMeExpr opMeExpr(kInvalidExprID, OP_sub, PTY_u64, 2);
+      opMeExpr.SetOpnd(0, reassoc.ivPart);
+      opMeExpr.SetOpnd(1, reassoc.nonIVPart);
+      return HashMeExpr(opMeExpr);
+    } else {
+      OpMeExpr opMeExpr(kInvalidExprID, reassoc.ivPartNegated ? OP_sub : OP_add, PTY_u64, 2);
+      opMeExpr.SetOpnd(0, reassoc.nonIVPart);
+      opMeExpr.SetOpnd(1, reassoc.ivPart);
+      return HashMeExpr(opMeExpr);
+    }
+  }
+}
+
+// Given an address expression, group the terms into ivPart containing the
+// terms likely to vary frequently during execution, and nonIVPart containing
+// the rest of the terms.  Return the 2 parts in ReassociatedParts.
+ReassociatedParts IRMap::ReassociateAddSub(MeExpr *x) {
+  switch (x->GetMeOp()) {
+    case kMeOpVar:
+    case kMeOpReg: {
+      ScalarMeExpr *scalar = static_cast<ScalarMeExpr *>(x);
+      if (scalar->GetOst()->hasSelfIncDec) {
+        return ReassociatedParts(x, nullptr);
+      }
+      return ReassociatedParts(nullptr, x);
+    }
+    case kMeOpOp: {
+      OpMeExpr *opX = static_cast<OpMeExpr *>(x);
+      if (!IsPrimitiveInteger(opX->GetPrimType())) {
+        return ReassociatedParts(nullptr, x);
+      }
+      switch (opX->GetOp()) {
+        case OP_cvt: {
+          if (!IsPrimitiveInteger(opX->GetOpndType())) {
+            return ReassociatedParts(nullptr, x);
+          }
+          ReassociatedParts opndReassoc = ReassociateAddSub(opX->GetOpnd(0));
+          if (opndReassoc.ivPart != nullptr) {
+            opndReassoc.ivPart = CreateMeExprTypeCvt(opX->GetPrimType(), opX->GetOpndType(), *opndReassoc.ivPart);
+          }
+          if (opndReassoc.nonIVPart != nullptr) {
+            opndReassoc.nonIVPart = CreateMeExprTypeCvt(opX->GetPrimType(), opX->GetOpndType(), *opndReassoc.nonIVPart);
+          }
+          return opndReassoc;
+        }
+        case OP_neg: {
+          ReassociatedParts opndReassoc = ReassociateAddSub(opX->GetOpnd(0));
+          if (opndReassoc.ivPart != nullptr) {
+            opndReassoc.ivPartNegated = !opndReassoc.ivPartNegated;
+          }
+          if (opndReassoc.nonIVPart != nullptr) {
+            opndReassoc.nonIVPartNegated = !opndReassoc.nonIVPartNegated;
+          }
+          return opndReassoc;
+        }
+        case OP_mul: {
+          ReassociatedParts reassoc0 = ReassociateAddSub(opX->GetOpnd(0));
+          ReassociatedParts reassoc1 = ReassociateAddSub(opX->GetOpnd(1));
+          if (reassoc0.ivPart != nullptr || reassoc1.ivPart != nullptr) {
+            return ReassociatedParts(x, nullptr);
+          }
+          return ReassociatedParts(nullptr, x);
+        }
+        case OP_add: {
+          ReassociatedParts reassoc0 = ReassociateAddSub(opX->GetOpnd(0));
+          ReassociatedParts reassoc1 = ReassociateAddSub(opX->GetOpnd(1));
+          ReassociatedParts answer(nullptr, nullptr);
+          // set answer.ivPart
+          if (reassoc0.ivPart == nullptr) {
+            answer.ivPart = reassoc1.ivPart;
+            answer.ivPartNegated = reassoc1.ivPartNegated;
+          } else if (reassoc1.ivPart == nullptr) {
+            answer.ivPart = reassoc0.ivPart;
+            answer.ivPartNegated = reassoc0.ivPartNegated;
+          } else {
+            if (reassoc0.ivPartNegated == reassoc1.ivPartNegated) {
+              answer.ivPart = CreateMeExprBinary(OP_add, x->GetPrimType(), *reassoc0.ivPart, *reassoc1.ivPart);
+              answer.ivPartNegated = reassoc0.ivPartNegated;
+            } else if (!reassoc0.ivPartNegated) {
+              answer.ivPart = CreateMeExprBinary(OP_sub, x->GetPrimType(), *reassoc0.ivPart, *reassoc1.ivPart);
+            } else {
+              answer.ivPart = CreateMeExprBinary(OP_sub, x->GetPrimType(), *reassoc1.ivPart, *reassoc0.ivPart);
+            }
+          }
+          // set answer.nonIVPart
+          if (reassoc0.nonIVPart == nullptr) {
+            answer.nonIVPart = reassoc1.nonIVPart;
+            answer.nonIVPartNegated = reassoc1.nonIVPartNegated;
+          } else if (reassoc1.nonIVPart == nullptr) {
+            answer.nonIVPart = reassoc0.nonIVPart;
+            answer.nonIVPartNegated = reassoc0.nonIVPartNegated;
+          } else {
+            if (reassoc0.nonIVPartNegated == reassoc1.nonIVPartNegated) {
+              answer.nonIVPart = CreateMeExprBinary(OP_add, x->GetPrimType(), *reassoc0.nonIVPart, *reassoc1.nonIVPart);
+              answer.nonIVPartNegated = reassoc0.nonIVPartNegated;
+            } else if (!reassoc0.nonIVPartNegated) {
+              answer.nonIVPart = CreateMeExprBinary(OP_sub, x->GetPrimType(), *reassoc0.nonIVPart, *reassoc1.nonIVPart);
+            } else {
+              answer.nonIVPart = CreateMeExprBinary(OP_sub, x->GetPrimType(), *reassoc1.nonIVPart, *reassoc0.nonIVPart);
+            }
+          }
+          return answer;
+        }
+        case OP_sub: {
+          ReassociatedParts reassoc0 = ReassociateAddSub(opX->GetOpnd(0));
+          ReassociatedParts reassoc1 = ReassociateAddSub(opX->GetOpnd(1));
+          ReassociatedParts answer(nullptr, nullptr);
+          // set answer.ivPart
+          if (reassoc0.ivPart == nullptr) {
+            answer.ivPart = reassoc1.ivPart;
+            if (answer.ivPart != nullptr) {
+              answer.ivPartNegated = !reassoc1.ivPartNegated;
+            }
+          } else if (reassoc1.ivPart == nullptr) {
+            answer.ivPart = reassoc0.ivPart;
+            answer.ivPartNegated = reassoc0.ivPartNegated;
+          } else {
+            if (reassoc0.ivPartNegated == reassoc1.ivPartNegated) {
+              answer.ivPart = CreateMeExprBinary(OP_sub, x->GetPrimType(), *reassoc0.ivPart, *reassoc1.ivPart);
+              answer.ivPartNegated = reassoc0.ivPartNegated;
+            } else if (!reassoc0.ivPartNegated) { // reassoc1 must ivPartNegated
+              answer.ivPart = CreateMeExprBinary(OP_add, x->GetPrimType(), *reassoc0.ivPart, *reassoc1.ivPart);
+            } else { // reassoc0.ivPartNegated and !reassoc1.ivPartNegated
+              answer.ivPart = CreateMeExprBinary(OP_add, x->GetPrimType(), *reassoc0.ivPart, *reassoc1.ivPart);
+              answer.ivPartNegated = true;
+            }
+          }
+          // set answer.nonIVPart
+          if (reassoc0.nonIVPart == nullptr) {
+            answer.nonIVPart = reassoc1.nonIVPart;
+            if (answer.nonIVPart != nullptr) {
+              answer.nonIVPartNegated = !reassoc1.nonIVPartNegated;
+            }
+          } else if (reassoc1.nonIVPart == nullptr) {
+            answer.nonIVPart = reassoc0.nonIVPart;
+            answer.nonIVPartNegated = reassoc0.nonIVPartNegated;
+          } else {
+            if (reassoc0.nonIVPartNegated == reassoc1.nonIVPartNegated) {
+              answer.nonIVPart = CreateMeExprBinary(OP_sub, x->GetPrimType(), *reassoc0.nonIVPart, *reassoc1.nonIVPart);
+              answer.nonIVPartNegated = reassoc0.nonIVPartNegated;
+            } else if (!reassoc0.nonIVPartNegated) { // reassoc1 must nonIVPartNegated
+              answer.nonIVPart = CreateMeExprBinary(OP_add, x->GetPrimType(), *reassoc0.nonIVPart, *reassoc1.nonIVPart);
+            } else { // reassoc0.nonIVPartNegated and !reassoc1.nonIVPartNegated
+              answer.nonIVPart = CreateMeExprBinary(OP_add, x->GetPrimType(), *reassoc0.nonIVPart, *reassoc1.nonIVPart);
+              answer.nonIVPartNegated = true;
+            }
+          }
+          return answer;
+        }
+        default: return ReassociatedParts(nullptr, x);
+      }
+    }
+    default: return ReassociatedParts(nullptr, x);
+  }
+}
+
+// return nullptr if no change
 MeExpr *IRMap::SimplifyIvar(IvarMeExpr *ivar, bool lhsIvar) {
-  auto *simplifiedIvar = SimplifyIvarWithConstOffset(ivar, lhsIvar);
-  if (simplifiedIvar != nullptr) {
+  IvarMeExpr *simplifiedIvar = static_cast<IvarMeExpr *>(SimplifyIvarWithConstOffset(ivar, lhsIvar));
+  if (simplifiedIvar == nullptr) {
+    simplifiedIvar = static_cast<IvarMeExpr *>(SimplifyIvarWithAddrofBase(ivar));
+    if (simplifiedIvar == nullptr) {
+      simplifiedIvar = static_cast<IvarMeExpr *>(SimplifyIvarWithIaddrofBase(ivar, lhsIvar));
+    }
+  }
+  if (simplifiedIvar && simplifiedIvar->GetMeOp() != kMeOpIvar) {
     return simplifiedIvar;
   }
-
-  simplifiedIvar = SimplifyIvarWithAddrofBase(ivar);
-  if (simplifiedIvar != nullptr) {
-    return simplifiedIvar;
+  ReassociatedParts reassoc = ReassociateAddSub(simplifiedIvar ? simplifiedIvar->GetBase() : ivar->GetBase());
+  if (reassoc.ivPart != nullptr ^ reassoc.nonIVPart != nullptr) {
+    CHECK_FATAL(!reassoc.ivPartNegated && !reassoc.nonIVPartNegated,
+                "SimplifyIvar: top level reassociated address expression must not be negated");
+    return simplifiedIvar;      // not reassociated
   }
-
-  simplifiedIvar = SimplifyIvarWithIaddrofBase(ivar, lhsIvar);
-  if (simplifiedIvar != nullptr) {
-    return simplifiedIvar;
+  MeExpr *newBase = FormReassociatedExpr(reassoc);
+  if (newBase == ivar->GetBase()) {
+    return nullptr;
   }
-  return nullptr;
+  if (simplifiedIvar != nullptr) {
+    ivar = simplifiedIvar;
+  }
+  if (lhsIvar) {
+    IvarMeExpr *meDef = New<IvarMeExpr>(exprID++, ivar->GetPrimType(), ivar->GetTyIdx(), ivar->GetFieldID(), ivar->GetOp());
+    meDef->SetBase(newBase);
+    meDef->SetOffset(ivar->GetOffset());
+    meDef->SetMuVal(ivar->GetMu());
+    meDef->SetVolatileFromBaseSymbol(ivar->GetVolatileFromBaseSymbol());
+    PutToBucket(meDef->GetHashIndex() % mapHashLength, *meDef);
+    meDef->simplifiedWithConstOffset = ivar->simplifiedWithConstOffset;
+    return meDef;
+  } else {
+    IvarMeExpr newIvar(kInvalidExprID, ivar->GetPrimType(), ivar->GetTyIdx(), ivar->GetFieldID(), ivar->GetOp());
+    newIvar.SetBase(newBase);
+    newIvar.SetOffset(ivar->GetOffset());
+    newIvar.SetMuVal(ivar->GetMu());
+    newIvar.SetVolatileFromBaseSymbol(ivar->GetVolatileFromBaseSymbol());
+    IvarMeExpr *formedIvar = static_cast<IvarMeExpr *>(HashMeExpr(newIvar));
+    formedIvar->simplifiedWithConstOffset = ivar->simplifiedWithConstOffset;
+    return formedIvar;
+  }
 }
 
 IvarMeExpr *IRMap::BuildLHSIvar(MeExpr &baseAddr, IassignMeStmt &iassignMeStmt, FieldID fieldID) {
@@ -1085,6 +1309,7 @@ MeExpr *IRMap::SimplifyAddExpr(OpMeExpr *addExpr) {
           }
           return retOpMeExpr;
         }
+#if 0 // this is defeating the result of ReassociateAddSub()
         // (const + a) + b --> (a + b) + const
         retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_add, OP_add,
                                                                         opndB, opnd1, opndA));
@@ -1095,6 +1320,9 @@ MeExpr *IRMap::SimplifyAddExpr(OpMeExpr *addExpr) {
           }
         }
         return retOpMeExpr;
+#else
+        return nullptr;
+#endif
       }
 
       if (opndB->GetMeOp() == kMeOpConst) {
@@ -1107,6 +1335,7 @@ MeExpr *IRMap::SimplifyAddExpr(OpMeExpr *addExpr) {
           }
           return retOpMeExpr;
         }
+#if 0 // this is defeating the result of ReassociateAddSub()
         // (a + const) + b --> (a + b) + const
         retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_add, OP_add,
                                                                         opndA, opnd1, opndB));
@@ -1117,6 +1346,9 @@ MeExpr *IRMap::SimplifyAddExpr(OpMeExpr *addExpr) {
           }
         }
         return retOpMeExpr;
+#else
+        return nullptr;
+#endif
       }
     }
 
@@ -1167,6 +1399,7 @@ MeExpr *IRMap::SimplifyAddExpr(OpMeExpr *addExpr) {
           }
           return retOpMeExpr;
         }
+#if 0 // this is defeating the result of ReassociateAddSub()
         // (a - const) + b --> (a + b) - const
         retOpMeExpr = static_cast<OpMeExpr *>(CreateCanonicalizedMeExpr(addExpr->GetPrimType(), OP_sub, OP_add,
                                                                         opndA, opnd1, opndB));
@@ -1177,6 +1410,9 @@ MeExpr *IRMap::SimplifyAddExpr(OpMeExpr *addExpr) {
           }
         }
         return retOpMeExpr;
+#else
+        return nullptr;
+#endif
       }
     }
   }

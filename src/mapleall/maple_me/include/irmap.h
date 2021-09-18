@@ -22,6 +22,17 @@
 namespace maple {
 class IRMapBuild; // circular dependency exists, no other choice
 
+// for representing the reults of ReassociateAddSub()
+class ReassociatedParts {
+ public:
+  ReassociatedParts(MeExpr *ivpart, MeExpr *nonivpart) : ivPart(ivpart), nonIVPart(nonivpart) {}
+ public:
+  MeExpr *ivPart = nullptr;    // the expr part likely to vary during exec
+  MeExpr *nonIVPart = nullptr; // the expr part not likely to change during exec
+  bool ivPartNegated = false;
+  bool nonIVPartNegated = false;
+};
+
 class IRMap : public AnalysisResult {
   friend IRMapBuild;
  public:
@@ -146,6 +157,8 @@ class IRMap : public AnalysisResult {
   MeExpr* SimplifyIvarWithConstOffset(IvarMeExpr *ivar, bool lhsIvar);
   MeExpr *SimplifyIvarWithAddrofBase(IvarMeExpr *ivar);
   MeExpr *SimplifyIvarWithIaddrofBase(IvarMeExpr *ivar, bool lhsIvar);
+  MeExpr *FormReassociatedExpr(ReassociatedParts reassoc);
+  ReassociatedParts ReassociateAddSub(MeExpr *x);
   MeExpr *SimplifyIvar(IvarMeExpr *ivar, bool lhsIvar);
 
   template <class T, typename... Arguments>
