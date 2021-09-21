@@ -2976,24 +2976,27 @@ Insn *GraphColorRegAllocator::SpillOperand(Insn &insn, const Operand &opnd, bool
   CG *cg = a64CGFunc->GetCG();
 
   Insn *spillDefInsn = nullptr;
-  if (isDef && !lr->IsRematerializable(cg->GetRematLevel() > rematAddr ? rematAddr : cg->GetRematLevel())) {
-    lr->SetSpillReg(pregNO);
-    MemOperand *memOpnd = GetSpillOrReuseMem(*lr, regSize, isOutOfRange, insn, forCall ? false : true);
-    spillDefInsn = &cg->BuildInstruction<AArch64Insn>(a64CGFunc->PickStInsn(regSize, stype), phyOpnd, *memOpnd);
-    spillDefInsn->SetIsSpill();
-    std::string comment = " SPILL vreg: " + std::to_string(regNO) + " op:" +
-                          kOpcodeInfo.GetName(lr->GetOp());
-    if (isForCallerSave) {
-      comment += " for caller save in BB " + std::to_string(insn.GetBB()->GetId());
+  if (isDef) {
+    if (!lr->IsRematerializable(cg->GetRematLevel() > rematAddr ? rematAddr : cg->GetRematLevel())) {
+      lr->SetSpillReg(pregNO);
+      MemOperand *memOpnd = GetSpillOrReuseMem(*lr, regSize, isOutOfRange, insn, forCall ? false : true);
+      spillDefInsn = &cg->BuildInstruction<AArch64Insn>(a64CGFunc->PickStInsn(regSize, stype), phyOpnd, *memOpnd);
+      spillDefInsn->SetIsSpill();
+      std::string comment = " SPILL vreg: " + std::to_string(regNO) + " op:" +
+                            kOpcodeInfo.GetName(lr->GetOp());
+      if (isForCallerSave) {
+        comment += " for caller save in BB " + std::to_string(insn.GetBB()->GetId());
+      }
+      spillDefInsn->SetComment(comment);
+      if (forCall) {
+        insn.GetBB()->InsertInsnBefore(insn, *spillDefInsn);
+      } else if (isOutOfRange || (insn.GetNext() && insn.GetNext()->GetMachineOpcode() == MOP_clinit_tail)) {
+        insn.GetBB()->InsertInsnAfter(*insn.GetNext(), *spillDefInsn);
+      } else {
+        insn.GetBB()->InsertInsnAfter(insn, *spillDefInsn);
+      }
     }
-    spillDefInsn->SetComment(comment);
-    if (forCall) {
-      insn.GetBB()->InsertInsnBefore(insn, *spillDefInsn);
-    } else if (isOutOfRange || (insn.GetNext() && insn.GetNext()->GetMachineOpcode() == MOP_clinit_tail)) {
-      insn.GetBB()->InsertInsnAfter(*insn.GetNext(), *spillDefInsn);
-    } else {
-      insn.GetBB()->InsertInsnAfter(insn, *spillDefInsn);
-    }
+
     if ((insn.GetMachineOpcode() != MOP_xmovkri16) && (insn.GetMachineOpcode() != MOP_wmovkri16)) {
       return spillDefInsn;
     }
