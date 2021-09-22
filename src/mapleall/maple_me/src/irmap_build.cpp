@@ -167,11 +167,13 @@ void IRMapBuild::SetMeExprOpnds(MeExpr &meExpr, BaseNode &mirNode, bool atParm, 
     auto &binaryNode = static_cast<BinaryNode&>(mirNode);
     opMeExpr.SetOpnd(0, BuildExpr(*binaryNode.Opnd(0), atParm, noProp));
     opMeExpr.SetOpnd(1, BuildExpr(*binaryNode.Opnd(1), atParm, noProp));
+    opMeExpr.SetHasAddressValue();
   } else if (mirNode.IsTernaryNode()) {
     auto &ternaryNode = static_cast<TernaryNode&>(mirNode);
     opMeExpr.SetOpnd(0, BuildExpr(*ternaryNode.Opnd(0), atParm, noProp));
     opMeExpr.SetOpnd(1, BuildExpr(*ternaryNode.Opnd(1), atParm, noProp));
     opMeExpr.SetOpnd(2, BuildExpr(*ternaryNode.Opnd(2), atParm, noProp));
+    opMeExpr.SetHasAddressValue();
   } else if (mirNode.IsNaryNode()) {
     auto &naryMeExpr = static_cast<NaryMeExpr&>(meExpr);
     auto &naryNode = static_cast<NaryNode&>(mirNode);
@@ -486,6 +488,7 @@ void IRMapBuild::InitMeExprBuildFactory() {
   RegisterFactoryFunction<MeExprBuildFactory>(OP_ashr, &IRMapBuild::BuildOpMeExpr);
   RegisterFactoryFunction<MeExprBuildFactory>(OP_lshr, &IRMapBuild::BuildOpMeExpr);
   RegisterFactoryFunction<MeExprBuildFactory>(OP_shl, &IRMapBuild::BuildOpMeExpr);
+  RegisterFactoryFunction<MeExprBuildFactory>(OP_ror, &IRMapBuild::BuildOpMeExpr);
   RegisterFactoryFunction<MeExprBuildFactory>(OP_max, &IRMapBuild::BuildOpMeExpr);
   RegisterFactoryFunction<MeExprBuildFactory>(OP_min, &IRMapBuild::BuildOpMeExpr);
   RegisterFactoryFunction<MeExprBuildFactory>(OP_band, &IRMapBuild::BuildOpMeExpr);

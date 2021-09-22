@@ -52,7 +52,7 @@ PrimType LibAstFile::CvtPrimType(const clang::BuiltinType::Kind kind) const {
     case clang::BuiltinType::ULongLong:
       return PTY_u64;
     case clang::BuiltinType::UInt128:
-      return PTY_u64;
+      return PTY_u128;
     case clang::BuiltinType::Char_S:
     case clang::BuiltinType::SChar:
       return PTY_i8;
@@ -65,14 +65,15 @@ PrimType LibAstFile::CvtPrimType(const clang::BuiltinType::Kind kind) const {
       return PTY_i32;
     case clang::BuiltinType::Long:
     case clang::BuiltinType::LongLong:
-    case clang::BuiltinType::Int128:    // pty = PTY_i128, NOTYETHANDLED
       return PTY_i64;
+    case clang::BuiltinType::Int128:    // pty = PTY_i128, NOTYETHANDLED
+      return PTY_i128;
     case clang::BuiltinType::Half:      // pty = PTY_f16, NOTYETHANDLED
     case clang::BuiltinType::Float:
       return PTY_f32;
     case clang::BuiltinType::Double:
-      return PTY_f64;
     case clang::BuiltinType::LongDouble:
+      return PTY_f64;
     case clang::BuiltinType::Float128:
       return PTY_f64;
     case clang::BuiltinType::NullPtr: // default 64-bit, need to update

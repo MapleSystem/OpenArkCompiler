@@ -55,7 +55,8 @@ void MEBETopLevelManager::Run(maple::MIRModule &mod) {
   for (size_t i = 0; i < phasesSequence.size(); ++i) {
     const MaplePhaseInfo *curPhase = MaplePhaseRegister::GetMaplePhaseRegister()->GetPhaseByID(phasesSequence[i]);
     if (!IsQuiet()) {
-      LogInfo::MapleLogger() << "<<<Run Module Phase [ " << curPhase->PhaseName()  << " ]>>>\n";
+      LogInfo::MapleLogger() << "<<<Run Module " << (curPhase->IsAnalysis() ? "analysis" : "transform")
+                             << " Phase [ " << curPhase->PhaseName()  << " ]>>>\n";
     }
     DumpModule(mod, curPhase->PhaseName(), true);
     if (curPhase->IsAnalysis()) {
@@ -74,8 +75,8 @@ void MEBETopLevelManager::DoPhasesPopulate(const maple::MIRModule &mirModule) {
 }
 
 MAPLE_TRANSFORM_PHASE_REGISTER(MEBETopLevelManager, TopLevelManager)
-MAPLE_TRANSFORM_PHASE_REGISTER(IpaSccPM, IpaSccPM)
 
+MAPLE_ANALYSIS_PHASE_REGISTER(IpaSccPM, IpaSccPM)
 MAPLE_ANALYSIS_PHASE_REGISTER(M2MClone, clone)
 MAPLE_ANALYSIS_PHASE_REGISTER(M2MCallGraph, callgraph)
 MAPLE_ANALYSIS_PHASE_REGISTER(M2MKlassHierarchy, classhierarchy)

@@ -44,7 +44,7 @@ class FEIRVarName : public FEIRVar {
   std::string GetNameRawImpl() const override;
   std::unique_ptr<FEIRVar> CloneImpl() const override;
   bool EqualsToImpl(const std::unique_ptr<FEIRVar> &var) const override;
-  size_t HashImpl() const override;
+  uint32 HashImpl() const override;
 
   GStrIdx nameIdx;
   // means emit this symbol with type

@@ -54,7 +54,7 @@ bool FEIRVarTypeScatter::EqualsToImpl(const std::unique_ptr<FEIRVar> &argVar) co
   return false;
 }
 
-size_t FEIRVarTypeScatter::HashImpl() const {
+uint32 FEIRVarTypeScatter::HashImpl() const {
   return 0;
 }
 

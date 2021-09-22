@@ -84,7 +84,8 @@ UniqueFEIRExpr ASTCallExpr::ProcessBuiltinFunc(std::list<UniqueFEIRStmt> &stmts,
   if (funcName.compare(0, prefix.size(), prefix) == 0) {
     auto argExpr = args[0]->Emit2FEExpr(stmts);
     UniqueFEIRType type = FEIRTypeHelper::CreateTypeNative(*mirType);
-    UniqueFEIRType ptrType = FEIRTypeHelper::CreateTypeNative(*args[0]->GetType());
+    UniqueFEIRType ptrType = FEIRTypeHelper::CreateTypeNative(
+        *GlobalTables::GetTypeTable().GetOrCreatePointerType(*mirType));
     isFinish = true;
     return FEIRBuilder::CreateExprIRead(std::move(type), std::move(ptrType), std::move(argExpr));
   }
@@ -409,7 +410,8 @@ UniqueFEIRExpr ASTCallExpr::EmitBuiltinExtractReturnAddr(std::list<UniqueFEIRStm
 
 UniqueFEIRExpr ASTCallExpr::EmitBuiltinAlloca(std::list<UniqueFEIRStmt> &stmts) const {
   auto arg = args[0]->Emit2FEExpr(stmts);
-  auto alloca = std::make_unique<FEIRExprUnary>(OP_alloca, mirType, std::move(arg));
+  CHECK_NULL_FATAL(mirType);
+  auto alloca = std::make_unique<FEIRExprUnary>(FEIRTypeHelper::CreateTypeNative(*mirType), OP_alloca, std::move(arg));
   return alloca;
 }
 
@@ -434,7 +436,8 @@ UniqueFEIRExpr ASTCallExpr::EmitBuiltinUnreachable(std::list<UniqueFEIRStmt> &st
 
 UniqueFEIRExpr ASTCallExpr::EmitBuiltinAbs(std::list<UniqueFEIRStmt> &stmts) const {
   auto arg = args[0]->Emit2FEExpr(stmts);
-  auto abs = std::make_unique<FEIRExprUnary>(OP_abs, mirType, std::move(arg));
+  CHECK_NULL_FATAL(mirType);
+  auto abs = std::make_unique<FEIRExprUnary>(FEIRTypeHelper::CreateTypeNative(*mirType), OP_abs, std::move(arg));
   auto feType = std::make_unique<FEIRTypeNative>(*mirType);
   abs->SetType(std::move(feType));
   return abs;

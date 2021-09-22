@@ -90,6 +90,7 @@ class MPLFEOptions : public maple::MapleDriverOptionBase {
   // bc compiler options
   bool ProcessRC(const mapleOption::Option &opt);
   bool ProcessNoBarrier(const mapleOption::Option &opt);
+  bool ProcessO2(const mapleOption::Option &opt);
 
   // ast compiler options
   bool ProcessUseSignedChar(const mapleOption::Option &opt);
@@ -111,6 +112,7 @@ class MPLFEOptions : public maple::MapleDriverOptionBase {
 
   // EnhanceC
   bool ProcessNpeCheckDynamic(const mapleOption::Option &opt);
+  bool ProcessBoundaryCheckDynamic(const mapleOption::Option &opt);
 
   // symbol resolve
   bool ProcessAOT(const mapleOption::Option &opt);

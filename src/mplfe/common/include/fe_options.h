@@ -411,6 +411,22 @@ class FEOptions {
     return isNpeCheckDynamic;
   }
 
+  void SetBoundaryCheckDynamic(bool flag) {
+    isBoundaryCheckDynamic = flag;
+  }
+
+  bool IsBoundaryCheckDynamic() const {
+    return isBoundaryCheckDynamic;
+  }
+
+  void SetO2(bool flag) {
+    isO2 = flag;
+  }
+
+  bool IsO2() const {
+    return isO2;
+  }
+
  private:
   static FEOptions options;
   // input control options
@@ -459,6 +475,7 @@ class FEOptions {
   // bc compiler options
   bool isRC = false;
   bool isNoBarrier = false;
+  bool isO2 = false;
 
   // ast compiler options
   bool useSignedChar = false;
@@ -479,6 +496,7 @@ class FEOptions {
 
   // EnhanceC
   bool isNpeCheckDynamic = false;
+  bool isBoundaryCheckDynamic = false;
 
   FEOptions();
   ~FEOptions() = default;

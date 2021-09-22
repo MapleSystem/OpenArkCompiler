@@ -77,6 +77,14 @@ class FEIRVar {
     return kind;
   }
 
+  bool operator==(const FEIRVar &var) const {
+    return GetNameRaw() == var.GetNameRaw();
+  }
+
+  bool operator!=(const FEIRVar &var) const {
+    return GetNameRaw() != var.GetNameRaw();
+  }
+
   const UniqueFEIRType &GetType() const {
     return type;
   }
@@ -144,7 +152,7 @@ class FEIRVar {
     return EqualsToImpl(var);
   }
 
-  size_t Hash() const {
+  uint32 Hash() const {
     return HashImpl();
   }
 
@@ -177,7 +185,7 @@ class FEIRVar {
   virtual std::string GetNameRawImpl() const = 0;
   virtual std::unique_ptr<FEIRVar> CloneImpl() const = 0;
   virtual bool EqualsToImpl(const std::unique_ptr<FEIRVar> &var) const = 0;
-  virtual size_t HashImpl() const = 0;
+  virtual uint32 HashImpl() const = 0;
 
   FEIRVarKind kind : 6;
   bool isGlobal : 1;

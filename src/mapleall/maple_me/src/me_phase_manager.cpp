@@ -117,7 +117,7 @@ bool MeFuncPM::FuncLevelRun(MeFunction &meFunc, AnalysisDataManager &serialADM) 
     SolveSkipFrom(MeOption::GetSkipFromPhase(), i);
     const MaplePhaseInfo *curPhase = MaplePhaseRegister::GetMaplePhaseRegister()->GetPhaseByID(phasesSequence[i]);
     if (!IsQuiet()) {
-      LogInfo::MapleLogger() << "---Run " << (curPhase->IsAnalysis() ? "analysis" : "transform")
+      LogInfo::MapleLogger() << "---Run Me " << (curPhase->IsAnalysis() ? "analysis" : "transform")
                              << " Phase [ " << curPhase->PhaseName() << " ]---\n";
     }
     DumpMEIR(meFunc, curPhase->PhaseName(), true);

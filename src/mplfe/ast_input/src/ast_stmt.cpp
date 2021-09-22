@@ -21,6 +21,7 @@
 #include "fe_utils_ast.h"
 #include "fe_manager.h"
 #include "ast_util.h"
+#include "conditional_operator.h"
 
 namespace maple {
 // ---------- ASTStmt ----------
@@ -81,6 +82,9 @@ std::list<UniqueFEIRStmt> ASTReturnStmt::Emit2FEStmtImpl() const {
   std::list<UniqueFEIRStmt> stmts;
   auto astExpr = exprs.front();
   UniqueFEIRExpr feExpr = (astExpr != nullptr) ? astExpr->Emit2FEExpr(stmts) : nullptr;
+  if (astExpr != nullptr && ConditionalOptimize::DeleteRedundantTmpVar(feExpr, stmts)) {
+    return stmts;
+  }
   UniqueFEIRStmt stmt = std::make_unique<FEIRStmtReturn>(std::move(feExpr));
   stmt->SetSrcFileInfo(GetSrcFileIdx(), GetSrcFileLineNum());
   stmts.emplace_back(std::move(stmt));

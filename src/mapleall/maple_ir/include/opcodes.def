@@ -165,6 +165,7 @@
   OPCODE(ashr, BinaryNode, 0, 0)
   OPCODE(lshr, BinaryNode, 0, 0)
   OPCODE(shl, BinaryNode, 0, 0)
+  OPCODE(ror, BinaryNode, 0, 0)
   OPCODE(max, BinaryNode, 0, 0)
   OPCODE(min, BinaryNode, 0, 0)
   OPCODE(band, BinaryNode, 0, 0)

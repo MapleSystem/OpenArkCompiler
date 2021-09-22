@@ -747,10 +747,6 @@ bool AArch64Ebo::OperandLiveAfterInsn(const RegOperand &regOpnd, Insn &insn) {
       const AArch64MD *md = &AArch64CG::kMd[static_cast<AArch64Insn*>(nextInsn)->GetMachineOpcode()];
       auto *regProp = static_cast<AArch64OpndProp*>(md->operand[i]);
 #endif
-#if TARGARM32
-      const Arm32MD *md = &Arm32CG::kMd[static_cast<Arm32Insn*>(nextInsn)->GetMachineOpcode()];
-      auto *regProp = static_cast<Arm32OpndProp*>(md->operand[i]);
-#endif
       bool isUse = regProp->IsUse();
       /* if noUse Redefined, no need to check live-out. */
       return isUse;
@@ -772,6 +768,12 @@ bool AArch64Ebo::ValidPatternForCombineExtAndLoad(OpndInfo *prevOpndInfo, Insn *
   }
   Insn *prevInsn = prevOpndInfo->insn;
   AArch64MemOperand *memOpnd = static_cast<AArch64MemOperand*>(prevInsn->GetMemOpnd());
+  ASSERT(!prevInsn->IsStorePair(), "do not do this opt for str pair");
+  ASSERT(!prevInsn->IsLoadPair(), "do not do this opt for ldr pair");
+  if (memOpnd->GetAddrMode() == AArch64MemOperand::kAddrModeBOi &&
+      !a64CGFunc->IsOperandImmValid(newMop, prevInsn->GetMemOpnd(), kInsnSecondOpnd)) {
+    return false;
+  }
   int32 shiftAmount = memOpnd->ShiftAmount();
   if (shiftAmount == 0) {
     return true;

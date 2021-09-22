@@ -246,7 +246,7 @@ static const uint8 castMatrix[kNumCastKinds][kNumCastKinds] = {
     {  8, 9, 9,10,99,99,99, 3 },  // zext        |
     {  8, 0, 9, 0,99,99,99, 3 },  // sext        |
     { 99,99,99,99, 0, 0, 0, 4 },  // int2fp      |
-    {  0, 0, 0, 0,99,99,99, 3 },  // fp2int      +- firstCastKind
+    {  0, 0, 0, 0,99,99,99, 0 },  // fp2int      +- firstCastKind
     { 99,99,99,99, 0, 0, 0, 4 },  // fpTrunc     |
     { 99,99,99,99, 2, 8, 2, 4 },  // fpExt       |
     {  5, 7, 7,11, 6, 6, 6, 1 },  // retype     -+

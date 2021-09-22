@@ -3084,6 +3084,7 @@ std::map<TokenKind, MIRParser::FuncPtrParseExpr> MIRParser::InitFuncPtrMapForPar
   funcPtrMap[TK_mul] = &MIRParser::ParseExprBinary;
   funcPtrMap[TK_rem] = &MIRParser::ParseExprBinary;
   funcPtrMap[TK_shl] = &MIRParser::ParseExprBinary;
+  funcPtrMap[TK_ror] = &MIRParser::ParseExprBinary;
   funcPtrMap[TK_sub] = &MIRParser::ParseExprBinary;
   funcPtrMap[TK_CG_array_elem_add] = &MIRParser::ParseExprBinary;
   funcPtrMap[TK_cmp] = &MIRParser::ParseExprCompare;

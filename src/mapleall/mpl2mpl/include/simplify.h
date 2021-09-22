@@ -27,11 +27,14 @@ struct MemEntry {
     kMemEntryArray
   };
 
-  static bool ComputeMemEntry(BaseNode &expr, MIRFunction &func, MemEntry &memEntry);
+  static bool ComputeMemEntry(BaseNode &expr, MIRFunction &func, MemEntry &memEntry, bool isLowLevel);
   MemEntry() = default;
   MemEntry(BaseNode *addrExpr, MIRType *memType) : addrExpr(addrExpr), memType(memType) {}
 
   MemEntryKind GetKind() const {
+    if (memType == nullptr) {
+      return kMemEntryUnknown;
+    }
     auto typeKind = memType->GetKind();
     if (typeKind == kTypeScalar || typeKind == kTypePointer) {
       return kMemEntryPrimitive;
@@ -51,7 +54,7 @@ struct MemEntry {
   static StmtNode *GenMemopRetAssign(CallNode &callStmt, MIRFunction &func, bool isLowLevel);
 
   BaseNode *addrExpr = nullptr;   // memory address
-  MIRType *memType = nullptr;     // memory type
+  MIRType *memType = nullptr;     // memory type, this may be nullptr for low level memory entry
 };
 
 enum MemOpKind {

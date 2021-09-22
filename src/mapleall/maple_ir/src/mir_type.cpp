@@ -178,11 +178,11 @@ bool IsNoCvtNeeded(PrimType toType, PrimType fromType) {
     case PTY_i8:
     case PTY_i16:
       return fromType == PTY_i32;
+    case PTY_i64:
     case PTY_u64:
     case PTY_a64:
-      return fromType == PTY_ptr;
     case PTY_ptr:
-      return fromType == PTY_u64 || fromType == PTY_a64;
+      return fromType == PTY_ptr || fromType == PTY_u64 || fromType == PTY_a64 || fromType == PTY_i64;
     default:
       return false;
   }
@@ -231,6 +231,8 @@ uint32 GetPrimTypeSize(PrimType primType) {
     case PTY_v8u8:
     case PTY_v2f32:
       return 8;
+    case PTY_u128:
+    case PTY_i128:
     case PTY_c128:
     case PTY_f128:
     case PTY_v2i64:

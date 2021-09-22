@@ -441,14 +441,21 @@ void EnhanceStrLdrAArch64::Run(BB &bb, Insn &insn) {
       a64MemOpnd.GetOffsetImmediate()->GetValue() == 0) {
     auto &addDestOpnd = static_cast<RegOperand&>(prevInsn->GetOperand(kInsnFirstOpnd));
     if (baseOpnd == &addDestOpnd && !IfOperandIsLiveAfterInsn(addDestOpnd, insn)) {
-      ASSERT(static_cast<AArch64CGFunc&>(cgFunc).IsOperandImmValid(insn.GetMachineOpcode(), &memOpnd, kInsnSecondOpnd),
-          "Check Imm valid");
-      static_cast<AArch64MemOperand&>(memOpnd).SetBaseRegister(
+      auto &concreteMemOpnd = static_cast<AArch64MemOperand&>(memOpnd);
+      auto *origBaseReg = concreteMemOpnd.GetBaseRegister();
+      concreteMemOpnd.SetBaseRegister(
           static_cast<AArch64RegOperand&>(prevInsn->GetOperand(kInsnSecondOpnd)));
       auto &ofstOpnd = static_cast<ImmOperand&>(prevInsn->GetOperand(kInsnThirdOpnd));
       AArch64OfstOperand &offOpnd = static_cast<AArch64CGFunc&>(cgFunc).GetOrCreateOfstOpnd(
           ofstOpnd.GetValue(), k32BitSize);
-      static_cast<AArch64MemOperand&>(memOpnd).SetOffsetImmediate(offOpnd);
+      auto *origOffOpnd = concreteMemOpnd.GetOffsetImmediate();
+      concreteMemOpnd.SetOffsetImmediate(offOpnd);
+      if (!static_cast<AArch64CGFunc&>(cgFunc).IsOperandImmValid(insn.GetMachineOpcode(), &memOpnd, kInsnSecondOpnd)) {
+        // If new offset is invalid, undo it
+        concreteMemOpnd.SetBaseRegister(*static_cast<AArch64RegOperand*>(origBaseReg));
+        concreteMemOpnd.SetOffsetImmediate(*origOffOpnd);
+        return;
+      }
       bb.RemoveInsn(*prevInsn);
     }
   }

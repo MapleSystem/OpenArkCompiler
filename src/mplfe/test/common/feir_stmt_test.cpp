@@ -26,6 +26,7 @@
 #include "feir_builder.h"
 #include "mplfe_ut_regx.h"
 #include "fe_utils_java.h"
+#include "ror.h"
 #define private public
 #undef private
 
@@ -419,6 +420,61 @@ TEST_F(FEIRStmtTest, FEIRStmtJavaFillArrayData) {
                         MPLFEUTRegx::RefIndex(MPLFEUTRegx::kAnyNumber) +
                         std::string(", addrof ptr \\$const_array_0, constval i32 16\\)") +
                         MPLFEUTRegx::Any();
+  EXPECT_EQ(MPLFEUTRegx::Match(dumpStr, pattern), true);
+  RestoreCout();
+}
+
+TEST_F(FEIRStmtTest, FEIRExpr_hash) {
+  std::unique_ptr<FEIRVar> varReg0 = FEIRBuilder::CreateVarReg(0, PTY_i32);
+  std::unique_ptr<FEIRVar> varReg1 = FEIRBuilder::CreateVarReg(1, PTY_i8);
+  UniqueFEIRExpr exprDRead0 = std::make_unique<FEIRExprDRead>(std::move(varReg0));
+  UniqueFEIRExpr exprDRead1 = std::make_unique<FEIRExprDRead>(std::move(varReg1));
+  UniqueFEIRExpr exprDRead2 = exprDRead0->Clone();
+  EXPECT_EQ(exprDRead0->Hash() == exprDRead1->Hash(), false);
+  EXPECT_EQ(exprDRead0->Hash() == exprDRead2->Hash(), true);
+
+  UniqueFEIRVar Var0 = FEIRBuilder::CreateVarNameForC("a", *GlobalTables::GetTypeTable().GetInt32());
+  UniqueFEIRVar Var1 = FEIRBuilder::CreateVarNameForC("b", *GlobalTables::GetTypeTable().GetInt32());
+  UniqueFEIRVar Var2 = Var0->Clone();
+  UniqueFEIRExpr exprDRead10 = std::make_unique<FEIRExprDRead>(std::move(Var0));
+  UniqueFEIRExpr exprDRead11 = std::make_unique<FEIRExprDRead>(std::move(Var1));
+  UniqueFEIRExpr exprDRead12 = exprDRead10->Clone();
+  EXPECT_EQ(exprDRead10->Hash() == exprDRead11->Hash(), false);
+  EXPECT_EQ(exprDRead10->Hash() == exprDRead12->Hash(), true);
+  UniqueFEIRType retType = FEIRTypeHelper::CreateTypeNative(*GlobalTables::GetTypeTable().GetInt32());
+  MIRType *ptr = GlobalTables::GetTypeTable().GetOrCreatePointerType(*GlobalTables::GetTypeTable().GetInt32());
+  UniqueFEIRType ptrType = FEIRTypeHelper::CreateTypeNative(*ptr);
+  UniqueFEIRExpr exprIread0 = FEIRBuilder::CreateExprIRead(retType->Clone(), ptrType->Clone(), exprDRead10->Clone());
+  UniqueFEIRExpr exprIread1 = FEIRBuilder::CreateExprIRead(retType->Clone(), ptrType->Clone(), exprDRead11->Clone());
+  UniqueFEIRExpr exprIread2 = FEIRBuilder::CreateExprIRead(retType->Clone(), ptrType->Clone(), exprDRead12->Clone());
+  UniqueFEIRExpr exprIread3 = exprIread0->Clone();
+  EXPECT_EQ(exprIread0->Hash() == exprIread1->Hash(), false);
+  EXPECT_EQ(exprIread0->Hash() == exprIread2->Hash(), true);
+  EXPECT_EQ(exprIread0->Hash() == exprIread3->Hash(), true);
+}
+
+TEST_F(FEIRStmtTest, FEIRStmtRor) {
+  RedirectCout();
+  MIRType *type = GlobalTables::GetTypeTable().GetUInt64();
+  UniqueFEIRVar baseVar = FEIRBuilder::CreateVarNameForC("a", *type, false, false);
+  UniqueFEIRExpr baseExpr = FEIRBuilder::CreateExprDRead(std::move(baseVar));
+  UniqueFEIRVar baseShiftVar = FEIRBuilder::CreateVarNameForC("b", *type, false, false);
+  UniqueFEIRExpr baseShiftExpr = FEIRBuilder::CreateExprDRead(std::move(baseShiftVar));
+  UniqueFEIRExpr constExpr1 = FEIRBuilder::CreateExprConstI32(64);
+  UniqueFEIRExpr constExpr2 = FEIRBuilder::CreateExprConstI32(63);
+  UniqueFEIRExpr andExpr = FEIRBuilder::CreateExprBinary(OP_band, baseShiftExpr->Clone(), constExpr2->Clone());
+  UniqueFEIRExpr leftExpr = FEIRBuilder::CreateExprBinary(OP_lshr, baseExpr->Clone(), andExpr->Clone());
+  UniqueFEIRExpr subExpr = FEIRBuilder::CreateExprBinary(OP_sub, constExpr1->Clone(), andExpr->Clone());
+  UniqueFEIRExpr rightExpr = FEIRBuilder::CreateExprBinary(OP_shl, baseExpr->Clone(), subExpr->Clone());
+  UniqueFEIRExpr orExpr = FEIRBuilder::CreateExprBinary(OP_bior, leftExpr->Clone(), rightExpr->Clone());
+  // ror optimize
+  auto orExprPtr = static_cast<FEIRExprBinary*>(orExpr.get());
+  Ror ror(orExprPtr->GetOp(), orExprPtr->GetOpnd0(), orExprPtr->GetOpnd1());
+  UniqueFEIRExpr target = ror.Emit2FEExpr();
+  BaseNode *node = target->GenMIRNode(mirBuilder);
+  node->Dump();
+  std::string dumpStr = GetBufferString();
+  std::string pattern = std::string("ror u64 \\(dread u64 %a, dread u64 %b\\)") + MPLFEUTRegx::Any();
   EXPECT_EQ(MPLFEUTRegx::Match(dumpStr, pattern), true);
   RestoreCout();
 }

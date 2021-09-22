@@ -472,6 +472,8 @@ int32 ParmLocator::LocateNextParm(MIRType &mirType, PLocInfo &pLoc, bool isFirst
     case PTY_a64:
     case PTY_u64:
     case PTY_i64:
+    case PTY_i128:
+    case PTY_u128:
       /* Rule C.7 */
       typeSize = k8ByteSize;
       pLoc.reg0 = is64x1vec ? AllocateSIMDFPRegister() : AllocateGPRegister();
@@ -663,6 +665,8 @@ ReturnMechanism::ReturnMechanism(MIRType &retTy, const BECommon &be)
     case PTY_a64:
     case PTY_u64:
     case PTY_i64:
+    case PTY_i128:
+    case PTY_u128:
       regCount = 1;
       reg0 = AArch64Abi::intReturnRegs[0];
       primTypeOfReg0 = IsSignedInteger(pType) ? PTY_i64 : PTY_u64;  /* promote the type */

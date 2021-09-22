@@ -129,6 +129,29 @@ bool AnalysisDataManager::IsAnalysisPhaseAvailable(uint32 phaseKey, MaplePhaseID
   return it != availableAnalysisPhases.end();
 }
 
+void AnalysisDataManager::Dump() {
+  LogInfo::MapleLogger() << "availableAnalysisPhases: \n";
+  for (auto &it : availableAnalysisPhases) {
+    LogInfo::MapleLogger() << "<"
+                           << it.first.first
+                           << ", "
+                           << MaplePhaseRegister::GetMaplePhaseRegister()->GetPhaseByID(it.first.second)->PhaseName()
+                           << "> : "
+                           << it.second
+                           << "\n";
+  }
+  LogInfo::MapleLogger() << "analysisPhaseMemPool: \n";
+  for (auto &it : analysisPhaseMemPool) {
+    LogInfo::MapleLogger() << "<"
+                           << it.first.first
+                           << ", "
+                           << MaplePhaseRegister::GetMaplePhaseRegister()->GetPhaseByID(it.first.second)->PhaseName()
+                           << "> : "
+                           << it.second
+                           << "\n";
+  }
+}
+
 void MaplePhaseManager::AddPhase(std::string phaseName, bool condition) {
   if (!condition) {
     return;

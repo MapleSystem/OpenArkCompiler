@@ -171,7 +171,7 @@ class Emitter {
   /* a symbol start/end a block */
   void EmitBlockMarker(const std::string &markerName, const std::string &sectionName,
                        bool withAddr, const std::string &addrName = "");
-  void EmitNullConstant(uint32 size);
+  void EmitNullConstant(uint64 size);
   void EmitCombineBfldValue(StructEmitInfo &structEmitInfo);
   void EmitBitFieldConstant(StructEmitInfo &structEmitInfo, MIRConst &mirConst, const MIRType *nextType,
                             uint64 fieldOffset);
@@ -210,6 +210,7 @@ class Emitter {
   void EmitStructConstant(MIRConst &mirConst);
   void EmitVectorConstant(MIRConst &mirConst);
   void EmitLocalVariable(const CGFunc &cgFunc);
+  void EmitSymbolsWithPrefixSection(const MIRSymbol &symbol);
   void EmitGlobalVariable();
   void EmitGlobalRootList(const MIRSymbol &mirSymbol);
   void EmitMuidTable(const std::vector<MIRSymbol*> &vec, const std::map<GStrIdx, MIRType*> &strIdx2Type,

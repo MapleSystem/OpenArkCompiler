@@ -375,8 +375,7 @@ MeExpr *Prop::FormInverse(ScalarMeExpr *v, MeExpr *x, MeExpr *formingExp) {
     case kMeOpOp: {
       OpMeExpr *opx = static_cast<OpMeExpr *>(x);
       if (opx->GetOp() == OP_neg) {  // negate formingExp and recurse down
-        OpMeExpr negx(-1, OP_neg, opx->GetPrimType(), 1);
-        negx.SetOpnd(0, formingExp);
+        OpMeExpr negx(-1, OP_neg, opx->GetPrimType(), formingExp);
         newx = irMap.HashMeExpr(negx);
         return FormInverse(v, opx->GetOpnd(0), newx);
       }
@@ -387,12 +386,14 @@ MeExpr *Prop::FormInverse(ScalarMeExpr *v, MeExpr *x, MeExpr *formingExp) {
           // ( ..i2.. ) = y + ( ..i1.. ) becomes  ( ..i2.. ) - y = ( ..i1.. )
           // form formingExp - opx->GetOpnd(0)
           subx.SetOpnd(1, opx->GetOpnd(0));
+          subx.SetHasAddressValue();
           newx = irMap.HashMeExpr(subx);
           return FormInverse(v, opx->GetOpnd(1), newx);
         } else {
           // ( ..i2.. ) = ( ..i1.. ) + y  becomes  ( ..i2.. ) - y = ( ..i1.. )
           // form formingExp - opx->GetOpnd(1)
           subx.SetOpnd(1, opx->GetOpnd(1));
+          subx.SetHasAddressValue();
           newx = irMap.HashMeExpr(subx);
           return FormInverse(v, opx->GetOpnd(0), newx);
         }
@@ -404,6 +405,7 @@ MeExpr *Prop::FormInverse(ScalarMeExpr *v, MeExpr *x, MeExpr *formingExp) {
           OpMeExpr subx(-1, OP_sub, opx->GetPrimType(), 2);
           subx.SetOpnd(0, opx->GetOpnd(0));
           subx.SetOpnd(1, formingExp);
+          subx.SetHasAddressValue();
           newx = irMap.HashMeExpr(subx);
           return FormInverse(v, opx->GetOpnd(1), newx);
         } else {
@@ -412,6 +414,7 @@ MeExpr *Prop::FormInverse(ScalarMeExpr *v, MeExpr *x, MeExpr *formingExp) {
           OpMeExpr addx(-1, OP_add, opx->GetPrimType(), 2);
           addx.SetOpnd(0, formingExp);
           addx.SetOpnd(1, opx->GetOpnd(1));
+          addx.SetHasAddressValue();
           newx = irMap.HashMeExpr(addx);
           return FormInverse(v, opx->GetOpnd(0), newx);
         }
@@ -490,6 +493,7 @@ MeExpr *Prop::RehashUsingInverse(MeExpr *x) {
           }
         }
       }
+      newopx.SetHasAddressValue();
       return irMap.HashMeExpr(newopx);
     }
     case kMeOpNary: {
@@ -567,7 +571,8 @@ MeExpr *Prop::CheckTruncation(MeExpr *lhs, MeExpr *rhs) const {
     OpMeExpr opmeexpr(-1, extOp, newPrimType, 1);
     opmeexpr.SetBitsSize(bitfieldTy->GetFieldSize());
     opmeexpr.SetOpnd(0, rhs);
-    return irMap.HashMeExpr(opmeexpr);
+    auto *simplifiedExpr = irMap.SimplifyOpMeExpr(&opmeexpr);
+    return simplifiedExpr != nullptr ? simplifiedExpr : irMap.HashMeExpr(opmeexpr);
   }
   if (IsPrimitiveInteger(lhsTy->GetPrimType()) &&
       lhsTy->GetPrimType() != PTY_ptr && lhsTy->GetPrimType() != PTY_ref &&
@@ -583,7 +588,8 @@ MeExpr *Prop::CheckTruncation(MeExpr *lhs, MeExpr *rhs) const {
       OpMeExpr opmeexpr(-1, extOp, newPrimType, 1);
       opmeexpr.SetBitsSize(GetPrimTypeSize(lhsTy->GetPrimType()) * 8);
       opmeexpr.SetOpnd(0, rhs);
-      return irMap.HashMeExpr(opmeexpr);
+      auto *simplifiedExpr = irMap.SimplifyOpMeExpr(&opmeexpr);
+      return simplifiedExpr != nullptr ? simplifiedExpr : irMap.HashMeExpr(opmeexpr);
     }
   }
   // if lhs is function pointer and rhs is not, insert a retype
@@ -611,7 +617,8 @@ MeExpr *Prop::CheckTruncation(MeExpr *lhs, MeExpr *rhs) const {
         OpMeExpr opmeexpr(-1, OP_retype, lhsPtrType->GetPrimType(), 1);
         opmeexpr.SetTyIdx(lhsPtrType->GetTypeIndex());
         opmeexpr.SetOpnd(0, rhs);
-        return irMap.HashMeExpr(opmeexpr);
+        auto *simplifiedExpr = irMap.SimplifyOpMeExpr(&opmeexpr);
+        return simplifiedExpr != nullptr ? simplifiedExpr : irMap.HashMeExpr(opmeexpr);
       }
     }
   }
@@ -748,7 +755,7 @@ MeExpr &Prop::PropMeExpr(MeExpr &meExpr, bool &isProped, bool atParm) {
     case kMeOpVar: {
       auto &varExpr = static_cast<VarMeExpr&>(meExpr);
       MeExpr *propMeExpr = &meExpr;
-      MIRSymbol *symbol = irMap.GetSSATab().GetMIRSymbolFromID(varExpr.GetOstIdx());
+      MIRSymbol *symbol = varExpr.GetOst()->GetMIRSymbol();
       if (mirModule.IsCModule() && CanBeReplacedByConst(*symbol) && symbol->GetKonst() != nullptr) {
         propMeExpr = irMap.CreateConstMeExpr(varExpr.GetPrimType(), *symbol->GetKonst());
       } else {
@@ -821,7 +828,7 @@ MeExpr &Prop::PropMeExpr(MeExpr &meExpr, bool &isProped, bool atParm) {
 
       for (size_t i = 0; i < newMeExpr.GetNumOpnds(); ++i) {
         MeExpr *opnd = meOpExpr.GetOpnd(i);
-        MeExpr *meExprProped = &PropMeExpr(utils::ToRef(opnd), subProped, false);
+        MeExpr *meExprProped = &PropMeExpr(*opnd, subProped, false);
         // If type is not equal, use cvt
         if (opnd->GetPrimType() != meExprProped->GetPrimType()) {
           CHECK_FATAL(IsPrimitiveInteger(opnd->GetPrimType()), "should be integer");
@@ -834,6 +841,7 @@ MeExpr &Prop::PropMeExpr(MeExpr &meExpr, bool &isProped, bool atParm) {
         }
         newMeExpr.SetOpnd(i, meExprProped);
       }
+      newMeExpr.SetHasAddressValue();
 
       if (subProped) {
         isProped = true;
