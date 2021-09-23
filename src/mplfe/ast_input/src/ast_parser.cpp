@@ -1550,6 +1550,59 @@ ASTExpr *ASTParser::ProcessExprImaginaryLiteral(MapleAllocator &allocator, const
 std::map<std::string, ASTParser::FuncPtrBuiltinFunc> ASTParser::builtingFuncPtrMap =
      ASTParser::InitBuiltinFuncPtrMap();
 
+void ASTParser::ProcessBoundaryRetAttr(MapleAllocator &allocator, const clang::FunctionDecl &funcDecl,
+                                       ASTCallExpr &astCallExpr) {
+  if (!FEOptions::GetInstance().IsBoundaryCheckDynamic()) {
+    return;
+  }
+  std::list<ASTStmt*> stmts;
+  ASTFunc *astFunc = static_cast<ASTFunc*>(ASTDeclsBuilder::GetASTDecl(funcDecl.getID()));
+  if (astFunc == nullptr) {
+    return;
+  }
+  for (const auto *returnsCountAttr : funcDecl.specific_attrs<clang::ReturnsCountAttr>()) {
+    clang::Expr *expr = returnsCountAttr->getLenExpr();
+    ASTExpr *lenExpr = ProcessExpr(allocator, expr);
+    if (lenExpr == nullptr) {
+      continue;
+    }
+    ASTDecl *returnVar = ASTDeclsBuilder::ASTVarBuilder(
+        allocator, "", astCallExpr.GetRetVarName(), std::vector<MIRType*>{astCallExpr.GetRetType()}, GenericAttrs());
+    returnVar->SetIsParam(true);
+    uint64 size = GetSizeFromQualType(funcDecl.getReturnType()->getPointeeType());
+    MIRType *pointedType = static_cast<MIRPtrType*>(astCallExpr.GetRetType())->GetPointedType();
+    if (pointedType->GetPrimType() == PTY_f64) {
+      size = 8; // 8 is f64 byte num, because now f128 also cvt to f64
+    }
+    if (lenExpr->GetASTOp() == kASTStringLiteral) {
+      ASTStringLiteral *strExpr = static_cast<ASTStringLiteral*>(lenExpr);
+      std::string lenName(strExpr->GetCodeUnits().begin(), strExpr->GetCodeUnits().end());
+      bool isFound = false;
+      std::vector<ASTDecl*> paramDecls = astFunc->GetParamDecls();
+      for (size_t i = 0; i < paramDecls.size(); ++i) {
+        if (paramDecls[i]->GetName() != lenName) {
+          continue;
+        }
+        isFound = true;
+        MIRType *lenType = paramDecls[i]->GetTypeDesc().front();
+        if (lenType == nullptr || !IsPrimitiveInteger(lenType->GetPrimType())) {
+          ERR(kLncErr, "EnhanceC error: The parameter [%s] specified as boundary returns_count var is not an integer"
+                       "type in the function [%s]", lenName.c_str(), astFile->GetMangledName(funcDecl).c_str());
+          break;
+        }
+        InsertBoundaryVar(allocator, returnVar, astCallExpr.GetArgsExpr()[i], stmts, size);
+      }
+      if (!isFound) {
+        ERR(kLncErr, "EnhanceC error: The parameter [%s] specified as boundary returns_count var is not found "
+                     "in the function [%s]", lenName.c_str(), astFile->GetMangledName(funcDecl).c_str());
+      }
+    } else if (lenExpr->GetType() != nullptr && IsPrimitiveInteger(lenExpr->GetType()->GetPrimType())) {
+      InsertBoundaryVar(allocator, returnVar, lenExpr, stmts, size);
+    }
+  }
+  astCallExpr.AddBoundaryStmts(stmts);
+}
+
 ASTExpr *ASTParser::ProcessExprCallExpr(MapleAllocator &allocator, const clang::CallExpr &expr) {
   ASTCallExpr *astCallExpr = ASTDeclsBuilder::ASTExprBuilder<ASTCallExpr>(allocator);
   ASSERT(astCallExpr != nullptr, "astCallExpr is nullptr");
@@ -1600,6 +1653,9 @@ ASTExpr *ASTParser::ProcessExprCallExpr(MapleAllocator &allocator, const clang::
     astCallExpr->SetIcall(true);
   }
   astCallExpr->SetType(astFile->CvtType(expr.getType()));
+  if (funcDecl != nullptr) {
+    ProcessBoundaryRetAttr(allocator, *funcDecl, *astCallExpr);
+  }
   return astCallExpr;
 }
 
@@ -2249,7 +2305,7 @@ ASTDecl *ASTParser::ProcessDeclFunctionDecl(MapleAllocator &allocator, const cla
   // collect EnhanceC func attr
   ProcessNonnullFuncAttrs(funcDecl, attrs, paramDecls);
   std::list<ASTStmt*> boundaryStmts;
-  ProcessBoundaryFuncAttrs(allocator, funcDecl, paramDecls, boundaryStmts);
+  ProcessBoundaryFuncAttrs(allocator, funcDecl, attrs, paramDecls, boundaryStmts);
   ProcessBoundaryParamAttrs(allocator, funcDecl, paramDecls, boundaryStmts);
   // one element vector type in rettype
   if (LibAstFile::isOneElementVector(qualType)) {
@@ -2307,8 +2363,15 @@ void ASTParser::ProcessNonnullFuncAttrs(const clang::FunctionDecl &funcDecl,
 }
 
 void ASTParser::ProcessBoundaryFuncAttrs(MapleAllocator &allocator, const clang::FunctionDecl &funcDecl,
-                                         std::vector<ASTDecl*> &paramDecls, std::list<ASTStmt*> &stmts) {
-  if (!FEOptions::GetInstance().IsBoundaryCheckDynamic() || !funcDecl.hasBody()) {
+                                         GenericAttrs &attrs, std::vector<ASTDecl*> &paramDecls,
+                                         std::list<ASTStmt*> &stmts) {
+  if (!FEOptions::GetInstance().IsBoundaryCheckDynamic()) {
+    return;
+  }
+  if (funcDecl.hasAttr<clang::ReturnsCountAttr>()) {
+    attrs.SetAttr(GENATTR_boundary);
+  }
+  if (!funcDecl.hasBody()) {
     return;
   }
   for (const auto *countAttr : funcDecl.specific_attrs<clang::CountAttr>()) {
@@ -2362,6 +2425,15 @@ void ASTParser::ProcessBoundaryParamAttrs(MapleAllocator &allocator, const clang
 void ASTParser::ProcessBoundaryLenExpr(MapleAllocator &allocator, const clang::FunctionDecl &funcDecl,
                                        unsigned int idx, std::vector<ASTDecl*> &paramDecls,
                                        ASTExpr *lenExpr, std::list<ASTStmt*> &stmts) {
+  // The type size can only be obtained from ClangDecl instead of ASTDecl,
+  // because the field of mir struct type has not yet been initialized at this time
+  CHECK_FATAL(funcDecl.getParamDecl(idx)->getType()->isPointerType(), "decl must be pointer type");
+  uint64 lenSize = GetSizeFromQualType(funcDecl.getParamDecl(idx)->getType()->getPointeeType());
+  MIRType *pointedType = static_cast<MIRPtrType*>(paramDecls[idx]->GetTypeDesc().front())->GetPointedType();
+  if (pointedType->GetPrimType() == PTY_f64) {
+    lenSize = 8; // 8 is f64 byte num, because now f128 also cvt to f64
+  }
+  // Check lenExpr kind from: parameter stringLiteral or constant value/var expression
   if (lenExpr->GetASTOp() == kASTStringLiteral) {
     ASTStringLiteral *strExpr = static_cast<ASTStringLiteral*>(lenExpr);
     std::string lenName(strExpr->GetCodeUnits().begin(), strExpr->GetCodeUnits().end());
@@ -2379,22 +2451,22 @@ void ASTParser::ProcessBoundaryLenExpr(MapleAllocator &allocator, const clang::F
       }
       ASTDeclRefExpr *lenRefExpr = ASTDeclsBuilder::ASTExprBuilder<ASTDeclRefExpr>(allocator);
       lenRefExpr->SetASTDecl(lenDecl);
-      InsertBoundaryVar(allocator, funcDecl.getParamDecl(idx), paramDecls[idx], lenRefExpr, stmts, true);
+      InsertBoundaryVar(allocator, paramDecls[idx], lenRefExpr, stmts, lenSize);
     }
     if (!isFound) {
       ERR(kLncErr, "EnhanceC error: The parameter [%s] specified as boundary count var is not found "
                    "in the function [%s]", lenName.c_str(), astFile->GetMangledName(funcDecl).c_str());
     }
   } else if (lenExpr->GetType() != nullptr && IsPrimitiveInteger(lenExpr->GetType()->GetPrimType())) {
-    InsertBoundaryVar(allocator, funcDecl.getParamDecl(idx), paramDecls[idx], lenExpr, stmts, true);
+    InsertBoundaryVar(allocator, paramDecls[idx], lenExpr, stmts, lenSize);
   } else {
     ERR(kLncErr, "EnhanceC error: The boundary length expr is not an integer type in the function [%s]",
         astFile->GetMangledName(funcDecl).c_str());
   }
 }
 
-void ASTParser::InsertBoundaryVar(MapleAllocator &allocator, const clang::VarDecl *clangDecl, ASTDecl *ptrDecl,
-                                  ASTExpr *lenExpr, std::list<ASTStmt*> &stmts, bool isSize) {
+void ASTParser::InsertBoundaryVar(MapleAllocator &allocator, ASTDecl *ptrDecl, ASTExpr *lenExpr,
+                                  std::list<ASTStmt*> &stmts, uint64 size) {
   ptrDecl->SetIsBoundaryAttr(true);
   MIRType *ptrType = ptrDecl->GetTypeDesc().front();
   // insert lower boundary stmt
@@ -2403,24 +2475,17 @@ void ASTParser::InsertBoundaryVar(MapleAllocator &allocator, const clang::VarDec
   std::string lowerVarName = "_boundary." + ptrDecl->GetName() + ".lower";
   ASTVar *lowerDecl = ASTDeclsBuilder::ASTVarBuilder(
       allocator, "", lowerVarName, std::vector<MIRType*>{ptrType}, GenericAttrs());
+  lowerDecl->SetIsParam(true);
   lowerDecl->SetInitExpr(lowerRefExpr);
   ASTDeclStmt *lowerStmt = ASTDeclsBuilder::ASTStmtBuilder<ASTDeclStmt>(allocator);
   lowerStmt->SetSubDecl(lowerDecl);
   // insert upper boundary stmt
   ASTDeclRefExpr *upperRefExpr = ASTDeclsBuilder::ASTExprBuilder<ASTDeclRefExpr>(allocator);
   upperRefExpr->SetASTDecl(ptrDecl);
-  if (isSize) {
-    // The type size can only be obtained from ClangDecl instead of ASTDecl,
-    // because the field of mir struct type has not yet been initialized at this time
-    CHECK_FATAL(clangDecl->getType()->isPointerType(), "decl must be pointer type");
-    auto typeSize = GetSizeFromQualType(clangDecl->getType()->getPointeeType());
-    MIRType *pointedType = static_cast<MIRPtrType*>(ptrType)->GetPointedType();
-    if (pointedType->GetPrimType() == PTY_f64) {
-      typeSize = 8; // 8 is f64 byte num, because now f128 also cvt to f64
-    }
+  if (size) {
     auto sizeExpr = ASTDeclsBuilder::ASTExprBuilder<ASTIntegerLiteral>(allocator);
     sizeExpr->SetType(PTY_i32);
-    sizeExpr->SetVal(typeSize);
+    sizeExpr->SetVal(size);
     auto rhs = ASTDeclsBuilder::ASTExprBuilder<ASTBinaryOperatorExpr>(allocator);
     rhs->SetLeftExpr(lenExpr);
     rhs->SetRightExpr(sizeExpr);
@@ -2437,6 +2502,7 @@ void ASTParser::InsertBoundaryVar(MapleAllocator &allocator, const clang::VarDec
   std::string upperVarName = "_boundary." + ptrDecl->GetName() + ".upper";
   ASTVar *upperDecl = ASTDeclsBuilder::ASTVarBuilder(
       allocator, "", upperVarName, std::vector<MIRType*>{ptrType}, GenericAttrs());
+  upperDecl->SetIsParam(true);
   upperDecl->SetInitExpr(upperBinExpr);
   ASTDeclStmt *upperStmt = ASTDeclsBuilder::ASTStmtBuilder<ASTDeclStmt>(allocator);
   upperStmt->SetSubDecl(upperDecl);

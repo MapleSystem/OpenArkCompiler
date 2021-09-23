@@ -92,7 +92,7 @@ class MapleSccPhase : public MaplePhase {
  public:
   MapleSccPhase(MaplePhaseID id, MemPool *mp) : MaplePhase(kSccPhase, id, *mp){}
   ~MapleSccPhase() override = default;
-  virtual bool PhaseRun(SccT &f) = 0;
+  virtual bool PhaseRun(SccT &scc) = 0;
 };
 
 class MaplePhaseRegister {

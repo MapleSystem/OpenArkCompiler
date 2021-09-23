@@ -34,6 +34,12 @@ struct MIRAliasVars {
   GStrIdx sigStrIdx;
 };
 
+enum FuncReturnAttr: uint32_t {
+  kReturnUndeiced = 0x1,
+  kRetrunNull = 0x2,
+  kRetrunNoNull = 0x3
+};
+
 enum FuncAttrProp : uint32_t {
   kNoThrowException = 0x1,
   kNoRetNewlyAllocObj = 0x2,
@@ -952,6 +958,14 @@ class MIRFunction {
     return genericArg;
   }
 
+  void SetRetrunAttrKind(const FuncReturnAttr kind) {
+    returnKind = kind;
+  }
+
+  FuncReturnAttr GetRetrunAttrKind() {
+    return returnKind;
+  }
+
   AnnotationType *GetFuncGenericRet() {
     return genericRet;
   }
@@ -1090,6 +1104,7 @@ class MIRFunction {
   MapleAllocator codeMemPoolTmpAllocator{nullptr};
   bool useTmpMemPool = false;
   MapleMap<uint32, std::pair<StIdx, StIdx>> *boundaryMap = nullptr; // EnhanceC boundary var
+  FuncReturnAttr returnKind = FuncReturnAttr::kReturnUndeiced;
 
   void DumpFlavorLoweredThanMmpl() const;
   MIRFuncType *ReconstructFormals(const std::vector<MIRSymbol*> &symbols, bool clearOldArgs);

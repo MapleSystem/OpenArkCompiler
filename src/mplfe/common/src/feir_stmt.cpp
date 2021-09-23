@@ -1759,6 +1759,7 @@ std::list<StmtNode*> FEIRStmtCallAssign::GenMIRStmtsImpl(MIRBuilder &mirBuilder)
   if (!methodInfo.IsReturnVoid() && var != nullptr) {
     retVarSym = var->GenerateLocalMIRSymbol(mirBuilder);
     InsertNonnullInRetVar(*retVarSym);
+    InsertBoundaryVarInRetVar(mirBuilder, var);
   }
   if (retVarSym == nullptr) {
     stmtCall = mirBuilder.CreateStmtCall(puIdx, std::move(args), mirOp);
@@ -1776,6 +1777,21 @@ void FEIRStmtCallAssign::InsertNonnullInRetVar(MIRSymbol &retVarSym) const {
     attrs.SetAttr(ATTR_nonnull);
     retVarSym.AddAttrs(attrs);
   }
+}
+
+void FEIRStmtCallAssign::InsertBoundaryVarInRetVar(MIRBuilder &mirBuilder, const UniqueFEIRVar &retVar) const {
+  if (!methodInfo.GetMirFunc()->GetFuncAttrs().GetAttr(FUNCATTR_boundary)) {
+    return;
+  }
+  MIRFunction *curFunction = mirBuilder.GetCurrentFunctionNotNull();
+  MIRType *retType = retVar->GetType()->GenerateMIRTypeAuto();
+  UniqueFEIRExpr tmpExpr = FEIRBuilder::CreateExprDRead(FEIRBuilder::CreateVarNameForC(retVar->GetNameRaw(), *retType));
+  std::string tag = "_boundary." + retVar->GetNameRaw();
+  std::string lowerName = tag + ".lower";
+  MIRSymbol *lowerSym = FEManager::GetMIRBuilder().GetOrCreateDeclInFunc(lowerName, *retType, *curFunction);
+  std::string upperName = tag + ".upper";
+  MIRSymbol *upperSym = FEManager::GetMIRBuilder().GetOrCreateDeclInFunc(upperName, *retType, *curFunction);
+  curFunction->SetBoundaryMap(tmpExpr->Hash(), std::make_pair(lowerSym->GetStIdx(), upperSym->GetStIdx()));
 }
 
 void FEIRStmtCallAssign::InsertNonnullCheckingInArgs(const UniqueFEIRExpr &expr, size_t index,
@@ -2236,6 +2252,37 @@ BaseNode *FEIRExprConst::GenMIRNodeImpl(MIRBuilder &mirBuilder) const {
       ERR(kLncErr, "unsupported const kind");
       return nullptr;
   }
+}
+
+uint32 FEIRExprConst::HashImpl() const {
+  uint32 hash =  (static_cast<uint32>(kind) << kOpHashShift) + (type->Hash() << kTypeHashShift);
+  PrimType primType = GetPrimType();
+  switch (primType) {
+    case PTY_u1:
+    case PTY_u8:
+    case PTY_u16:
+    case PTY_u32:
+      hash += static_cast<uint32>(std::hash<int64>{}(value.u32));
+      break;
+    case PTY_u64:
+    case PTY_i8:
+    case PTY_i16:
+    case PTY_i32:
+    case PTY_i64:
+    case PTY_ref:
+    case PTY_ptr:
+      hash += static_cast<uint32>(std::hash<int64>{}(value.i64));
+      break;
+    case PTY_f32:
+      hash += static_cast<uint32>(std::hash<float>{}(value.f32));
+      break;
+    case PTY_f64:
+      hash += static_cast<uint32>(std::hash<double>{}(value.f64));
+      break;
+    default:
+      ERR(kLncErr, "unsupported const kind");
+  }
+  return hash;
 }
 
 void FEIRExprConst::CheckRawValue2SetZero() {

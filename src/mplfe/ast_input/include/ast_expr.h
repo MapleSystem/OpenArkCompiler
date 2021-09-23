@@ -1079,6 +1079,10 @@ class ASTCallExpr : public ASTExpr {
     return retType;
   }
 
+  const std::string &GetRetVarName() const {
+    return varName;
+  }
+
   void SetFuncName(const std::string &name) {
     funcName = name;
   }
@@ -1109,6 +1113,10 @@ class ASTCallExpr : public ASTExpr {
 
   bool IsFirstArgRet() const {
     return retType->GetPrimType() == PTY_agg && retType->GetSize() > 16; // Condition needs to be extended synchronously.
+  }
+
+  void AddBoundaryStmts(std::list<ASTStmt*> &stmts) {
+    boundaryStmts.insert(boundaryStmts.end(), stmts.begin(), stmts.end());
   }
 
   std::string CvtBuiltInFuncName(std::string builtInName) const;
@@ -1227,6 +1235,7 @@ UniqueFEIRExpr EmitBuiltin##STR(std::list<UniqueFEIRStmt> &stmts) const;
 #undef DEF_MIR_INTRINSIC
 
   UniqueFEIRExpr Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const override;
+  void InsertBoudaryVarInRet(std::list<UniqueFEIRStmt> &stmts) const;
 
   static std::unordered_map<std::string, FuncPtrBuiltinFunc> builtingFuncPtrMap;
   std::vector<ASTExpr*> args;
@@ -1236,6 +1245,7 @@ UniqueFEIRExpr EmitBuiltin##STR(std::list<UniqueFEIRStmt> &stmts) const;
   FuncAttrs funcAttrs;
   bool isIcall = false;
   std::string varName;
+  std::list<ASTStmt*> boundaryStmts;
 };
 
 class ASTParenExpr : public ASTExpr {

@@ -254,7 +254,7 @@ class FEIRTypeDefault : public FEIRType {
 
   PrimType primType;
   GStrIdx typeNameIdx;
-  TypeDim dim;
+  TypeDim dim = 0;
 };
 
 // ---------- FEIRTypeByName ----------

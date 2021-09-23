@@ -14,6 +14,7 @@
  */
 #include "enhance_c_checker.h"
 #include "ast_expr.h"
+#include "ast_stmt.h"
 #include "feir_builder.h"
 
 namespace maple {
@@ -37,17 +38,30 @@ UniqueFEIRExpr ENCChecker::FindBaseExprInPointerOperation(const UniqueFEIRExpr &
     }
   }
   if ((expr->GetKind() == kExprDRead && expr->GetPrimType() == PTY_ptr) ||
-      (expr->GetKind() == kExprIRead && expr->GetPrimType() == PTY_ptr && expr->GetFieldID() != 0)) {
+      (expr->GetKind() == kExprIRead && expr->GetPrimType() == PTY_ptr && expr->GetFieldID() != 0) ||
+      IsAddrofArrayVar(expr)) {
     baseExpr = expr->Clone();
   }
   return baseExpr;
+}
+
+bool ENCChecker::IsAddrofArrayVar(const UniqueFEIRExpr &expr) {
+  if (expr->GetKind() != kExprAddrofVar) {
+    return false;
+  }
+  MIRType *type = expr->GetVarUses().front()->GetType()->GenerateMIRTypeAuto();
+  if (expr->GetFieldID() == 0 && type->GetKind() == kTypeArray) {
+    return true;
+  }
+  return false;
 }
 
 void ENCChecker::AssignBoundaryVar(MIRBuilder &mirBuilder, const UniqueFEIRExpr &dstExpr, const UniqueFEIRExpr &srcExpr,
                                    std::list<StmtNode*> &ans) {
   if (!FEOptions::GetInstance().IsBoundaryCheckDynamic() ||
       srcExpr->GetPrimType() != PTY_ptr || dstExpr->GetPrimType() != PTY_ptr ||
-      !(srcExpr->GetKind() == kExprDRead || srcExpr->GetKind() == kExprIRead || srcExpr->GetKind() == kExprBinary)) {
+      !(srcExpr->GetKind() == kExprDRead || srcExpr->GetKind() == kExprIRead || srcExpr->GetKind() == kExprBinary ||
+        IsAddrofArrayVar(srcExpr))) {
     return;
   }
   // Avoid inserting redundant boundary vars
@@ -63,38 +77,53 @@ void ENCChecker::AssignBoundaryVar(MIRBuilder &mirBuilder, const UniqueFEIRExpr 
   if (lIt != curFunction->GetBoundaryMap().end()) {  // The boundary var exists on the l-value
     lBoundaryVarStIdx = lIt->second;
   }
-  // Check if the r-value has a boundary var
-  std::pair<StIdx, StIdx> rBoundaryVarStIdx;
+  // Check if the r-value has a boundary var or an array
   UniqueFEIRExpr baseExpr = ENCChecker::FindBaseExprInPointerOperation(srcExpr);
+  if (baseExpr == nullptr) {
+    return;
+  }
+  std::pair<StIdx, StIdx> rBoundaryVarStIdx = std::make_pair(StIdx(0), StIdx(0));
   auto rIt = curFunction->GetBoundaryMap().find(baseExpr->Hash());
   if (rIt != curFunction->GetBoundaryMap().end()) {  // Assgin when the boundary var exists on the r-value
     rBoundaryVarStIdx = rIt->second;
   } else {
-    if (lBoundaryVarStIdx.first != StIdx(0)) {
-      // Insert a empty r-value boundary var when there is a l-value boundary var and no r-value boundary var
+    if (lBoundaryVarStIdx.first != StIdx(0) && baseExpr->GetKind() != kExprAddrofVar) {
+      // Insert a empty r-value boundary var
+      // when there is a l-value boundary var and r-value without a boundary var or with an array
       rBoundaryVarStIdx = ENCChecker::InsertBoundaryVar(mirBuilder, baseExpr);
-    } else {
-      return;
     }
   }
   // insert L-value bounary and assign boundary var
-  if (lBoundaryVarStIdx.first == StIdx(0)) {
+  // when r-value with a boundary var or with an array
+  if (lBoundaryVarStIdx.first == StIdx(0) &&
+      (rBoundaryVarStIdx.first != StIdx(0) || baseExpr->GetKind() == kExprAddrofVar)) {
     lBoundaryVarStIdx = ENCChecker::InsertBoundaryVar(mirBuilder, dstExpr);
   }
-  if (lBoundaryVarStIdx.first != StIdx(0) && rBoundaryVarStIdx.first != StIdx(0)) {
+  if (lBoundaryVarStIdx.first != StIdx(0)) {
     MIRSymbol *lLowerSym = curFunction->GetLocalOrGlobalSymbol(lBoundaryVarStIdx.first);
     CHECK_NULL_FATAL(lLowerSym);
-    MIRSymbol *rLowerSym = curFunction->GetLocalOrGlobalSymbol(rBoundaryVarStIdx.first);
-    CHECK_NULL_FATAL(rLowerSym);
-    StmtNode *lowerStmt = mirBuilder.CreateStmtDassign(*lLowerSym, 0, mirBuilder.CreateExprDread(*rLowerSym));
-    ans.emplace_back(lowerStmt);
-
     MIRSymbol *lUpperSym = curFunction->GetLocalOrGlobalSymbol(lBoundaryVarStIdx.second);
     CHECK_NULL_FATAL(lUpperSym);
-    MIRSymbol *rUpperSym = curFunction->GetLocalOrGlobalSymbol(rBoundaryVarStIdx.second);
-    CHECK_NULL_FATAL(rUpperSym);
-    StmtNode *upperStmt = mirBuilder.CreateStmtDassign(*lUpperSym, 0, mirBuilder.CreateExprDread(*rUpperSym));
-    ans.emplace_back(upperStmt);
+    if (rBoundaryVarStIdx.first != StIdx(0)) {
+      MIRSymbol *rLowerSym = curFunction->GetLocalOrGlobalSymbol(rBoundaryVarStIdx.first);
+      CHECK_NULL_FATAL(rLowerSym);
+      StmtNode *lowerStmt = mirBuilder.CreateStmtDassign(*lLowerSym, 0, mirBuilder.CreateExprDread(*rLowerSym));
+      ans.emplace_back(lowerStmt);
+
+      MIRSymbol *rUpperSym = curFunction->GetLocalOrGlobalSymbol(rBoundaryVarStIdx.second);
+      CHECK_NULL_FATAL(rUpperSym);
+      StmtNode *upperStmt = mirBuilder.CreateStmtDassign(*lUpperSym, 0, mirBuilder.CreateExprDread(*rUpperSym));
+      ans.emplace_back(upperStmt);
+    } else if (baseExpr->GetKind() == kExprAddrofVar) {
+      StmtNode *lowerStmt = mirBuilder.CreateStmtDassign(*lLowerSym, 0, baseExpr->GenMIRNode(mirBuilder));
+      ans.emplace_back(lowerStmt);
+
+      size_t size = baseExpr->GetVarUses().front()->GetType()->GenerateMIRTypeAuto()->GetSize();
+      UniqueFEIRExpr binExpr = FEIRBuilder::CreateExprBinary(
+          OP_add, baseExpr->Clone(), std::make_unique<FEIRExprConst>(size, PTY_ptr));
+      StmtNode *upperStmt = mirBuilder.CreateStmtDassign(*lUpperSym, 0, binExpr->GenMIRNode(mirBuilder));
+      ans.emplace_back(upperStmt);
+    }
   }
 }
 
@@ -130,6 +159,54 @@ std::pair<StIdx, StIdx> ENCChecker::InsertBoundaryVar(MIRBuilder &mirBuilder, co
   return boundaryVarStIdx;
 }
 
+UniqueFEIRExpr ENCChecker::CvtArray2PtrForm(const UniqueFEIRExpr &expr, bool &isConstantIdx) {
+  FEIRExprAddrofArray *arrExpr = static_cast<FEIRExprAddrofArray*>(expr.get());
+  UniqueFEIRExpr resExpr = nullptr;
+  if (arrExpr->GetExprArray()->GetKind() == kExprAddrofArray) {
+    resExpr = CvtArray2PtrForm(arrExpr->GetExprArray()->Clone(), isConstantIdx);
+  }
+  MIRType *type = arrExpr->GetTypeArray()->GenerateMIRTypeAuto();
+  if (type->GetKind() != kTypeArray) {
+    return nullptr;
+  }
+  MIRArrayType *arrType = static_cast<MIRArrayType*>(type);
+  size_t offsetSize = arrType->GetElemType()->GetSize();
+  for (size_t i = arrType->GetDim() - 1; i > 0; --i) {
+    offsetSize *= arrType->GetSizeArrayItem(static_cast<uint32>(i));
+  }
+  CHECK_FATAL(arrExpr->GetExprIndexs().size() == 1, "idx num must be 1");
+  if (arrExpr->GetExprIndexs().front()->GetKind() != kExprConst) {
+    isConstantIdx = false;
+  }
+  UniqueFEIRExpr mulExpr = FEIRBuilder::CreateExprBinary(OP_mul,
+      arrExpr->GetExprIndexs().front()->Clone(), FEIRBuilder::CreateExprConstI32(static_cast<int32>(offsetSize)));
+  mulExpr = FEIRBuilder::CreateExprCvtPrim(std::move(mulExpr), PTY_ptr);
+  if (arrExpr->GetExprArray()->GetKind() != kExprAddrofArray) {
+    return FEIRBuilder::CreateExprBinary(OP_add, arrExpr->GetExprArray()->Clone(), std::move(mulExpr));
+  } else if (resExpr != nullptr) {
+    return FEIRBuilder::CreateExprBinary(OP_add, std::move(resExpr), std::move(mulExpr));
+  } else {
+    return nullptr;
+  }
+}
+
+void ENCChecker::PeelNestedBoundaryChecking(std::list<UniqueFEIRStmt> &stmts, const UniqueFEIRExpr &baseExpr) {
+  std::list<UniqueFEIRStmt>::iterator i = stmts.begin();
+  while (i != stmts.end()) {
+    bool flag = ((*i)->GetKind() == kFEIRStmtNary);
+    if (flag) {
+      FEIRStmtNary *nary = static_cast<FEIRStmtNary*>((*i).get());
+      flag = (nary->GetOP() == OP_assertge || nary->GetOP() == OP_assertlt) &&
+             nary->GetArgExprs().back()->Hash() == baseExpr->Hash();
+    }
+    if (flag) {
+      i = stmts.erase(i);
+    } else {
+      ++i;
+    }
+  }
+}
+
 void FEIRStmtDAssign::AssignBoundaryVar(MIRBuilder &mirBuilder, std::list<StmtNode*> &ans) const {
   if (!FEOptions::GetInstance().IsBoundaryCheckDynamic()) {
     return;
@@ -163,14 +240,25 @@ void FEIRStmtIAssign::AssignBoundaryVarAndChecking(MIRBuilder &mirBuilder, std::
 
 StmtNode *FEIRStmtNary::ReplaceBoundaryVar(MIRBuilder &mirBuilder) const {
   MIRFunction *curFunction = mirBuilder.GetCurrentFunctionNotNull();
-  auto it = curFunction->GetBoundaryMap().find(argExprs.back()->Hash());
-  if (it == curFunction->GetBoundaryMap().end()) {
-    return nullptr;
+  BaseNode *rightNode = nullptr;
+  if (argExprs.back()->GetKind() == kExprAddrofVar) {  // var must be array type by the previous checking
+    UniqueFEIRExpr rightExpr = argExprs.back()->Clone();
+    if (op == OP_assertlt) {
+      size_t size = rightExpr->GetVarUses().front()->GetType()->GenerateMIRTypeAuto()->GetSize();
+      rightExpr = FEIRBuilder::CreateExprBinary(
+          OP_add, std::move(rightExpr), std::make_unique<FEIRExprConst>(size, PTY_ptr));
+    }
+    rightNode = rightExpr->GenMIRNode(mirBuilder);
+  } else {
+    auto it = curFunction->GetBoundaryMap().find(argExprs.back()->Hash());
+    if (it == curFunction->GetBoundaryMap().end()) {
+      return nullptr;
+    }
+    StIdx boundaryStIdx = (op == OP_assertge) ? it->second.first : it->second.second;
+    MIRSymbol *boundarySym = curFunction->GetLocalOrGlobalSymbol(boundaryStIdx);
+    CHECK_NULL_FATAL(boundarySym);
+    rightNode = mirBuilder.CreateExprDread(*boundarySym);
   }
-  StIdx boundaryStIdx = (op == OP_assertge) ? it->second.first : it->second.second;
-  MIRSymbol *boundarySym = curFunction->GetLocalOrGlobalSymbol(boundaryStIdx);
-  CHECK_NULL_FATAL(boundarySym);
-  BaseNode *rightNode = mirBuilder.CreateExprDread(*boundarySym);
   MapleVector<BaseNode*> args(mirBuilder.GetCurrentFuncCodeMpAllocator()->Adapter());
   BaseNode *leftNode = argExprs.front()->GenMIRNode(mirBuilder);
   args.emplace_back(leftNode);
@@ -183,6 +271,18 @@ void ASTArraySubscriptExpr::InsertBoundaryChecking(std::list<UniqueFEIRStmt> &st
   if (!FEOptions::GetInstance().IsBoundaryCheckDynamic()) {
     return;
   }
+  if (arrayType->GetKind() == MIRTypeKind::kTypeArray) {
+    bool isConstantIdx = true;
+    idxExpr = ENCChecker::CvtArray2PtrForm(idxExpr, isConstantIdx);
+    if (isConstantIdx) {
+      return;  // skip checking when all indexes are constants
+    }
+    while (baseExpr != nullptr && baseExpr->GetKind() == kExprAddrofArray) {
+      baseExpr = static_cast<FEIRExprAddrofArray*>(baseExpr.get())->GetExprArray()->Clone();
+    }
+  }
+  // peel nested boundary checking in a multi-dimensional array
+  ENCChecker::PeelNestedBoundaryChecking(stmts, baseExpr);
   // insert lower boundary chencking, baseExpr will be replace by lower boundary var when FEIRStmtNary GenMIRStmts
   std::list<UniqueFEIRExpr> lowerExprs;
   lowerExprs.emplace_back(idxExpr->Clone());
@@ -205,6 +305,8 @@ void ASTUODerefExpr::InsertBoundaryChecking(std::list<UniqueFEIRStmt> &stmts, Un
   if (baseExpr == nullptr) {
     return;
   }
+  // peel nested boundary checking in a multi-dimensional array
+  ENCChecker::PeelNestedBoundaryChecking(stmts, baseExpr);
   // insert lower boundary chencking, baseExpr will be replace by lower boundary var when FEIRStmtNary GenMIRStmts
   std::list<UniqueFEIRExpr> lowerExprs;
   lowerExprs.emplace_back(expr->Clone());
@@ -265,5 +367,13 @@ void FEIRStmtIAssign::InsertBoundaryChecking(MIRBuilder &mirBuilder, std::list<S
   UniqueFEIRStmt upperStmt = std::make_unique<FEIRStmtNary>(OP_assertlt, std::move(upperExprs));
   std::list<StmtNode*> upperStmts = upperStmt->GenMIRStmts(mirBuilder);
   ans.splice(ans.end(), upperStmts);
+}
+
+void ASTCallExpr::InsertBoudaryVarInRet(std::list<UniqueFEIRStmt> &stmts) const {
+  for (ASTStmt *bs : boundaryStmts) {
+    for (UniqueFEIRStmt &feStmt : bs->Emit2FEStmt()) {
+      stmts.emplace_back(std::move(feStmt));
+    }
+  }
 }
 }
