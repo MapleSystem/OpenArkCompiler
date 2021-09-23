@@ -280,6 +280,14 @@ class FEIRExpr {
     return CloneImpl();
   }
 
+  virtual bool operator==(const FEIRExpr &expr) const {
+    return false;
+  }
+
+  virtual bool operator!=(const FEIRExpr &expr) const {
+    return true;
+  }
+
   BaseNode *GenMIRNode(MIRBuilder &mirBuilder) const {
     return GenMIRNodeImpl(mirBuilder);
   }
@@ -310,6 +318,10 @@ class FEIRExpr {
 
   FEIRNodeKind GetKind() const {
     return kind;
+  }
+
+  void SetKind(FEIRNodeKind specKind) {
+    kind = specKind;
   }
 
   FEIRType *GetType() const {
@@ -469,6 +481,14 @@ class FEIRExprDRead : public FEIRExpr {
   void SetVarSrc(std::unique_ptr<FEIRVar> argVarSrc);
   void SetTrans(UniqueFEIRVarTrans argTrans) {
     varSrc->SetTrans(std::move(argTrans));
+  }
+
+  bool operator==(const FEIRExpr &expr) const override {
+    return expr.GetKind() == kExprDRead && *varSrc == *(expr.GetVarUses().front()) && fieldID == expr.GetFieldID();
+  }
+
+  bool operator!=(const FEIRExpr &expr) const override {
+    return expr.GetKind() != kExprDRead || *varSrc != *(expr.GetVarUses().front()) || fieldID != expr.GetFieldID();
   }
 
   UniqueFEIRVarTrans CreateTransDirect() {
@@ -739,6 +759,7 @@ class FEIRExprUnary : public FEIRExpr {
   FEIRExprUnary(std::unique_ptr<FEIRType> argType, Opcode argOp, std::unique_ptr<FEIRExpr> argOpnd);
   ~FEIRExprUnary() = default;
   void SetOpnd(std::unique_ptr<FEIRExpr> argOpnd);
+  const UniqueFEIRExpr &GetOpnd() const;
   static std::map<Opcode, bool> InitMapOpNestableForExprUnary();
 
  protected:
@@ -897,6 +918,10 @@ class FEIRExprBinary : public FEIRExpr {
   const std::unique_ptr<FEIRExpr> &GetOpnd0() const;
   const std::unique_ptr<FEIRExpr> &GetOpnd1() const;
   bool IsComparative() const;
+
+  Opcode GetOp() const {
+    return op;
+  }
 
  protected:
   std::unique_ptr<FEIRExpr> CloneImpl() const override;
@@ -2401,6 +2426,14 @@ class FEIRStmtIf : public FEIRStmt {
     std::move(begin(stmts), end(stmts), std::inserter(elseStmts, end(elseStmts)));
   }
 
+  std::list<UniqueFEIRStmt> &GetThenStmt() {
+    return thenStmts;
+  }
+
+  std::list<UniqueFEIRStmt> &GetElseStmt() {
+    return elseStmts;
+  }
+
  protected:
   std::string DumpDotStringImpl() const override;
   std::list<StmtNode*> GenMIRStmtsImpl(MIRBuilder &mirBuilder) const override;
@@ -2539,7 +2572,7 @@ class FEIRStmtGCCAsm : public FEIRStmt {
 
  protected:
   std::list<StmtNode*> GenMIRStmtsImpl(MIRBuilder &mirBuilder) const override;
-  bool HandleConstraintPlusQ(MIRBuilder &mirBuilder, AsmNode *asmNode, uint32 index) const;
+  bool HandleConstraintPlusQm(MIRBuilder &mirBuilder, AsmNode *asmNode, uint32 index) const;
 
  private:
   std::vector<std::tuple<std::string, std::string, bool>> outputs;

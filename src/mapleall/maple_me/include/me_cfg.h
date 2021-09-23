@@ -294,6 +294,7 @@ class MeCFG : public AnalysisResult {
   }
   void BBTopologicalSort(SCCOfBBs &scc);
   void BuildSCC();
+  void UpdateBranchTarget(BB &currBB, BB &oldTarget, BB &newTarget, MeFunction &func);
 
  private:
   void ReplaceSwitchContainsOneCaseBranchWithBrtrue(BB &bb, MapleVector<BB*> &exitBlocks);

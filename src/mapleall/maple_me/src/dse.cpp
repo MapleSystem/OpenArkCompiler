@@ -301,7 +301,7 @@ void DSE::PropagateUseLive(const VersionSt &vst) {
   }
 }
 
-void DSE::MarkLastGotoInPredBBRequired(const BB &bb) {
+void DSE::MarkLastBranchStmtInPredBBRequired(const BB &bb) {
   for (auto predIt = bb.GetPred().begin(); predIt != bb.GetPred().end(); ++predIt) {
     const BB *predBB = *predIt;
     CHECK_NULL_FATAL(predBB);
@@ -309,7 +309,7 @@ void DSE::MarkLastGotoInPredBBRequired(const BB &bb) {
       continue;
     }
     const StmtNode &lastStmt = predBB->GetLast();
-    if (lastStmt.GetOpCode() == OP_goto) {
+    if (IsBranch(lastStmt.GetOpCode())) {
       MarkStmtRequired(lastStmt, ToRef(predBB));
     }
   }
@@ -350,7 +350,7 @@ void DSE::MarkControlDependenceLive(const BB &bb) {
 
   MarkLastBranchStmtInBBRequired(bb);
   MarkLastBranchStmtInPDomBBRequired(bb);
-  MarkLastGotoInPredBBRequired(bb);
+  MarkLastBranchStmtInPredBBRequired(bb);
 }
 
 void DSE::MarkSingleUseLive(const BaseNode &mirNode) {

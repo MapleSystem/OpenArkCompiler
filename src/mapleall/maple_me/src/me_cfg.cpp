@@ -277,8 +277,7 @@ void MeCFG::BuildMirCFG() {
           BB *meBB = GetLabelBBAt(lblIdx);
           (void)caseLabels.insert(lblIdx);
           // Avoid duplicate succs.
-          auto it = std::find(bb->GetSucc().begin(), bb->GetSucc().end(), meBB);
-          if (it == bb->GetSucc().end()) {
+          if (!meBB->IsSuccBB(*bb)) {
             bb->AddSucc(*meBB);
           }
         }
@@ -1742,6 +1741,45 @@ void MeCFG::BuildSCC() {
 
   VerifySCC();
   SCCTopologicalSort(sccNodes);
+}
+
+// After currBB's succ is changed, we can update currBB's target
+void MeCFG::UpdateBranchTarget(BB &currBB, BB &oldTarget, BB &newTarget, MeFunction &func) {
+  // update statement offset if succ is goto target
+  if (currBB.IsGoto()) {
+    ASSERT(currBB.GetSucc(0) == &newTarget, "[FUNC: %s]Goto's target BB is not newTarget", func.GetName().c_str());
+    auto *gotoBr = static_cast<GotoMeStmt*>(currBB.GetLastMe());
+    if (gotoBr->GetOffset() != newTarget.GetBBLabel()) {
+      LabelIdx label = func.GetOrCreateBBLabel(newTarget);
+      gotoBr->SetOffset(label);
+    }
+  } else if (currBB.GetKind() == kBBCondGoto) {
+    if (currBB.GetSucc(0) == &newTarget) {
+      return; // no need to update offset for fallthru BB
+    }
+    auto *condBr = static_cast<CondGotoMeStmt*>(currBB.GetLastMe());
+    BB *gotoBB = currBB.GetSucc().at(1);
+    ASSERT(gotoBB == &newTarget, "[FUNC: %s]newTarget is not one of CondGoto's succ BB", func.GetName().c_str());
+    LabelIdx oldLabelIdx = condBr->GetOffset();
+    if (oldLabelIdx != gotoBB->GetBBLabel()) {
+      // original gotoBB is replaced by newBB
+      LabelIdx label = func.GetOrCreateBBLabel(*gotoBB);
+      condBr->SetOffset(label);
+    }
+  } else if (currBB.GetKind() == kBBSwitch) {
+    auto *switchStmt = static_cast<SwitchMeStmt*>(currBB.GetLastMe());
+    LabelIdx oldLabelIdx = oldTarget.GetBBLabel();
+    LabelIdx label = func.GetOrCreateBBLabel(newTarget);
+    if (switchStmt->GetDefaultLabel() == oldLabelIdx) {
+      switchStmt->SetDefaultLabel(label);
+    }
+    for (size_t i = 0; i < switchStmt->GetSwitchTable().size(); ++i) {
+      LabelIdx labelIdx = switchStmt->GetSwitchTable().at(i).second;
+      if (labelIdx == oldLabelIdx) {
+        switchStmt->SetCaseLabel(i, label);
+      }
+    }
+  }
 }
 
 bool MEMeCfg::PhaseRun(MeFunction &f) {

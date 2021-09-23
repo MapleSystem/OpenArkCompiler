@@ -108,7 +108,6 @@ constexpr bool IsStmtMustRequire(Opcode opcode) {
     case OP_membarstoreload:
     case OP_membarstorestore:
     case OP_assertnonnull:
-    case OP_eval:
     case OP_free:
     case OP_incref:
     case OP_decref:

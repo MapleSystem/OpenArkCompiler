@@ -167,7 +167,7 @@ StmtNode *FEIRStmtNary::ReplaceBoundaryVar(MIRBuilder &mirBuilder) const {
   if (it == curFunction->GetBoundaryMap().end()) {
     return nullptr;
   }
-  StIdx boundaryStIdx = (op == OP_assertlt) ? it->second.first : it->second.second;
+  StIdx boundaryStIdx = (op == OP_assertge) ? it->second.first : it->second.second;
   MIRSymbol *boundarySym = curFunction->GetLocalOrGlobalSymbol(boundaryStIdx);
   CHECK_NULL_FATAL(boundarySym);
   BaseNode *rightNode = mirBuilder.CreateExprDread(*boundarySym);
@@ -187,13 +187,13 @@ void ASTArraySubscriptExpr::InsertBoundaryChecking(std::list<UniqueFEIRStmt> &st
   std::list<UniqueFEIRExpr> lowerExprs;
   lowerExprs.emplace_back(idxExpr->Clone());
   lowerExprs.emplace_back(baseExpr->Clone());
-  UniqueFEIRStmt lowerStmt = std::make_unique<FEIRStmtNary>(OP_assertlt, std::move(lowerExprs));
+  UniqueFEIRStmt lowerStmt = std::make_unique<FEIRStmtNary>(OP_assertge, std::move(lowerExprs));
   stmts.emplace_back(std::move(lowerStmt));
   // insert upper boundary chencking, baseExpr will be replace by upper boundary var when FEIRStmtNary GenMIRStmts
   std::list<UniqueFEIRExpr> upperExprs;
   upperExprs.emplace_back(std::move(idxExpr));
   upperExprs.emplace_back(std::move(baseExpr));
-  UniqueFEIRStmt upperStmt = std::make_unique<FEIRStmtNary>(OP_assertge, std::move(upperExprs));
+  UniqueFEIRStmt upperStmt = std::make_unique<FEIRStmtNary>(OP_assertlt, std::move(upperExprs));
   stmts.emplace_back(std::move(upperStmt));
 }
 
@@ -209,13 +209,13 @@ void ASTUODerefExpr::InsertBoundaryChecking(std::list<UniqueFEIRStmt> &stmts, Un
   std::list<UniqueFEIRExpr> lowerExprs;
   lowerExprs.emplace_back(expr->Clone());
   lowerExprs.emplace_back(baseExpr->Clone());
-  UniqueFEIRStmt lowerStmt = std::make_unique<FEIRStmtNary>(OP_assertlt, std::move(lowerExprs));
+  UniqueFEIRStmt lowerStmt = std::make_unique<FEIRStmtNary>(OP_assertge, std::move(lowerExprs));
   stmts.emplace_back(std::move(lowerStmt));
   // insert upper boundary chencking, baseExpr will be replace by upper boundary var when FEIRStmtNary GenMIRStmts
   std::list<UniqueFEIRExpr> upperExprs;
   upperExprs.emplace_back(std::move(expr));
   upperExprs.emplace_back(std::move(baseExpr));
-  UniqueFEIRStmt upperStmt = std::make_unique<FEIRStmtNary>(OP_assertge, std::move(upperExprs));
+  UniqueFEIRStmt upperStmt = std::make_unique<FEIRStmtNary>(OP_assertlt, std::move(upperExprs));
   stmts.emplace_back(std::move(upperStmt));
 }
 
@@ -230,14 +230,14 @@ void FEIRStmtDAssign::InsertBoundaryChecking(MIRBuilder &mirBuilder, std::list<S
   std::list<UniqueFEIRExpr> lowerExprs;
   lowerExprs.emplace_back(idxExpr->Clone());
   lowerExprs.emplace_back(idxExpr->Clone());
-  UniqueFEIRStmt lowerStmt = std::make_unique<FEIRStmtNary>(OP_assertlt, std::move(lowerExprs));
+  UniqueFEIRStmt lowerStmt = std::make_unique<FEIRStmtNary>(OP_assertge, std::move(lowerExprs));
   std::list<StmtNode*> lowerStmts = lowerStmt->GenMIRStmts(mirBuilder);
   ans.splice(ans.end(), lowerStmts);
   // insert l-value upper boundary chencking
   std::list<UniqueFEIRExpr> upperExprs;
   upperExprs.emplace_back(idxExpr->Clone());
   upperExprs.emplace_back(idxExpr->Clone());
-  UniqueFEIRStmt upperStmt = std::make_unique<FEIRStmtNary>(OP_assertge, std::move(upperExprs));
+  UniqueFEIRStmt upperStmt = std::make_unique<FEIRStmtNary>(OP_assertlt, std::move(upperExprs));
   std::list<StmtNode*> upperStmts = upperStmt->GenMIRStmts(mirBuilder);
   ans.splice(ans.end(), upperStmts);
 }
@@ -255,14 +255,14 @@ void FEIRStmtIAssign::InsertBoundaryChecking(MIRBuilder &mirBuilder, std::list<S
   std::list<UniqueFEIRExpr> lowerExprs;
   lowerExprs.emplace_back(idxExpr->Clone());
   lowerExprs.emplace_back(idxExpr->Clone());
-  UniqueFEIRStmt lowerStmt = std::make_unique<FEIRStmtNary>(OP_assertlt, std::move(lowerExprs));
+  UniqueFEIRStmt lowerStmt = std::make_unique<FEIRStmtNary>(OP_assertge, std::move(lowerExprs));
   std::list<StmtNode*> lowerStmts = lowerStmt->GenMIRStmts(mirBuilder);
   ans.splice(ans.end(), lowerStmts);
   // insert l-value upper boundary chencking
   std::list<UniqueFEIRExpr> upperExprs;
   upperExprs.emplace_back(idxExpr->Clone());
   upperExprs.emplace_back(idxExpr->Clone());
-  UniqueFEIRStmt upperStmt = std::make_unique<FEIRStmtNary>(OP_assertge, std::move(upperExprs));
+  UniqueFEIRStmt upperStmt = std::make_unique<FEIRStmtNary>(OP_assertlt, std::move(upperExprs));
   std::list<StmtNode*> upperStmts = upperStmt->GenMIRStmts(mirBuilder);
   ans.splice(ans.end(), upperStmts);
 }

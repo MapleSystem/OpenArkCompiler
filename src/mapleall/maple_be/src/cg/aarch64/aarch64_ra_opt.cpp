@@ -109,7 +109,6 @@ bool RaX0Opt::PropagateX0Optimize(const BB *bb, const Insn *insn, X0OptInfo &opt
       continue;
     }
 
-    /* BB definition differences among C and other modules */
     if (ninsn->IsCall()) {
       break;
     }

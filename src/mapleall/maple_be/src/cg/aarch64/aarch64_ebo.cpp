@@ -747,10 +747,6 @@ bool AArch64Ebo::OperandLiveAfterInsn(const RegOperand &regOpnd, Insn &insn) {
       const AArch64MD *md = &AArch64CG::kMd[static_cast<AArch64Insn*>(nextInsn)->GetMachineOpcode()];
       auto *regProp = static_cast<AArch64OpndProp*>(md->operand[i]);
 #endif
-#if TARGARM32
-      const Arm32MD *md = &Arm32CG::kMd[static_cast<Arm32Insn*>(nextInsn)->GetMachineOpcode()];
-      auto *regProp = static_cast<Arm32OpndProp*>(md->operand[i]);
-#endif
       bool isUse = regProp->IsUse();
       /* if noUse Redefined, no need to check live-out. */
       return isUse;

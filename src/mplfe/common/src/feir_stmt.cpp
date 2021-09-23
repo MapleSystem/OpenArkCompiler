@@ -2602,6 +2602,10 @@ void FEIRExprUnary::SetOpnd(std::unique_ptr<FEIRExpr> argOpnd) {
   opnd = std::move(argOpnd);
 }
 
+const UniqueFEIRExpr &FEIRExprUnary::GetOpnd() const {
+  return opnd;
+}
+
 void FEIRExprUnary::SetExprTypeByOp() {
   switch (op) {
     case OP_neg:
@@ -2913,6 +2917,7 @@ std::map<Opcode, FEIRExprBinary::FuncPtrGenMIRNode> FEIRExprBinary::InitFuncPtrM
   ans[OP_rem] = &FEIRExprBinary::GenMIRNodeNormal;
   ans[OP_shl] = &FEIRExprBinary::GenMIRNodeNormal;
   ans[OP_sub] = &FEIRExprBinary::GenMIRNodeNormal;
+  ans[OP_ror] = &FEIRExprBinary::GenMIRNodeNormal;
   return ans;
 }
 
@@ -2976,6 +2981,7 @@ void FEIRExprBinary::SetExprTypeByOp() {
     case OP_ashr:
     case OP_lshr:
     case OP_shl:
+    case OP_ror:
       SetExprTypeByOpShift();
       break;
     // Logic
@@ -4014,8 +4020,8 @@ std::list<StmtNode*> FEIRStmtAtomic::GenMIRStmtsImpl(MIRBuilder &mirBuilder) con
   return stmts;
 }
 
-bool FEIRStmtGCCAsm::HandleConstraintPlusQ(MIRBuilder &mirBuilder, AsmNode *asmNode, uint32 index) const {
-  if (std::get<1>(outputs[index]) != "+Q") {
+bool FEIRStmtGCCAsm::HandleConstraintPlusQm(MIRBuilder &mirBuilder, AsmNode *asmNode, uint32 index) const {
+  if (std::get<1>(outputs[index]) != "+Q" && std::get<1>(outputs[index]) != "+m") {
     return false;
   }
   FieldID fieldID = outputsExprs[index]->GetFieldID();
@@ -4059,7 +4065,7 @@ std::list<StmtNode*> FEIRStmtGCCAsm::GenMIRStmtsImpl(MIRBuilder &mirBuilder) con
     asmNode->inputConstraints.emplace_back(strIdx);
   }
   for (uint32 i = 0; i < outputs.size(); ++i) {
-    if (HandleConstraintPlusQ(mirBuilder, asmNode, i)) {
+    if (HandleConstraintPlusQm(mirBuilder, asmNode, i)) {
       continue;
     }
     FieldID fieldID = 0;

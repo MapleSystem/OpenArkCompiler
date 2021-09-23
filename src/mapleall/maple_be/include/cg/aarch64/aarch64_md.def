@@ -360,6 +360,10 @@ DEFINE_MOP(MOP_wasrrrr, {mopdReg32ID,mopdReg32IS,mopdReg32IS},0,kLtAluShiftReg,"
 DEFINE_MOP(MOP_xlsrrrr, {mopdReg64ID,mopdReg64IS,mopdReg64IS},0,kLtAluShiftReg,"lsr","0,1,2",1)
 /* MOP_wlsrrrr */
 DEFINE_MOP(MOP_wlsrrrr, {mopdReg32ID,mopdReg32IS,mopdReg32IS},0,kLtAluShiftReg,"lsr","0,1,2",1)
+/* MOP_xrorrrr */
+DEFINE_MOP(MOP_xrorrrr, {mopdReg64ID,mopdReg64IS,mopdReg64IS},0,kLtAluShiftReg,"ror","0,1,2",1)
+/* MOP_wrorrrr */
+DEFINE_MOP(MOP_wrorrrr, {mopdReg32ID,mopdReg32IS,mopdReg32IS},0,kLtAluShiftReg,"ror","0,1,2",1)
 /* MOP_wtstri32 */
 DEFINE_MOP(MOP_wtstri32, {mopdRegCCD,mopdReg32ID,mopdImm32},0,kLtAlu,"tst","1,2",1)
 /* MOP_xtstri64 */

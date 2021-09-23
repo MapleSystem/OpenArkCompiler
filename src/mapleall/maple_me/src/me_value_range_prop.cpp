@@ -685,6 +685,7 @@ int64 ValueRangePropagation::GetRealValue(int64 value, PrimType primType) const 
       return static_cast<int32>(value);
       break;
     case PTY_i64:
+    case PTY_i128:
       return static_cast<int64>(value);
       break;
     case PTY_u8:
@@ -708,6 +709,7 @@ int64 ValueRangePropagation::GetRealValue(int64 value, PrimType primType) const 
       break;
     case PTY_u64:
     case PTY_a64:
+    case PTY_u128:
       return static_cast<uint64>(value);
       break;
     case PTY_u1:

@@ -232,6 +232,7 @@ void SSARename2Preg::Rename2PregLeafLHS(MeStmt *mestmt, const VarMeExpr *varmeex
       }
       (void)bbSet->insert(mestmt->GetBB()->GetBBId());
     }
+    meirmap->SimplifyAssign(regssmestmt);
   }
 }
 

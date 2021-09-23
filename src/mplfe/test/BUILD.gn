@@ -63,6 +63,7 @@ executable("mplfeUT") {
     "${MPLFE_ROOT}:lib_mplfe_ast_input",
     "${MPLFE_ROOT}:lib_mplfe_bc_input",
     "${MPLFE_ROOT}:lib_mplfe_util",
+    "${MPLFE_ROOT}:lib_mplfe_optimize",
     "${MPLFE_ROOT}:lib_mplfe_dex_input",
     "${MPLFE_ROOT}:lib_mplfe_jbc_input",
   ]
@@ -136,6 +137,7 @@ source_set("lib_mplfe_test_jbc_input") {
 
 include_common_directories = [
   "${MPLFE_ROOT}/common/include",
+  "${MPLFE_ROOT}/optimize/include",
   "${MPLFE_ROOT}/jbc_input/include",  # mplfeUT.cpp exists
   "${MPLFE_ROOT}/test/common",
   "${THIRD_PARTY_ROOT}/bounds_checking_function/include",

@@ -25,9 +25,35 @@ MeExpr *IRMap::SimplifyCast(MeExpr *expr) {
   return MeCastOpt::SimplifyCast(*this, expr);
 }
 
-// Try remove redundant intTrunc for dassgin and iassign
+// Try to remove redundant intTrunc for dassgin and iassign
 void IRMap::SimplifyCastForAssign(MeStmt *assignStmt) {
   MeCastOpt::SimplifyCastForAssign(assignStmt);
+}
+
+void IRMap::SimplifyAssign(AssignMeStmt *assignStmt) {
+  if (assignStmt == nullptr) {
+    return;
+  }
+  if (assignStmt->GetOp() == OP_regassign) {
+    // try to remove redundant iaddrof
+    while (assignStmt->GetRHS()->GetOp() == OP_iaddrof) {
+      auto *iaddrof = static_cast<OpMeExpr*>(assignStmt->GetRHS());
+      FieldID fld = iaddrof->GetFieldID();
+      MIRType *type = iaddrof->GetType();
+      CHECK_FATAL(type->IsMIRPtrType(), "IaddrofExpr's type must be pointer type!");
+      MIRType *pointedType = static_cast<MIRPtrType*>(type)->GetPointedType();
+      int64 offset = pointedType->GetBitOffsetFromBaseAddr(fld);
+      if (offset == 0) {
+        // although iaddrof expr's type may be not the same as base(iaddrof is fieldType, base is agg's type),
+        // we could use base directly because regassign can reserve only primtype in a reg.
+        MeExpr *base = iaddrof->GetOpnd(0);
+        assignStmt->SetRHS(base);
+      } else {
+        break;
+      }
+    }
+  }
+  SimplifyCastForAssign(assignStmt);
 }
 
 VarMeExpr *IRMap::CreateVarMeExprVersion(OriginalSt *ost) {
@@ -775,6 +801,15 @@ UnaryMeStmt *IRMap::CreateUnaryMeStmt(Opcode op, MeExpr *opnd, BB *bb, const Src
   return unaryMeStmt;
 }
 
+GotoMeStmt *IRMap::CreateGotoMeStmt(uint32 offset, BB *bb, const SrcPosition *src) {
+  GotoMeStmt *gotoMeStmt = New<GotoMeStmt>(offset);
+  gotoMeStmt->SetBB(bb);
+  if (src != nullptr) {
+    gotoMeStmt->SetSrcPos(*src);
+  }
+  return gotoMeStmt;
+}
+
 IntrinsiccallMeStmt *IRMap::CreateIntrinsicCallMeStmt(MIRIntrinsicID idx, std::vector<MeExpr*> &opnds, TyIdx tyIdx) {
   auto *meStmt =
       NewInPool<IntrinsiccallMeStmt>(tyIdx == 0u ? OP_intrinsiccall : OP_intrinsiccallwithtype, idx, tyIdx);
@@ -1148,6 +1183,14 @@ MeExpr *IRMap::SimplifyAddExpr(OpMeExpr *addExpr) {
   return nullptr;
 }
 
+static inline bool SignExtendsOpnd(PrimType toType, PrimType fromType) {
+  if ((IsPrimitiveInteger(toType) && IsSignedInteger(fromType)) &&
+      (GetPrimTypeSize(fromType) < GetPrimTypeSize(toType))) {
+    return true;
+  }
+  return false;
+}
+
 MeExpr *IRMap::SimplifyMulExpr(OpMeExpr *mulExpr) {
   if (IsPrimitiveVector(mulExpr->GetPrimType())) {
     return nullptr;
@@ -1180,11 +1223,13 @@ MeExpr *IRMap::SimplifyMulExpr(OpMeExpr *mulExpr) {
     if (opnd0->GetOp() == OP_cvt) {
       // reassociation effects sign extension
       auto *cvtExpr = static_cast<OpMeExpr *>(opnd0);
-      if ((IsSignedInteger(cvtExpr->GetOpndType()) != IsSignedInteger(opnd0->GetOpnd(0)->GetPrimType())) &&
-          (GetPrimTypeSize(cvtExpr->GetOpndType()) < GetPrimTypeSize(cvtExpr->GetPrimType()))) {
+      if (SignExtendsOpnd(cvtExpr->GetPrimType(), cvtExpr->GetOpndType())) {
         return nullptr;
       }
       opnd0 = opnd0->GetOpnd(0);
+    }
+    if (SignExtendsOpnd(mulExpr->GetPrimType(), opnd0->GetPrimType())) {
+      return nullptr;
     }
 
     if (opnd0->GetOp() == OP_add) {
@@ -1242,6 +1287,31 @@ MeExpr *IRMap::SimplifyMulExpr(OpMeExpr *mulExpr) {
             mulExpr->GetPrimType(), OP_sub, OP_mul, opndA, opnd1, OP_mul, opndB, opnd1);
       }
       return nullptr;
+    }
+
+    // (a * constA) * constB --> a * (constA * constB)
+    if (opnd0->GetOp() == OP_mul && opnd1->GetMeOp() == kMeOpConst) {
+      auto *simplified = SimplifyMulExpr(static_cast<OpMeExpr*>(opnd0));
+      opnd0 = simplified == nullptr ? opnd0 : simplified;
+      if (opnd0->GetOp() != OP_mul) {
+        return nullptr;
+      }
+      auto *opndA = opnd0->GetOpnd(0);
+      auto *opndB = opnd0->GetOpnd(1);
+      if (opndA->GetMeOp() != kMeOpConst && opndB->GetMeOp() != kMeOpConst) {
+        return nullptr;
+      }
+      if (opndA->GetMeOp() != kMeOpConst) {
+        // use opndA for const
+        auto *tmp = opndA;
+        opndA = opndB;
+        opndB = tmp;
+      }
+      if (opndA->GetPrimType() == opnd1->GetPrimType()) {
+        auto *newConst = FoldConstExpr(opndA->GetPrimType(), OP_mul,
+                                       static_cast<ConstMeExpr*>(opndA), static_cast<ConstMeExpr*>(opnd1));
+        return CreateMeExprBinary(OP_mul, mulExpr->GetPrimType(), *opndB, *newConst);
+      }
     }
   }
   return nullptr;

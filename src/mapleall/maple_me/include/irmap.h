@@ -124,6 +124,7 @@ class IRMap : public AnalysisResult {
   MeExpr *CreateMeExprExt(Opcode, PrimType, uint32, MeExpr&);
   UnaryMeStmt *CreateUnaryMeStmt(Opcode op, MeExpr *opnd);
   UnaryMeStmt *CreateUnaryMeStmt(Opcode op, MeExpr *opnd, BB *bb, const SrcPosition *src);
+  GotoMeStmt *CreateGotoMeStmt(uint32 offset, BB *bb, const SrcPosition *src = nullptr);
   IntrinsiccallMeStmt *CreateIntrinsicCallMeStmt(MIRIntrinsicID idx, std::vector<MeExpr*> &opnds,
                                                  TyIdx tyIdx = TyIdx());
   IntrinsiccallMeStmt *CreateIntrinsicCallAssignedMeStmt(MIRIntrinsicID idx, std::vector<MeExpr*> &opnds,
@@ -140,6 +141,7 @@ class IRMap : public AnalysisResult {
   MeExpr *SimplifyOpMeExpr(OpMeExpr *opmeexpr);
   MeExpr *SimplifyMeExpr(MeExpr *x);
   void SimplifyCastForAssign(MeStmt *assignStmt);
+  void SimplifyAssign(AssignMeStmt *assignStmt);
   MeExpr *SimplifyCast(MeExpr *expr);
   MeExpr* SimplifyIvarWithConstOffset(IvarMeExpr *ivar, bool lhsIvar);
   MeExpr *SimplifyIvarWithAddrofBase(IvarMeExpr *ivar);
