@@ -26,6 +26,8 @@
 namespace maplebe {
 using namespace maple;
 
+constexpr uint32 kLoopFactor = 10;
+
 #define JAVALANG (GetMirModule().IsJavaModule())
 
 Operand *HandleDread(const BaseNode &parent, BaseNode &expr, CGFunc &cgFunc) {
@@ -1602,16 +1604,23 @@ void CGFunc::UpdateCallBBFrequency() {
 }
 
 void BBFrequencySet(BB *bb) {
-  uint32 freq = bb->GetFrequency();
+  float freq = bb->GetFrequency();
   for (auto pred : bb->GetPreds()) {
-    uint32 predFreq = pred->GetFrequency();
+    auto &loopPred = bb->GetLoopPreds();
+    if (std::find(loopPred.begin(), loopPred.end(), pred) != loopPred.end()) {
+      continue;
+    }
+    float predFreq = pred->GetFrequency();
     if (pred->GetLoop()) {
-      predFreq /= (pred->GetLoop()->GetLoopLevel() * 10);
+      predFreq /= (pred->GetLoop()->GetLoopLevel() * kLoopFactor);
     }
     freq += (predFreq / pred->GetSuccs().size());
+    if (freq <= 0.0) {
+      CGOptions::DisableUseRaBBFreq();
+    }
   }
   if (bb->GetLoop()) {
-    freq *= (bb->GetLoop()->GetLoopLevel() * 10);
+    freq *= (bb->GetLoop()->GetLoopLevel() * kLoopFactor);
   }
   bb->SetFrequency(freq);
 }
@@ -1622,7 +1631,7 @@ void BBFrequencyVisitSucc(std::queue<BB *> &BBQueue) {
     BBQueue.pop();
     BBFrequencySet(bb);
     for (auto succ : bb->GetSuccs()) {
-      if (succ->GetFrequency()) {
+      if (succ->GetFrequency() != 0.0) {
         continue;
       }
       bool allPredVisited = true;
@@ -1631,7 +1640,7 @@ void BBFrequencyVisitSucc(std::queue<BB *> &BBQueue) {
         if (std::find(loopPred.begin(), loopPred.end(), pred) != loopPred.end()) {
           continue;
         }
-        if (pred->GetFrequency() == 0) {
+        if (pred->GetFrequency() == 0.0) {
           allPredVisited = false;
           break;
         }
@@ -1653,6 +1662,11 @@ void CGFunc::BuildStaticBBFrequency() {
   std::queue<BB *> BBQueue;
   BBQueue.push(bb);
   BBFrequencyVisitSucc(BBQueue);
+  FOR_ALL_BB(bb, this) {
+    if (bb->GetLoop()) {
+      bb->SetFrequency(bb->GetFrequency() + bb->GetLoop()->GetLoopLevel() * kFreqBase * kLoopFactor);
+    }
+  }
 }
 
 void CGFunc::HandleFunction() {

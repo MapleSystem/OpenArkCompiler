@@ -35,7 +35,7 @@
 
 namespace maplebe {
 constexpr int32 kBBLimit = 10000;
-constexpr int32 kFreqBase = 10000;
+constexpr int32 kFreqBase = 500000;
 struct MemOpndCmp {
   bool operator()(const MemOperand *lhs, const MemOperand *rhs) const {
     CHECK_FATAL(lhs != nullptr, "null ptr check");
@@ -844,7 +844,7 @@ class CGFunc {
     return bb;
   }
 
-  BB *CreateNewBB(bool unreachable, BB::BBKind kind, uint32 frequency) {
+  BB *CreateNewBB(bool unreachable, BB::BBKind kind, float frequency) {
     BB *newBB = CreateNewBB();
     newBB->SetKind(kind);
     newBB->SetUnreachable(unreachable);
@@ -852,7 +852,7 @@ class CGFunc {
     return newBB;
   }
 
-  BB *CreateNewBB(LabelIdx label, bool unreachable, BB::BBKind kind, uint32 frequency) {
+  BB *CreateNewBB(LabelIdx label, bool unreachable, BB::BBKind kind, float frequency) {
     BB *newBB = CreateNewBB(unreachable, kind, frequency);
     newBB->AddLabel(label);
     SetLab2BBMap(label, *newBB);
@@ -991,7 +991,7 @@ class CGFunc {
   bool isAfterRegAlloc = false;
   bool isAggParamInReg = false;
   bool hasTakenLabel = false;
-  uint32 frequency = 0;
+  float frequency = 0;
   DebugInfo *debugInfo = nullptr;  /* debugging info */
   MapleVector<DBGExprLoc*> dbgCallFrameLocations;
   RegOperand *aggParamReg = nullptr;

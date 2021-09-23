@@ -5628,7 +5628,7 @@ void AArch64CGFunc::MergeReturn() {
 
   LabelIdx labidx = CreateLabel();
   LabelOperand &targetOpnd = GetOrCreateLabelOperand(labidx);
-  uint32 freq = 0;
+  float freq = 0;
   for (auto *tmpBB : GetExitBBsVec()) {
     ASSERT(tmpBB->GetKind() == BB::kBBReturn, "Error: suppose to merge multi return bb");
     tmpBB->SetKind(BB::kBBGoto);
@@ -6034,7 +6034,7 @@ void AArch64CGFunc::HandleRCCall(bool begin, const MIRSymbol *retRef) {
 
     AppendCall(*callSym, *srcOpnds);
     GetCurBB()->SetHasCall();
-    if (frequency != 0) {
+    if (frequency != 0.0) {
       GetCurBB()->SetFrequency(frequency);
     }
     return;
@@ -6067,7 +6067,7 @@ void AArch64CGFunc::HandleRCCall(bool begin, const MIRSymbol *retRef) {
     Insn &callInsn = AppendCall(*callSym, *srcOpnds, true);
     static_cast<AArch64cleancallInsn&>(callInsn).SetRefSkipIndex(stOffset);
     GetCurBB()->SetHasCall();
-    if (frequency != 0) {
+    if (frequency != 0.0) {
       GetCurBB()->SetFrequency(frequency);
     }
     return;
@@ -6149,7 +6149,7 @@ void AArch64CGFunc::HandleRCCall(bool begin, const MIRSymbol *retRef) {
 
   Insn &callInsn = AppendCall(*sym, *srcOpnds, true);
   static_cast<AArch64cleancallInsn&>(callInsn).SetRefSkipIndex(refSkipIndex);
-  if (frequency != 0) {
+  if (frequency != 0.0) {
     GetCurBB()->SetFrequency(frequency);
   }
   GetCurBB()->SetHasCall();

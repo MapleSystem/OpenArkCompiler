@@ -274,7 +274,7 @@ void GraphColorRegAllocator::CalculatePriority(LiveRange &lr) const {
       numDefs += lu->second->GetDefNum();
       numUses += lu->second->GetUseNum();
       uint32 useCnt = lu->second->GetDefNum() + lu->second->GetUseNum();
-      uint32 mult;
+      float mult;
       if (CGOptions::UseRaBBFreq()) {
         mult = bb->GetFrequency();
         if (bb->HasCall()) {
@@ -285,12 +285,12 @@ void GraphColorRegAllocator::CalculatePriority(LiveRange &lr) const {
       } else {
         if (bb->GetLoop() != nullptr) {
           uint32 loopFactor;
-          if (bb->HasCall()) {
+          if (lr.GetNumCall()) {
             loopFactor = bb->GetLoop()->GetLoopLevel() * kAdjustWeight;
           } else {
             loopFactor = bb->GetLoop()->GetLoopLevel() / kAdjustWeight;
           }
-          mult = static_cast<uint32>(pow(kLoopWeight, loopFactor));
+          mult = static_cast<float>(pow(kLoopWeight, loopFactor));
         } else {
           mult = 1;
         }
@@ -1234,7 +1234,7 @@ void GraphColorRegAllocator::Separate() {
 #endif  /* USE_LRA */
 #ifdef OPTIMIZE_FOR_PROLOG
     if (doOptProlog && ((lr->GetNumDefs() <= 1) && (lr->GetNumUses() <= 1) && (lr->GetNumCall() > 0)) &&
-        (lr->GetFrequency() <= (cgFunc->GetFirstBB()->GetFrequency() << 1))) {
+        (lr->GetFrequency() <= (cgFunc->GetFirstBB()->GetFrequency() * 2))) {
       if (lr->GetRegType() == kRegTyInt) {
         intDelayed.emplace_back(lr);
       } else {

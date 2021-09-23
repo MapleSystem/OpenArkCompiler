@@ -263,10 +263,10 @@ class BB {
   void SetLevel(uint32 arg) {
     level = arg;
   }
-  uint32 GetFrequency() const {
+  float GetFrequency() const {
     return frequency;
   }
-  void SetFrequency(uint32 arg) {
+  void SetFrequency(float arg) {
     frequency = arg;
   }
   BB *GetNext() {
@@ -689,7 +689,7 @@ class BB {
   static const std::string bbNames[kBBLast];
   uint32 id;
   uint32 level = 0;
-  uint32 frequency = 0;
+  float frequency = 0;
   BB *prev = nullptr;  /* Doubly linked list of BBs; */
   BB *next = nullptr;
   /* They represent the order in which blocks are to be emitted. */

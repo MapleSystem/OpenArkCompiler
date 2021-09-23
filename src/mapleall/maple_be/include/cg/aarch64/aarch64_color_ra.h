@@ -523,11 +523,11 @@ class LiveRange {
     ++numUses;
   }
 
-  uint32 GetFrequency() const {
+  float GetFrequency() const {
     return frequency;
   }
 
-  void SetFrequency(uint32 frequency) {
+  void SetFrequency(float frequency) {
     this->frequency = frequency;
   }
 #endif  /* OPTIMIZE_FOR_PROLOG */
@@ -620,7 +620,7 @@ class LiveRange {
 #ifdef OPTIMIZE_FOR_PROLOG
   uint32 numDefs = 0;
   uint32 numUses = 0;
-  uint32 frequency = 0;
+  float frequency = 0;
 #endif                                /* OPTIMIZE_FOR_PROLOG */
   MemOperand *spillMem = nullptr;     /* memory operand used for spill, if any */
   regno_t spillReg = 0;               /* register operand for spill at current point */
