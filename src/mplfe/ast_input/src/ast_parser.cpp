@@ -1926,8 +1926,10 @@ ASTExpr *ASTParser::ProcessExprBinaryOperator(MapleAllocator &allocator, const c
     astBinOpExpr->SetCvtNeeded(true);
   }
   // ptr +/-
-  if (boType->isPointerType() && clang::BinaryOperator::isAdditiveOp(clangOpCode) && lhsType->isPointerType() &&
-      rhsType->isIntegerType() && !boType->isVoidPointerType() && GetSizeFromQualType(boType->getPointeeType()) != 1) {
+  if (boType->isPointerType() && clang::BinaryOperator::isAdditiveOp(clangOpCode) &&
+      ((lhsType->isPointerType() && rhsType->isIntegerType()) ||
+       (lhsType->isIntegerType() && rhsType->isPointerType())) &&
+      !boType->isVoidPointerType() && GetSizeFromQualType(boType->getPointeeType()) != 1) {
     auto ptrSizeExpr = ASTDeclsBuilder::ASTExprBuilder<ASTIntegerLiteral>(allocator);
     ptrSizeExpr->SetType(PTY_i32);
     auto boMirType = astFile->CvtType(boType);
