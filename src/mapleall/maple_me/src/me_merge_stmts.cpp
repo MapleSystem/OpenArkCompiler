@@ -243,8 +243,8 @@ void MergeStmts::MergeMeStmts() {
 
   for (BB *bb : layoutBBs) {
     ASSERT(bb != nullptr, "Check bblayout phase");
-    std::queue<MeStmt*> candidateStmts;
-
+    std::list<MeStmt*> candidateStmts;
+    std::map<FieldID, MeStmt*> uniqCheck;
     // Identify consecutive (I/D)assign stmts
     // Candiates of (I/D)assignment are grouped together and saparated by nullptr
     auto &meStmts = bb->GetMeStmts();
@@ -310,18 +310,19 @@ void MergeStmts::MergeMeStmts() {
               rhsDassignStmt->GetConstVal()->GetKind() != kConstInt) {
             candidateStmts.push(nullptr);
           } else if (candidateStmts.empty() || candidateStmts.back() == nullptr) {
-            candidateStmts.push(&meStmt);
+            candidateStmts.push_back(&meStmt);
           } else if (candidateStmts.back()->GetOp() == OP_dassign &&
                      static_cast<DassignMeStmt*>(candidateStmts.back())->GetLHS()->GetOst()->GetMIRSymbol() == lhsMirSt) {
             candidateStmts.push(&meStmt);
           } else {
-            candidateStmts.push(nullptr);
-            candidateStmts.push(&meStmt);
+            candidateStmts.push_back(nullptr);
+            candidateStmts.push_back(&meStmt);
           }
           break;
         }
         default: {
-          candidateStmts.push(nullptr);
+          candidateStmts.push_back(nullptr);
+          uniqCheck.clear();
           break;
         }
       }
@@ -330,7 +331,7 @@ void MergeStmts::MergeMeStmts() {
     // Merge possible candidate (I/D)assign stmts
     while (!candidateStmts.empty()) {
       if (candidateStmts.front() == nullptr) {
-        candidateStmts.pop();
+        candidateStmts.pop_front();
         continue;
       }
       Opcode op = candidateStmts.front()->GetOp();

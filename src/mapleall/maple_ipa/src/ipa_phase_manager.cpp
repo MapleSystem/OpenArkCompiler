@@ -14,6 +14,7 @@
  */
 #include "me_phase_manager.h"
 #include "ipa_phase_manager.h"
+#include "prop_return_null.h"
 #include <iostream>
 #include <vector>
 #include <string>
@@ -40,11 +41,13 @@ bool IpaSccPM::PhaseRun(MIRModule &m) {
     }
     auto meFuncMP = std::make_unique<ThreadLocalMemPool>(memPoolCtrler, "maple_ipa per-scc mempool");
     auto meFuncStackMP = std::make_unique<StackMemPool>(memPoolCtrler, "");
+    bool runScc = false;
     for (auto *cgNode : (*it)->GetCGNodes()) {
       MIRFunction *func = cgNode->GetMIRFunction();
-      if (func->IsEmpty()) {
+      if (func->IsEmpty() || !func->GetBody()) {
         continue;
       }
+      runScc = true;
       m.SetCurFunction(func);
       MemPool *versMP = new ThreadLocalMemPool(memPoolCtrler, "first verst mempool");
       MeFunction &meFunc = *(meFuncMP->New<MeFunction>(&m, func, meFuncMP.get(), *meFuncStackMP, versMP, "unknown"));
@@ -54,6 +57,9 @@ bool IpaSccPM::PhaseRun(MIRModule &m) {
         LogInfo::MapleLogger() << "---Preparing Function for scc phase < " << func->GetName() << " > ---\n";
       }
       meFunc.Prepare();
+    }
+    if (!runScc) {
+      continue;
     }
     for (size_t i = 0; i < phasesSequence.size(); ++i) {
       const MaplePhaseInfo *curPhase = MaplePhaseRegister::GetMaplePhaseRegister()->GetPhaseByID(phasesSequence[i]);
@@ -72,6 +78,7 @@ bool IpaSccPM::PhaseRun(MIRModule &m) {
 void IpaSccPM::DoPhasesPopulate(const MIRModule &mirModule) {
   (void)mirModule;
   AddPhase("sccprepare", true);
+  AddPhase("prop_return_attr", true);
   AddPhase("sccemit", true);
 }
 
@@ -148,5 +155,6 @@ void SCCEmit::GetAnalysisDependence(maple::AnalysisDep &aDep) const {
 }
 
 MAPLE_ANALYSIS_PHASE_REGISTER(SCCPrepare, sccprepare)
+MAPLE_TRANSFORM_PHASE_REGISTER(SCCPropReturnAttr, prop_return_attr);
 MAPLE_ANALYSIS_PHASE_REGISTER(SCCEmit, sccemit)
 }  // namespace maple

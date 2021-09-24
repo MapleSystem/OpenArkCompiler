@@ -23,9 +23,12 @@ class ENCChecker {
   ENCChecker() = default;
   ~ENCChecker() = default;
   static UniqueFEIRExpr FindBaseExprInPointerOperation(const UniqueFEIRExpr &expr);
+  static bool IsAddrofArrayVar(const UniqueFEIRExpr &expr);
   static void AssignBoundaryVar(MIRBuilder &mirBuilder, const UniqueFEIRExpr &dstExpr, const UniqueFEIRExpr &srcExpr,
                                 std::list<StmtNode*> &ans);
   static std::pair<StIdx, StIdx> InsertBoundaryVar(MIRBuilder &mirBuilder, const UniqueFEIRExpr &expr);
+  static UniqueFEIRExpr CvtArray2PtrForm(const UniqueFEIRExpr &expr, bool &isConstantIdx);
+  static void PeelNestedBoundaryChecking(std::list<UniqueFEIRStmt> &stmts, const UniqueFEIRExpr &baseExpr);
 };  // class ENCChecker
 }  // namespace maple
 #endif  // MPLFE_INCLUDE_COMMON_ENCChecker_H

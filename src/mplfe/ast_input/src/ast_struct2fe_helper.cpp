@@ -248,9 +248,9 @@ bool ASTFunc2FEHelper::ProcessDeclImpl(MapleAllocator &allocator) {
       UniqueFEIRExpr tmpExpr = FEIRBuilder::CreateExprDRead(
           FEIRBuilder::CreateVarNameForC(paramDecls[i]->GetName(), *argMIRTypes[i]));
       std::string tag = "_boundary." + paramDecls[i]->GetName();
-      std::string lowerName = tag + ".lower_0_0";
+      std::string lowerName = tag + ".lower";
       MIRSymbol *lowerSym = FEManager::GetMIRBuilder().GetOrCreateDeclInFunc(lowerName, *argMIRTypes[i], *mirFunc);
-      std::string upperName = tag + ".upper_0_0";
+      std::string upperName = tag + ".upper";
       MIRSymbol *upperSym = FEManager::GetMIRBuilder().GetOrCreateDeclInFunc(upperName, *argMIRTypes[i], *mirFunc);
       mirFunc->SetBoundaryMap(tmpExpr->Hash(), std::make_pair(lowerSym->GetStIdx(), upperSym->GetStIdx()));
     }

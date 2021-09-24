@@ -152,7 +152,7 @@ bool FEIRTypeDefault::IsEqualToImpl(const std::unique_ptr<FEIRType> &argType) co
 }
 
 uint32 FEIRTypeDefault::HashImpl() const {
-  return std::hash<uint32>{}(typeNameIdx);
+  return std::hash<uint32>{}(primType) + std::hash<uint32>{}(typeNameIdx) + std::hash<uint32>{}(dim);
 }
 
 bool FEIRTypeDefault::IsScalarImpl() const {

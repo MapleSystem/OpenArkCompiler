@@ -85,3 +85,4 @@
 #endif
   ATTR(oneelem_simd)
   ATTR(nonnull)
+  ATTR(boundary)

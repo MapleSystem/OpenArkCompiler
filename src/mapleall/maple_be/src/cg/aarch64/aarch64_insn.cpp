@@ -1155,6 +1155,9 @@ void AArch64Insn::Emit(const CG &cg, Emitter &emitter) const {
       EmitStringIndexOf(emitter);
       return;
     }
+    case MOP_pseudo_none: {
+      return;
+    }
     default:
       break;
   }
@@ -1829,6 +1832,13 @@ void AArch64Insn::Dump() const {
     LogInfo::MapleLogger() << " (opnd" << i << ": ";
     opnd.Dump();
     LogInfo::MapleLogger() << ")";
+  }
+
+  if (IsVectorOp()) {
+    const AArch64VectorInsn *vInsn = static_cast<const AArch64VectorInsn*>(this);
+    if (vInsn->GetNumOfRegSpec() != 0) {
+      LogInfo::MapleLogger() << " (vecSpec: " << vInsn->GetNumOfRegSpec() << ")";
+    }
   }
   LogInfo::MapleLogger() << "\n";
 }
