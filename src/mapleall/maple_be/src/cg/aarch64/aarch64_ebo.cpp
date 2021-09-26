@@ -185,6 +185,7 @@ OpndInfo *AArch64Ebo::OperandInfoDef(BB &currentBB, Insn &currentInsn, Operand &
     opndInfoPrev->redefined = true;
     if (opndInfoPrev->bb == &currentBB) {
       opndInfoPrev->redefinedInBB = true;
+      opndInfoPrev->redefinedInsn = &currentInsn;
     }
     UpdateOpndInfo(localOpnd, *opndInfoPrev, opndInfo, hashVal);
   } else {
