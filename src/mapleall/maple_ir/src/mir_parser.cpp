@@ -1407,6 +1407,18 @@ bool MIRParser::ParseUnaryStmtAssertNonNull(StmtNodePtr &stmt) {
   return ParseUnaryStmt(OP_assertnonnull, stmt);
 }
 
+bool MIRParser::ParseUnaryStmtAssignAssertNonNull(StmtNodePtr &stmt) {
+  return ParseUnaryStmt(OP_assignassertnonnull, stmt);
+}
+
+bool MIRParser::ParseUnaryStmtCallAssertNonNull(StmtNodePtr &stmt) {
+  return ParseUnaryStmt(OP_callassertnonnull, stmt);
+}
+
+bool MIRParser::ParseUnaryStmtReturnAssertNonNull(StmtNodePtr &stmt) {
+  return ParseUnaryStmt(OP_returnassertnonnull, stmt);
+}
+
 bool MIRParser::ParseStmtMarker(StmtNodePtr &stmt) {
   Opcode op;
   switch (paramTokenKindForStmt) {
@@ -3175,6 +3187,9 @@ std::map<TokenKind, MIRParser::FuncPtrParseStmt> MIRParser::InitFuncPtrMapForPar
   funcPtrMap[TK_eval] = &MIRParser::ParseUnaryStmtEval;
   funcPtrMap[TK_free] = &MIRParser::ParseUnaryStmtFree;
   funcPtrMap[TK_assertnonnull] = &MIRParser::ParseUnaryStmtAssertNonNull;
+  funcPtrMap[TK_callassertnonnull] = &MIRParser::ParseUnaryStmtCallAssertNonNull;
+  funcPtrMap[TK_assignassertnonnull] = &MIRParser::ParseUnaryStmtAssignAssertNonNull;
+  funcPtrMap[TK_returnassertnonnull] = &MIRParser::ParseUnaryStmtReturnAssertNonNull;
   funcPtrMap[TK_assertge] = &MIRParser::ParseBinaryStmtAssertGE;
   funcPtrMap[TK_assertlt] = &MIRParser::ParseBinaryStmtAssertLT;
   funcPtrMap[TK_label] = &MIRParser::ParseStmtLabel;

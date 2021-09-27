@@ -150,6 +150,9 @@ class MIRParser {
   bool ParseUnaryStmtEval(StmtNodePtr&);
   bool ParseUnaryStmtFree(StmtNodePtr&);
   bool ParseUnaryStmtAssertNonNull(StmtNodePtr&);
+  bool ParseUnaryStmtCallAssertNonNull(StmtNodePtr&);
+  bool ParseUnaryStmtAssignAssertNonNull(StmtNodePtr&);
+  bool ParseUnaryStmtReturnAssertNonNull(StmtNodePtr&);
   bool ParseStmtMarker(StmtNodePtr&);
   bool ParseStmtGosub(StmtNodePtr&);
   bool ParseStmtAsm(StmtNodePtr&);

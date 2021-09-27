@@ -716,7 +716,7 @@ BlockNode *BinaryMplImport::ImportBlockNode(MIRFunction *func) {
       case OP_decref:
       case OP_incref:
       case OP_decrefreset:
-      case OP_assertnonnull:
+      CASE_ASSERTNONNULL
       case OP_igoto: {
         UnaryStmtNode *s = mod.CurFuncCodeMemPool()->New<UnaryStmtNode>(op);
         s->SetOpnd(ImportExpression(func), 0);

@@ -246,7 +246,7 @@ void LoopUnrolling::CopyAndInsertStmt(MeIRMap &irMap, MemPool &memPool, MapleAll
         CopyCallStmt(irMap, memPool, mpAllocator, cands,  stmt, bb);
         break;
       }
-      case OP_assertnonnull: {
+      CASE_ASSERTNONNULL {
         auto &unaryStmt = static_cast<UnaryMeStmt&>(stmt);
         UnaryMeStmt *newUnaryStmt = irMap.New<UnaryMeStmt>(unaryStmt);
         bb.AddMeStmtLast(newUnaryStmt);
@@ -299,7 +299,7 @@ void LoopUnrolling::ComputeCodeSize(const MeStmt &meStmt, uint32 &cost) {
       break;
     }
     case OP_iassign:
-    case OP_assertnonnull:
+    CASE_ASSERTNONNULL
     case OP_membaracquire: {
       cost += kThreeInsn;
       break;

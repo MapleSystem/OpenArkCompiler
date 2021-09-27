@@ -16,6 +16,7 @@
 #include "me_cond_based_npc.h"
 #include "me_const.h"
 #include "me_dominance.h"
+#include "opcode_info.h"
 
 // We do two types of condition based optimization here:
 // 1. condition based null pointer check(NPC) elimination
@@ -228,7 +229,7 @@ void CondBasedNPC::DoCondBasedNPC() const {
   for (auto bIt = cfg->valid_begin(); bIt != eIt; ++bIt) {
     auto *bb = *bIt;
     for (auto &stmt : bb->GetMeStmts()) {
-      if (stmt.GetOp() != OP_assertnonnull) {
+      if (!kOpcodeInfo.IsAssertNonnull(stmt.GetOp())) {
         continue;
       }
       auto &assertMeStmt = static_cast<UnaryMeStmt&>(stmt);

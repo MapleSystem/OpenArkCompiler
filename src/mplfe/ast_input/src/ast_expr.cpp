@@ -1034,16 +1034,6 @@ MIRConst *ASTInitListExpr::GenerateMIRConstForStruct() const {
 
 UniqueFEIRExpr ASTInitListExpr::Emit2FEExprImpl(std::list<UniqueFEIRStmt> &stmts) const {
   UniqueFEIRVar feirVar = FEIRBuilder::CreateVarNameForC(varName, *initListType);
-  if (!hasVectorType) {
-    std::unique_ptr<std::list<UniqueFEIRExpr>> argExprList = std::make_unique<std::list<UniqueFEIRExpr>>();
-    UniqueFEIRExpr addrOfExpr = FEIRBuilder::CreateExprAddrofVar(feirVar->Clone());
-    argExprList->emplace_back(std::move(addrOfExpr));
-    argExprList->emplace_back(FEIRBuilder::CreateExprConstU32(0));
-    argExprList->emplace_back(FEIRBuilder::CreateExprSizeOfType(std::make_unique<FEIRTypeNative>(*initListType)));
-    std::unique_ptr<FEIRStmtIntrinsicCallAssign> stmt = std::make_unique<FEIRStmtIntrinsicCallAssign>(
-        INTRN_C_memset, nullptr, nullptr, std::move(argExprList));
-    stmts.emplace_back(std::move(stmt));
-  }
   if (initListType->GetKind() == MIRTypeKind::kTypeArray) {
     UniqueFEIRType typeNative = FEIRTypeHelper::CreateTypeNative(*initListType);
     UniqueFEIRExpr arrayExpr = FEIRBuilder::CreateExprAddrofVar(feirVar->Clone());
@@ -1108,6 +1098,49 @@ void ASTInitListExpr::ProcessStringLiteralInitList(UniqueFEIRExpr addrOfCharArra
   std::unique_ptr<FEIRStmtIntrinsicCallAssign> memcpyStmt = std::make_unique<FEIRStmtIntrinsicCallAssign>(
       INTRN_C_memcpy, nullptr, nullptr, std::move(argExprList));
   stmts.emplace_back(std::move(memcpyStmt));
+
+  // Handling Implicit Initialization When Incomplete Initialization
+  if (addrOfCharArray->GetKind() != kExprAddrofArray) {
+    return;
+  }
+  auto type = static_cast<FEIRExprAddrofArray*>(addrOfCharArray.get())->GetTypeArray()->Clone();
+  MIRType *mirType = type->GenerateMIRType();
+  if (mirType->GetKind() == kTypeArray) {
+    MIRArrayType *arrayType = static_cast<MIRArrayType*>(mirType);
+    if (arrayType->GetDim() != 2) { // only processing two-dimensional arrays.
+      return;
+    }
+    uint32 dimSize = arrayType->GetSizeArrayItem(1);
+    uint32 elemSize = arrayType->GetElemType()->GetSize();
+    ProcessImplicitInit(addrOfCharArray->Clone(), stringLength, dimSize, elemSize, stmts);
+  }
+}
+
+void ASTInitListExpr::ProcessImplicitInit(UniqueFEIRExpr addrExpr, uint32 initSize,
+                                          uint32 total, uint32 elemSize, std::list<UniqueFEIRStmt> &stmts) const {
+  if (initSize >= total) {
+    return;
+  }
+  std::unique_ptr<std::list<UniqueFEIRExpr>> argExprList = std::make_unique<std::list<UniqueFEIRExpr>>();
+  UniqueFEIRExpr realAddr = addrExpr->Clone();
+  UniqueFEIRExpr elemSizeExpr = FEIRBuilder::CreateExprConstI32(elemSize);
+  if (initSize != 0) {
+    UniqueFEIRExpr initSizeExpr = FEIRBuilder::CreateExprConstI32(initSize);
+    if (elemSize != 1) {
+      initSizeExpr = FEIRBuilder::CreateExprBinary(OP_mul, std::move(initSizeExpr), elemSizeExpr->Clone());
+    }
+    realAddr = FEIRBuilder::CreateExprBinary(OP_add, std::move(realAddr), initSizeExpr->Clone());
+  }
+  argExprList->emplace_back(std::move(realAddr));
+  argExprList->emplace_back(FEIRBuilder::CreateExprConstI32(0));
+  UniqueFEIRExpr cntExpr = FEIRBuilder::CreateExprConstI32(total - initSize);
+  if (elemSize != 1) {
+    cntExpr = FEIRBuilder::CreateExprBinary(OP_mul, std::move(cntExpr), elemSizeExpr->Clone());
+  }
+  argExprList->emplace_back(std::move(cntExpr));
+  std::unique_ptr<FEIRStmtIntrinsicCallAssign> memsetStmt = std::make_unique<FEIRStmtIntrinsicCallAssign>(
+      INTRN_C_memset, nullptr, nullptr, std::move(argExprList));
+  stmts.emplace_back(std::move(memsetStmt));
 }
 
 void ASTInitListExpr::ProcessDesignatedInitUpdater(
@@ -1141,33 +1174,50 @@ void ASTInitListExpr::ProcessStructInitList(std::variant<std::pair<UniqueFEIRVar
   UniqueFEIRType baseStructFEType = nullptr;
   UniqueFEIRType baseStructFEPtrType = nullptr;
   MIRStructType *curStructMirType = static_cast<MIRStructType*>(initList->initListType);
+  UniqueFEIRVar var;
   if (std::holds_alternative<UniqueFEIRExpr>(base)) {
+    var = std::get<UniqueFEIRExpr>(base)->GetVarUses().front()->Clone();
     baseStructMirType = static_cast<MIRStructType*>(initList->initListType);
     baseStructMirPtrType = GlobalTables::GetTypeTable().GetOrCreatePointerType(*baseStructMirType);
     baseStructFEType = FEIRTypeHelper::CreateTypeNative(*baseStructMirType);
     baseStructFEPtrType = std::make_unique<FEIRTypeNative>(*baseStructMirPtrType);
   } else {
-    auto var = std::get<std::pair<UniqueFEIRVar, FieldID>>(base).first->Clone();
+    var = std::get<std::pair<UniqueFEIRVar, FieldID>>(base).first->Clone();
     baseStructFEType = var->GetType()->Clone();
     baseStructMirType = static_cast<MIRStructType*>(baseStructFEType->GenerateMIRTypeAuto());
     baseStructMirPtrType = GlobalTables::GetTypeTable().GetOrCreatePointerType(*baseStructMirType);
     baseStructFEPtrType = std::make_unique<FEIRTypeNative>(*baseStructMirPtrType);
   }
+
   FieldID baseFieldID = 0;
   if (!std::holds_alternative<UniqueFEIRExpr>(base)) {
     baseFieldID = std::get<std::pair<UniqueFEIRVar, FieldID>>(base).second;
   }
+
+  if (initList->initExprs.size() == 0) {
+    UniqueFEIRExpr addrOfExpr = std::make_unique<FEIRExprAddrofVar>(var->Clone(), 0);
+    ProcessImplicitInit(addrOfExpr->Clone(), 0, curStructMirType->GetSize(), 1, stmts);
+    return;
+  }
+
+  uint32 unionInitSize = 0;
   for (int i = 0; i < initList->initExprs.size(); ++i) {
     if (initList->initExprs[i] == nullptr) {
       continue; // skip anonymous field
     }
-    if (initList->initExprs[i]->GetASTOp() == kASTImplicitValueInitExpr) {
-      continue; // skip implicitValueInit
-    }
+
     FieldID curFieldID = 0;
     FEUtils::TraverseToNamedField(*curStructMirType, curStructMirType->GetElemStrIdx(i), curFieldID);
     uint32 fieldID = baseFieldID + curFieldID;
     MIRType *fieldMirType = curStructMirType->GetFieldType(curFieldID);
+    unionInitSize = fieldMirType->GetSize();
+
+    if (initList->initExprs[i]->GetASTOp() == kASTImplicitValueInitExpr && fieldMirType->GetPrimType() == PTY_agg) {
+      UniqueFEIRExpr addrOfExpr = std::make_unique<FEIRExprAddrofVar>(var->Clone(), fieldID);
+      ProcessImplicitInit(addrOfExpr->Clone(), 0, fieldMirType->GetSize(), 1, stmts);
+      continue;
+    }
+
     if (initList->initExprs[i]->GetASTOp() == kASTOpInitListExpr || initList->initExprs[i]->GetASTOp() == kASTASTDesignatedInitUpdateExpr) {
       std::variant<std::pair<UniqueFEIRVar, FieldID>, UniqueFEIRExpr> subBase;
       if (std::holds_alternative<UniqueFEIRExpr>(base)) {
@@ -1212,6 +1262,12 @@ void ASTInitListExpr::ProcessStructInitList(std::variant<std::pair<UniqueFEIRVar
       }
     }
   }
+
+  // Handling Incomplete Union Initialization
+  if (curStructMirType->GetKind() == kTypeUnion) {
+    UniqueFEIRExpr addrOfExpr = std::make_unique<FEIRExprAddrofVar>(var->Clone(), 0);
+    ProcessImplicitInit(addrOfExpr->Clone(), unionInitSize, curStructMirType->GetSize(), 1, stmts);
+  }
 }
 
 void ASTInitListExpr::ProcessArrayInitList(UniqueFEIRExpr addrOfArray, ASTInitListExpr *initList,
@@ -1253,6 +1309,13 @@ void ASTInitListExpr::ProcessArrayInitList(UniqueFEIRExpr addrOfArray, ASTInitLi
       }
     }
   }
+
+  // handling implicit initialization sections
+  auto allSize = arrayMirType->GetSize();
+  auto elemSize = elementType->GetSize();
+  CHECK_FATAL(elemSize != 0, "elemSize should not 0");
+  auto allElemCnt = allSize / elemSize;
+  ProcessImplicitInit(addrOfArray->Clone(), initList->initExprs.size(), allElemCnt, elemSize, stmts);
 }
 
 void ASTInitListExpr::ProcessVectorInitList(std::variant<std::pair<UniqueFEIRVar, FieldID>, UniqueFEIRExpr> &base,

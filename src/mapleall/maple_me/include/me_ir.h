@@ -2674,6 +2674,7 @@ class CommentMeStmt : public MeStmt {
 
   StmtNode &EmitStmt(SSATab &ssaTab);
   MapleString& GetComment() { return comment; }
+  const MapleString& GetComment() const { return comment; }
  private:
   MapleString comment;
 };

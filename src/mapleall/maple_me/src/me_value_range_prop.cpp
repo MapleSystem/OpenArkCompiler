@@ -53,7 +53,7 @@ void ValueRangePropagation::Execute() {
           DealWithCondGoto(*bb, stmt);
           break;
         }
-        case OP_assertnonnull: {
+        CASE_ASSERTNONNULL {
           DealWithAssertNonnull(*bb, stmt);
           break;
         }

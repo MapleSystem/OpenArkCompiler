@@ -671,16 +671,15 @@ TEST_F(AstExprTest, InitListExpr_Array) {
   std::list<StmtNode*> mirList1 = stmts.front()->GenMIRStmts(mirBuilder);
   mirList1.front()->Dump();
   auto dumpStr1 = GetBufferString();
-  EXPECT_EQ(dumpStr1, "intrinsiccall C_memset (addrof ptr %arr, constval u32 0, sizeoftype u32 <[4] f64>)\n\n");
+  EXPECT_EQ(dumpStr1, "iassign <* f64> 0 (\n  array 1 ptr <* <[4] f64>> (addrof ptr %arr, constval i32 0), \n" \
+                      "  constval f64 2.5)\n\n");
 
   stmts.pop_front();
   std::list<StmtNode*> mirList2 = stmts.front()->GenMIRStmts(mirBuilder);
   mirList2.front()->Dump();
   auto dumpStr2 = GetBufferString();
-  std::string pattern2 = std::string("iassign \\<\\* f64\\> 0 \\(\n") +
-      std::string("  array 1 ptr \\<\\* \\<\\[4\\] f64\\>\\> \\(addrof ptr %arr, constval i32 0\\), \n") +
-      std::string("  constval f64 2.5\\)\n\n");
-  EXPECT_EQ(MPLFEUTRegx::Match(dumpStr2, pattern2), true);
+  EXPECT_EQ(dumpStr2, "iassign <* f64> 0 (\n  array 1 ptr <* <[4] f64>> (addrof ptr %arr, constval i32 1), \n" \
+                      "  constval f64 3.5)\n\n");
 
   // mul dim array
   uint32 arraySize[2] = {4, 10};
@@ -700,33 +699,44 @@ TEST_F(AstExprTest, InitListExpr_Array) {
 
   stmts.clear();
   (void)astMulDimInitListExpr->Emit2FEExpr(stmts);
-  ASSERT_EQ(stmts.size(), 3);
+  ASSERT_EQ(stmts.size(), 4);
   std::list<StmtNode*> mirMulDimList3 = stmts.front()->GenMIRStmts(mirBuilder);
   mirMulDimList3.front()->Dump();
   auto dumpStr3 = GetBufferString();
-
-  EXPECT_EQ(dumpStr3,
-            "intrinsiccall C_memset (addrof ptr %mulDimArr, constval u32 0, sizeoftype u32 <[4][10] f64>)\n\n");
+  std::string pattern3 = "iassign <* f64> 0 (\n  array 1 ptr <* <[4] f64>> (\n" \
+                         "    array 1 ptr <* <[4][10] f64>> (addrof ptr %mulDimArr, constval i32 0),\n" \
+                         "    constval i32 0), \n" \
+                         "  constval f64 2.5)\n\n";
+  EXPECT_EQ(dumpStr3, pattern3);
 
   stmts.pop_front();
   std::list<StmtNode*> mirMulDimList4 = stmts.front()->GenMIRStmts(mirBuilder);
   mirMulDimList4.front()->Dump();
   auto dumpStr4 = GetBufferString();
-  std::string pattern4 = "iassign <* f64> 0 (\n  array 1 ptr <* <[4] f64>> (\n"\
-                         "    array 1 ptr <* <[4][10] f64>> (addrof ptr %mulDimArr, constval i32 0),\n"\
-                         "    constval i32 0), \n"\
-                         "  constval f64 2.5)\n\n";
+  std::string pattern4 = "iassign <* f64> 0 (\n  array 1 ptr <* <[4] f64>> (\n" \
+                         "    array 1 ptr <* <[4][10] f64>> (addrof ptr %mulDimArr, constval i32 0),\n" \
+                         "    constval i32 1), \n" \
+                         "  constval f64 3.5)\n\n";
   EXPECT_EQ(dumpStr4, pattern4);
 
   stmts.pop_front();
   std::list<StmtNode*> mirMulDimList5 = stmts.front()->GenMIRStmts(mirBuilder);
   mirMulDimList5.front()->Dump();
   auto dumpStr5 = GetBufferString();
-  std::string pattern5 = "iassign <* f64> 0 (\n  array 1 ptr <* <[4] f64>> (\n"\
-                         "    array 1 ptr <* <[4][10] f64>> (addrof ptr %mulDimArr, constval i32 0),\n"\
-                         "    constval i32 1), \n"\
-                         "  constval f64 3.5)\n\n";
+  std::string pattern5 = "intrinsiccall C_memset (\n  add ptr (\n    array 1 ptr <* <[4][10] f64>> " \
+                         "(addrof ptr %mulDimArr, constval i32 0),\n    mul i32 (constval i32 2, constval i32 8))" \
+                         ",\n  constval i32 0,\n  mul i32 (constval i32 2, constval i32 8))\n\n";
   EXPECT_EQ(dumpStr5, pattern5);
+
+
+  stmts.pop_front();
+  std::list<StmtNode*> mirMulDimList6 = stmts.front()->GenMIRStmts(mirBuilder);
+  mirMulDimList6.front()->Dump();
+  auto dumpStr6 = GetBufferString();
+  std::string pattern6 = "intrinsiccall C_memset (\n  add ptr (\n    addrof ptr %mulDimArr,\n    " \
+                         "mul i32 (constval i32 1, constval i32 80)),\n  constval i32 0,\n  " \
+                         "mul i32 (constval i32 3, constval i32 80))\n\n";
+  EXPECT_EQ(dumpStr6, pattern6);
   RestoreCout();
 }
 }  // namespace maple

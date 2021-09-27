@@ -540,7 +540,7 @@ MeStmt *IRMapBuild::BuildMeStmtWithNoSSAPart(StmtNode &stmt) {
       }
       return tryMeStmt;
     }
-    case OP_assertnonnull:
+    CASE_ASSERTNONNULL
     case OP_eval:
     case OP_igoto:
     case OP_free:

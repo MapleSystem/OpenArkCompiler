@@ -122,7 +122,7 @@ StmtNode *ConstantFold::Simplify(StmtNode *node) {
     case OP_incref:
     case OP_decrefreset:
     case OP_regassign:
-    case OP_assertnonnull:
+    CASE_ASSERTNONNULL
     case OP_igoto:
       return SimplifyUnary(static_cast<UnaryStmtNode*>(node));
     case OP_assertge:

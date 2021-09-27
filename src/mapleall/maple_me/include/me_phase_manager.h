@@ -82,6 +82,7 @@
 #include "cfg_opt.h"
 #include "lfo_dep_test.h"
 #include "me_autovec.h"
+#include "safety_warning.h"
 
 namespace maple {
 using meFuncOptTy = MapleFunctionPhase<MeFunction>;

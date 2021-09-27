@@ -643,6 +643,8 @@ class ASTInitListExpr : public ASTExpr {
                                     ASTExpr *expr, std::list<UniqueFEIRStmt> &stmts) const;
   void ProcessStringLiteralInitList(UniqueFEIRExpr addrOfCharArray, UniqueFEIRExpr addrOfStringLiteral,
                                     uint32 stringLength, std::list<UniqueFEIRStmt> &stmts) const;
+  void ProcessImplicitInit(UniqueFEIRExpr addrExpr, uint32 initSize, uint32 total, uint32 elemSize,
+                           std::list<UniqueFEIRStmt> &stmts) const;
   MIRConst *GenerateMIRConstForArray() const;
   MIRConst *GenerateMIRConstForStruct() const;
   std::vector<ASTExpr*> initExprs;

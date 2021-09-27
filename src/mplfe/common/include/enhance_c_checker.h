@@ -23,7 +23,7 @@ class ENCChecker {
   ENCChecker() = default;
   ~ENCChecker() = default;
   static UniqueFEIRExpr FindBaseExprInPointerOperation(const UniqueFEIRExpr &expr);
-  static bool IsAddrofArrayVar(const UniqueFEIRExpr &expr);
+  static MIRType *IsAddrofArrayVar(const UniqueFEIRExpr &expr);
   static void AssignBoundaryVar(MIRBuilder &mirBuilder, const UniqueFEIRExpr &dstExpr, const UniqueFEIRExpr &srcExpr,
                                 std::list<StmtNode*> &ans);
   static std::pair<StIdx, StIdx> InsertBoundaryVar(MIRBuilder &mirBuilder, const UniqueFEIRExpr &expr);

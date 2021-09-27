@@ -26,6 +26,12 @@ enum Opcode : uint8 {
   OP_last,
 };
 
+#define CASE_ASSERTNONNULL     \
+  case OP_assertnonnull:       \
+  case OP_assignassertnonnull: \
+  case OP_callassertnonnull:   \
+  case OP_returnassertnonnull:
+
 inline constexpr bool IsDAssign(Opcode code) {
   return (code == OP_dassign || code == OP_maydassign);
 }
@@ -107,7 +113,7 @@ constexpr bool IsStmtMustRequire(Opcode opcode) {
     case OP_membarrelease:
     case OP_membarstoreload:
     case OP_membarstorestore:
-    case OP_assertnonnull:
+    CASE_ASSERTNONNULL
     case OP_free:
     case OP_incref:
     case OP_decref:

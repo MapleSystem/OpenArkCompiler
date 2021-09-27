@@ -13,6 +13,7 @@
  * See the Mulan PSL v1 for more details.
  */
 #include <safe_cast.h>
+#include "opcode_info.h"
 
 namespace maple {
 #ifdef LOAD_SAFE_CAST_FOR_ME_EXPR
@@ -74,7 +75,7 @@ REGISTER_SAFE_CAST(UnaryMeStmt, instance_of<CondGotoMeStmt>(from) ||
                                 instance_of<CondGotoMeStmt>(from) ||
                                 from.GetOp() == OP_eval ||
                                 from.GetOp() == OP_free ||
-                                from.GetOp() == OP_assertnonnull ||
+                                kOpcodeInfo.IsAssertNonnull(from.GetOpCode()) ||
                                 from.GetOp() == OP_incref ||
                                 from.GetOp() == OP_decref ||
                                 from.GetOp() == OP_decrefreset);

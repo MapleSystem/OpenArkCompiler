@@ -277,7 +277,7 @@ bool MeStmtPre::AllVarsSameVersion(const MeRealOcc &realOcc1, const MeRealOcc &r
 // varvec can only store RegMeExpr and VarMeExpr
 void MeStmtPre::CollectVarForMeStmt(const MeStmt &meStmt, MeExpr *meExpr, std::vector<MeExpr*> &varVec) const {
   switch (meStmt.GetOp()) {
-    case OP_assertnonnull: {
+    CASE_ASSERTNONNULL {
       auto *unaryStmt = static_cast<const UnaryMeStmt*>(&meStmt);
       if (unaryStmt->GetOpnd()->GetMeOp() == kMeOpVar || unaryStmt->GetOpnd()->GetMeOp() == kMeOpReg) {
         varVec.push_back(unaryStmt->GetOpnd());
@@ -320,7 +320,7 @@ void MeStmtPre::CollectVarForCand(MeRealOcc &realOcc, std::vector<MeExpr*> &varV
 
 static MeStmt *CopyMeStmt(IRMap *irMap, const MeStmt &meStmt) {
   switch (meStmt.GetOp()) {
-    case OP_assertnonnull: {
+    CASE_ASSERTNONNULL {
       auto *unaryStmt = static_cast<const UnaryMeStmt*>(&meStmt);
       UnaryMeStmt *newUnaryStmt = irMap->New<UnaryMeStmt>(unaryStmt);
       return newUnaryStmt;
@@ -357,7 +357,7 @@ MeStmt *MeStmtPre::PhiOpndFromRes4Stmt(MeRealOcc &realZ, size_t j, MeExpr *&lhsV
   BB *phiBB = defZ->GetBB();
   CHECK_FATAL(stmtQ != nullptr, "nullptr check");
   switch (stmtQ->GetOp()) {
-    case OP_assertnonnull: {
+    CASE_ASSERTNONNULL {
       auto *unaryStmtQ = static_cast<UnaryMeStmt*>(stmtQ);
       MeExpr *retOpnd = GetReplaceMeExpr(*unaryStmtQ->GetOpnd(), *phiBB, j);
       if (retOpnd != nullptr) {
@@ -508,7 +508,7 @@ void MeStmtPre::ComputeVarAndDfPhis() {
     GetIterDomFrontier(defBB, &dfPhiDfns);
     MeStmt *stmt = realOcc->GetMeStmt();
     switch (stmt->GetOp()) {
-      case OP_assertnonnull: {
+      CASE_ASSERTNONNULL {
         auto *unaryStmt = static_cast<UnaryMeStmt*>(stmt);
         SetVarPhis(unaryStmt->GetOpnd());
         break;
@@ -934,7 +934,7 @@ void MeStmtPre::BuildWorkListBB(BB *bb) {
         VersionStackChiListUpdate(*intrinStmt.GetChiList());
         break;
       }
-      case OP_assertnonnull: {
+      CASE_ASSERTNONNULL {
         auto &unaryStmt = static_cast<UnaryMeStmt&>(stmt);
         if (!unaryStmt.GetOpnd()->IsLeaf()) {
           break;

@@ -433,6 +433,7 @@ const std::string &MIRModule::GetFileNameFromFileNum(uint32 fileNum) const {
   for (auto &info : srcFileInfo) {
     if (info.second == fileNum) {
       nameIdx = info.first;
+      break;
     }
   }
   return GlobalTables::GetStrTable().GetStringFromStrIdx(nameIdx);

@@ -321,7 +321,7 @@ void PreWorkCand::AddRealOccSorted(const Dominance &dom, MeRealOcc &occ, PUIdx p
 uint32 PreWorkCandHashTable::ComputeStmtWorkCandHashIndex(const MeStmt &stmt) {
   uint32 hIdx = (static_cast<uint32>(stmt.GetOp())) << kOffsetMeStmtOpcode;
   switch (stmt.GetOp()) {
-    case OP_assertnonnull: {
+    CASE_ASSERTNONNULL {
       hIdx += ComputeWorkCandHashIndex(*stmt.GetOpnd(0)) << kOffsetUnaryMeStmtOpcode;
       break;
     }

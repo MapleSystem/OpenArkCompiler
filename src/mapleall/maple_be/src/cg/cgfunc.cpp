@@ -1100,6 +1100,9 @@ void InitHandleStmtFactory() {
   RegisterFactoryFunction<HandleStmtFactory>(OP_comment, HandleComment);
   RegisterFactoryFunction<HandleStmtFactory>(OP_catch, HandleCatchOp);
   RegisterFactoryFunction<HandleStmtFactory>(OP_assertnonnull, HandleAssertNull);
+  RegisterFactoryFunction<HandleStmtFactory>(OP_callassertnonnull, HandleAssertNull);
+  RegisterFactoryFunction<HandleStmtFactory>(OP_assignassertnonnull, HandleAssertNull);
+  RegisterFactoryFunction<HandleStmtFactory>(OP_returnassertnonnull, HandleAssertNull);
   RegisterFactoryFunction<HandleStmtFactory>(OP_asm, HandleAsm);
 }
 

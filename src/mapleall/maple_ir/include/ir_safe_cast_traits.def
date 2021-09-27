@@ -13,6 +13,7 @@
  * See the Mulan PSL v1 for more details.
  */
 #include <safe_cast.h>
+#include "opcode_info.h"
 
 namespace maple {
 #ifdef LOAD_SAFE_CAST_FOR_MIR_CONST
@@ -172,7 +173,7 @@ REGISTER_SAFE_CAST(UnaryStmtNode, from.GetOpCode() == OP_eval ||
                                   from.GetOpCode() == OP_decref ||
                                   from.GetOpCode() == OP_incref ||
                                   from.GetOpCode() == OP_decrefreset ||
-                                  from.GetOpCode() == OP_assertnonnull ||
+                                  kOpcodeInfo.IsAssertNonnull(from.GetOpCode()) ||
                                   instance_of<DassignNode>(from) ||
                                   instance_of<RegassignNode>(from) ||
                                   instance_of<CondGotoNode>(from) ||

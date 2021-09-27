@@ -104,7 +104,8 @@ src_libmplme = [
   "src/cfg_opt.cpp",
   "src/simplifyCFG.cpp",
   "src/seqvec.cpp",
-  "src/me_autovec.cpp"
+  "src/me_autovec.cpp",
+  "src/safety_warning.cpp"
 ]
 
 src_libmplmewpo = [

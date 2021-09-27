@@ -356,7 +356,7 @@ void HDSE::CollectNotNullExpr(MeStmt &stmt, MeExpr &meExpr, uint8 exprType) {
       } else {
         // Ref expr used array or assertnotnull
         Opcode op = meExpr.GetOp();
-        bool notNull = op == OP_array || op == OP_assertnonnull;
+        bool notNull = op == OP_array || kOpcodeInfo.IsAssertNonnull(op);
         exprType = notNull ? kExprTypeNotNull : kExprTypeNormal;
       }
       for (size_t i = 0; i < meExpr.GetNumOpnds(); ++i) {

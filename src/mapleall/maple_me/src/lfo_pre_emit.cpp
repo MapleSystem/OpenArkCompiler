@@ -523,7 +523,7 @@ StmtNode* LfoPreEmitter::EmitLfoStmt(MeStmt *mestmt, BaseNode *parent) {
       lfoStmtParts[throwStmtNode->GetStmtID()] = lfopart;
       return throwStmtNode;
     }
-    case OP_assertnonnull:
+    CASE_ASSERTNONNULL
     case OP_eval:
     case OP_free: {
       UnaryStmtNode *unaryStmtNode = codeMP->New<UnaryStmtNode>(mestmt->GetOp());

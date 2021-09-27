@@ -327,7 +327,7 @@ std::list<StmtNode*> FEIRStmtDAssign::GenMIRStmtsImpl(MIRBuilder &mirBuilder) co
 void FEIRStmtDAssign::InsertNonnullChecking(MIRBuilder &mirBuilder, const MIRSymbol &dstSym,
                                             std::list<StmtNode*> &ans) const {
   if (isNonnullChecking && dstSym.GetAttr(ATTR_nonnull)) {
-    UniqueFEIRStmt stmt = std::make_unique<FEIRStmtUseOnly>(OP_assertnonnull, expr->Clone());
+    UniqueFEIRStmt stmt = std::make_unique<FEIRStmtUseOnly>(OP_assignassertnonnull, expr->Clone());
     std::list<StmtNode*> stmts = stmt->GenMIRStmts(mirBuilder);
     ans.splice(ans.end(), stmts);
   }
@@ -737,7 +737,7 @@ std::list<StmtNode*> FEIRStmtUseOnly::GenMIRStmtsImpl(MIRBuilder &mirBuilder) co
 }
 
 bool FEIRStmtUseOnly::SkipNonnullChecking(MIRBuilder &mirBuilder) const {
-  if (op != OP_assertnonnull) {
+  if (!kOpcodeInfo.IsAssertNonnull(op)) {
     return false;
   }
   if (expr->GetKind() == kExprDRead) {
@@ -804,7 +804,7 @@ void FEIRStmtReturn::InsertNonnullChecking(MIRBuilder &mirBuilder, std::list<Stm
   if (mirBuilder.GetCurrentFunction()->GetAttrs().GetAttr(FUNCATTR_nonnull) &&
       (expr->GetKind() == kExprDRead || expr->GetKind() == kExprIRead) &&
       expr->GetPrimType() == PTY_ptr) {
-    UniqueFEIRStmt stmt = std::make_unique<FEIRStmtUseOnly>(OP_assertnonnull, expr->Clone());
+    UniqueFEIRStmt stmt = std::make_unique<FEIRStmtUseOnly>(OP_returnassertnonnull, expr->Clone());
     std::list<StmtNode*> stmts = stmt->GenMIRStmts(mirBuilder);
     ans.splice(ans.end(), stmts);
   }
@@ -1805,7 +1805,7 @@ void FEIRStmtCallAssign::InsertNonnullCheckingInArgs(const UniqueFEIRExpr &expr,
   if (methodInfo.GetMirFunc()->GetNthParamAttr(index).GetAttr(ATTR_nonnull)) {
     if ((expr->GetKind() == kExprDRead && expr->GetPrimType() == PTY_ptr) ||
         (expr->GetKind() == kExprIRead && expr->GetFieldID() != 0 && expr->GetPrimType() == PTY_ptr)) {
-      UniqueFEIRStmt stmt = std::make_unique<FEIRStmtUseOnly>(OP_assertnonnull, expr->Clone());
+      UniqueFEIRStmt stmt = std::make_unique<FEIRStmtUseOnly>(OP_callassertnonnull, expr->Clone());
       std::list<StmtNode*> stmts = stmt->GenMIRStmts(mirBuilder);
       ans.splice(ans.end(), stmts);
     }
@@ -4008,7 +4008,7 @@ void FEIRStmtIAssign::InsertNonnullChecking(MIRBuilder &mirBuilder, MIRType &bas
   FieldID tmpID = fieldID;
   FieldPair fieldPair = static_cast<MIRStructType&>(baseType).TraverseToFieldRef(tmpID);
   if (fieldPair.second.second.GetAttr(FLDATTR_nonnull)) {
-    UniqueFEIRStmt stmt = std::make_unique<FEIRStmtUseOnly>(OP_assertnonnull, baseExpr->Clone());
+    UniqueFEIRStmt stmt = std::make_unique<FEIRStmtUseOnly>(OP_assignassertnonnull, baseExpr->Clone());
     std::list<StmtNode*> stmts = stmt->GenMIRStmts(mirBuilder);
     ans.splice(ans.end(), stmts);
   }

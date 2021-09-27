@@ -37,31 +37,58 @@ UniqueFEIRExpr ENCChecker::FindBaseExprInPointerOperation(const UniqueFEIRExpr &
       return baseExpr;
     }
   }
+  if (expr->GetKind() == kExprAddrofArray) {
+    FEIRExprAddrofArray *arrExpr = static_cast<FEIRExprAddrofArray*>(expr.get());
+    baseExpr = FindBaseExprInPointerOperation(arrExpr->GetExprArray());
+    if (baseExpr != nullptr) {
+      return baseExpr;
+    }
+  }
   if ((expr->GetKind() == kExprDRead && expr->GetPrimType() == PTY_ptr) ||
       (expr->GetKind() == kExprIRead && expr->GetPrimType() == PTY_ptr && expr->GetFieldID() != 0) ||
-      IsAddrofArrayVar(expr)) {
+      IsAddrofArrayVar(expr) != nullptr) {
     baseExpr = expr->Clone();
   }
   return baseExpr;
 }
 
-bool ENCChecker::IsAddrofArrayVar(const UniqueFEIRExpr &expr) {
-  if (expr->GetKind() != kExprAddrofVar) {
-    return false;
+MIRType *ENCChecker::IsAddrofArrayVar(const UniqueFEIRExpr &expr) {
+  if (expr->GetKind() == kExprAddrofVar) {
+    MIRType *type = expr->GetVarUses().front()->GetType()->GenerateMIRTypeAuto();
+    if (expr->GetFieldID() == 0) {
+      if (type->GetKind() == kTypeArray) {
+        return type;
+      }
+    } else {
+      CHECK_FATAL(type->IsStructType(), "basetype must be StructType");
+      FieldID fieldID = expr->GetFieldID();
+      FieldPair fieldPair = static_cast<MIRStructType*>(type)->TraverseToFieldRef(fieldID);
+      MIRType *arrType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(fieldPair.second.first);
+      if (arrType->GetKind() == kTypeArray) {
+        return arrType;
+      }
+    }
   }
-  MIRType *type = expr->GetVarUses().front()->GetType()->GenerateMIRTypeAuto();
-  if (expr->GetFieldID() == 0 && type->GetKind() == kTypeArray) {
-    return true;
+  if (expr->GetKind() == kExprIAddrof) {
+    FEIRExprIAddrof *iaddrof = static_cast<FEIRExprIAddrof*>(expr.get());
+    MIRType *pointerType = iaddrof->GetClonedPtrType()->GenerateMIRTypeAuto();
+    CHECK_FATAL(pointerType->IsMIRPtrType(), "Must be ptr type!");
+    MIRType *baseType = static_cast<MIRPtrType*>(pointerType)->GetPointedType();
+    CHECK_FATAL(baseType->IsStructType(), "basetype must be StructType");
+    FieldID fieldID = iaddrof->GetFieldID();
+    FieldPair fieldPair = static_cast<MIRStructType*>(baseType)->TraverseToFieldRef(fieldID);
+    MIRType *arrType = GlobalTables::GetTypeTable().GetTypeFromTyIdx(fieldPair.second.first);
+    if (arrType->GetKind() == kTypeArray) {
+      return arrType;
+    }
   }
-  return false;
+  return nullptr;
 }
 
 void ENCChecker::AssignBoundaryVar(MIRBuilder &mirBuilder, const UniqueFEIRExpr &dstExpr, const UniqueFEIRExpr &srcExpr,
                                    std::list<StmtNode*> &ans) {
   if (!FEOptions::GetInstance().IsBoundaryCheckDynamic() ||
-      srcExpr->GetPrimType() != PTY_ptr || dstExpr->GetPrimType() != PTY_ptr ||
-      !(srcExpr->GetKind() == kExprDRead || srcExpr->GetKind() == kExprIRead || srcExpr->GetKind() == kExprBinary ||
-        IsAddrofArrayVar(srcExpr))) {
+      srcExpr->GetPrimType() != PTY_ptr || dstExpr->GetPrimType() != PTY_ptr) {
     return;
   }
   // Avoid inserting redundant boundary vars
@@ -71,23 +98,24 @@ void ENCChecker::AssignBoundaryVar(MIRBuilder &mirBuilder, const UniqueFEIRExpr 
     return;
   }
   MIRFunction *curFunction = mirBuilder.GetCurrentFunctionNotNull();
+  // Check if the r-value has a boundary var or an array
+  UniqueFEIRExpr baseExpr = ENCChecker::FindBaseExprInPointerOperation(srcExpr);
+  if (baseExpr == nullptr) {
+    return;
+  }
+  MIRType *arrType = ENCChecker::IsAddrofArrayVar(baseExpr);
   // Check if the l-value has a boundary var
   std::pair<StIdx, StIdx> lBoundaryVarStIdx = std::make_pair(StIdx(0), StIdx(0));
   auto lIt = curFunction->GetBoundaryMap().find(dstExpr->Hash());
   if (lIt != curFunction->GetBoundaryMap().end()) {  // The boundary var exists on the l-value
     lBoundaryVarStIdx = lIt->second;
   }
-  // Check if the r-value has a boundary var or an array
-  UniqueFEIRExpr baseExpr = ENCChecker::FindBaseExprInPointerOperation(srcExpr);
-  if (baseExpr == nullptr) {
-    return;
-  }
   std::pair<StIdx, StIdx> rBoundaryVarStIdx = std::make_pair(StIdx(0), StIdx(0));
   auto rIt = curFunction->GetBoundaryMap().find(baseExpr->Hash());
   if (rIt != curFunction->GetBoundaryMap().end()) {  // Assgin when the boundary var exists on the r-value
     rBoundaryVarStIdx = rIt->second;
   } else {
-    if (lBoundaryVarStIdx.first != StIdx(0) && baseExpr->GetKind() != kExprAddrofVar) {
+    if (lBoundaryVarStIdx.first != StIdx(0) && arrType == nullptr) {
       // Insert a empty r-value boundary var
       // when there is a l-value boundary var and r-value without a boundary var or with an array
       rBoundaryVarStIdx = ENCChecker::InsertBoundaryVar(mirBuilder, baseExpr);
@@ -96,7 +124,7 @@ void ENCChecker::AssignBoundaryVar(MIRBuilder &mirBuilder, const UniqueFEIRExpr 
   // insert L-value bounary and assign boundary var
   // when r-value with a boundary var or with an array
   if (lBoundaryVarStIdx.first == StIdx(0) &&
-      (rBoundaryVarStIdx.first != StIdx(0) || baseExpr->GetKind() == kExprAddrofVar)) {
+      (rBoundaryVarStIdx.first != StIdx(0) || arrType != nullptr)) {
     lBoundaryVarStIdx = ENCChecker::InsertBoundaryVar(mirBuilder, dstExpr);
   }
   if (lBoundaryVarStIdx.first != StIdx(0)) {
@@ -114,13 +142,11 @@ void ENCChecker::AssignBoundaryVar(MIRBuilder &mirBuilder, const UniqueFEIRExpr 
       CHECK_NULL_FATAL(rUpperSym);
       StmtNode *upperStmt = mirBuilder.CreateStmtDassign(*lUpperSym, 0, mirBuilder.CreateExprDread(*rUpperSym));
       ans.emplace_back(upperStmt);
-    } else if (baseExpr->GetKind() == kExprAddrofVar) {
+    } else if (arrType != nullptr) {
       StmtNode *lowerStmt = mirBuilder.CreateStmtDassign(*lLowerSym, 0, baseExpr->GenMIRNode(mirBuilder));
       ans.emplace_back(lowerStmt);
-
-      size_t size = baseExpr->GetVarUses().front()->GetType()->GenerateMIRTypeAuto()->GetSize();
       UniqueFEIRExpr binExpr = FEIRBuilder::CreateExprBinary(
-          OP_add, baseExpr->Clone(), std::make_unique<FEIRExprConst>(size, PTY_ptr));
+          OP_add, baseExpr->Clone(), std::make_unique<FEIRExprConst>(arrType->GetSize(), PTY_ptr));
       StmtNode *upperStmt = mirBuilder.CreateStmtDassign(*lUpperSym, 0, binExpr->GenMIRNode(mirBuilder));
       ans.emplace_back(upperStmt);
     }
@@ -241,12 +267,12 @@ void FEIRStmtIAssign::AssignBoundaryVarAndChecking(MIRBuilder &mirBuilder, std::
 StmtNode *FEIRStmtNary::ReplaceBoundaryVar(MIRBuilder &mirBuilder) const {
   MIRFunction *curFunction = mirBuilder.GetCurrentFunctionNotNull();
   BaseNode *rightNode = nullptr;
-  if (argExprs.back()->GetKind() == kExprAddrofVar) {  // var must be array type by the previous checking
+  MIRType *arrType = ENCChecker::IsAddrofArrayVar(argExprs.back());
+  if (arrType != nullptr) {  // var must be array type by the previous checking
     UniqueFEIRExpr rightExpr = argExprs.back()->Clone();
     if (op == OP_assertlt) {
-      size_t size = rightExpr->GetVarUses().front()->GetType()->GenerateMIRTypeAuto()->GetSize();
       rightExpr = FEIRBuilder::CreateExprBinary(
-          OP_add, std::move(rightExpr), std::make_unique<FEIRExprConst>(size, PTY_ptr));
+          OP_add, std::move(rightExpr), std::make_unique<FEIRExprConst>(arrType->GetSize(), PTY_ptr));
     }
     rightNode = rightExpr->GenMIRNode(mirBuilder);
   } else {

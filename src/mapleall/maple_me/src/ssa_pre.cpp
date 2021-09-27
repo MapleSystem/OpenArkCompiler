@@ -1615,7 +1615,7 @@ void SSAPre::BuildWorkListStmt(MeStmt &stmt, uint32 seqStmt, bool isRebuilt, MeE
     case OP_decrefreset:
     case OP_eval:
     case OP_igoto:
-    case OP_assertnonnull:
+    CASE_ASSERTNONNULL
     case OP_free: {
       auto *unaryStmt = static_cast<UnaryMeStmt*>(meStmt);
       BuildWorkListExpr(*meStmt, static_cast<int32>(seqStmt), *unaryStmt->GetOpnd(), isRebuilt,

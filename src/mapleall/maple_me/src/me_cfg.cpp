@@ -400,7 +400,7 @@ bool MeCFG::FindUse(const StmtNode &stmt, StIdx stIdx) const {
         return FindExprUse(*iNode.GetRHS(), stIdx);
       }
     }
-    case OP_assertnonnull:
+    CASE_ASSERTNONNULL
     case OP_eval:
     case OP_free:
     case OP_switch: {

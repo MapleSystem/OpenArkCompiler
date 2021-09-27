@@ -495,7 +495,7 @@ void SSADevirtual::TraversalMeStmt(MeStmt &meStmt) {
       VisitMeExpr(thrMeStmt->GetOpnd());
       break;
     }
-    case OP_assertnonnull:
+    CASE_ASSERTNONNULL
     case OP_eval:
     case OP_igoto:
     case OP_free: {

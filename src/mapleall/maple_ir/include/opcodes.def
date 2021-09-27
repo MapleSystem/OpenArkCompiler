@@ -34,6 +34,9 @@
   OPCODE(assertge, BinaryStmtNode, (OPCODEISSTMT | OPCODENOTMMPL), 8)
   OPCODE(assertlt, BinaryStmtNode, (OPCODEISSTMT | OPCODENOTMMPL), 8)
   OPCODE(assertnonnull, UnaryStmtNode, (OPCODEISSTMT | OPCODENOTMMPL), 8)
+  OPCODE(assignassertnonnull, UnaryStmtNode, (OPCODEISSTMT | OPCODENOTMMPL), 8)
+  OPCODE(callassertnonnull, UnaryStmtNode, (OPCODEISSTMT | OPCODENOTMMPL), 8)
+  OPCODE(returnassertnonnull, UnaryStmtNode, (OPCODEISSTMT | OPCODENOTMMPL), 8)
 // Expr & Notmmpl
   // storage access opcodes
   OPCODE(dread, AddrofNode, (OPCODENOTMMPL | OPCODEHASSSAUSE), 12)

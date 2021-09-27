@@ -827,8 +827,6 @@ bool AArch64ReachingDefinition::FindRegUseBetweenInsn(uint32 regNO, Insn *startI
   }
 
   ASSERT(startInsn->GetBB() == endInsn->GetBB(), "two insns must be in a same BB");
-  ASSERT(endInsn->GetId() >= startInsn->GetId(), "two insns must be in a same BB");
-
   for (Insn *insn = startInsn; insn != nullptr && insn != endInsn->GetNext(); insn = insn->GetNext()) {
     if (!insn->IsMachineInstruction()) {
       continue;

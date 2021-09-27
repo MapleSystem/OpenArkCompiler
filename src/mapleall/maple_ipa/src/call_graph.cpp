@@ -946,7 +946,7 @@ void DoDevirtual(const Klass &klass, const KlassHierarchy &klassh) {
       Opcode op = stmt->GetOpCode();
       switch (op) {
         case OP_comment:
-        case OP_assertnonnull:
+        CASE_ASSERTNONNULL
         case OP_brtrue:
         case OP_brfalse:
         case OP_try:

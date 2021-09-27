@@ -495,7 +495,7 @@ void DSE::CollectNotNullNode(StmtNode &stmt, BaseNode &node, BB &bb, uint8 nodeT
         }
       } else {
         // Ref expr used array or assertnotnull
-        bool notNull = op == OP_array || op == OP_assertnonnull;
+        bool notNull = op == OP_array || kOpcodeInfo.IsAssertNonnull(op);
         nodeType = notNull ? kNodeTypeNotNull : kNodeTypeNormal;
       }
       for (size_t i = 0; i < node.GetNumOpnds(); ++i) {
