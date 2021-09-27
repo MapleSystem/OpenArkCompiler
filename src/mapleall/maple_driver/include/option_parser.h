@@ -82,7 +82,8 @@ enum Level {
   kLevelZero = 0,
   kLevelOne = 1,
   kLevelTwo = 2,
-  kLevelThree = 3
+  kLevelThree = 3,
+  kLevelFour = 4
 };
 }  // namespace mapleOption
 #endif  // MAPLE_UTIL_INCLUDE_OPTION_PARSER_H
