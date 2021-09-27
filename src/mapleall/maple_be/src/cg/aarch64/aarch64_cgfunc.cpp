@@ -7444,7 +7444,7 @@ AArch64RegOperand &AArch64CGFunc::GetOrCreatePhysicalRegisterOperand(AArch64reg 
     aarch64PhyRegIdx = (aarch64PhyRegIdx << 1) + 1;
   } else {
     size = (size == k128BitSize) ? k128BitSize : k64BitSize;
-    aarch64PhyRegIdx = (aarch64PhyRegIdx * k3ByteSize) + 1;
+    aarch64PhyRegIdx = aarch64PhyRegIdx << 2;
   }
   ASSERT(aarch64PhyRegIdx < k256BitSize, "phyRegOperandTable index out of range");
   AArch64RegOperand *phyRegOpnd = nullptr;
